@@ -30,10 +30,6 @@ class Grid(object):
 		return self.coords.size
 	
 	@property
-	def reshaped(self):
-		return self.reshape(self.shape)
-	
-	@property
 	def shape(self):
 		if not self.is_separable:
 			raise ValueError('A non-separated grid does not have a shape.')

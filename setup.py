@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='hcipy',
 	version='0.1',
@@ -6,5 +6,5 @@ setup(name='hcipy',
 	url='https://gitlab.strw.leidenuniv.nl/por/hcipy',
 	author='Emiel Por',
 	author_email='por@strw.leidenuniv.nl',
-	packages=['hcipy'],
+	packages=find_packages(),
 	zip_safe=False)

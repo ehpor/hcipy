@@ -16,7 +16,10 @@ class Grid(object):
 	def subset(self, criterium):
 		from .coordinates import UnstructuredCoords
 		
-		indices = criterium(self) != 0
+		if hasattr(criterium, '__call__'):
+			indices = criterium(self) != 0
+		else:
+			indices = criterium
 		new_coords = [c[indices] for c in self.coords]
 		new_weights = self.weights[indices]
 		return self.__class__(UnstructuredCoords(new_coords), new_weights)

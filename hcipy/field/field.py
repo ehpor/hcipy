@@ -29,4 +29,7 @@ class Field(np.ndarray):
 	
 	@property
 	def shaped(self):
+		if self.tensor_order > 1:
+			new_shape = np.concatenate([self.grid.shape, np.array(self.shape)[1:]])
+			return self.reshape(new_shape)
 		return self.reshape(self.grid.shape)

@@ -74,7 +74,7 @@ class FastFourierTransform(object):
 		res = res[self.cutout_input].ravel() / self.weights
 		
 		if hasattr(field, 'grid'):
-			from .sampled_function import SampledFunction
-			return SampledFunction(res, self.input_grid)
+			from ..field import Field
+			return Field(res, self.input_grid)
 		else:
 			return res

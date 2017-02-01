@@ -1,4 +1,8 @@
-__all__ = ['grid', 'coordinates', 'cartesian_grid', 'polar_grid', 'field']
+__all__ = ['Grid']
+__all__ += ['UnstructuredCoords', 'SeparatedCoords', 'RegularCoords']
+__all__ += ['CartesianGrid']
+__all__ += ['PolarGrid']
+__all__ += ['Field']
 
 from .grid import *
 from .coordinates import *

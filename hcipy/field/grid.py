@@ -34,7 +34,7 @@ class Grid(object):
 	
 	@property
 	def shape(self):
-		if not self.is_separable:
+		if not self.is_separated:
 			raise ValueError('A non-separated grid does not have a shape.')
 		return self.coords.shape
 
@@ -64,6 +64,13 @@ class Grid(object):
 	
 	@property
 	def weights(self):
+		if self._weights is None:
+			self._weights = self.__class__.get_automatic_weights(self.coords)
+
+			if self._weights is None:
+				self._weights = 1
+				warnings.warn('No automatic weights could be calculated for this grid.')
+		
 		if np.isscalar(self._weights):
 			return np.ones(self.size) * self._weights
 		else:
@@ -71,13 +78,7 @@ class Grid(object):
 	
 	@weights.setter
 	def weights(self, weights):
-		if weights is None:
-			self._weights = self.__class__.get_automatic_weights(coords)
-			if self._weights is None:
-				warnings.warn('No automatic weights could be calculated for this grid.')
-				self._weights = 0
-		else:
-			self._weights = weights
+		self._weights = weights
 	
 	@property
 	def points(self):
@@ -107,35 +108,33 @@ class Grid(object):
 		else:
 			Grid.coordinate_system_transformations[source] = {dest: func}
 	
-	def __mul__(self, f):
-		res = self.copy()
-		res *= f
-		return res
-		
-	def __rmul__(self, f):
-		return self * f
-	
-	def __imul__(self, f):
-		return NotImplemented
-	
-	def __div__(self, f):
-		return self * (1.0 / f)
-	
-	def __idiv__(self, f):
-		self *= 1.0 / f
-		return self
-	
-	def __neg__(self):
-		res = self.copy()
-		res *= -1
-		return res
-	
 	def __getitem__(self, i):
 		return self.points[i]
+
+	def scale(self, scale):
+		raise NotImplementedError
+	
+	def scaled(self, scale):
+		grid = self.copy()
+		grid.scale(scale)
+		return grid
+	
+	def shift(self, shift):
+		raise NotImplementedError
+	
+	def shifted(self, shift):
+		grid = self.copy()
+		grid.shift(shift)
+		return grid
 	
 	def reverse(self):
 		self.coords.reverse()
 		return self
+
+	def reversed(self):
+		grid = self.copy()
+		grid.reverse()
+		return grid
 	
 	@staticmethod
 	def get_automatic_weights(coords):

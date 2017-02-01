@@ -13,28 +13,39 @@ class PolarGrid(Grid):
 	def theta(self):
 		return self.coords[1]
 	
-	def __imul__(self, f):
-		self.coords *= np.array([f, 1])
-		self.weights *= np.abs(f)**(self.ndim)
-		return self
+	def scale(self, scale):
+		self.coords *= np.array([scale, 1])
+		self.weights *= np.abs(scale)**(self.ndim)
+
+	def shift(self, shift):
+		raise ValueError("Can't shift a PolarGrid inplace.");
+	
+	def shifted(self, shift):
+		grid = self.as_('cartesian')
+		grid.shift(shift)
+		return grid
 	
 	@staticmethod
 	def get_automatic_weights(coords):
 		return None
 
 def cartesian_to_polar(self):
+	from .coordinates import UnstructuredCoords
+	
 	x = self.x
 	y = self.y
 	r = np.hypot(x, y)
 	theta = np.arctan2(y, x)
-	return PolarGrid(Coords([r, theta]))
+	return PolarGrid(UnstructuredCoords([r, theta]))
 
 def polar_to_cartesian(self):
+	from .coordinates import UnstructuredCoords
+	
 	r = self.r
 	theta = self.theta
 	x = r * np.cos(theta)
 	y = r * np.sin(theta)
-	return CartesianGrid(Coords([x, y]))
+	return CartesianGrid(UnstructuredCoords([x, y]))
 
 Grid.add_coordinate_system_transformation('cartesian', 'polar', cartesian_to_polar)
 Grid.add_coordinate_system_transformation('polar', 'cartesian', polar_to_cartesian)

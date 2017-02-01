@@ -21,18 +21,20 @@ class CartesianGrid(Grid):
 	def w(self):
 		return self.coords[3]
 	
-	def __imul__(self, f):
-		self.coords *= f
-		self.weights *= np.abs(f)**(self.ndim)
-		return self
+	def scale(self, scale):
+		self.coords *= scale
+		self.weights *= np.abs(scale)**self.ndim)
+
+	def shift(self, shift):
+		self.coords += shift
 	
 	@staticmethod
 	def get_automatic_weights(coords):
 		if coords.is_regular:
 			return np.prod(coords.delta)
-		elif coords.is_separable:
+		elif coords.is_separated:
 			weights = []
-			for i in range(grid.ndim):
+			for i in range(len(coords)):
 				x = coords.separated_coords[i]
 				w = (x[2:] - x[:-2]) / 2.
 				w = np.concatenate(([x[1] - x[0]], w, [x[-1] - x[-2]]))

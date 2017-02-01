@@ -1,5 +1,5 @@
 *.pyc
 /dist/
-/*.egg_info
+/*.egg-info
 /.vscode
 tags

@@ -23,7 +23,7 @@ class CartesianGrid(Grid):
 	
 	def scale(self, scale):
 		self.coords *= scale
-		self.weights *= np.abs(scale)**self.ndim)
+		self.weights *= np.abs(scale)**self.ndim
 
 	def shift(self, shift):
 		self.coords += shift
@@ -40,4 +40,4 @@ class CartesianGrid(Grid):
 				w = np.concatenate(([x[1] - x[0]], w, [x[-1] - x[-2]]))
 				weights.append(w)
 			
-			return np.multiply.reduce(np.ix_(*weights))
+			return np.multiply.reduce(np.ix_(*weights[::-1]))

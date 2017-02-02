@@ -42,6 +42,10 @@ class CoordsBase(object):
 	@property
 	def is_regular(self):
 		return hasattr(self, 'regular_coords')
+	
+	@property
+	def shape(self):
+		return self.dims[::-1]
 
 class UnstructuredCoords(CoordsBase):
 	def __init__(self, coords):
@@ -89,7 +93,7 @@ class SeparatedCoords(CoordsBase):
 		return len(self.separated_coords)
 	
 	@property
-	def shape(self):
+	def dims(self):
 		return np.array([len(c) for c in self.separated_coords])
 	
 	def __iadd__(self, b):
@@ -112,38 +116,38 @@ class SeparatedCoords(CoordsBase):
 		return self
 
 class RegularCoords(CoordsBase):
-	def __init__(self, delta, shape, zero=None):
+	def __init__(self, delta, dims, zero=None):
+		if np.isscalar(dims):
+			self.dims = np.array([dims]).astype('int')
+		else:
+			self.dims = np.array(dims).astype('int')
+		
 		if np.isscalar(delta):
-			self.delta = np.array([delta])
+			self.delta = np.array([delta]*len(self.dims))
 		else:
 			self.delta = np.array(delta)
 
-		if np.isscalar(shape):
-			self.shape = np.array([shape]).astype('int')
-		else:
-			self.shape = np.array(shape).astype('int')
-
 		if zero is None:
-			self.zero = np.zeros(len(self.delta))
+			self.zero = np.zeros(len(self.dims))
 		elif np.isscalar(zero):
-			self.zero = np.array([zero])
+			self.zero = np.array([zero]*len(self.dims))
 		else:
 			self.zero = np.array(zero)
 
 	@property
 	def separated_coords(self):
-		return [np.arange(n) * delta + zero for delta, n, zero in zip(self.delta, self.shape, self.zero)]
+		return [np.arange(n) * delta + zero for delta, n, zero in zip(self.delta, self.dims, self.zero)]
 
 	@property
 	def regular_coords(self):
-		return self.delta, self.shape, self.zero
+		return self.delta, self.dims, self.zero
 
 	@property
 	def size(self):
-		return np.prod(self.shape)
+		return np.prod(self.dims)
 	
 	def __len__(self):
-		return len(self.shape)
+		return len(self.dims)
 
 	def __getitem__(self, i):
 		return np.meshgrid(*self.separated_coords)[i].ravel()
@@ -158,7 +162,7 @@ class RegularCoords(CoordsBase):
 		return self
 	
 	def reverse(self):
-		maximum = self.zero + self.delta * (self.shape - 1)
+		maximum = self.zero + self.delta * (self.dims - 1)
 		self.delta = -self.delta
 		self.zero = maximum
 		return self

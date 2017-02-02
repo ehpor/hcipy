@@ -33,6 +33,12 @@ class Grid(object):
 		return self.coords.size
 	
 	@property
+	def dims(self):
+		if not self.is_separated:
+			raise ValueError('A non-separated grid does not have dims.')
+		return self.coords.dims
+	
+	@property
 	def shape(self):
 		if not self.is_separated:
 			raise ValueError('A non-separated grid does not have a shape.')

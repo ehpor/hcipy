@@ -70,7 +70,7 @@ def zernike_noll(i, D=1, grid=None):
 
 # High level functions
 def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False):
-	from ..mode_basis import ModeBasis
+	from .mode_basis import ModeBasis
 	f = zernike_ansi if ansi else zernike_noll
 
 	modes = [f(i, D, grid) for i in range(starting_mode, starting_mode+num_modes)]

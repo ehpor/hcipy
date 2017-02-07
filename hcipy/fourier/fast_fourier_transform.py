@@ -78,3 +78,12 @@ class FastFourierTransform(object):
 			return Field(res, self.input_grid)
 		else:
 			return res
+
+class ConvolveFFT(object):
+	pass
+
+class RotateFFT(object):
+	pass
+
+class FilterFFT(object):
+	pass

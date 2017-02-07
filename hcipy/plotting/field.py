@@ -110,3 +110,28 @@ def contourf_field(field, grid=None, ax=None, *args, **kwargs):
 		raise NotImplementedError()
 
 	return cs
+
+def complex_field_to_rgb(X, theme='dark', rmin=None, rmax=None):
+	"""
+	Takes an array of complex number and converts it to an array of [r, g, b],
+	where phase gives hue and saturaton/value are given by the absolute value.
+	Especially for use with imshow for complex plots.
+	"""
+	import matplotlib as mpl
+
+	if rmin is None:
+		rmin = np.abs(X).min()
+	if rmax is None:
+		rmax = np.abs(X).max()
+	Y = np.zeros(X.shape + (3,), dtype='float')
+	Y[..., 0] = np.angle(X) / (2 * np.pi) % 1
+	t = np.clip((np.abs(X) - rmin) / (rmax - rmin), 0, 1)
+	if theme == 'light':
+		Y[..., 1] = t
+		Y[..., 2] = 1
+	elif theme == 'dark':
+		Y[..., 1] = 1
+		Y[..., 2] = t
+	Y = mpl.colors.hsv_to_rgb(Y[np.newaxis,...])
+	Y = Y.reshape(Y.shape[1:])
+	return Y

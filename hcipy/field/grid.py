@@ -144,7 +144,10 @@ class Grid(object):
 	
 	@staticmethod
 	def get_automatic_weights(coords):
-		raise NotImplementedError
+		raise NotImplementedError()
 	
 	def __str__(self):
 		return str(self.__class__) + '(' + str(self.coords.__class__) + ')'
+
+	def closest_to(self, p):
+		raise NotImplementedError()

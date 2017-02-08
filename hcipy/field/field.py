@@ -33,3 +33,7 @@ class Field(np.ndarray):
 			new_shape = np.concatenate([self.grid.shape, np.array(self.shape)[1:]])
 			return self.reshape(new_shape)
 		return self.reshape(self.grid.shape)
+	
+	def at(self, p):
+		i = self.grid.closest_to(p)
+		return self[i]

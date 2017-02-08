@@ -9,11 +9,8 @@ class OpticalElement(object):
 		raise NotImplementedError()
 
 class Detector(object):
-	def integrate(self, wavefront):
+	def integrate(self, wavefront, dt, weight=1):
 		raise NotImplementedError()
 	
 	def read_out(self):
-		raise NotImplementedError()
-	
-	def reset(self):
 		raise NotImplementedError()

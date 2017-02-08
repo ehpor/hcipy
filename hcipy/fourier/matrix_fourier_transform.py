@@ -44,7 +44,7 @@ class MatrixFourierTransform(object):
 		else:
 			return res
 	
-	def inverse(self, field):
+	def backward(self, field):
 		if self.ndim == 1:
 			f = field.ravel() * self.output_grid.weights
 			res = np.dot(self.M.conj().T, f)

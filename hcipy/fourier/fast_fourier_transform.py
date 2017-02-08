@@ -67,7 +67,7 @@ class FastFourierTransform(object):
 		else:
 			return res
 	
-	def inverse(self, field):
+	def backward(self, field):
 		f = np.zeros(self.internal_shape, dtype='complex')
 		f[self.cutout_output] = (field.ravel() / self.shift).reshape(self.shape_out)
 		res = np.fft.fftshift(np.fft.ifftn(np.fft.ifftshift(f)))

@@ -14,7 +14,7 @@ class FraunhoferPropagatorMonochromatic(MonochromaticPropagator):
 		f_lambda = f_lambda_ref * (wavelength / wavelength_0)
 
 		self.uv_grid = output_grid * ((2*np.pi / f_lambda))
-		self.fourier_transform = MatrixFourierTransform(input_grid, output_grid)
+		self.fourier_transform = MatrixFourierTransform(input_grid, uv_grid)
 		self.output_grid = output_grid
 
 		self.norm_factor = 1j / f_lambda

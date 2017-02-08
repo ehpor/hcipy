@@ -1,20 +1,12 @@
 import numpy as np
+from ..optics import OpticalElement, Wavefront
 
-class MonochromaticPropagator(object):
+class MonochromaticPropagator(OpticalElement):
     def __init__(self, wavelength):
         self.wavelength = wavelength
-    
-    def __call__(self, wavefront):
-        return self.forward(wavefront)
-    
-    def forward(self, wavefront):
-        raise NotImplementedError()
-    
-    def backward(self, wavefront):
-        raise NotImplementedError()
 
- def make_polychromatic_propagator(monochromatic_propagator):
-    class PolychromaticPropagator(object):
+ def make_propagator(monochromatic_propagator):
+    class Propagator(object):
         def __init__(self, *args, **kwargs):
             self.wavelengths = []
             self.monochromatic_propagators = []
@@ -42,4 +34,4 @@ class MonochromaticPropagator(object):
         def backward(self, wavefront):
             return self.get_monochromatic_propagator(wavefront.wavelength).backward(wavefront)
 
-    return PolychromaticPropagator
+    return Propagator

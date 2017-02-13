@@ -98,7 +98,7 @@ def von_karman_psd(grid, u_o=0.1):
 def modified_von_karman_psd(grid, u_o=0.1, u_i=100):
 	return VonKarmanPSD(u, u_o) * np.exp(-u**2/u_i**2)
 
-def make_standard_multilayer_atmosphere():
+def make_standard_multilayer_atmosphere(fried_parameter=1, wavelength=500e-9, zenith_angle=0):
 	"""
 	Standard atmosphere from Guyon (2005):
 	Limits of Adaptive Optics for high contrast imaging.
@@ -107,6 +107,8 @@ def make_standard_multilayer_atmosphere():
 	heights = np.array([500, 1000, 2000, 4000, 8000, 16000])
 	velocities = np.array([10, 10, 10, 10, 10, 10])
 	Cn_squared = np.array([0.2283, 0.0883, 0.0666, 0.1458, 0.3350, 0.1350])
+	Cn_squared = scale_Cn_squared_to_fried_parameter(Cn_Squared, fried_parameter, wavelength, zenith_angle)
+	
 	return (heights, velocities, Cn_squared)
 
 def scale_Cn_squared_to_fried_parameter(Cn_squared, fried_parameter, wavelength=500e-9, zenith_angle=0):

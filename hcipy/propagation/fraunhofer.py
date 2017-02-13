@@ -28,4 +28,8 @@ class FraunhoferPropagatorMonochromatic(MonochromaticPropagator):
 		U_new = self.fourier_transform.inverse(wavefront.electric_field) * self.norm_factor
 		return Wavefront(Field(U_new, self.input_grid), wavefront.wavelength)
 	
+	def get_transformation_matrix(self, wavelength=1):
+		# Ignore input wavelength and just use the internal one.
+		return self.fourier_transform.get_transformation_matrix() / self.norm_factor
+	
 FraunhoferPropagator = make_propagator(FraunhoferPropagatorMonochromatic)

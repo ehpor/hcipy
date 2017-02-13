@@ -4,7 +4,6 @@ class SVD(object):
 	def __init__(self, M, num_modes=None):
 		self._M = M
 		self._num_modes = num_modes
-		self._svd = None
 
 		if self.num_modes is None:
 			from numpy.linalg import svd

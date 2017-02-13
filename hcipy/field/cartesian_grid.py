@@ -40,7 +40,7 @@ class CartesianGrid(Grid):
 				w = np.concatenate(([x[1] - x[0]], w, [x[-1] - x[-2]]))
 				weights.append(w)
 			
-			return np.multiply.reduce(np.ix_(*weights[::-1]))
+			return np.multiply.reduce(np.ix_(*weights[::-1])).ravel()
 		
 	def closest_to(p):
 		rel_points = self.points - np.array(p)

@@ -1,6 +1,7 @@
 import numpy as np
+from .fourier_transform import FourierTransform
 
-class MatrixFourierTransform(object):
+class MatrixFourierTransform(FourierTransform):
 	def __init__(self, input_grid, output_grid):
 		# Check input grid assumptions
 		if not input_grid.is_separated or not input_grid.is_('cartesian'):
@@ -26,11 +27,10 @@ class MatrixFourierTransform(object):
 		elif self.ndim == 2:
 			self.M1 = np.exp(-1j * np.dot(output_grid.coords.separated_coords[0][:,np.newaxis], input_grid.coords.separated_coords[0][np.newaxis,:]))
 			self.M2 = np.exp(-1j * np.dot(output_grid.coords.separated_coords[1][:,np.newaxis], input_grid.coords.separated_coords[1][np.newaxis,:])).T
-			
-	def __call__(self, field):
-		return self.forward(field)
 	
 	def forward(self, field):
+		from ..field import Field
+
 		if self.ndim == 1:
 			f = field.ravel() * self.weights
 			res = np.dot(self.M, f)
@@ -38,13 +38,11 @@ class MatrixFourierTransform(object):
 			f = (field.ravel() * self.weights).reshape(self.shape)
 			res = np.dot(np.dot(self.M1, f), self.M2).ravel()
 		
-		if hasattr(field, 'grid'):
-			from ..field import Field
-			return Field(res, self.output_grid)
-		else:
-			return res
+		return Field(res, self.output_grid)
 	
 	def backward(self, field):
+		from ..field import Field
+		
 		if self.ndim == 1:
 			f = field.ravel() * self.output_grid.weights
 			res = np.dot(self.M.conj().T, f)
@@ -54,8 +52,4 @@ class MatrixFourierTransform(object):
 			
 		res /= (2*np.pi)**self.ndim
 		
-		if hasattr(field, 'grid'):
-			from ..field import Field
-			return Field(res, self.input_grid)
-		else:
-			return res
+		return Field(res, self.input_grid)

@@ -1,4 +1,5 @@
 import numpy as np
+from .fourier_transform import FourierTransform
 
 def make_fft_grid(input_grid, q=1, fov=1):
 	from ..field import CartesianGrid, RegularCoords
@@ -15,7 +16,7 @@ def make_fft_grid(input_grid, q=1, fov=1):
 	
 	return CartesianGrid(RegularCoords(delta, shape, zero))
 
-class FastFourierTransform(object):
+class FastFourierTransform(FourierTransform):
 	def __init__(self, input_grid, q=1, fov=1):
 		# Check assumptions
 		if not input_grid.is_regular:
@@ -52,32 +53,25 @@ class FastFourierTransform(object):
 			self.shift = np.exp(-1j * np.dot(center, self.output_grid.coords))
 			self.shift /= np.fft.fftshift(self.shift.reshape(self.shape_out)).ravel()[0] # No piston shift (remove central shift phase)
 	
-	def __call__(self, field):
-		return self.forward(field)
-	
 	def forward(self, field):
+		from ..field import Field
+		
 		f = np.zeros(self.internal_shape, dtype='complex')
 		f[self.cutout_input] = (field.ravel() * self.weights).reshape(self.shape_in)
 		res = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(f)))
 		res = res[self.cutout_output].ravel() * self.shift
 		
-		if hasattr(field, 'grid'):
-			from ..field import Field
-			return Field(res, self.output_grid)
-		else:
-			return res
+		return Field(res, self.output_grid)
 	
 	def backward(self, field):
+		from ..field import Field
+
 		f = np.zeros(self.internal_shape, dtype='complex')
 		f[self.cutout_output] = (field.ravel() / self.shift).reshape(self.shape_out)
 		res = np.fft.fftshift(np.fft.ifftn(np.fft.ifftshift(f)))
 		res = res[self.cutout_input].ravel() / self.weights
 		
-		if hasattr(field, 'grid'):
-			from ..field import Field
-			return Field(res, self.input_grid)
-		else:
-			return res
+		return Field(res, self.input_grid)
 
 class ConvolveFFT(object):
 	pass

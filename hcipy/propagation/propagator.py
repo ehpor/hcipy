@@ -5,7 +5,7 @@ class MonochromaticPropagator(OpticalElement):
 	def __init__(self, wavelength):
 		self.wavelength = wavelength
 
- def make_propagator(monochromatic_propagator):
+def make_propagator(monochromatic_propagator):
 	class Propagator(object):
 		def __init__(self, *args, **kwargs):
 			self.wavelengths = []
@@ -15,13 +15,13 @@ class MonochromaticPropagator(OpticalElement):
 		
 		def get_monochromatic_propagator(self, wavelength):
 			if len(self.wavelengths) > 0:
-				i = np.argmin(np.abs(wavelength - np.array(wavelengths))
+				i = np.argmin(np.abs(wavelength - np.array(self.wavelengths)))
 				return self.monochromatic_propagators[i]
 			
 			m = monochromatic_propagator(*self.monochromatic_args, wavelength=wavelength, **self.monochromatic_kwargs)
 
 			self.wavelengths.append(wavelength)
-			self.monochromatic_propagators(m)
+			self.monochromatic_propagators.append(m)
 
 			return m
 

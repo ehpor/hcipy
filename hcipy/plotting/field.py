@@ -1,8 +1,9 @@
 import numpy as np
 
-def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', non_linear_axes=False, *args, **kwargs):
+def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None, non_linear_axes=False, *args, **kwargs):
 	import matplotlib as mpl
 	import matplotlib.pyplot as plt
+	from matplotlib.image import NonUniformImage
 	from ..field import Field
 
 	if ax is None:
@@ -11,9 +12,9 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	ax.set_aspect(aspect)
 
 	if grid is None:
-		grid = data.grid
+		grid = field.grid
 	else:
-		field = Field(data, grid)
+		field = Field(field, grid)
 	
 	if norm is None:
 		if vmin is None:

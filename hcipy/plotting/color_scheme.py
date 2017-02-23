@@ -1,9 +1,9 @@
+from cycler import cycler
+from . import colors
+
 # Blue, red, green, orange, purple, brown
 palettes = {
-	'dark': ['#1f78b4', '#e31a1c', '#33a02c', '#ff7f00', '#6a3d9a', '#b15928'],
-	'light': ['#a6cee3', '#fb9a99', '#b2df8a', '#fdbf6f', '#cab2d6', '#ffff99'],
-	'paired': ['#a6cee3', '#1f78b4', '#fb9a99', '#e31a1c', '#b2df8a', '#33a02c',
-		'#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a', '#ffff99', '#b15928']
+	'dark': cycler(color=[colors.blue_700, colors.red_700, colors.green_700, colors.orange_700, colors.purple_700, colors.brown_700])
 }
 
 def set_color_scheme(dark=False, publication_quality=False, cmap='viridis'):
@@ -13,7 +13,7 @@ def set_color_scheme(dark=False, publication_quality=False, cmap='viridis'):
 	"""
 	import matplotlib as mpl
 
-	mpl.rc('lines', linewidth=1, markeredgewidth=0.25)
+	mpl.rc('lines', linewidth=1.5, markeredgewidth=0.25)
 	mpl.rc('image', cmap=cmap)
 	mpl.rc('legend', scatterpoints=1, numpoints=1, labelspacing=0.3)
 	mpl.rc('axes.formatter', limits=(-4,4))

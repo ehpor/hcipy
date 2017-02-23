@@ -9,6 +9,6 @@ python setup.py install
 
 If you want to make changes in the code itself, do:
 
-python setup.py install --develop
+python setup.py develop
 
 This will create a symbolic link from the python packages to the current directory, so that any changes in this directory are directly available to python without reinstalling the package itself.

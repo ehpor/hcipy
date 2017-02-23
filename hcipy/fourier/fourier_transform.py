@@ -36,7 +36,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 
 	if output_grid is None:
 		# Choose between FFT and MFT
-		if not (input_grid.is_regular and input_grid.is_('cartesian'):
+		if not (input_grid.is_regular and input_grid.is_('cartesian')):
 			raise ValueError('For non-regular non-cartesian Grids, a Fourier transform is required to have an output_grid.')
 
 		if input_grid.ndim not in [1,2]:
@@ -65,8 +65,8 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 				mft = MatrixFourierTransform(input_grid, output_grid)
 
 				a = np.zeros(input_grid.size, dtype='complex')
-				fft_time = time_it(lambda fft.forward(a))
-				mft_time = time_it(lambda mft.forward(a))
+				fft_time = time_it(lambda: fft.forward(a))
+				mft_time = time_it(lambda: mft.forward(a))
 
 				if fft_time > mft_time:
 					method = 'mft'

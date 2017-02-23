@@ -47,9 +47,6 @@ class AtmosphericModel(OpticalElement):
 			self._t = 0
 		else:
 			self._t = t
-	
-	def make_random(self):
-		self.t = None
 
 	def evolve_until(self, t=None):
 		self.t = t
@@ -61,7 +58,7 @@ class AtmosphericModel(OpticalElement):
 			wf = wavefront
 			for i, (height, velocity, Cn, phase_screen) in enumerate(self.layers):
 				# TODO: store propagators once
-				shift = self.t * velocity - np.sin(self.off_axis_angle) * height / np.cos(self.zenith_angle)
+				shift = self.t * velocity - np.sin(self.off_axis_angle * height / np.cos(self.zenith_angle)
 				phase_screen = phase_screen.shifted(shift) * np.sqrt(Cn * k**2 * 0.423)
 				phase_screen = phase_screen()
 
@@ -111,7 +108,7 @@ def make_standard_multilayer_atmosphere(fried_parameter=1, wavelength=500e-9, ze
 	velocities = np.array([10, 10, 10, 10, 10, 10])
 	Cn_squared = np.array([0.2283, 0.0883, 0.0666, 0.1458, 0.3350, 0.1350])
 	Cn_squared = scale_Cn_squared_to_fried_parameter(Cn_Squared, fried_parameter, wavelength, zenith_angle)
-
+	
 	return (heights, velocities, Cn_squared)
 
 def scale_Cn_squared_to_fried_parameter(Cn_squared, fried_parameter, wavelength=500e-9, zenith_angle=0):

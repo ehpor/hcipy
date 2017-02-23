@@ -79,7 +79,7 @@ class SpectralNoiseFFT(SpectralNoise):
 		self.C = C
 		self.coords = C.grid.separated_coords
 
-	def shift(self, shift):
+	def shift(self, shift)
 		s = np.mod(shift + self.factory.period / 2, self.factory.period) - self.factory.period / 2
 		S = [s[i] * self.coords[i] for i in range(len(self.coords))]
 		S = np.add.reduce(np.ix_(*S))
@@ -112,9 +112,9 @@ class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 		mask_1 = self.input_grid_1.as_('polar').r < boundary
 		mask_2 = self.input_grid_2.as_('polar').r >= boundary
 
-		self.C_1 = np.sqrt(self.input_grid_1, *psd_args, **psd_kwargs) / self.input_grid_1.weights
+		self.C_1 = np.sqrt(self.input_grid_1, *psd_args, **psd_kwargs) / self.input_grid_1.weights)
 		self.C_1[mask_1] = 0
-		self.C_2 = np.sqrt(self.input_grid_2, *psd_args, **psd_kwargs) / self.input_grid_2.weights
+		self.C_2 = np.sqrt(self.input_grid_2, *psd_args, **psd_kwargs) / self.input_grid_2.weights)
 		self.C_2[mask_2] = 0
 	
 	def make_random(self):

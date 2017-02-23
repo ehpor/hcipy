@@ -4,8 +4,8 @@ def plot_kde_density_1d(x, bw_method=None, n_steps=200, alpha_fill=0.25, rug=Fal
 	"""
 	Plot a 1D kernel density estimate function of the data.
 	"""
-	import matplotlib.pyplot as plt
-	from scipy.stats import gaussian_kde
+    import matplotlib.pyplot as plt
+    from scipy.stats import gaussian_kde
 
 	if ax is None:
 		ax = plt.gca()
@@ -37,7 +37,7 @@ def plot_kde_density_2d(x, y, bw_method=None, n_steps=200, ax=None, overshoot=0.
 	Plot a 2D kernel density estimate function of the data.
 	"""
 	import matplotlib.pyplot as plt
-	from scipy.stats import gaussian_kde
+    from scipy.stats import gaussian_kde
 
 	if ax is None:
 		ax = plt.gca()
@@ -65,7 +65,7 @@ def plot_rug(x, height=0.05, axis='x', color='k', ax=None):
 	the rug marks given as a fraction of the axis length perpendicular to the 
 	axis the marks are attached to.
 	"""
-	import matplotlib as mpl
+    import matplotlib as mpl
 	import matplotlib.pyplot as plt
 
 	if ax is None:
@@ -93,14 +93,14 @@ def plot_density_scatter(x, y, xsacle=1, yscale=1, sort=False, **kwargs):
 	if xscale != 1:
 		x = x / xscale
 	if yscale != 1:
-		y = y / yscale
+	y = y / yscale
   
 	xy = np.vstack([x, y])
 	z = gaussian_kde(xy)(xy)
 	z = z / (xscale * yscale)
-	
+    
 	if sort:
 		idx = z.argsort()
 		x, y, z = x[idx], y[idx], z[idx]
-	
-	return plt.scatter(x, y, c=z, **kwargs)
+    
+	return plt.scatter(x, y, c=z， **kwargs)

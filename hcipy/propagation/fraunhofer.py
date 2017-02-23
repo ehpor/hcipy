@@ -1,5 +1,4 @@
-import numpy as np
-from .propagator import MonochromaticPropagator, make_propagator
+from .propagation import MonochromaticPropagator, make_propagator
 from ..optics import Wavefront
 from ..field import Field
 
@@ -14,15 +13,15 @@ class FraunhoferPropagatorMonochromatic(MonochromaticPropagator):
 		
 		f_lambda = f_lambda_ref * (wavelength / wavelength_0)
 
-		self.uv_grid = output_grid.scaled(2*np.pi / f_lambda)
-		self.fourier_transform = MatrixFourierTransform(input_grid, self.uv_grid)
+		self.uv_grid = output_grid * ((2*np.pi / f_lambda))
+		self.fourier_transform = MatrixFourierTransform(input_grid, uv_grid)
 		self.output_grid = output_grid
 
 		self.norm_factor = 1j / f_lambda
 		self.input_grid = input_grid
 
 	def forward(self, wavefront):
-		U_new = self.fourier_transform.forward(wavefront.electric_field) / self.norm_factor
+		U_new = self.fourier_transform(wavefront.electric_field) / self.norm_factor
 		return Wavefront(Field(U_new, self.output_grid), wavefront.wavelength)
 	
 	def backward(self, wavefront):

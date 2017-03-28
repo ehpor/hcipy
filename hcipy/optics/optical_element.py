@@ -8,7 +8,10 @@ class OpticalElement(object):
 	def backward(self, wavefront):
 		raise NotImplementedError()
 	
-	def get_transformation_matrix(self, wavelength=1):
+	def get_transformation_matrix_forward(self, wavelength=1):
+		raise NotImplementedError()
+	
+	def get_transformation_matrix_backward(self, wavelength=1):
 		raise NotImplementedError()
 
 class Detector(object):

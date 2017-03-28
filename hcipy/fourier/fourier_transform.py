@@ -7,7 +7,7 @@ class FourierTransform(object):
 	def backward(self, field):
 		raise NotImplementedError()
 	
-	def get_transformation_matrix(self):
+	def get_transformation_matrix_forward(self):
 		coords_in = self.input_grid.as_('cartesian').coords
 		coords_out = self.output_grid.as_('cartesian').coords
 
@@ -15,6 +15,16 @@ class FourierTransform(object):
 		A *= self.input_grid.weights
 
 		return A
+	
+	def get_transformation_matrix_backward(self):
+		coords_in = self.input_grid.as_('cartesian').coords
+		coords_out = self.output_grid.as_('cartesian').coords
+
+		A = np.exp(1j * np.dot(np.array(coords_in).T, coords_out))
+		A *= self.output_grid.weights# / np.sqrt(2*np.pi)**self.input_grid.ndim
+
+		return A
+
 
 def time_it(function, t_max=5, n_max=100):
 	import time
@@ -33,6 +43,7 @@ def time_it(function, t_max=5, n_max=100):
 def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='estimate'):
 	from .fast_fourier_transform import FastFourierTransform, make_fft_grid
 	from .matrix_fourier_transform import MatrixFourierTransform
+	from .naive_fourier_transform import NaiveFourierTransform
 
 	if output_grid is None:
 		# Choose between FFT and MFT
@@ -74,7 +85,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 					method = 'fft'
 	else:
 		# Choose between MFT and Naive
-		if input_grid.is_separable and input_grid.is_('cartesian') and output_grid.is_separable and output_grid.is_('cartesian') and input_grid.ndim in [1,2]:
+		if input_grid.is_separated and input_grid.is_('cartesian') and output_grid.is_separated and output_grid.is_('cartesian') and input_grid.ndim in [1,2]:
 			method = 'mft'
 		else:
 			method = 'naive'

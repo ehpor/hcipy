@@ -6,7 +6,7 @@ class MonochromaticPropagator(OpticalElement):
 		self.wavelength = wavelength
 
 def make_propagator(monochromatic_propagator):
-	class Propagator(object):
+	class Propagator(OpticalElement):
 		def __init__(self, *args, **kwargs):
 			self.wavelengths = []
 			self.monochromatic_propagators = []
@@ -34,7 +34,10 @@ def make_propagator(monochromatic_propagator):
 		def backward(self, wavefront):
 			return self.get_monochromatic_propagator(wavefront.wavelength).backward(wavefront)
 		
-		def get_transformation_matrix(self, wavelength=1):
-			return self.get_monochromatic_propagator(wavelength).get_transformation_matrix()
+		def get_transformation_matrix_forward(self, wavelength=1):
+			return self.get_monochromatic_propagator(wavelength).get_transformation_matrix_forward()
+
+		def get_transformation_matrix_backward(self, wavelength=1):
+			return self.get_monochromatic_propagator(wavelength).get_transformation_matrix_backward()
 
 	return Propagator

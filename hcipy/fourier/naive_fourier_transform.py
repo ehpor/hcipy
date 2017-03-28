@@ -7,8 +7,15 @@ class NaiveFourierTransform(FourierTransform):
         self.output_grid = output_grid
     
     def forward(self, field):
-        T = self.get_transformation_matrix()
+        T = self.get_transformation_matrix_forward()
         res = T.dot(field.ravel())
 
         from ..field import Field
         return Field(res, self.output_grid)
+    
+    def backward(self, field):
+        T = self.get_transformation_matrix_backward()
+        res = T.dot(field.ravel())
+
+        from ..field import Field
+        return Field(res, self.input_grid)

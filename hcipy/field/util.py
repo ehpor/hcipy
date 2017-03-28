@@ -52,7 +52,7 @@ def make_hexagonal_grid(circum_diameter, n_rings):
 		r += list(range(-n,0))
 	
 	x = (-np.array(q) + np.array(r)) * circum_diameter / 2
-	y = (np.array(q) + np.array(r)) * apothem
+	y = (np.array(q) + np.array(r)) * apothem * 2
 
 	weight = 2 * apothem**2 * np.sqrt(3)
 	

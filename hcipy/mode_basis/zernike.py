@@ -56,7 +56,7 @@ def zernike(n, m, D=1, grid=None):
 		z = sqrt(n+1) * np.outer(zernke_azimuthal(m, Theta), zernike_radial(n, abs(m), 2*R/D) * (2*R<D)).flatten()
 	else:
 		r, theta = grid.as_('polar').coords
-		z = sqrt(n+1) * zernike_azimuthal(m, theta) * zernike_radial(n, abs(m), 2*r/D) * (2*r/D)
+		z = sqrt(n+1) * zernike_azimuthal(m, theta) * zernike_radial(n, abs(m), 2*r/D) * (2*r<D)
 	
 	return Field(z, grid)
 

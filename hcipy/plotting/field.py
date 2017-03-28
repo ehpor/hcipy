@@ -59,23 +59,22 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	return im
 
 def contour_field(field, grid=None, ax=None, *args, **kwargs):
+	import matplotlib.pyplot as plt
 	if ax is None:
 		ax = plt.gca()
 
 	if grid is None:
-		grid = data.grid
-		values = data
+		grid = field.grid
 	else:
-		values = data
-		data = SampledFunction(data, grid)
+		field = Field(field, grid)
 	
 	c_grid = grid.as_('cartesian')
 	min_x, min_y, max_x, max_y = c_grid.x.min(), c_grid.y.min(), c_grid.x.max(), c_grid.y.max()
 
-	if grid.is_separable and grid.is_('cartesian'):
+	if grid.is_separated and grid.is_('cartesian'):
 		# We can contour directly
 		x, y = grid.coords.separated_coords
-		z = values.reshape(grid.shape).T
+		z = field.shaped
 		
 		X, Y = np.meshgrid(x, y)
 		
@@ -90,19 +89,17 @@ def contourf_field(field, grid=None, ax=None, *args, **kwargs):
 		ax = plt.gca()
 
 	if grid is None:
-		grid = data.grid
-		values = data
+		grid = field.grid
 	else:
-		values = data
-		data = SampledFunction(data, grid)
+		field = Field(field, grid)
 	
 	c_grid = grid.as_('cartesian')
 	min_x, min_y, max_x, max_y = c_grid.x.min(), c_grid.y.min(), c_grid.x.max(), c_grid.y.max()
 
-	if grid.is_separable and grid.is_('cartesian'):
+	if grid.is_separated and grid.is_('cartesian'):
 		# We can contour directly
 		x, y = grid.coords.separated_coords
-		z = values.reshape(grid.shape).T
+		z = field.shaped
 		
 		X, Y = np.meshgrid(x, y)
 		

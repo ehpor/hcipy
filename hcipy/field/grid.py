@@ -150,4 +150,5 @@ class Grid(object):
 		return str(self.__class__) + '(' + str(self.coords.__class__) + ')'
 
 	def closest_to(self, p):
-		raise NotImplementedError()
+		rel_points = self.points - np.array(p) * np.ones(self.ndim)
+		return np.argmin(np.sum(rel_points**2, axis=-1))

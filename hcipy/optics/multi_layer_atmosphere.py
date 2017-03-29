@@ -1,5 +1,6 @@
 import numpy as np
 from .optical_element import OpticalElement
+from ..field import Field
 
 def random_velocity(velocity):
 	"""
@@ -43,7 +44,7 @@ class AtmosphericModel(OpticalElement):
 	@t.setter
 	def t(self, t):
 		if t is None:
-			self.phase_screens = [self.phase_screen_factory.make_random() for i in len(turbulence_layers)]
+			self.phase_screens = [self.phase_screen_factory.make_random() for i in range(self.num_layers)]
 			self._t = 0
 		else:
 			self._t = t
@@ -90,16 +91,32 @@ class AtmosphericModel(OpticalElement):
 	@property
 	def layers(self):
 		return zip(self.heights, self.velocities, self.Cn_squared, self.phase_screens)
+	
+	@property
+	def num_layers(self):
+		return len(self.heights)
 
 def kolmogorov_psd(grid):
-	res = np.zeros()
-	return 0.023 * (u/(2*np.pi))**(-11/3.)
+	u = grid.as_('polar').r
+	res = np.empty(grid.size)
+	m = (u != 0)
+
+	res[m] = 0.023 * (u[m]/(2*np.pi))**(-11/3.)
+	res[~m] = 0
+
+	return Field(res, grid)
 
 def von_karman_psd(grid, u_o=0.1):
-	return 0.0299 * ((u**2 + u_o**2)/(2*np.pi)**2)**(-11/6.)
+	u = grid.as_('polar').r
+	res = 0.0299 * ((u**2 + u_o**2)/(2*np.pi)**2)**(-11/6.)
+	res[grid.closest_to(0)] = 0
+	return Field(res, grid)
 
 def modified_von_karman_psd(grid, u_o=0.1, u_i=100):
-	return VonKarmanPSD(u, u_o) * np.exp(-u**2/u_i**2)
+	u = grid.as_('polar').r
+	res = VonKarmanPSD(u, u_o) * np.exp(-u**2/u_i**2)
+	res[grid.closest_to(0)] = 0
+	return Field(res, grid)
 
 def make_standard_multilayer_atmosphere(fried_parameter=1, wavelength=500e-9, zenith_angle=0):
 	"""
@@ -110,9 +127,9 @@ def make_standard_multilayer_atmosphere(fried_parameter=1, wavelength=500e-9, ze
 	heights = np.array([500, 1000, 2000, 4000, 8000, 16000])
 	velocities = np.array([10, 10, 10, 10, 10, 10])
 	Cn_squared = np.array([0.2283, 0.0883, 0.0666, 0.1458, 0.3350, 0.1350])
-	Cn_squared = scale_Cn_squared_to_fried_parameter(Cn_Squared, fried_parameter, wavelength, zenith_angle)
+	Cn_squared = scale_Cn_squared_to_fried_parameter(Cn_squared, fried_parameter, wavelength, zenith_angle)
 
-	return (heights, velocities, Cn_squared)
+	return zip(heights, velocities, Cn_squared)
 
 def scale_Cn_squared_to_fried_parameter(Cn_squared, fried_parameter, wavelength=500e-9, zenith_angle=0):
 	k = 2*np.pi / wavelength

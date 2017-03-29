@@ -33,14 +33,14 @@ def regular_polygon_aperture(num_sides, circum_diameter):
 
 	# Make use of symmetry
 	if num_sides % 2 == 0:
-		thetas = np.arange(int(num_sides / 4) + 1) * 2*np.pi
+		thetas = np.arange(int(num_sides / 2), dtype='float') * np.pi / int(num_sides / 2)
 	else:
-		thetas = np.arange(int(num_sides / 2) + 1) * 2*np.pi
+		thetas = np.arange(int(num_sides / 2) + 1) * (num_sides - 2) * np.pi / (num_sides / 2)
 
-	mask = rectangular_aperture(circum_diameter)
+	mask = rectangular_aperture(circum_diameter*4)
 
 	def func(grid):
-		f = np.zeros(grid.size, dtype='float')
+		f = np.ones(grid.size, dtype='float')
 		g = grid.as_('cartesian')
 		m = mask(g) != 0
 
@@ -48,13 +48,16 @@ def regular_polygon_aperture(num_sides, circum_diameter):
 		x = x[m]
 		y = y[m]
 
+		f[~m] = 0
+
 		# Make use of symmetry
 		if num_sides % 2 == 0:
 			for theta in thetas:
-				f[m] = np.abs(np.cos(theta) * x + np.sin(theta) * y) < (circum_diameter / 2)
+				f[m] *= (np.abs(np.cos(theta) * x + np.sin(theta) * y) < apothem)
 		else:
 			for theta in thetas:
-				f[m] *= (np.cos(theta) * x + np.abs(np.sin(theta) * y)) < (circum_diameter / 2)
+				print(theta)
+				f[m] *= ((np.abs(np.sin(theta) * x) + -np.cos(theta) * y) < apothem)
 		
 		return Field(f, grid)
 	

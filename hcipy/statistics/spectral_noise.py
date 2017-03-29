@@ -1,6 +1,8 @@
 import numpy as np
 import copy
 
+from ..field import Field
+
 class SpectralNoiseFactory(object):
 	def __init__(self, psd, output_grid, psd_args=(), psd_kwargs={}):
 		self.psd = psd
@@ -49,7 +51,7 @@ class SpectralNoise(object):
 		return self()
 
 class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
-	def __init__(self, psd, output_grid, psd_args=(), psd_kwargs={}):
+	def __init__(self, psd, output_grid, oversample=1, psd_args=(), psd_kwargs={}):
 		from ..fourier import FastFourierTransform
 
 		SpectralNoiseFactory.__init__(self, psd, output_grid, psd_args, psd_kwargs)
@@ -57,7 +59,7 @@ class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
 		if not self.output_grid.is_regular:
 			raise ValueError("Can't make a SpectralNoiseFactoryFFT on a non-regular grid.")
 		
-		self.fourier = FastFourierTransform(self.output_grid)
+		self.fourier = FastFourierTransform(self.output_grid, q=oversample)
 		self.input_grid = self.fourier.output_grid
 	
 		self.period = output_grid.coords.delta * output_grid.coords.shape
@@ -71,7 +73,8 @@ class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
 		return SpectralNoiseFFT(self, C)
 	
 	def make_zero(self):
-		return SpectralNoise(self, np.zeros(self.input_grid.size, dtype='complex'))
+		C = Field(np.zeros(self.input_grid.size, dtype='complex'), self.input_grid)
+		return SpectralNoiseFFT(self, C)
 	
 class SpectralNoiseFFT(SpectralNoise):
 	def __init__(self, factory, C):
@@ -80,7 +83,7 @@ class SpectralNoiseFFT(SpectralNoise):
 		self.coords = C.grid.separated_coords
 
 	def shift(self, shift):
-		s = np.mod(shift + self.factory.period / 2, self.factory.period) - self.factory.period / 2
+		s = shift#np.mod(shift + self.factory.period / 2, self.factory.period) - self.factory.period / 2
 		S = [s[i] * self.coords[i] for i in range(len(self.coords))]
 		S = np.add.reduce(np.ix_(*S))
 		self.C *= np.exp(-1j * S.ravel())
@@ -94,10 +97,12 @@ class SpectralNoiseFFT(SpectralNoise):
 		return self
 	
 	def __call__(self):
-		return self.factory.fourier.inverse(self.C).real
+		return self.factory.fourier.backward(self.C).real
 	
 class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 	def __init__(self, psd, output_grid, oversampling, psd_args=(), psd_kwargs={}):
+		from ..fourier import FastFourierTransform, MatrixFourierTransform
+
 		SpectralNoiseFactory.__init__(self, psd, output_grid, psd_args, psd_kwargs)
 
 		self.oversampling = oversampling
@@ -105,16 +110,16 @@ class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 		self.fourier_1 = FastFourierTransform(self.output_grid)
 		self.input_grid_1 = self.fourier_1.output_grid
 
-		self.fourier_2 = self.input_grid_1.scale(1 / oversampling)
+		self.input_grid_2 = self.input_grid_1.scaled(1.0 / oversampling)
 		self.fourier_2 = MatrixFourierTransform(self.output_grid, self.input_grid_2)
 
 		boundary = np.abs(self.input_grid_2.x).max()
 		mask_1 = self.input_grid_1.as_('polar').r < boundary
 		mask_2 = self.input_grid_2.as_('polar').r >= boundary
 
-		self.C_1 = np.sqrt(self.input_grid_1, *psd_args, **psd_kwargs) / self.input_grid_1.weights
+		self.C_1 = np.sqrt(psd(self.input_grid_1, *psd_args, **psd_kwargs) / self.input_grid_1.weights)
 		self.C_1[mask_1] = 0
-		self.C_2 = np.sqrt(self.input_grid_2, *psd_args, **psd_kwargs) / self.input_grid_2.weights
+		self.C_2 = np.sqrt(psd(self.input_grid_2, *psd_args, **psd_kwargs) / self.input_grid_2.weights)
 		self.C_2[mask_2] = 0
 	
 	def make_random(self):
@@ -130,7 +135,10 @@ class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 		N_1 = self.input_grid_1.size
 		N_2 = self.input_grid_2.size
 
-		return SpectralNoiseMultiscale(self, np.zeros(N_1, dtype='complex'), np.zeros(N_2, dtype='complex'))
+		C_1 = Field(np.zeros(N_1, dtype='complex'), self.C_1.grid)
+		C_2 = Field(np.zeros(N_1, dtype='complex'), self.C_2.grid)
+
+		return SpectralNoiseMultiscale(self, C_1, C_2)
 	
 class SpectralNoiseMultiscale(SpectralNoise):
 	def __init__(self, factory, C_1, C_2):
@@ -143,10 +151,10 @@ class SpectralNoiseMultiscale(SpectralNoise):
 		self.coords_2 = C_2.grid.separated_coords
 
 	def shift(self, shift):
-		S_1 = [s[i] * self.coords_1[i] for i in range(len(self.coords_1))]
+		S_1 = [shift[i] * self.coords_1[i] for i in range(len(self.coords_1))]
 		S_1 = np.add.reduce(np.ix_(*S_1))
 
-		S_2 = [s[i] * self.coords_2[i] for i in range(len(self.coords_2))]
+		S_2 = [shift[i] * self.coords_2[i] for i in range(len(self.coords_2))]
 		S_2 = np.add.reduce(np.ix_(*S_2))
 
 		self.C_1 *= np.exp(-1j * S_1.ravel())
@@ -163,6 +171,6 @@ class SpectralNoiseMultiscale(SpectralNoise):
 		return self
 
 	def __call__(self):
-		ps = self.factory.fourier_1.inverse(self.C_1).real
-		ps += self.factory.fourier_2.inverse(self.C_2).real
+		ps = self.factory.fourier_1.backward(self.C_1).real
+		ps += self.factory.fourier_2.backward(self.C_2).real
 		return ps

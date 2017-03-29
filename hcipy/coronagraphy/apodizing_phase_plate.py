@@ -31,3 +31,6 @@ def generate_app_keller(wavefront, propagator, propagator_max, contrast, num_ite
 
 def generate_app_por(wavefront, propagator, propagator_max, contrast):
 	raise NotImplementedError()
+
+def generate_app_doelman(wavefront, propagator, propagator_max, contrast, num_iterations):
+	raise NotImplementedError()

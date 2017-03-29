@@ -5,7 +5,7 @@ from scipy.misc import imsave
 import os
 
 class GifWriter(object):
-	def __init__(self, filename, framerate):
+	def __init__(self, filename, framerate=15):
 		self.closed = False
 		self.filename = filename
 		self.framerate = framerate

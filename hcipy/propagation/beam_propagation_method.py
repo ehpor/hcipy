@@ -4,7 +4,7 @@ from ..optics import Wavefront
 from ..field import Field
 from ..fourier import FastFourierTransform
 
-class FresnelPropagatorMonochromatic(object):
+class WideAnglePropagatorMonochromatic(object):
 	def __init__(self, input_grid, distance, wavelength=1):
 		self.fft = FastFourierTransform(input_grid)
 		k = 2*np.pi / wavelength

@@ -1,6 +1,6 @@
 class OpticalElement(object):
 	def __call__(self, wavefront):
-		raise self.forward(wavefront)
+		return self.forward(wavefront)
 	
 	def forward(self, wavefront):
 		raise NotImplementedError()
@@ -20,3 +20,7 @@ class Detector(object):
 	
 	def read_out(self):
 		raise NotImplementedError()
+	
+	def __call__(self, wavefront, dt=1, weight=1):
+		self.integrate(wavefront, dt, weight)
+		return self.read_out()

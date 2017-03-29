@@ -7,7 +7,7 @@ def write_fits(data, filename, shape=None):
 	
 	hdu = None
 	
-	if not shape is None:
+	if shape is not None:
 		hdu = fits.PrimaryHDU(data.reshape(shape))
 	elif hasattr(data, 'grid'):
 		if data.grid.is_separated:

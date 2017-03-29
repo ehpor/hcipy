@@ -1,4 +1,3 @@
-import hcipy.techniques.computer_generated_hologram as cgh
 from hcipy import *
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +19,7 @@ angles = np.arange(N) * (np.pi / N)
 r = 30
 positions = [np.array([np.sin(angle)*r, np.cos(angle)*r]) for angle in angles]
 
-holo = cgh.make_multiplexed_cgh(pupil_grid, zernike_basis, positions, 1)
+holo = make_multiplexed_cgh(pupil_grid, zernike_basis, positions, 1)
 holo = np.sign(holo) * np.pi/2
 
 imshow_field(holo)

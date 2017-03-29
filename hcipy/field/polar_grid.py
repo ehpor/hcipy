@@ -40,6 +40,7 @@ def cartesian_to_polar(self):
 
 def polar_to_cartesian(self):
 	from .coordinates import UnstructuredCoords
+	from .cartesian_grid import CartesianGrid
 	
 	r = self.r
 	theta = self.theta

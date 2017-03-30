@@ -5,6 +5,6 @@ __all__ += ['FraunhoferPropagator']
 __all__ += ['AngularSpectrumPropagator']
 
 from .propagator import *
-from .beam_propagation_method import *
+from .angular_spectrum import *
 from .fresnel import *
 from .fraunhofer import *

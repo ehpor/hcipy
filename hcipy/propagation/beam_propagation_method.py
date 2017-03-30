@@ -13,8 +13,8 @@ class AngularSpectrumPropagatorMonochromatic(object):
 		self.fft = FastFourierTransform(input_grid)
 		k = 2*np.pi / wavelength
 		k_squared = self.fft.output_grid.as_('polar').r**2
-		k_z = np.sqrt( k**2 - k_squared + 0j )
-		self.transfer_function = np.exp( 1j*k_z*distance )
+		k_z = np.sqrt(k**2 - k_squared + 0j)
+		self.transfer_function = np.exp(1j * k_z * distance)
 	
 	def forward(self, wavefront):
 		ft = self.fft.forward(wavefront.electric_field)

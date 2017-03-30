@@ -9,6 +9,7 @@ class Wavefront(object):
 	def __init__(self, electric_field, wavelength=1):
 		self.electric_field = electric_field
 		self.wavelength = wavelength
+		self.wavenumber = 2.0 * np.pi / self.wavelength
 	
 	def copy(self):
 		return copy.deepcopy(self)

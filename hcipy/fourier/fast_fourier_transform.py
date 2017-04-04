@@ -3,6 +3,9 @@ from .fourier_transform import FourierTransform
 
 def make_fft_grid(input_grid, q=1, fov=1):
 	from ..field import CartesianGrid, RegularCoords
+
+	q = np.ones(input_grid.ndim) * q
+	fov = np.ones(input_grid.ndim) * fov
 	
 	# Check assumptions
 	if not input_grid.is_regular:

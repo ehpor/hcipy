@@ -12,12 +12,16 @@ def make_pupil_grid(N, D=1):
 
 	return CartesianGrid(RegularCoords(delta, N, zero))
 
-def make_focal_grid(pupil_grid, q=1, fov=1, focal_length=1, wavelength=1):
+def make_focal_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1):
 	from ..fourier import make_fft_grid
 
 	f_lambda = focal_length * wavelength
+	if num_airy is None:
+		fov = 1
+	else:
+		fov = num_airy / (pupil_grid.shape / 2)
+		
 	uv = make_fft_grid(pupil_grid, q, fov)
-
 	focal_grid = uv.scaled(f_lambda / (2*np.pi))
 	
 	return focal_grid

@@ -75,7 +75,7 @@ class Grid(object):
 
 			if self._weights is None:
 				self._weights = 1
-				warnings.warn('No automatic weights could be calculated for this grid.')
+				warnings.warn('No automatic weights could be calculated for this grid.', stacklevel=2)
 		
 		if np.isscalar(self._weights):
 			return np.ones(self.size) * self._weights

@@ -19,7 +19,8 @@ imshow_field(wf.phase, cmap='RdBu')
 plt.colorbar()
 plt.show()
 
-focal_grid = make_focal_grid(pupil_grid, 8, 0.1)
+focal_grid = make_focal_grid(pupil_grid, 8, 20)
+exit()
 prop = FraunhoferPropagator(pupil_grid, focal_grid)
 
 img = prop(wf)

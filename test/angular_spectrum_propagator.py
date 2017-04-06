@@ -12,7 +12,7 @@ k = 2*np.pi / wavelength
 N_samp = 1024
 pupil_grid = make_pupil_grid(N_samp, D_tel*N_over)
 aperture = circular_aperture(D_tel)
-focal_grid = make_focal_grid(pupil_grid, 1, 0.1)
+focal_grid = make_focal_grid(pupil_grid, 1, 500)
 
 fresnel = FresnelPropagator(pupil_grid, distance)
 ASP = AngularSpectrumPropagator(pupil_grid, distance)

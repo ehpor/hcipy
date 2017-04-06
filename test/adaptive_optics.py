@@ -10,7 +10,7 @@ N_mla = 8
 D_mla = 1.0 / N_mla
 
 pupil_grid = make_pupil_grid(N, 1.3)
-focal_grid = make_focal_grid(pupil_grid, 8, 0.3)
+focal_grid = make_focal_grid(pupil_grid, 8, 8)
 prop = FraunhoferPropagator(pupil_grid, focal_grid)
 
 x = np.arange(-1,1,D_mla)

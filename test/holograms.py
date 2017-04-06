@@ -27,7 +27,7 @@ plt.show()
 
 aper = aperture * np.exp(0.2j * holo)
 
-focal_grid = make_focal_grid(pupil_grid, 8, 0.3)
+focal_grid = make_focal_grid(pupil_grid, 8, 45)
 prop = FraunhoferPropagator(pupil_grid, focal_grid)
 
 wf = Wavefront(aper)

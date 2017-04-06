@@ -10,7 +10,7 @@ A = aperture(pupil_grid)
 imshow_field(A)
 plt.show()
 
-focal_grid = make_focal_grid(pupil_grid, 1, 0.1)
+focal_grid = make_focal_grid(pupil_grid, 8, 15)
 
 fresnel = FresnelPropagator(pupil_grid, 500)
 fraunhofer = FraunhoferPropagator(pupil_grid, focal_grid)

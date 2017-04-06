@@ -13,28 +13,31 @@ class FraunhoferPropagatorMonochromatic(MonochromaticPropagator):
 			f_lambda_ref = wavelength_0 * focal_length
 		
 		f_lambda = f_lambda_ref * (wavelength / wavelength_0)
-
 		self.uv_grid = output_grid.scaled(2*np.pi / f_lambda)
 		self.fourier_transform = make_fourier_transform(input_grid, self.uv_grid)
 		self.output_grid = output_grid
 
+		# Intrinsic to Fraunhofer propagation
 		self.norm_factor = (2*np.pi) / (1j * f_lambda)
+		# Wavelength power scaling due to grid redefinition
+		# and wavelength scaling w.r.t. wavelength_0
+		self.wavelength_norm_factor = 1 / f_lambda_ref
 		self.input_grid = input_grid
 
 	def forward(self, wavefront):
-		U_new = self.fourier_transform.forward(wavefront.electric_field) * self.norm_factor
+		U_new = self.fourier_transform.forward(wavefront.electric_field) * self.norm_factor * self.wavelength_norm_factor
 		return Wavefront(Field(U_new, self.output_grid), wavefront.wavelength)
 	
 	def backward(self, wavefront):
-		U_new = self.fourier_transform.backward(wavefront.electric_field) / self.norm_factor
+		U_new = self.fourier_transform.backward(wavefront.electric_field) / self.norm_factor / self.wavelength_norm_factor
 		return Wavefront(Field(U_new, self.input_grid), wavefront.wavelength)
 	
 	def get_transformation_matrix_forward(self, wavelength=1):
 		# Ignore input wavelength and just use the internal one.
-		return self.fourier_transform.get_transformation_matrix_forward() * self.norm_factor
+		return self.fourier_transform.get_transformation_matrix_forward() * self.norm_factor * self.wavelength_norm_factor
 	
 	def get_transformation_matrix_backward(self, wavelength=1):
 		# Ignore input wavelength and just use the internal one.
-		return self.fourier_transform.get_transformation_matrix_backward() / self.norm_factor
+		return self.fourier_transform.get_transformation_matrix_backward() / self.norm_factor / self.wavelength_norm_factor
 	
 FraunhoferPropagator = make_propagator(FraunhoferPropagatorMonochromatic)

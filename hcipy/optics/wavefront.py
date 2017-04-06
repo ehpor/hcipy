@@ -9,7 +9,6 @@ class Wavefront(object):
 	def __init__(self, electric_field, wavelength=1):
 		self.electric_field = electric_field
 		self.wavelength = wavelength
-		self.wavenumber = 2.0 * np.pi / self.wavelength
 	
 	def copy(self):
 		return copy.deepcopy(self)
@@ -27,6 +26,14 @@ class Wavefront(object):
 				self._electric_field = Field(U[0].astype('complex'), U[1])
 			else:
 				raise ValueError("Electric field requires an accompanying grid.")
+	
+	@property
+	def wavenumber(self):
+		return 2*np.pi / self.wavelength
+	
+	@wavenumber.setter
+	def wavenumber(self, wavenumber):
+		self.wavelength = 2*np.pi / wavenumber
 	
 	@property
 	def grid(self):

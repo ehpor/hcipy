@@ -9,12 +9,12 @@ class DeformableMirror(OpticalElement):
 	
 	def forward(self, wavefront):
 		wf = wavefront.copy()
-		wf.electric_field *= np.exp(2j * self.surface / wavefront.wavelength)
+		wf.electric_field *= np.exp(2j * self.surface * wavefront.wavenumber)
 		return wf
 	
 	def backward(self, wavefront):
 		wf = wavefront.copy()
-		wf.electric_field *= np.exp(-2j * self.surface / wavefront.wavelength)
+		wf.electric_field *= np.exp(-2j * self.surface * wavefront.wavenumber)
 		return wf
 	
 	@property

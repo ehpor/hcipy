@@ -13,11 +13,11 @@ def make_fft_grid(input_grid, q=1, fov=1):
 	if not input_grid.is_('cartesian'):
 		raise ValueError('The input_grid must be cartesian.')
 	
-	delta = (2*np.pi / (input_grid.delta * input_grid.shape)) / q
-	shape = (input_grid.shape * fov * q).astype('int')
-	zero = delta * (-shape/2).astype('int')
+	delta = (2*np.pi / (input_grid.delta * input_grid.dims)) / q
+	dims = (input_grid.dims * fov * q).astype('int')
+	zero = delta * (-dims/2).astype('int')
 	
-	return CartesianGrid(RegularCoords(delta, shape, zero))
+	return CartesianGrid(RegularCoords(delta, dims, zero))
 
 class FastFourierTransform(FourierTransform):
 	def __init__(self, input_grid, q=1, fov=1):
@@ -47,9 +47,7 @@ class FastFourierTransform(FourierTransform):
 		cutout_end = cutout_start + self.shape_out
 		self.cutout_output = [slice(start, end) for start, end in zip(cutout_start, cutout_end)]
 		
-		center = input_grid.zero + input_grid.delta * (np.array(input_grid.shape) // 2)
-		
-		center = input_grid.zero + input_grid.delta * (np.array(input_grid.shape) // 2)
+		center = input_grid.zero + input_grid.delta * (np.array(input_grid.dims) // 2)
 		if np.allclose(center, 0):
 			self.shift = 1
 		else:

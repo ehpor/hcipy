@@ -22,8 +22,8 @@ class CartesianGrid(Grid):
 		return self.coords[3]
 	
 	def scale(self, scale):
-		self.coords *= scale
 		self.weights *= np.abs(scale)**self.ndim
+		self.coords *= scale
 
 	def shift(self, shift):
 		self.coords += shift

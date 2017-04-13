@@ -10,7 +10,7 @@ Welcome to HCIPy's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
+   fields
 
 API Reference
 =============
@@ -18,4 +18,4 @@ API Reference
 .. autosummary::
    :toctree: _autosummary
 
-   hcipy
+   hcipy.multiprocessing.mpi_map

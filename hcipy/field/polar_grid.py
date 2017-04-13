@@ -16,6 +16,7 @@ class PolarGrid(Grid):
 	def scale(self, scale):
 		self.coords *= np.array([scale, 1])
 		self.weights *= np.abs(scale)**(self.ndim)
+		return self
 
 	def shift(self, shift):
 		raise ValueError("Can't shift a PolarGrid inplace.");

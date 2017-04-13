@@ -1,6 +1,6 @@
 # HCIPy
 
-This Python package provides a common framework for performing optical propagation simulations, meant for high contrast imaging, in Python.
+This Python package provides a common framework for performing optical propagation simulations, meant for high contrast imaging.
 
 > **Caution**: this library is still under heavy development. Many functions are untested and may not work as expected. Testing and adding functionality will continue over the next few weeks.
 
@@ -37,7 +37,7 @@ git checkout -b new_feature
 ```
 where `new_feature` is the name of the feature that you want to develop. You can then use normal `git` commands for commits. Use
 ```
-git push -u origin marys-feature
+git push -u origin new_feature
 ```
 to add your feature to the repository on Gitlab for all other to see. Use
 ```

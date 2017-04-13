@@ -9,6 +9,7 @@ from . import math_util
 from . import mode_basis
 from . import multiprocessing
 from . import optics
+from . import photonics
 from . import plotting
 from . import propagation
 from . import statistics
@@ -26,6 +27,7 @@ from .math_util import *
 from .mode_basis import *
 from .multiprocessing import *
 from .optics import *
+from .photonics import *
 from .plotting import *
 from .propagation import *
 from .statistics import *
@@ -44,6 +46,7 @@ __all__.extend(math_util.__all__)
 __all__.extend(mode_basis.__all__)
 __all__.extend(multiprocessing.__all__)
 __all__.extend(optics.__all__)
+__all__.extend(photonics.__all__)
 __all__.extend(plotting.__all__)
 __all__.extend(propagation.__all__)
 __all__.extend(statistics.__all__)

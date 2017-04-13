@@ -15,7 +15,7 @@ def make_fft_grid(input_grid, q=1, fov=1):
 	
 	delta = (2*np.pi / (input_grid.delta * input_grid.dims)) / q
 	dims = (input_grid.dims * fov * q).astype('int')
-	zero = delta * (-dims/2).astype('int')
+	zero = delta * (-(dims-1)/2).astype('int')
 	
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 
@@ -52,7 +52,7 @@ class FastFourierTransform(FourierTransform):
 			self.shift = 1
 		else:
 			self.shift = np.exp(-1j * np.dot(center, self.output_grid.coords))
-			self.shift /= np.fft.fftshift(self.shift.reshape(self.shape_out)).ravel()[0] # No piston shift (remove central shift phase)
+			self.shift /= np.fft.ifftshift(self.shift.reshape(self.shape_out)).ravel()[0] # No piston shift (remove central shift phase)
 	
 	def forward(self, field):
 		from ..field import Field

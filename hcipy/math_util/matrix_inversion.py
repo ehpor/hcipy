@@ -2,7 +2,7 @@ import numpy as np
 
 def inverse_truncated_modal(M, num_modes, svd=None):
 	if svd is None:
-		from .svd import SVD
+		from .singular_value_decomposition import SVD
 		svd = SVD(M, num_modes)
 
 	U, S, Vt = svd.svd
@@ -10,7 +10,7 @@ def inverse_truncated_modal(M, num_modes, svd=None):
 
 def inverse_truncated(M, rcond=1e-15, svd=None):
 	if svd is None:
-		from .svd import SVD
+		from .singular_value_decomposition import SVD
 		svd = SVD(M)
 
 	U, S, Vt = svd.svd
@@ -20,7 +20,7 @@ def inverse_truncated(M, rcond=1e-15, svd=None):
 
 def inverse_tikhonov(M, rcond=1e-15, svd=None):
 	if svd is None:
-		from .svd import SVD
+		from .singular_value_decomposition import SVD
 		svd = SVD(M)
 	
 	U, S, Vt = svd.svd

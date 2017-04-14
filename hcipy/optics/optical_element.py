@@ -17,28 +17,29 @@ class OpticalElement(object):
 	def get_transformation_matrix_backward(self, wavelength=1):
 		raise NotImplementedError()
 
-class OpticalSystem(list, OpticalElement):
+class OpticalSystem(list):
 
-	def __init__(self, **kwargs):
-		list.__init__(self, **kwargs)
+	#def __init__(self, **kwargs):
+	#	list.__init__(self, **kwargs)
 
 	def forward(self, wavefront):
 		temp = wavefront.copy()
-		for oe in self.optical_elements:
+		for i, optical_element in enumerate(self):
 			#pyplot.subplot(1,2,1)
-			#imshow_field( temp.phase )
+			#imshow_field( temp.intensity )
+			print("Element {:d}".format(i))
 			print( temp.total_power )
-			temp = oe.forward(temp)
+			temp = optical_element.forward(temp)
 			print( temp.total_power )
 			#pyplot.subplot(1,2,2)
-			#imshow_field( temp.phase )
+			#imshow_field( temp.intensity )
 			#pyplot.show()
 		return temp
 	
 	def backward(self, wavefront):
 		temp = wavefront.copy()
-		for oe in self.optical_elements:
-			temp = oe.backward(temp)
+		for optical_element in self:
+			temp = optical_element.backward(temp)
 		return temp
 	
 	# String all optical elements together in a single matrix

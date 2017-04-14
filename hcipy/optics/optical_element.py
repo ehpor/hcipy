@@ -19,21 +19,10 @@ class OpticalElement(object):
 
 class OpticalSystem(list):
 
-	#def __init__(self, **kwargs):
-	#	list.__init__(self, **kwargs)
-
 	def forward(self, wavefront):
 		temp = wavefront.copy()
 		for i, optical_element in enumerate(self):
-			#pyplot.subplot(1,2,1)
-			#imshow_field( temp.intensity )
-			print("Element {:d}".format(i))
-			print( temp.total_power )
 			temp = optical_element.forward(temp)
-			print( temp.total_power )
-			#pyplot.subplot(1,2,2)
-			#imshow_field( temp.intensity )
-			#pyplot.show()
 		return temp
 	
 	def backward(self, wavefront):

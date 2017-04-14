@@ -14,7 +14,7 @@ if __name__ == "__main__":
 			pyplot.axis('off')
 		pyplot.show()
 	
-	pyramid = PyramidWavefrontSensor(pupil_plane, 2, 32, CCD, wavelength=1.0E-6)
+	pyramid = PyramidWavefrontSensor(pupil_plane, 2, 128, CCD, wavelength=1.0E-6)
 
 	aperture = circular_aperture(1)(pupil_plane)
 	for i in range( Nz ):

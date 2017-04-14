@@ -10,8 +10,7 @@ from ..optics import OpticalSystem
 from matplotlib import pyplot
 import numpy as np
 
-# TODO: change input variables.
-# change output_grid to pupil_diameter and pupil_separation
+# TODO: Change measurement function to find pupils correctly!
 class PyramidWavefrontSensor(WavefrontSensor):
 	def __init__(self, input_grid, pupil_separation, num_pupil_pixels, detector, wavelength):
 		
@@ -23,22 +22,22 @@ class PyramidWavefrontSensor(WavefrontSensor):
 		self.input_grid = input_grid
 		self.detector = detector(self.output_grid)
 
-		self.optical_system = self.make_optical_system(self.input_grid, self.output_grid,wavelength)
+		self.optical_system = self.make_optical_system(self.input_grid, self.output_grid, wavelength)
 
-	def make_optical_system(self, input_grid, output_grid,wavelength):
+	def make_optical_system(self, input_grid, output_grid, wavelength):
 		fourier_grid = make_focal_grid(input_grid, q=(2 + self.pupil_separation), wavelength=wavelength)
 
-		fraunhofer_1 = FraunhoferPropagator(input_grid,fourier_grid,wavelength_0=wavelength)
-		a = 0.5 * self.pupil_separation * 2.0 * np.pi/wavelength
-		b = 0.5 * self.pupil_separation * 2.0 * np.pi/wavelength
+		fraunhofer_1 = FraunhoferPropagator(input_grid, fourier_grid, wavelength_0=wavelength)
+		a = 0.5 * self.pupil_separation * 2.0*np.pi / wavelength
+		b = 0.5 * self.pupil_separation * 2.0*np.pi / wavelength
 		
 		T = (fourier_grid.x>0) * (fourier_grid.y>0) * np.exp(1j* (a * fourier_grid.x + b * fourier_grid.y))
 		T += (fourier_grid.x>0) * (fourier_grid.y<0) * np.exp(1j* (a * fourier_grid.x - b * fourier_grid.y))
 		T += (fourier_grid.x<0) * (fourier_grid.y>0) * np.exp(1j* (-a * fourier_grid.x + b * fourier_grid.y))
 		T += (fourier_grid.x<0) * (fourier_grid.y<0) * np.exp(-1j* (a * fourier_grid.x + b * fourier_grid.y))
 
-		horizontal_edge_mask = abs(fourier_grid.x)<1.0E-13
-		vertical_edge_mask = abs(fourier_grid.y)<1.0E-13
+		horizontal_edge_mask = abs(fourier_grid.x) < 1.0E-13
+		vertical_edge_mask = abs(fourier_grid.y) < 1.0E-13
 		T[horizontal_edge_mask] += 0.5 * (np.exp(1j* (a * fourier_grid.x + b * fourier_grid.y)) + np.exp(1j* (a * fourier_grid.x - b * fourier_grid.y)))[horizontal_edge_mask]
 		T[vertical_edge_mask] += 0.5 * (np.exp(1j* (a * fourier_grid.x + b * fourier_grid.y)) + np.exp(1j* (-a * fourier_grid.x + b * fourier_grid.y)))[vertical_edge_mask]
 		T = T/np.abs(T)
@@ -46,10 +45,10 @@ class PyramidWavefrontSensor(WavefrontSensor):
 		pyramid_prism = Apodizer(T)
 		fraunhofer_2 = FraunhoferPropagator(fourier_grid, output_grid, wavelength_0=wavelength)
 
-		return OpticalSystem((fraunhofer_1,pyramid_prism,fraunhofer_2))
+		return OpticalSystem((fraunhofer_1, pyramid_prism, fraunhofer_2))
 
 	def measurement(self, pupil_intensity):
-		B = np.reshape( pupil_intensity, pupil_intensity.grid.shape )
+		B = np.reshape(pupil_intensity, pupil_intensity.grid.shape)
 		shape = B.shape
 
 		Nx = shape[0]//2

@@ -1,4 +1,5 @@
 __all__ = ['WavefrontSensor']
+__all__ += ['PyramidWavefrontSensor']
 
 from .holographic_modal import *
 from .optical_differentiation import *

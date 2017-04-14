@@ -16,11 +16,15 @@ def circular_aperture(diameter):
 
 def rectangular_aperture(size, center=None):
 	dim = size * np.ones(2)
+	
+	if center is None:
+		shift = np.zeros(2)
+	else:
+		shift = center * np.ones(2)
 
 	def func(grid):
 		x, y = grid.as_('cartesian').coords
-		f = (np.abs(x) <= (dim[0]/2)) * (np.abs(y) <= (dim[1]/2))
-
+		f = (np.abs(x-shift[0]) <= (dim[0]/2)) * (np.abs(y-shift[1]) <= (dim[1]/2))			
 		return Field(f.astype('float'), grid)
 	
 	return func

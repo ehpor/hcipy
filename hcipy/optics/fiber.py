@@ -1,5 +1,5 @@
 import numpy as np
-from .optical_element import Detector
+from .detector import Detector
 
 def fiber_mode_gaussian(grid, mode_field_diameter):
 	g = grid.as_('polar')

@@ -9,7 +9,10 @@ class WavefrontSensor(object):
 	def make_optical_system(self):
 		raise NotImplementedError()
 
-	def measurement(self, intensity_measurement):
+	def measurement(self):
+		raise NotImplementedError()
+
+	def calibrate(self):
 		raise NotImplementedError()
 
 	def integrate(self, wavefront, dt=1, weight=1):

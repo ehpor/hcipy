@@ -1,13 +1,13 @@
 from hcipy import *
 from matplotlib import pyplot
-import numpy as np
+import numpy
 
 if __name__ == "__main__":
 	pupil_plane = make_pupil_grid(128,1)
-	output_grid = make_pupil_grid(64,4.0)
+	output_grid = make_pupil_grid(256,2.0)
 
 	Nz = 5
-	zernike_basis = make_zernike_basis(Nz, 1, pupil_plane, 2)
+	zernike_basis = make_zernike_basis(Nz, 1, pupil_plane, 1)
 	if False:
 		for i,m in enumerate(zernike_basis):
 			pyplot.subplot(3,3,i+1)
@@ -15,7 +15,7 @@ if __name__ == "__main__":
 			pyplot.axis('off')
 		pyplot.show()
 	
-	pyramid = PyramidWavefrontSensor(pupil_plane,output_grid,CCD(output_grid),wavelength=1.0E-6)
+	pyramid = PyramidWavefrontSensor(pupil_plane, output_grid, CCD, wavelength=1.0E-6)
 
 	aperture = circular_aperture(1)(pupil_plane)
 	for i in range( Nz ):

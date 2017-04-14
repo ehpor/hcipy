@@ -19,48 +19,60 @@ def quadrant_filter(size, center=None):
 	
 	def func(grid):
 		x, y = grid.as_('cartesian').coords
-		f = (np.abs(x/x.max()-shift[0]) <= (dim[0]/2)) * (np.abs(y/y.max()-shift[1]) <= (dim[1]/2))			
+		f = (np.abs(x/x.max()-shift[0]) <= (dim[0]/2)) * (np.abs(y/y.max()-shift[1]) <= (dim[1]/2))	
 		return f.astype('float')
 	
 	return func
 
+# TODO: fix quadrant code!
+# TODO: change input variables.
+# change output_grid to pupil_diameter and pupil_separation
 class PyramidWavefrontSensor(WavefrontSensor):
 	def __init__(self, input_grid, output_grid, detector, wavelength):
-		self.detector = detector
+		
 		self.output_grid = output_grid
 		self.input_grid = input_grid
+		self.detector = detector(output_grid)
 
 		self.optical_system = self.make_optical_system(self.input_grid, self.output_grid,wavelength)
 
 	def make_optical_system(self, input_grid, output_grid,wavelength):
-		fourier_grid = make_focal_grid(input_grid,q=4,wavelength=wavelength)
+		fourier_grid = make_focal_grid(input_grid,q=16,wavelength=wavelength)
 
 		fraunhofer_1 = FraunhoferPropagator(input_grid,fourier_grid,wavelength_0=wavelength)
-		a = 1.0 * 2.0 * np.pi/wavelength
-		b = 1.0 * 2.0 * np.pi/wavelength
+		a = 0.5 * 2.0 * np.pi/wavelength
+		b = 0.5 * 2.0 * np.pi/wavelength
 		
-		T = quadrant_filter( np.array([1.0,1.0]) , np.array([0.5,0.5]) )(fourier_grid) * np.exp(1j* (a * fourier_grid.x + b * fourier_grid.y))
-		T += quadrant_filter( np.array([1.0,1.0]) , np.array([0.5,-0.5]) )(fourier_grid) * np.exp(1j* (a * fourier_grid.x - b * fourier_grid.y))
-		T += quadrant_filter( np.array([1.0,1.0]) , np.array([-0.5,0.5]) )(fourier_grid) * np.exp(1j* (-a * fourier_grid.x + b * fourier_grid.y))
-		T += quadrant_filter( np.array([1.0,1.0]) , np.array([-0.5,-0.5]) )(fourier_grid) * np.exp(-1j* (a * fourier_grid.x + b * fourier_grid.y))
+		T = (fourier_grid.x>0) * (fourier_grid.y>0) * np.exp(1j* (a * fourier_grid.x + b * fourier_grid.y))
+		T += (fourier_grid.x>0) * (fourier_grid.y<0) * np.exp(1j* (a * fourier_grid.x - b * fourier_grid.y))
+		T += (fourier_grid.x<0) * (fourier_grid.y>0) * np.exp(1j* (-a * fourier_grid.x + b * fourier_grid.y))
+		T += (fourier_grid.x<0) * (fourier_grid.y<0) * np.exp(-1j* (a * fourier_grid.x + b * fourier_grid.y))
 
-		pyramid_prism = Apodizer(T.flatten())
+		horizontal_edge_mask = abs(fourier_grid.x)<1.0E-13
+		vertical_edge_mask = abs(fourier_grid.y)<1.0E-13
+		T[horizontal_edge_mask] += 0.5 * (np.exp(1j* (a * fourier_grid.x + b * fourier_grid.y)) + np.exp(1j* (a * fourier_grid.x - b * fourier_grid.y)))[horizontal_edge_mask]
+		T[vertical_edge_mask] += 0.5 * (np.exp(1j* (a * fourier_grid.x + b * fourier_grid.y)) + np.exp(1j* (-a * fourier_grid.x + b * fourier_grid.y)))[vertical_edge_mask]
+		T = T/np.abs(T)
+
+		pyramid_prism = Apodizer(T)
 		fraunhofer_2 = FraunhoferPropagator(fourier_grid, output_grid, wavelength_0=wavelength)
 
-		A = Field( np.angle(T.flatten()), fourier_grid )
-		#imshow_field( A )
-		#pyplot.colorbar()
-		#pyplot.show()
+		if False:
+			A = Field( np.angle(T.flatten()), fourier_grid )
+			B = Field( np.abs(T.flatten()), fourier_grid)
+			pyplot.subplot(1,2,1)
+			imshow_field( A )
+			pyplot.colorbar()
+			pyplot.subplot(1,2,2)
+			imshow_field( B )
+			pyplot.colorbar()
+			pyplot.show()
 
-		temp = OpticalSystem()
-		temp.add_element(fraunhofer_1)
-		temp.add_element(pyramid_prism)
-		temp.add_element(fraunhofer_2)
+		temp = OpticalSystem((fraunhofer_1,pyramid_prism,fraunhofer_2))
 
 		return temp
 
 	def measurement(self, pupil_intensity):
-		print( pupil_intensity.grid.shape )
 		B = np.reshape( pupil_intensity, pupil_intensity.grid.shape )
 		shape = B.shape
 

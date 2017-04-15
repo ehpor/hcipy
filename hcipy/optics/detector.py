@@ -14,7 +14,7 @@ class Detector(object):
 # TODO: add the detector noise
 class CCD(Detector):
 	def __init__(self, pixel_grid):
-		self.intensity = Field( np.zeros((pixel_grid.size,)), pixel_grid )
+		self.intensity = Field(np.zeros((pixel_grid.size,)), pixel_grid)
 
 	def integrate(self, wavefront, dt, weight=1):
 		self.intensity += wavefront.intensity * dt * weight

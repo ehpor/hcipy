@@ -1,41 +1,37 @@
 from hcipy import *
-from matplotlib import pyplot
-import numpy
+from matplotlib import pyplot as plt
+import numpy as np
 
 if __name__ == "__main__":
 	pupil_plane = make_pupil_grid(128,1)
 
-	Nz = 5
-	zernike_basis = make_zernike_basis(Nz, 1, pupil_plane, 1)
-	if False:
-		for i,m in enumerate(zernike_basis):
-			pyplot.subplot(3,3,i+1)
-			imshow_field(zernike_basis[i], cmap='RdBu')
-			pyplot.axis('off')
-		pyplot.show()
-	
-	pyramid = PyramidWavefrontSensor(pupil_plane, 2, 128, CCD, wavelength=1.0E-6)
+	num_zernike = 5
+	zernike_basis = make_zernike_basis(num_zernike, 1, pupil_plane, 2)
+
+	pupil_separation = 1
+	num_pupil_pixels = 32
+	pyramid = PyramidWavefrontSensor(pupil_plane, pupil_separation, num_pupil_pixels, CCD, wavelength=1.0E-6)
 
 	aperture = circular_aperture(1)(pupil_plane)
-	for i in range( Nz ):
+	for i in range(num_zernike):
 		
-		wf = Wavefront( aperture * numpy.exp(1j * zernike_basis[i]), wavelength = 1.0E-6 )
+		wf = Wavefront(aperture * np.exp(1j * zernike_basis[i]), wavelength=1.0E-6 )
 		wf.total_power = 1
 		pyramid.integrate(wf)
 		It = pyramid.detector.read_out() 
-		pyplot.figure(1)
-		pyplot.subplot(3,3,i+1)
-		imshow_field( It )
-		pyplot.colorbar()
+		plt.figure(1)
+		plt.subplot(3,3,i+1)
+		imshow_field(It)
+		plt.colorbar()
 		
-		pyplot.figure(2)
-		pyplot.subplot(3,3,i+1)
-		pyplot.imshow( pyramid.measurement(It)[0] )
-		pyplot.colorbar()
+		plt.figure(2)
+		plt.subplot(3,3,i+1)
+		plt.imshow(pyramid.measurement(It)[0])
+		plt.colorbar()
 
-		pyplot.figure(3)
-		pyplot.subplot(3,3,i+1)
-		pyplot.imshow( pyramid.measurement(It)[1] )
-		pyplot.colorbar()
+		plt.figure(3)
+		plt.subplot(3,3,i+1)
+		plt.imshow(pyramid.measurement(It)[1])
+		plt.colorbar()
 
-	pyplot.show()
+	plt.show()

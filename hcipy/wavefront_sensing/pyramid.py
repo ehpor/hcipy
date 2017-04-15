@@ -1,25 +1,28 @@
 from .wavefront_sensor import WavefrontSensor
 from ..optics import Apodizer
 from ..propagation import FraunhoferPropagator
-from ..aperture import rectangular_aperture
+from ..aperture import *
 from ..field.util import *
 from ..field import *
 from ..plotting import *
 from ..optics import OpticalSystem
 
-from matplotlib import pyplot
+from matplotlib import pyplot as plt
 import numpy as np
 
 class PyramidWavefrontSensor(WavefrontSensor):
-	def __init__(self, input_grid, pupil_separation, num_pupil_pixels, detector, over_sampling=2, wavelength=1):
+	def __init__(self, input_grid, pupil_separation, num_pupil_pixels, detector, measurement_diameter=1, over_sampling=2, wavelength=1):
 		
 		Din = input_grid.x.max() - input_grid.x.min()
 		self.pupil_separation = pupil_separation
 		self.num_pupil_pixels = num_pupil_pixels
 		self.over_sampling = over_sampling
 
-		self.output_grid = make_pupil_grid( 2 * pupil_separation * num_pupil_pixels, 2 * pupil_separation * Din)
 		self.input_grid = input_grid
+		self.output_grid = make_pupil_grid( 2 * pupil_separation * num_pupil_pixels, 2 * pupil_separation * Din)
+		self.measurement_grid = make_pupil_grid( pupil_separation * num_pupil_pixels, pupil_separation * Din)
+		self.measurement_mask = circular_aperture(Din*measurement_diameter)(self.measurement_grid)>0
+
 		self.detector = detector(self.output_grid)
 
 		self.optical_system = self.make_optical_system(self.input_grid, self.output_grid, wavelength)
@@ -47,12 +50,12 @@ class PyramidWavefrontSensor(WavefrontSensor):
 
 		return OpticalSystem((fraunhofer_1, pyramid_prism, fraunhofer_2))
 
-	def measurement(self, pupil_intensity):
+	def reduced_pupils(self, pupil_intensity):
 		B = np.reshape(pupil_intensity, pupil_intensity.grid.shape)
-		shape = B.shape
 
-		Nx = shape[0]//2
-		Ny = shape[0]//2
+		Nx = B.shape[0]//2
+		Ny = B.shape[1]//2
+
 		Ia = B[0:Nx,0:Ny]
 		Ib = B[Nx:(2*Nx),0:Ny]
 		Ic = B[Nx:(2*Nx),Ny:(2*Ny)]
@@ -61,3 +64,7 @@ class PyramidWavefrontSensor(WavefrontSensor):
 		I1 = (Ia+Ib-Ic-Id)/(Ia+Ib+Ic+Id)
 		I2 = (Ia-Ib-Ic+Id)/(Ia+Ib+Ic+Id)
 		return I1, I2
+
+	def measurement(self, pupil_intensity):
+		I1, I2 = self.reduced_pupils(pupil_intensity)
+		return np.concatenate( (I1.flatten()[self.measurement_mask], I2.flatten()[self.measurement_mask]) )

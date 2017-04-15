@@ -10,12 +10,11 @@ Welcome to HCIPy's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   introduction
    fields
-
-API Reference
-=============
-
-.. autosummary::
-   :toctree: _autosummary
-
-   hcipy.multiprocessing.mpi_map
+   mode_bases
+   fourier_transforms
+   optical_systems
+   adaptive_optics
+   coronagraphy
+   misc_techniques

@@ -18,18 +18,21 @@ class OpticalElement(object):
 		raise NotImplementedError()
 
 class OpticalSystem(list):
-
-	def forward(self, wavefront):
-		temp = wavefront.copy()
-		for i, optical_element in enumerate(self):
-			temp = optical_element.forward(temp)
-		return temp
+	def forward(self, wavefront, verbose=False):
+		intermediate_wavefront = wavefront.copy()
+		for optical_element in self:
+			if verbose:
+				print(intermediate_wavefront.total_power)
+			intermediate_wavefront = optical_element.forward(intermediate_wavefront)
+			if verbose:
+				print(intermediate_wavefront.total_power)
+		return intermediate_wavefront
 	
 	def backward(self, wavefront):
-		temp = wavefront.copy()
+		intermediate_wavefront = wavefront.copy()
 		for optical_element in self:
-			temp = optical_element.backward(temp)
-		return temp
+			intermediate_wavefront = optical_element.backward(intermediate_wavefront)
+		return intermediate_wavefront
 	
 	# String all optical elements together in a single matrix
 	def get_transformation_matrix_forward(self, wavelength=1):

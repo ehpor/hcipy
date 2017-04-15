@@ -10,22 +10,22 @@ from ..optics import OpticalSystem
 from matplotlib import pyplot
 import numpy as np
 
-# TODO: Change measurement function to find pupils correctly!
 class PyramidWavefrontSensor(WavefrontSensor):
-	def __init__(self, input_grid, pupil_separation, num_pupil_pixels, detector, wavelength):
+	def __init__(self, input_grid, pupil_separation, num_pupil_pixels, detector, over_sampling=2, wavelength=1):
 		
 		Din = input_grid.x.max() - input_grid.x.min()
 		self.pupil_separation = pupil_separation
 		self.num_pupil_pixels = num_pupil_pixels
+		self.over_sampling = over_sampling
 
-		self.output_grid = make_pupil_grid((2 + pupil_separation) * num_pupil_pixels, (2 + pupil_separation) * Din)
+		self.output_grid = make_pupil_grid( 2 * pupil_separation * num_pupil_pixels, 2 * pupil_separation * Din)
 		self.input_grid = input_grid
 		self.detector = detector(self.output_grid)
 
 		self.optical_system = self.make_optical_system(self.input_grid, self.output_grid, wavelength)
 
 	def make_optical_system(self, input_grid, output_grid, wavelength):
-		fourier_grid = make_focal_grid(input_grid, q=(2 + self.pupil_separation), wavelength=wavelength)
+		fourier_grid = make_focal_grid(input_grid, q=2*self.pupil_separation*self.over_sampling, wavelength=wavelength)
 
 		fraunhofer_1 = FraunhoferPropagator(input_grid, fourier_grid, wavelength_0=wavelength)
 		a = 0.5 * self.pupil_separation * 2.0*np.pi / wavelength

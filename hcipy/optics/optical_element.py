@@ -1,6 +1,3 @@
-from ..plotting import *
-from matplotlib import pyplot
-
 class OpticalElement(object):
 	def __call__(self, wavefront):
 		return self.forward(wavefront)

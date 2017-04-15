@@ -1,5 +1,3 @@
-from ..optics import Detector
-
 class WavefrontSensor(object):
 	def __init__(self, detector):
 		self.detector = detector

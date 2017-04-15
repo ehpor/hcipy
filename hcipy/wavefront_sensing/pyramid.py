@@ -1,13 +1,9 @@
 from .wavefront_sensor import WavefrontSensor
-from ..optics import Apodizer
+from ..optics import *
 from ..propagation import FraunhoferPropagator
 from ..aperture import *
-from ..field.util import *
 from ..field import *
-from ..plotting import *
-from ..optics import OpticalSystem
 
-from matplotlib import pyplot as plt
 import numpy as np
 
 class PyramidWavefrontSensor(WavefrontSensor):

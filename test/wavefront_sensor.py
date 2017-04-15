@@ -5,7 +5,7 @@ import numpy as np
 if __name__ == "__main__":
 	pupil_plane = make_pupil_grid(128,1)
 
-	num_zernike = 5
+	num_zernike = 9
 	zernike_basis = make_zernike_basis(num_zernike, 1, pupil_plane, 2)
 
 	pupil_separation = 1.5
@@ -17,6 +17,7 @@ if __name__ == "__main__":
 		
 		wf = Wavefront(aperture * np.exp(1j * zernike_basis[i]), wavelength=1.0E-6 )
 		wf.total_power = 1
+		
 		pyramid.integrate(wf)
 		pupil_intensity = pyramid.detector.read_out() 
 		reduced_pupils = pyramid.reduced_pupils(pupil_intensity)
@@ -36,8 +37,5 @@ if __name__ == "__main__":
 		plt.subplot(3,3,i+1)
 		plt.imshow(reduced_pupils[1])
 		plt.colorbar()
-
-		plt.figure(4)
-		plt.plot(measurement)
 
 	plt.show()

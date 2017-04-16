@@ -19,7 +19,7 @@ class PyramidWavefrontSensor(WavefrontSensor):
 		self.measurement_grid = make_pupil_grid( pupil_separation * num_pupil_pixels, pupil_separation * Din)
 		self.measurement_mask = circular_aperture(Din*measurement_diameter)(self.measurement_grid)>0
 
-		self.detector = detector(self.output_grid)
+		self.detector = detector()
 
 		self.optical_system = self.make_optical_system(self.input_grid, self.output_grid, wavelength)
 

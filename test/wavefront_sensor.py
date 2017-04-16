@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
 	pupil_separation = 1.5
 	num_pupil_pixels = 32
-	pyramid = PyramidWavefrontSensor(pupil_plane, pupil_separation, num_pupil_pixels, CCD, over_sampling=4, wavelength=1.0E-6)
+	pyramid = PyramidWavefrontSensor(pupil_plane, pupil_separation, num_pupil_pixels, PerfectDetector, over_sampling=4, wavelength=1.0E-6)
 
 	aperture = circular_aperture(1)(pupil_plane)
 	for i in range(num_zernike):

@@ -14,26 +14,46 @@ class OpticalElement(object):
 	def get_transformation_matrix_backward(self, wavelength=1):
 		raise NotImplementedError()
 
-class OpticalSystem(list):
-	def forward(self, wavefront, verbose=False):
-		intermediate_wavefront = wavefront.copy()
-		for optical_element in self:
-			if verbose:
-				print(intermediate_wavefront.total_power)
-			intermediate_wavefront = optical_element.forward(intermediate_wavefront)
-			if verbose:
-				print(intermediate_wavefront.total_power)
-		return intermediate_wavefront
+class OpticalSystem(OpticalElement):
+	def __init__(self, optical_elements):
+		self.optical_elements = optical_elements
+
+	def forward(self, wavefront):
+		wf = wavefront.copy()
+
+		for optical_element in self.optical_elements:
+			wf = optical_element.forward(wf)
+		
+		return wf
 	
 	def backward(self, wavefront):
-		intermediate_wavefront = wavefront.copy()
-		for optical_element in self:
-			intermediate_wavefront = optical_element.backward(intermediate_wavefront)
-		return intermediate_wavefront
+		wf = wavefront.copy()
+
+		for optical_element in reversed(self.optical_elements):
+			wf = optical_element.backward(wf)
+		
+		return wf
 	
-	# String all optical elements together in a single matrix
 	def get_transformation_matrix_forward(self, wavelength=1):
-		raise NotImplementedError()
+		matrix = 1
+
+		for optical_element in self.optical_elements:
+			matrix = np.dot(optical_element.get_transformation_matrix_forward(wavelength), matrix)
+		
+		return matrix
 	
 	def get_transformation_matrix_backward(self, wavelength=1):
-		raise NotImplementedError()
+		matrix = 1
+
+		for optical_element in reversed(self.optical_elements):
+			matrix = np.dot(optical_element.get_transformation_matrix_backward(wavelength), matrix)
+		
+		return matrix
+	
+	@property
+	def optical_elements(self):
+		return self._optical_elements
+
+	@optical_elements.setter
+	def optical_elements(self, optical_elements):
+		self._optical_elements = list(optical_elements)

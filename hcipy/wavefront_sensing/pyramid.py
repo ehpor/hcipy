@@ -1,4 +1,4 @@
-from .wavefront_sensor import WavefrontSensor
+from .wavefront_sensor import WavefrontSensor, WavefrontSensorNew
 from ..optics import *
 from ..propagation import FraunhoferPropagator
 from ..aperture import *
@@ -64,3 +64,58 @@ class PyramidWavefrontSensor(WavefrontSensor):
 	def measurement(self, pupil_intensity):
 		I1, I2 = self.reduced_pupils(pupil_intensity)
 		return np.concatenate( (I1.flatten()[self.measurement_mask], I2.flatten()[self.measurement_mask]) )
+
+def reduce_pyramid_image(img, pupil_mask):
+	img = img.shaped
+
+	sub_shape = img.grid.shape // 2
+
+	# Subpupils
+	I_a = img[:sub_shape[0], :sub_shape[1]]
+	I_b = img[sub_shape[0]:2*sub_shape[0], :sub_shape[1]]
+	I_c = img[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
+	I_d = img[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
+
+	norm = I_a + I_b + I_c + I_d
+
+	I_1 = (I_a + I_b - I_c - I_d) / norm
+	I_2 = (I_a - I_b - I_c + I_d) / norm
+
+	I_1 = I_1.ravel()# * pupil_mask
+	I_2 = I_2.ravel()# * pupil_mask
+
+	res = np.column_stack((I_1, I_2))
+	res = Field(res, pupil_mask.grid)
+	return res
+
+class PyramidWavefrontSensorNew(WavefrontSensorNew):
+	def __init__(self, pupil_grid, pupil_mask, pupil_separation, num_pupil_pixels, q, wavelength, refractive_index, detector):
+		pupil_diameter = pupil_grid.x[pupil_mask(pupil_grid) != 0].ptp()
+
+		self.detector_grid = make_pupil_grid(2 * pupil_separation * num_pupil_pixels, 2 * pupil_separation * pupil_diameter)
+		self.output_grid = make_pupil_grid(pupil_separation * num_pupil_pixels, pupil_separation * pupil_diameter)
+
+		self.pupil_mask = Field(pupil_mask, self.output_grid)
+
+		focal_grid = make_focal_grid(pupil_grid, q=2 * pupil_separation * q, wavelength=wavelength)
+
+		sep = 0.5 * pupil_separation * pupil_diameter
+		surf = -sep / (refractive_index(wavelength) - 1) * (np.abs(focal_grid.x) + np.abs(focal_grid.y))
+		surf = Field(surf, focal_grid)
+
+		self.pupil_to_focal = FraunhoferPropagator(pupil_grid, focal_grid, wavelength_0=wavelength)
+		self.pyramid = SurfaceApodizer(surf, refractive_index)
+		self.focal_to_pupil = FraunhoferPropagator(focal_grid, self.detector_grid, wavelength_0=wavelength)
+
+		self.detector = detector()
+
+	def integrate(self, wavefront, dt=1, weight=1):
+		wf = self.pupil_to_focal(wavefront)
+		wf = self.pyramid(wf)
+		wf = self.focal_to_pupil(wf)
+		self.detector.integrate(wf, dt, weight)
+
+	def read_out(self):
+		self.detector_image = self.detector.read_out()
+
+		return reduce_pyramid_image(self.detector_image, self.pupil_mask)

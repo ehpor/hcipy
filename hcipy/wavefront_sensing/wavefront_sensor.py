@@ -23,3 +23,20 @@ class WavefrontSensor(object):
 	def __call__(self, wavefront, dt=1, weight=1):
 		self.integrate(wavefront, dt, weight)
 		return self.measurement( self.read_out() )
+
+from ..optics import Detector
+
+class WavefrontSensorNew(Detector):
+	pass
+
+class PerfectWavefrontSensor(WavefrontSensorNew):
+	def __init__(self):
+		self.phase = 0
+		self.integration_time = 0
+	
+	def integrate(self, wavefront, dt, weight=1):
+		self.phase += wavefront.phase * dt * weight
+		self.integration_time = dt * weight
+	
+	def read_out(self):
+		return self.phase / self.integration_time

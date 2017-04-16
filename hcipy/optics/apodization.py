@@ -39,7 +39,7 @@ class SurfaceApodizer(OpticalElement):
 		self.refractive_index = refractive_index
 	
 	def forward(self, wavefront):
-		opd = (refractive_index(wavefront.wavelength) - 1) * self.surface
+		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
 		
 		wf = wavefront.copy()
 		wf.electric_field *= np.exp(1j * opd * wf.wavenumber)
@@ -47,7 +47,7 @@ class SurfaceApodizer(OpticalElement):
 		return wf
 	
 	def backward(self, wavefront):
-		opd = (refractive_index(wavefront.wavelength) - 1) * self.surface
+		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
 		
 		wf = wavefront.copy()
 		wf.electric_field *= np.exp(-1j * opd * wf.wavenumber)

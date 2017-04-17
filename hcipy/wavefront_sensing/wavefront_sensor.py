@@ -24,7 +24,7 @@ class WavefrontSensor(object):
 		self.integrate(wavefront, dt, weight)
 		return self.measurement( self.read_out() )
 
-from ..optics import Detector
+from ..optics import Detector, OpticalSystem
 
 class WavefrontSensorNew(Detector):
 	pass

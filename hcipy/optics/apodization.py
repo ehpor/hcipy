@@ -53,3 +53,25 @@ class SurfaceApodizer(OpticalElement):
 		wf.electric_field *= np.exp(-1j * opd * wf.wavenumber)
 
 		return wf
+
+class ComplexSurfaceApodizer(OpticalElement):
+	def __init__(self, amplitude, surface, refractive_index):
+		self.amplitude = amplitude
+		self.surface = surface
+		self.refractive_index = refractive_index
+	
+	def forward(self, wavefront):
+		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
+		
+		wf = wavefront.copy()
+		wf.electric_field *= self.amplitude * np.exp(1j * opd * wf.wavenumber)
+
+		return wf
+	
+	def backward(self, wavefront):
+		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
+		
+		wf = wavefront.copy()
+		wf.electric_field *= np.exp(-1j * opd * wf.wavenumber) / self.amplitude
+
+		return wf

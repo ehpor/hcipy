@@ -40,3 +40,25 @@ class PerfectWavefrontSensor(WavefrontSensorNew):
 	
 	def read_out(self):
 		return self.phase / self.integration_time
+
+class WavefrontSensorEstimator(object):
+	def reconstruct(self, images):
+		raise NotImplementedError()
+
+class PerfectPhaseSensor(OpticalSystem):
+	def forward(self, wavefront):
+		wf = wavefront.copy()
+		return wf.phase
+	
+	def backward(self, wavefront):
+		wf = wavefront.copy()
+		return -wf.phase
+
+class PerfectWavefrontSensorNew(OpticalSystem):
+	def forward(self, wavefront):
+		wf = wavefront.copy()
+		return wf.phase / wf.wavenumber
+	
+	def backward(self, wavefront):
+		wf = wavefront.copy()
+		return -wf.phase / wf.wavenumber

@@ -75,3 +75,27 @@ class ComplexSurfaceApodizer(OpticalElement):
 		wf.electric_field *= np.exp(-1j * opd * wf.wavenumber) / self.amplitude
 
 		return wf
+
+class MultiplexedComplexSurfaceApodizer(OpticalElement):
+	def __init__(self, amplitude, surface, refractive_index):
+		self.amplitude = amplitude
+		self.surface = surface
+		self.refractive_index = refractive_index
+	
+	def forward(self, wavefront):
+		for amplitude, surface in enumerate(self.amplitude, self.surface):
+			opd = (self.refractive_index(wavefront.wavelength) - 1) * surface
+			apodizer_mask += amplitude * np.exp(1j * opd * wf.wavenumber)
+
+		wf = wavefront.copy()
+		wf.electric_field *= apodizer_mask
+		return wf
+	
+	def backward(self, wavefront):
+		for amplitude, surface in enumerate(self.amplitude, self.surface):
+			opd = (self.refractive_index(wavefront.wavelength) - 1) * surface
+			apodizer_mask += amplitude * np.exp(1j * opd * wf.wavenumber)
+			
+		wf = wavefront.copy()
+		wf.electric_field /= apodizer_mask
+		return wf

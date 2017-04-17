@@ -1,4 +1,4 @@
-__all__ = ['Apodizer', 'PhaseApodizer', 'ThinLens', 'SurfaceApodizer']
+__all__ = ['Apodizer', 'PhaseApodizer', 'ThinLens', 'SurfaceApodizer', 'ComplexSurfaceApodizer', 'MultiplexedComplexSurfaceApodizer']
 __all__ += ['DynamicOpticalSystem']
 __all__ += ['Detector', 'PerfectDetector', 'NoisyDetector']
 __all__ += ['SingleModeFiber', 'fiber_mode_gaussian']

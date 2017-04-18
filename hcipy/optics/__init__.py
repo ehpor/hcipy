@@ -1,5 +1,6 @@
 __all__ = ['Apodizer', 'PhaseApodizer', 'ThinLens', 'SurfaceApodizer', 'ComplexSurfaceApodizer', 'MultiplexedComplexSurfaceApodizer']
 __all__ += ['DynamicOpticalSystem']
+__all__ += ['DeformableMirror']
 __all__ += ['Detector', 'PerfectDetector', 'NoisyDetector']
 __all__ += ['SingleModeFiber', 'fiber_mode_gaussian']
 __all__ += ['MicroLensArray']
@@ -9,6 +10,7 @@ __all__ += ['Wavefront']
 
 from .apodization import *
 from .dynamic_optical_system import *
+from .deformable_mirror import *
 from .detector import *
 from .fiber import *
 from .micro_lens_array import *

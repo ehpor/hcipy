@@ -1,3 +1,4 @@
+'''
 from .wavefront_sensor import WavefrontSensor, WavefrontSensorNew
 from ..optics import *
 from ..propagation import FraunhoferPropagator
@@ -119,3 +120,4 @@ class PyramidWavefrontSensorNew(WavefrontSensorNew):
 		self.detector_image = self.detector.read_out()
 
 		return reduce_pyramid_image(self.detector_image, self.pupil_mask)
+'''

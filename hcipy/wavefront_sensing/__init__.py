@@ -1,12 +1,8 @@
-__all__ = ['WavefrontSensor', 'WavefrontSensorNew']
-__all__ += ['FourierWavefrontSensor', 'pyramid_wavefront_sensor', 'zernike_wavefront_sensor', 'vector_zernike_wavefront_sensor', 'optical_differentiation_wavefront_sensor', 'rooftop_wavefront_sensor', 'gOD_wavefront_sensor']
-__all__ += ['PyramidWavefrontSensor', 'PyramidWavefrontSensorNew']
+__all__ = ['WavefrontSensorOptics', 'WavefrontSensorEstimator']
+__all__ += ['FourierWavefrontSensorOptics', 'pyramid_surface', 'PyramidWavefrontSensorOptics', 'phase_step_mask', 'ZernikeWavefrontSensorOptics', 'optical_differentiation_surface', 'OpticalDifferentiationWavefrontSensorOptics', 'RooftopWavefrontSensorOptics', 'gODWavefrontSensorOptics', 'PolgODWavefrontSensorOptics']
 
-from .fourier_wavefront_sensor_2 import *
+from .fourier_wavefront_sensor import *
 from .holographic_modal import *
-from .optical_differentiation import *
 from .phase_diversity import *
-from .pyramid import *
 from .shack_hartmann import *
 from .wavefront_sensor import *
-from .zernike import *

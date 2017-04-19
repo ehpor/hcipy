@@ -141,7 +141,17 @@ class FourierWavefrontSensorEstimator(WavefrontSensorEstimator):
 		I_c = img[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
 		I_d = img[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
 
-	norm = I_a + I_b + I_c + I_d
+		norm = I_a + I_b + I_c + I_d
+
+		I_1 = (I_a + I_b - I_c - I_d) / norm
+		I_2 = (I_a - I_b - I_c + I_d) / norm
+
+		I_1 = I_1.ravel() * pupil_mask
+		I_2 = I_2.ravel() * pupil_mask
+
+		res = np.column_stack((I_1, I_2))
+		res = Field(res, pupil_mask.grid)
+		return res
 
 def reduce_pyramid_image(img, pupil_mask):
 	img = img.shaped

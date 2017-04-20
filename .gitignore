@@ -3,3 +3,5 @@
 /*.egg-info
 /.vscode
 tags
+/doc/_build/
+/doc/_autosummary/

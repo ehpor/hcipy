@@ -32,3 +32,72 @@ class ThinLens(OpticalElement):
 	
 	def backward(self, wavefront):
 		pass
+
+class SurfaceApodizer(OpticalElement):
+	def __init__(self, surface, refractive_index):
+		self.surface = surface
+		self.refractive_index = refractive_index
+	
+	def forward(self, wavefront):
+		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
+		
+		wf = wavefront.copy()
+		wf.electric_field *= np.exp(1j * opd * wf.wavenumber)
+
+		return wf
+	
+	def backward(self, wavefront):
+		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
+		
+		wf = wavefront.copy()
+		wf.electric_field *= np.exp(-1j * opd * wf.wavenumber)
+
+		return wf
+
+class ComplexSurfaceApodizer(OpticalElement):
+	def __init__(self, amplitude, surface, refractive_index):
+		self.amplitude = amplitude
+		self.surface = surface
+		self.refractive_index = refractive_index
+	
+	def forward(self, wavefront):
+		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
+		
+		wf = wavefront.copy()
+		wf.electric_field *= self.amplitude * np.exp(1j * opd * wf.wavenumber)
+
+		return wf
+	
+	def backward(self, wavefront):
+		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
+		
+		wf = wavefront.copy()
+		wf.electric_field *= np.exp(-1j * opd * wf.wavenumber) / self.amplitude
+
+		return wf
+
+class MultiplexedComplexSurfaceApodizer(OpticalElement):
+	def __init__(self, amplitude, surface, refractive_index):
+		self.amplitude = amplitude
+		self.surface = surface
+		self.refractive_index = refractive_index
+	
+	def forward(self, wavefront):
+		apodizer_mask = 0
+		for amplitude, surface in zip(self.amplitude, self.surface):
+			opd = (self.refractive_index(wavefront.wavelength) - 1) * surface
+			apodizer_mask += amplitude * np.exp(1j * opd * wavefront.wavenumber)
+
+		wf = wavefront.copy()
+		wf.electric_field *= apodizer_mask
+		return wf
+	
+	def backward(self, wavefront):
+		apodizer_mask = 0
+		for amplitude, surface in zip(self.amplitude, self.surface):
+			opd = (self.refractive_index(wavefront.wavelength) - 1) * surface
+			apodizer_mask += amplitude * np.exp(1j * opd * wavefront.wavenumber)
+			
+		wf = wavefront.copy()
+		wf.electric_field /= apodizer_mask
+		return wf

@@ -1,4 +1,8 @@
-from ..optics import Detector
+from ..optics import OpticalSystem
 
-class WavefrontSensor(Detector):
+class WavefrontSensorOptics(OpticalSystem):
 	pass
+
+class WavefrontSensorEstimator(object):
+	def estimate(self, images):
+		raise NotImplementedError()

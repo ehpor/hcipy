@@ -3,7 +3,7 @@ import numpy as np
 class ModeBasis(list):
 	@property
 	def transformation_matrix(self):
-		return np.column_stack(self)
+		return np.stack(self, axis=0)
 	
 	# TODO: currently only works on scalar fields
 	@property

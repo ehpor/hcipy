@@ -150,7 +150,6 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 		res = Field(res, self.pupil_mask.grid)
 		return res
 
-import matplotlib.pyplot as plt
 class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 	def __init__(self, aperture, output_grid):
 		self.measurement_grid = make_pupil_grid(output_grid.shape[0]/2, output_grid.x.ptp()/2)
@@ -188,28 +187,3 @@ class ZernikeWavefrontSensorEstimator(WavefrontSensorEstimator):
 		intensity_measurements = (image-self.reference).ravel() * self.pupil_mask
 		res = Field(intensity_measurements[self.pupil_mask>0], self.pupil_mask.grid)
 		return res
-
-'''
-def reduce_pyramid_image(img, pupil_mask):
-	img = img.shaped
-
-	sub_shape = img.grid.shape // 2
-
-	# Subpupils
-	I_a = img[:sub_shape[0], :sub_shape[1]]
-	I_b = img[sub_shape[0]:2*sub_shape[0], :sub_shape[1]]
-	I_c = img[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
-	I_d = img[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
-
-	norm = I_a + I_b + I_c + I_d
-
-	I_1 = (I_a + I_b - I_c - I_d) / norm
-	I_2 = (I_a - I_b - I_c + I_d) / norm
-
-	I_1 = I_1.ravel() * pupil_mask
-	I_2 = I_2.ravel() * pupil_mask
-
-	res = np.column_stack((I_1, I_2))
-	res = Field(res, pupil_mask.grid)
-	return res
-'''

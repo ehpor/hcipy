@@ -7,13 +7,13 @@ import numpy as np
 class FourierWavefrontSensorOptics(WavefrontSensorOptics):
 	def __init__(self, pupil_grid, focal_plane_mask, output_grid_size, output_grid_pixels, q, wavelength, num_airy=None):
 		# Create the intermediate and final grids
-		output_grid = make_pupil_grid(output_grid_pixels, output_grid_size)
-		focal_grid = make_focal_grid(pupil_grid, q=q, num_airy=num_airy, wavelength=wavelength)
+		self.output_grid = make_pupil_grid(output_grid_pixels, output_grid_size)
+		self.focal_grid = make_focal_grid(pupil_grid, q=q, num_airy=num_airy, wavelength=wavelength)
 
 		# Make all the optical elements
-		pupil_to_focal = FraunhoferPropagator(pupil_grid, focal_grid, wavelength_0=wavelength)
-		focal_mask = focal_plane_mask(focal_grid)
-		focal_to_pupil = FraunhoferPropagator(focal_grid, output_grid, wavelength_0=wavelength)
+		pupil_to_focal = FraunhoferPropagator(pupil_grid, self.focal_grid, wavelength_0=wavelength)
+		focal_mask = focal_plane_mask(self.focal_grid)
+		focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.output_grid, wavelength_0=wavelength)
 
 		self.optical_elements = (pupil_to_focal, focal_mask, focal_to_pupil)
 
@@ -119,40 +119,76 @@ class gODWavefrontSensorOptics(OpticalDifferentiationWavefrontSensorOptics):
 
 class PolgODWavefrontSensorOptics(OpticalDifferentiationWavefrontSensorOptics):
 	def __init__(self, beta, pupil_grid, pupil_diameter, pupil_separation, num_pupil_pixels, q, wavelength_0, refractive_index, num_airy=None):
-		amplitude_filter = lambda x : np.cos( np.pi/2 * ((x>0) * beta + (1 - beta)*(1+x)/2) - np.pi/4 )/np.sqrt(2)
+		amplitude_filter = lambda x : np.cos( np.pi/2 * ((x>0) * beta + (1 - beta)*(1+x)/2) + np.pi/4 )/np.sqrt(2)
 		OpticalDifferentiationWavefrontSensorOptics.__init__(self, amplitude_filter, pupil_grid, pupil_diameter, pupil_separation, num_pupil_pixels, q, wavelength_0, refractive_index, num_airy)
 
 
-class FourierWavefrontSensorEstimator(WavefrontSensorEstimator):
-	def __init__(self, pupil_masks, nominators, denominators, references):
-		self.pupil_masks = pupil_masks
-		self.nominators = norminators
-		self.denominators = denominators
-		self.references = references
+class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
+	def __init__(self, aperture, output_grid):
+		self.measurement_grid = make_pupil_grid(output_grid.shape[0]/2, output_grid.x.ptp()/2)
+		self.pupil_mask = aperture(self.measurement_grid)
+
+	def estimate(self, images):
+		image = images.shaped
+		sub_shape = image.grid.shape // 2
+
+		# Subpupils
+		I_a = image[:sub_shape[0], :sub_shape[1]]
+		I_b = image[sub_shape[0]:2*sub_shape[0], :sub_shape[1]]
+		I_c = image[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
+		I_d = image[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
+
+		norm = I_a + I_b + I_c + I_d
+
+		I_x = (I_a + I_b - I_c - I_d) / norm
+		I_y = (I_a - I_b - I_c + I_d) / norm
+
+		I_x = I_x.ravel()[self.pupil_mask>0]
+		I_y = I_y.ravel()[self.pupil_mask>0]
+
+		res = np.column_stack((I_x, I_y))
+		res = Field(res, self.pupil_mask.grid)
+		return res
+
+import matplotlib.pyplot as plt
+class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
+	def __init__(self, aperture, output_grid):
+		self.measurement_grid = make_pupil_grid(output_grid.shape[0]/2, output_grid.x.ptp()/2)
+		self.pupil_mask = aperture(self.measurement_grid)
+
+	def estimate(self, images):
+		image = images.shaped
+		sub_shape = image.grid.shape // 2
+
+		# Subpupils
+		I_a = image[:sub_shape[0], :sub_shape[1]]
+		I_b = image[sub_shape[0]:2*sub_shape[0], :sub_shape[1]]
+		I_c = image[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
+		I_d = image[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
+
+		I_x = (I_d - I_a) / (I_a + I_d)
+		I_y = (I_c - I_b) / (I_c + I_b)
+		
+		I_x = I_x.ravel()[self.pupil_mask>0]
+		I_y = I_y.ravel()[self.pupil_mask>0]
+
+		res = np.column_stack((I_x, I_y))
+		res = Field(res, self.pupil_mask.grid)
+		return res
+
+class ZernikeWavefrontSensorEstimator(WavefrontSensorEstimator):
+	def __init__(self, pupil_mask, reference):
+		self.pupil_mask = pupil_mask
+		self.reference = reference
 
 	def estimate(self, images):
 		image = images[0]
 
-		sub_shape = img.grid.shape // 2
-
-		# Subpupils
-		I_a = img[:sub_shape[0], :sub_shape[1]]
-		I_b = img[sub_shape[0]:2*sub_shape[0], :sub_shape[1]]
-		I_c = img[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
-		I_d = img[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
-
-		norm = I_a + I_b + I_c + I_d
-
-		I_1 = (I_a + I_b - I_c - I_d) / norm
-		I_2 = (I_a - I_b - I_c + I_d) / norm
-
-		I_1 = I_1.ravel() * pupil_mask
-		I_2 = I_2.ravel() * pupil_mask
-
-		res = np.column_stack((I_1, I_2))
-		res = Field(res, pupil_mask.grid)
+		intensity_measurements = (image-self.reference).ravel() * self.pupil_mask
+		res = Field(intensity_measurements[self.pupil_mask>0], self.pupil_mask.grid)
 		return res
 
+'''
 def reduce_pyramid_image(img, pupil_mask):
 	img = img.shaped
 
@@ -175,3 +211,4 @@ def reduce_pyramid_image(img, pupil_mask):
 	res = np.column_stack((I_1, I_2))
 	res = Field(res, pupil_mask.grid)
 	return res
+'''

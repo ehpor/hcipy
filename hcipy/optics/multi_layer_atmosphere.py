@@ -18,8 +18,10 @@ class AtmosphericModel(OpticalElement):
 	If r_0 is given, the C_n^2 profile is scaled to that Fried parameter.
 	Turbulence_layers is a list of tuples: (height, velocity, C_n^2).
 	If a velocity is scalar, the direction for that layer is chosen randomly.
+
+	unwanted_modes: 
 	"""
-	def __init__(self, spectral_noise_factory, turbulence_layers, zenith_angle=0, off_axis_angle=0, include_scintilation=False):
+	def __init__(self, spectral_noise_factory, turbulence_layers, zenith_angle=0, off_axis_angle=0, include_scintilation=False, unwanted_modes=None):
 		self.phase_screen_factory = spectral_noise_factory
 		
 		self.include_scintilation = include_scintilation
@@ -36,6 +38,8 @@ class AtmosphericModel(OpticalElement):
 		self.heights = np.array([self.heights[i] for i in inds], dtype='float')
 		self.velocities = [self.velocities[i] for i in inds]
 		self.Cn_squared = np.array([self.Cn_squared[i] for i in inds], dtype='float')
+
+		self.unwanted_modes = unwanted_modes
 	
 	@property
 	def t(self):
@@ -66,6 +70,9 @@ class AtmosphericModel(OpticalElement):
 				phase_screen = phase_screen.shifted(shift) * np.sqrt(Cn * k**2 * 0.423)
 				phase_screen = phase_screen()
 
+				if self.unwanted_modes is not None:
+					phase_screen -= self._unwanted_modes_trans.dot(self._unwanted_modes_inv_trans(phase_screen))
+
 				wf.electric_field *= np.exp(1j * phase_screen)
 
 				if i+1 >= len(self.layers):
@@ -84,6 +91,9 @@ class AtmosphericModel(OpticalElement):
 				cumulated_phase_screen += phase_screen
 			cumulated_phase_screen = cumulated_phase_screen()
 
+			if self.unwanted_modes is not None:
+				cumulated_phase_screen -= self._unwanted_modes_trans.dot(self._unwanted_modes_inv_trans(cumulated_phase_screen))
+
 			wf = wavefront.copy()
 			wf.electric_field *= np.exp(1j * cumulated_phase_screen)
 		return wf
@@ -95,6 +105,20 @@ class AtmosphericModel(OpticalElement):
 	@property
 	def num_layers(self):
 		return len(self.heights)
+	
+	@property
+	def unwanted_modes(self):
+		return self._unwanted_modes
+	
+	@unwanted_modes.setter
+	def unwanted_modes(self, unwanted_modes):
+		self._unwanted_modes = unwanted_modes
+		if unwanted_modes is None:
+			self._unwanted_modes_trans = None
+			self._unwanted_modes_inv_trans = None
+		else:
+			self._unwanted_modes_trans = unwanted_modes.transformation_matrix
+			self._unwanted_modes_inv_trans = inverse_truncated(self._unwanted_modes_trans, 1e-6)
 
 def kolmogorov_psd(grid):
 	u = grid.as_('polar').r

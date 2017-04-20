@@ -21,7 +21,8 @@ class FourierTransform(object):
 		coords_out = self.output_grid.as_('cartesian').coords
 
 		A = np.exp(1j * np.dot(np.array(coords_in).T, coords_out))
-		A *= self.output_grid.weights# / np.sqrt(2*np.pi)**self.input_grid.ndim
+		A *= self.output_grid.weights
+		A /= (2*np.pi)**self.input_grid.ndim
 
 		return A
 

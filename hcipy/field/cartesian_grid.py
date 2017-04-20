@@ -22,11 +22,13 @@ class CartesianGrid(Grid):
 		return self.coords[3]
 	
 	def scale(self, scale):
-		self.coords *= scale
 		self.weights *= np.abs(scale)**self.ndim
+		self.coords *= scale
+		return self
 
 	def shift(self, shift):
 		self.coords += shift
+		return self
 	
 	@staticmethod
 	def get_automatic_weights(coords):

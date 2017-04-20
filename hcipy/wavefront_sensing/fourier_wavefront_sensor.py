@@ -177,8 +177,9 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 		return res
 
 class ZernikeWavefrontSensorEstimator(WavefrontSensorEstimator):
-	def __init__(self, pupil_mask, reference):
-		self.pupil_mask = pupil_mask
+	def __init__(self, aperture, output_grid, reference):
+		self.measurement_grid = output_grid
+		self.pupil_mask = aperture(self.measurement_grid)
 		self.reference = reference
 
 	def estimate(self, images):

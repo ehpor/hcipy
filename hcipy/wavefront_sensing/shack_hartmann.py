@@ -1,5 +1,7 @@
 from wavefront_sensor import WavefrontSensorOptics
 from ..optics import *
+from ..field import *
+from ..aperture import *
 from ..propagation import FresnelPropagator
 
 import numpy as np
@@ -25,7 +27,7 @@ class SquareShackHartmannWavefrontSensorOptics(ShackHartmannWavefrontSensorOptic
         mla_shape = rectangular_aperture(diameter)
         mla = MicroLensArray(input_grid, mla_grid, mla_shape, f_number * diameter)
         
-        ShackHartmannWavefrontSensor.__init__(input_grid, mla)
+        ShackHartmannWavefrontSensorOptics.__init__(input_grid, mla)
         
   
 #class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):

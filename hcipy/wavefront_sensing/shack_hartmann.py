@@ -13,8 +13,8 @@ class ShackHartmannWavefrontSensorOptics(WavefrontSensorOptics):
         sh_prop = FresnelPropagator(input_grid, micro_lens_array.focal_length)
         
         # Make optical system
-        self.optical_system = OpticalSystem((sh_prop, microlens_array, sh_prop))
-        self.mla_ind = micro_lens_array.mla_ind
+        self.optical_system = OpticalSystem((sh_prop, micro_lens_array, sh_prop))
+        self.mla_index = micro_lens_array.mla_index
         
 class SquareShackHartmannWavefrontSensorOptics(ShackHartmannWavefrontSensorOptics):
     ## Helper class to create a Shack-Hartmann WFS with square microlens array
@@ -27,7 +27,7 @@ class SquareShackHartmannWavefrontSensorOptics(ShackHartmannWavefrontSensorOptic
         mla_shape = rectangular_aperture(diameter)
         mla = MicroLensArray(input_grid, mla_grid, mla_shape, f_number * diameter)
         
-        ShackHartmannWavefrontSensorOptics.__init__(input_grid, mla)
+        ShackHartmannWavefrontSensorOptics.__init__(self, input_grid, mla)
         
   
 #class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):

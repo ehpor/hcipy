@@ -56,3 +56,5 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
             centroids[cent_index] = centy
             cent_index += 1
             
+        return centroids
+            

@@ -30,18 +30,29 @@ class SquareShackHartmannWavefrontSensorOptics(ShackHartmannWavefrontSensorOptic
         ShackHartmannWavefrontSensorOptics.__init__(self, input_grid, mla)
         
   
-#class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
-#    def __init__(self, mla_index):
-#        self.mla_index = mla_index
-#        
-#    def estimate(self, images):
-#        image = images[0]
-#        
-#        for sub_index in np.unique(shwfs.mla_index):
-#            
-#            ## Select individual subapertures based on mla_index
-#            subaperture = image.copy()
-#            subaperture[shwfs.mla_index != sub_index] = 0.0
-#            
-#            ## Find the centroid of the subaperture
-#            
+class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
+    def __init__(self, mla_index):
+        self.mla_index = mla_index
+        
+    def estimate(self, images):
+        image = images[0]
+        centroids = np.empty([2 * np.unique(self.mla_index).size, 1])
+        cent_index = 0
+        
+        for sub_index in np.unique(self.mla_index):
+            
+            # Select individual subapertures based on mla_index
+            subaperture = image[self.mla_index == sub_index]
+            
+            # Find the centroid of the subaperture
+            x = image.grid.x[self.mla_index == sub_index]
+            y = image.grid.y[self.mla_index == sub_index]
+            centx = sum(subaperture * x) / sum(subaperture)
+            centy = sum(subaperture * y) / sum(subaperture)
+            
+            # Add the centroid coordinates to the numpy array            
+            centroids[cent_index] = centx
+            cent_index += 1
+            centroids[cent_index] = centy
+            cent_index += 1
+            

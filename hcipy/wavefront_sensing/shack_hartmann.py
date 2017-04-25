@@ -1,4 +1,4 @@
-from wavefront_sensor import WavefrontSensorOptics
+from wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..optics import *
 from ..field import *
 from ..aperture import *
@@ -13,7 +13,7 @@ class ShackHartmannWavefrontSensorOptics(WavefrontSensorOptics):
         sh_prop = FresnelPropagator(input_grid, micro_lens_array.focal_length)
         
         # Make optical system
-        self.optical_system = OpticalSystem((sh_prop, micro_lens_array, sh_prop))
+        OpticalSystem.__init__(self, (sh_prop, micro_lens_array, sh_prop))
         self.mla_index = micro_lens_array.mla_index
         
 class SquareShackHartmannWavefrontSensorOptics(ShackHartmannWavefrontSensorOptics):
@@ -37,3 +37,11 @@ class SquareShackHartmannWavefrontSensorOptics(ShackHartmannWavefrontSensorOptic
 #    def estimate(self, images):
 #        image = images[0]
 #        
+#        for sub_index in np.unique(shwfs.mla_index):
+#            
+#            ## Select individual subapertures based on mla_index
+#            subaperture = image.copy()
+#            subaperture[shwfs.mla_index != sub_index] = 0.0
+#            
+#            ## Find the centroid of the subaperture
+#            

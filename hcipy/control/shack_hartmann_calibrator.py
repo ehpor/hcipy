@@ -20,7 +20,7 @@ def shack_hartmann_calibrator(wf, shwfs, shwfse, det, dm, amp):
         wfdm = dm.forward(wf)
         wfmla = shwfs.forward(wfdm)
         det.integrate(wfmla, 1, 1)
-        mla_img = det.readout()
+        mla_img = det.read_out()
         
         Splus = shwfse.estimate([mla_img])
         
@@ -31,7 +31,7 @@ def shack_hartmann_calibrator(wf, shwfs, shwfse, det, dm, amp):
         wfdm = dm.forward(wf)
         wfmla = shwfs.forward(wfdm)
         det.integrate(wfmla, 1, 1)
-        mla_img = det.readout()
+        mla_img = det.read_out()
         
         Sminus = shwfse.estimate([mla_img])
         

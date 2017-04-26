@@ -14,7 +14,7 @@ def inverse_truncated(M, rcond=1e-15, svd=None):
 		svd = SVD(M)
 
 	U, S, Vt = svd.svd
-	S_inv = np.array([1/s if abs(s) > (rocond * S.max()) else 0 for s in S])
+	S_inv = np.array([1/s if abs(s) > (rcond * S.max()) else 0 for s in S])
 
 	return (Vt.T * S_inv).dot(U.T)
 

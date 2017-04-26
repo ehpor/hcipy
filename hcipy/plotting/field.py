@@ -60,7 +60,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	ax.set_xlim(min_x, max_x)
 	ax.set_ylim(min_y, max_y)
 
-	plt.sci(im)
+	ax._sci(im)
 
 	return im
 

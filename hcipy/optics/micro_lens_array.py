@@ -8,6 +8,7 @@ class MicroLensArray(OpticalElement):
         self.focal_length = focal_length
         self.mla_index = Field(-np.ones(self.input_grid.size), self.input_grid)
         self.mla_opd = Field(np.zeros(self.input_grid.size), self.input_grid)
+        self.mla_grid = micro_lens_grid        
         
         for i, (x,y) in enumerate(micro_lens_grid.as_('cartesian').points):
             shifted_grid = input_grid.shifted((x,y))

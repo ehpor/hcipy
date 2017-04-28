@@ -15,12 +15,13 @@ class ShackHartmannWavefrontSensorOptics(WavefrontSensorOptics):
         # Make optical system
         OpticalSystem.__init__(self, (sh_prop, micro_lens_array, sh_prop))
         self.mla_index = micro_lens_array.mla_index
+        self.mla_grid = micro_lens_array.mla_grid
         
 class SquareShackHartmannWavefrontSensorOptics(ShackHartmannWavefrontSensorOptics):
     ## Helper class to create a Shack-Hartmann WFS with square microlens array
     def __init__(self, input_grid, f_number, N_lenslets):
         
-        diameter = 1.0 / N_lenslets
+        diameter = 2.0 / (N_lenslets)
         x = np.arange(-1,1,diameter)
         mla_grid = CartesianGrid(SeparatedCoords((x,x)))
         
@@ -40,7 +41,6 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
         cent_index = 0
         
         for sub_index in np.unique(self.mla_index):
-            
             # Select individual subapertures based on mla_index
             subaperture = image[self.mla_index == sub_index]
             

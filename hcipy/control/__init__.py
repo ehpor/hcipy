@@ -1,3 +1,3 @@
-__all__ = []
+__all__ = ['shack_hartmann_calibrator']
 
 from .shack_hartmann_calibrator import *

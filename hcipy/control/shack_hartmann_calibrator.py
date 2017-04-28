@@ -3,6 +3,8 @@
 ## This code calculates the influence matrix and response matrix for a
 ## Shack-Hartmann wavefront sensor + deformable mirror system
 
+import numpy as np
+
 def shack_hartmann_calibrator(wf, shwfs, shwfse, det, dm, amp):
     
     num_modes = len(dm.influence_functions)
@@ -35,7 +37,7 @@ def shack_hartmann_calibrator(wf, shwfs, shwfse, det, dm, amp):
         
         Sminus = shwfse.estimate([mla_img])
         
-        shift = (Splus + Sminus) / (2 * amp)
+        shift = (Splus - Sminus) / (2 * amp)
         Infmat.append(shift)
     
     return Infmat

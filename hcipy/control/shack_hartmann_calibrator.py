@@ -40,4 +40,4 @@ def shack_hartmann_calibrator(wf, shwfs, shwfse, det, dm, amp):
         shift = (Splus - Sminus) / (2 * amp)
         Infmat.append(shift)
     
-    return Infmat
+    return np.squeeze(Infmat).T

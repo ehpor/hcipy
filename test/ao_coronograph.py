@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import pyfits as pf
 
 ## Create aperture and pupil grid
-r_0 = 0.1
+r_0 = 0.04
 N = 256
 pupil_grid = make_pupil_grid(N, 1)
 focal_grid = make_focal_grid(pupil_grid, 8, 20)
@@ -118,7 +118,7 @@ for t in times:
     
         strehl = sci_img[np.argmax(prop(wf).intensity)] / prop(wf).intensity.max()     
                 
-        if strehl > 0.95:
+        if strehl > 0.85:
             break
     
     print strehl

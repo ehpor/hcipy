@@ -25,8 +25,8 @@ aperture = circular_aperture(1)
 #aperture = rectangular_aperture(1,1)
 
 ## Create the microlens array
-F_mla = 0.03
-N_mla = 8
+F_mla = 0.01
+N_mla = 32
 
 shwfs = SquareShackHartmannWavefrontSensorOptics(pupil_grid, F_mla, N_mla)
 shwfse = ShackHartmannWavefrontSensorEstimator(shwfs.mla_index)
@@ -38,7 +38,7 @@ det = PerfectDetector()
 wf = Wavefront(aperture(pupil_grid))
 
 ## Create the deformable mirror
-num_modes = 60
+num_modes = 21
 dm_modes = make_zernike_basis(num_modes, 1, pupil_grid, 2, False)
 zernike_freeform = DeformableMirror(dm_modes)
 
@@ -47,85 +47,31 @@ spectral_noise_factory = SpectralNoiseFactoryFFT(kolmogorov_psd, pupil_grid, 8)
 turbulence_layers = make_standard_multilayer_atmosphere(r_0, wavelength=1)
 atmospheric_model = AtmosphericModel(spectral_noise_factory, turbulence_layers)
 
-### Calibrate the DM influence matrix
-#num_modes = 60
-#dm_modes = make_zernike_basis(num_modes, 1, pupil_grid, 1, False)
-#zernike_freeform = DeformableMirror(dm_modes)
-#act_levels = np.zeros(num_modes)
-#amp = 0.1
-#Influence = []
-#
-#zernike_freeform.actuators = act_levels
-#lenslet_centers = shwfse.estimate([shwfs.forward(zernike_freeform.forward(wf)).intensity])
-#
-#shmw = GifWriter('sh_images.gif', 10)
-#for act in np.arange(num_modes):
-#    ## Set each actuator to +1 in sequence
-#    act_levels = np.zeros(num_modes)
-#    act_levels[act] = amp
-#    zernike_freeform.actuators = act_levels
-#    
-#    ## Propagate the wf on the deformable mirror
-#    wfdm = zernike_freeform.forward(wf)
-#    
-#    ## Propagate the wavefront through the Shack-Hartmann optics
-#    wfmla = shwfs.forward(wfdm)
-#    wfmla_img = wfmla.intensity
-#    
-#    Splus = shwfse.estimate([wfmla_img])
-#    
-#    plt.clf()
-#    ## Record the following:
-#    ## - The wavefront imposed by the DM
-#    plt.subplot(1,2,1)
-#    imshow_field(wfdm.phase * aperture(pupil_grid), vmin=-np.pi, vmax=np.pi, cmap='RdBu')
-#    ## - The microlens array image plane
-#    plt.subplot(1,2,2)
-#    imshow_field(np.log10(wfmla_img / wfmla_img.max()), vmin=-5)
-#    
-#    shmw.add_frame()
-#    
-#    # Set each actuator to -1 in sequence
-#    act_levels[act] = -amp
-#    zernike_freeform.actuators = act_levels
-#    
-#    ## Propagate the wf on the deformable mirror
-#    wfdm = zernike_freeform.forward(wf)
-#    
-#    ## Propagate the wavefront through the Shack-Hartmann optics
-#    wfmla = shwfs.forward(wfdm)
-#    wfmla_img = wfmla.intensity
-#    
-#    Sminus = shwfse.estimate([wfmla_img])
-#    
-#    plt.clf()
-#    ## Record the following:
-#    ## - The wavefront imposed by the DM
-#    plt.subplot(1,2,1)
-#    imshow_field(wfdm.phase * aperture(pupil_grid), vmin=-np.pi, vmax=np.pi, cmap='RdBu')
-#    ## - The microlens array image plane
-#    plt.subplot(1,2,2)
-#    imshow_field(np.log10(wfmla_img / wfmla_img.max()), vmin=-5)
-#    
-#    shmw.add_frame()
-#    
-#    ## Calculate the shift for this mode and append it to the influence matrix
-#    shift = (Splus - Sminus) / (2 * amp)
-#    Influence.append(shift)
-#    
-#shmw.close()
-
 ## Calibrate the DM influence matrix
-amp = 0.1
+amp = 1
 Influence = shack_hartmann_calibrator(wf, shwfs, shwfse, det, zernike_freeform, amp)
-lenslet_centers = shwfse.estimate([shwfs.forward(zernike_freeform.forward(wf)).intensity])
 
-Inf_modes = ModeBasis(Influence)
-Response = inverse_truncated(Inf_modes.transformation_matrix)
+## Extract the centers of the lenslets
+act_levels = np.zeros(num_modes)
+zernike_freeform.actuators = act_levels
+det.integrate(shwfs.forward(zernike_freeform.forward(wf)), 1, 1)
+calib_img = det.read_out()
+lenslet_centers = shwfse.estimate([calib_img])
 
+## Calculate the DM response matrix
+Response = inverse_truncated(Influence, 1e-3)
 
 act_levels = np.zeros(num_modes)
 zernike_freeform.actuators = act_levels
+
+act_level_matrix = []
+shift_matrix = []
+
+## Import the coronograph
+app_amp = pf.getdata('./coronographs/Square_20_80_20_25_0_2_amp_resampled_256.fits').ravel()
+app_phase = pf.getdata('./coronographs/Square_20_80_20_25_0_2_phase_resampled_256.fits').ravel()
+app_psf = pf.getdata('./coronographs/Square_20_80_20_25_0_2_psf_resampled_256.fits').ravel()
+app = app_amp * np.exp(1j * app_phase)
 
 ## Start loop of timesteps here
 times = np.linspace(0,0.7,200)
@@ -134,51 +80,69 @@ for t in times:
         
     ## Generate phase screen to simulate atmospheric turbulence
     atmospheric_model.t = t
-    wfdistort = atmospheric_model(wf)
-    #wfdistort = wf.copy()
+    wfatms = atmospheric_model(wf)
     
-    ## Propagate wavefront through the wavefront sensor
-    wfao = shwfs.forward(wfdistort)
-    det.integrate(wfao, 1, 1)
-    ao_img = det.read_out()
+    wfdistort = wfatms.copy()
+    wfdistort.electric_field *= app
+    det.integrate(prop(wfdistort), 1, 1)
+    distort_img = det.read_out()
     
-    ## Estimate the shifts from the microlens image
-    imshift = shwfse.estimate([ao_img]) - lenslet_centers
+    ## Start closed loop Shack-Hartmann wavefront correction here    
+    for cloop in np.arange(10):
     
-    ## Find the phase of the wavefront by reconstruction
-    act_levels = np.squeeze(np.dot(Response, imshift))
-
-    ## Add modes to DM to correct the wavefront
-    zernike_freeform.actuators = -act_levels
+        ## Propagate the wavefront onto the DM
+        wfcorrect = zernike_freeform.forward(wfatms)
+        
+        ## Focus the wavefront and integrate on science detector
+        det.integrate(prop(wfcorrect), 1, 1)
+        sci_img = det.read_out()
+        
+        ## Split wavefront and propagate through the wavefront sensor
+        wfao = shwfs.forward(wfcorrect)
+        det.integrate(wfao, 1, 1)
+        ao_img = det.read_out()
     
-    ## Propagate the wavefront onto the DM
-    wfcorrect = zernike_freeform.forward(wfdistort)
-
-    ## Propagate wavefront through coronograph
-    app_amp = pf.getdata('./coronographs/Square_20_80_20_25_0_2_amp_resampled_256.fits').ravel()
-    app_phase = pf.getdata('./coronographs/Square_20_80_20_25_0_2_phase_resampled_256.fits').ravel()
-    app_psf = pf.getdata('./coronographs/Square_20_80_20_25_0_2_psf_resampled_256.fits').ravel()
-    app = app_amp * np.exp(1j * app_phase)
+        ## Estimate the shifts from the microlens image
+        imshift = shwfse.estimate([ao_img]) - lenslet_centers
+        shift_matrix.append(imshift)
+        
+        ## Find the phase of the wavefront by reconstruction
+        act_levels = np.squeeze(np.dot(Response, imshift))
+        act_level_matrix.append(act_levels)
+        
+        ## Eliminate crosstalk by thresholding actuator levels
+        act_levels[abs(act_levels)/abs(act_levels).max() < 1e-1] = 0
     
+        ## Add modes to DM to correct the wavefront
+        zernike_freeform.actuators -= act_levels
+    
+        strehl = sci_img[np.argmax(prop(wf).intensity)] / prop(wf).intensity.max()     
+                
+        if strehl > 0.95:
+            break
+    
+    print strehl
+    
+    ## Propagate wavefront through coronograph    
     wfc = wfcorrect.copy()
     wfc.electric_field *= app
-    sci_img = prop(wfc).intensity
+    det.integrate(prop(wfc), 1, 1)
+    sci_img = det.read_out()
     
-    zernike_decom = dm_modes.transformation_matrix.T.dot(wfdistort.phase)
+    # zernike_decom = dm_modes.transformation_matrix.T.dot(wfdistort.phase)
     
     plt.clf()
     ## Record the following:
     ## - The atmosphere phase screen
     plt.subplot(2,2,1)
-    imshow_field(wfdistort.phase * aperture(pupil_grid), vmin=-np.pi, vmax=np.pi, cmap='RdBu')
+    imshow_field(wfatms.phase * aperture(pupil_grid), vmin=-np.pi, vmax=np.pi, cmap='RdBu')
     ## - The wavefront after ao correction
     plt.subplot(2,2,2)
-    imshow_field(zernike_freeform.surface * aperture(pupil_grid), vmin=-np.pi, vmax=np.pi, cmap='RdBu')
-    
-    ## - The microlens array image
+    imshow_field(wfcorrect.phase * aperture(pupil_grid), vmin=-np.pi, vmax=np.pi, cmap='RdBu')
+    ## - The science image without ao
     plt.subplot(2,2,3)
-    imshow_field(np.log10(ao_img / ao_img.max()), vmin=-5)
-    ## - The science image after coronograph
+    imshow_field(np.log10(distort_img / distort_img.max()), vmin=-5)
+    ## - The science image after ao
     plt.subplot(2,2,4)
     imshow_field(np.log10(sci_img / sci_img.max()), vmin=-5)
     

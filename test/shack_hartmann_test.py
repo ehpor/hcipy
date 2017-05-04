@@ -46,7 +46,7 @@ turbulence_layers = make_standard_multilayer_atmosphere(r_0, wavelength=1)
 atmospheric_model = AtmosphericModel(spectral_noise_factory, turbulence_layers)
 
 ## Calibrate the DM influence matrix
-amp = 0.1
+amp = 1
 Influence = shack_hartmann_calibrator(wf, shwfs, shwfse, det, zernike_freeform, amp)
 
 ## Extract the centers of the lenslets

@@ -34,9 +34,11 @@ extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.autosummary',
-    'matplotlib.sphinxext.plot_directive']
+    'matplotlib.sphinxext.plot_directive',
+    'numpydoc']
 
 autosummary_generate = True
+numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

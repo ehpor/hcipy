@@ -6,6 +6,14 @@
 Welcome to HCIPy's documentation!
 =================================
 
+HCIPy is a framework written in Python for high contrast imaging simulation work. It implements adaptive optics simulation, coronagraphy and optical diffraction calculations.
+
+.. caution::
+    HCIPy is still in active development. Many functions are untested and may not work as expected.
+
+.. tip::
+    Quickstart iPython Notebook.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
@@ -18,3 +26,4 @@ Welcome to HCIPy's documentation!
    adaptive_optics
    coronagraphy
    misc_techniques
+   miscellaneous

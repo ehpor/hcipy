@@ -28,6 +28,18 @@ This will install `hcipy` as a symbolic link to the current directory. Updates c
 git pull
 ```
 
+# Documentation
+
+A complete documentation is currently a work in progress, and is written in reStructuredText and compiled using Sphinx. The documentation can be built by:
+
+```
+cd doc
+make clean
+make html
+```
+
+Afterwards, the built documentation should now be visible in ``doc/_build/html`` as a static website.
+
 # Contributing
 
 We are working in a [feature branching workflow](https://www.atlassian.com/git/tutorials/comparing-workflows#feature-branch-workflow). This means that each feature will be developed on its own branch to be merged later into the *master* branch. To start contribution on a new feature:

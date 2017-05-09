@@ -28,31 +28,31 @@ class Field(np.ndarray):
 	
 	@property
 	def tensor_order(self):
-		'''int: The order of the tensor of the field.
+		'''The order of the tensor of the field.
 		'''
 		return self.ndim - 1
 	
 	@property
 	def is_scalar_field(self):
-		'''bool: True if this field is a scalar field (ie. a tensor order of 0), False otherwise.
+		'''True if this field is a scalar field (ie. a tensor order of 0), False otherwise.
 		'''
 		return self.tensor_order == 0
 	
 	@property
 	def is_vector_field(self):
-		'''bool: True if this field is a vector field (ie. a tensor order of 1), False otherwise.
+		'''True if this field is a vector field (ie. a tensor order of 1), False otherwise.
 		'''
 		return self.tensor_order == 1
 	
 	@property
 	def is_valid_field(self):
-		'''bool: True if the field corresponds with its grid.
+		'''True if the field corresponds with its grid.
 		'''
 		return self.shape[0] == self.grid.size
 	
 	@property
 	def shaped(self):
-		'''array_like: The reshaped version of this field.
+		'''The reshaped version of this field.
 
 		Raises
 		------

@@ -127,6 +127,7 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 	def __init__(self, aperture, output_grid):
 		self.measurement_grid = make_pupil_grid(output_grid.shape[0]/2, output_grid.x.ptp()/2)
 		self.pupil_mask = aperture(self.measurement_grid)
+		self.num_measurements = 2 * int(np.sum(self.pupil_mask > 0))
 
 	def estimate(self, images):
 		image = images.shaped

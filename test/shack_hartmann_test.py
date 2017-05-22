@@ -27,7 +27,7 @@ F_mla = 100
 N_mla = 20
 
 shwfs = SquareShackHartmannWavefrontSensorOptics(pupil_grid, F_mla, N_mla, D)
-shwfse = ShackHartmannWavefrontSensorEstimator(shwfs.mla_index)
+shwfse = ShackHartmannWavefrontSensorEstimator(shwfs.mla_grid, pupil_grid)
 
 ## Create the wavefront at the entrance pupil
 wf = Wavefront(aperture(pupil_grid), wavelength)

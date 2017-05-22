@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 ## Create aperture and pupil grid
 wavelength = 1e-6
-N = 512
+N = 256
 D = 0.01
 pupil_grid = make_pupil_grid(N, D)
 focal_grid = make_focal_grid(pupil_grid, 8, 20, wavelength)
@@ -27,7 +27,7 @@ F_mla = 100
 N_mla = 20
 
 shwfs = SquareShackHartmannWavefrontSensorOptics(pupil_grid, F_mla, N_mla, D)
-shwfse = ShackHartmannWavefrontSensorEstimator(shwfs.mla_grid, pupil_grid)
+shwfse = ShackHartmannWavefrontSensorEstimator(shwfs.mla_grid, shwfs.micro_lens_array.mla_index)
 
 ## Create the wavefront at the entrance pupil
 wf = Wavefront(aperture(pupil_grid), wavelength)
@@ -46,7 +46,7 @@ for i in range(num_modes):
     dm_wf = zernike_freeform(wf)
     sh_wf = shwfs(dm_wf)
     sh_img = sh_wf.intensity
-    #lenslet_centers = shwfse.estimate([sh_img])
+    lenslet_centers = shwfse.estimate([sh_img])
 
     plt.clf()
     imshow_field(sh_img)

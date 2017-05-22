@@ -44,17 +44,23 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		y2 = np.concatenate(([1.5 * y[0] - 0.5 * y[1]], y_mid, [1.5 * y[-1] - 0.5 * y[-2]]))
 		X, Y = np.meshgrid(x2, y2)
 		
-		im = ax.pcolormesh(X, Y, z, norm=norm, *args, **kwargs)
+		im = ax.pcolormesh(X, Y, z, norm=norm, *args, rasterized=True, **kwargs)
 	else:
 		# Use NonUniformImage to display
 		im = NonUniformImage(ax, extent=(min_x, max_x, min_y, max_y), interpolation=interpolation, norm=norm, *args, **kwargs)
 		im.set_data(x, y, z)
+
+		from matplotlib.patches import Rectangle
+		patch = Rectangle((min_x, min_y), max_x - min_x, max_y - min_y, facecolor='none')
+		ax.add_patch(patch)
+		im.set_clip_path(patch)
+
 		ax.images.append(im)
 	
 	ax.set_xlim(min_x, max_x)
 	ax.set_ylim(min_y, max_y)
 
-	plt.sci(im)
+	ax._sci(im)
 
 	return im
 

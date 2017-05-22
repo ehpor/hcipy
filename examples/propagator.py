@@ -10,12 +10,12 @@ A = aperture(pupil_grid)
 imshow_field(A)
 plt.show()
 
-focal_grid = make_focal_grid(pupil_grid, 8, 15)
+focal_grid = make_focal_grid(pupil_grid, 8, 100, wavelength=1E-6)
 
 fresnel = FresnelPropagator(pupil_grid, 500)
-fraunhofer = FraunhoferPropagator(pupil_grid, focal_grid)
+fraunhofer = FraunhoferPropagator(pupil_grid, focal_grid, wavelength_0=1E-6)
 
-wf = Wavefront(A)
+wf = Wavefront(A, wavelength=1E-6)
 wf.total_power = 1
 
 img = fresnel(wf)

@@ -25,8 +25,8 @@ class MatrixFourierTransform(FourierTransform):
 		if self.ndim == 1:
 			self.M = np.exp(-1j * np.dot(output_grid.x[:,np.newaxis], input_grid.x[np.newaxis,:]))
 		elif self.ndim == 2:
-			self.M1 = np.exp(-1j * np.dot(output_grid.coords.separated_coords[0][:,np.newaxis], input_grid.coords.separated_coords[0][np.newaxis,:]))
-			self.M2 = np.exp(-1j * np.dot(output_grid.coords.separated_coords[1][:,np.newaxis], input_grid.coords.separated_coords[1][np.newaxis,:])).T
+			self.M1 = np.exp(-1j * np.dot(output_grid.coords.separated_coords[1][:,np.newaxis], input_grid.coords.separated_coords[1][np.newaxis,:]))
+			self.M2 = np.exp(-1j * np.dot(output_grid.coords.separated_coords[0][:,np.newaxis], input_grid.coords.separated_coords[0][np.newaxis,:])).T
 	
 	def forward(self, field):
 		from ..field import Field

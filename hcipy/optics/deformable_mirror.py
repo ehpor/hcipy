@@ -1,6 +1,7 @@
 import numpy as np
 from .optical_element import OpticalElement
 from ..field import Field
+from ..mode_basis import ModeBasis
 
 class DeformableMirror(OpticalElement):
 	def __init__(self, influence_functions):

@@ -1,5 +1,7 @@
 import numpy as np
 from ..optics import OpticalElement
+from ..mode_basis import ModeBasis
+from ..math_util import inverse_truncated
 
 class PerfectCoronagraph(OpticalElement):
 	def __init__(self, aperture, order=2, coeffs=None):

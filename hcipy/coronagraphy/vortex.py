@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from ..plotting import imshow_field
 
 class VortexCoronagraph(OpticalElement):
-	def __init__(self, pupil_grid, pupil_diameter=1, charge=2, method='GS', q=16, num_airy=32):
+	def __init__(self, pupil_grid, pupil_diameter=1, charge=2, method='gs', q=8, num_airy=128):
 		self.pupil_grid = pupil_grid
 		self.focal_grid = make_focal_grid(pupil_grid, q, num_airy)
 		self.prop = FraunhoferPropagator(pupil_grid, self.focal_grid)
@@ -24,19 +24,29 @@ class VortexCoronagraph(OpticalElement):
 			self.vortex = np.exp(1j * charge * self.focal_grid.as_('polar').theta)
 			self.vortex = Field(self.vortex, self.focal_grid)
 
-			for i in range(30):
-				foc = self.prop(wf)
-				foc.electric_field *= self.vortex
+			foc = self.prop(wf)
 
-				pup = self.prop.backward(foc)
+			for i in range(100):
+				foc2 = foc.copy()
+				foc2.electric_field *= self.vortex
+				foc2.electric_field *= circular_aperture(num_airy)(self.focal_grid)
+
+				pup = self.prop.backward(foc2)
 				pup.electric_field[aperture < 0.5] = 0
 
-				foc2 = self.prop(pup)
-				self.vortex *= 1 - foc2.electric_field / foc.electric_field
+				foc3 = self.prop(pup)
+				#foc3.electric_field /= self.vortex
 
-			imshow_field(np.abs(self.vortex), self.focal_grid, vmax=1.2)
-			plt.colorbar()
-			plt.show()
+				self.vortex -= foc3.electric_field / foc.electric_field
+				self.vortex = np.exp(1j * np.angle(self.vortex))
+
+			#plt.subplot(1,2,1)
+			#imshow_field(np.abs(self.vortex), self.focal_grid, vmax=1.2)
+			#plt.colorbar()
+			#plt.subplot(1,2,2)
+			#imshow_field(np.angle(self.vortex), self.focal_grid)
+			#plt.colorbar()
+			#plt.show()
 		elif self.method.lower() == 'none':
 			self.vortex = np.exp(1j * charge * self.focal_grid.as_('polar').theta)
 		elif self.method.lower() == 'convolution':

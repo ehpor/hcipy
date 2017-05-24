@@ -1,4 +1,4 @@
-from wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
+from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..optics import *
 from ..field import *
 from ..aperture import *

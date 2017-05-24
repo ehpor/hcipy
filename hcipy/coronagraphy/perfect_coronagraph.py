@@ -26,7 +26,7 @@ class PerfectCoronagraph(OpticalElement):
 	def forward(self, wavefront):
 		wf = wavefront.copy()
 
-		correction = self.transformation.dot(self.coeffs * self.tranformation_inverse.dot(wf.electric_field))
+		correction = self.transformation.dot(self.coeffs * self.transformation_inverse.dot(wf.electric_field))
 		wf.electric_field -= correction
 
 		return wf

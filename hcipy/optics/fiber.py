@@ -1,5 +1,6 @@
 import numpy as np
 from .detector import Detector
+from .optical_element import OpticalElement
 
 def fiber_mode_gaussian(grid, mode_field_diameter):
 	g = grid.as_('polar')
@@ -24,3 +25,42 @@ class SingleModeFiber(Detector):
 		intensity = self.intensity
 		self.intensity = 0
 		return intensity
+
+# This implementation assumes orthogonality of the different fibers.
+# Forward() should be changed if this is added in the future.
+# Also, the modes are independent of wavelength.
+class SingleModeFiberArray(OpticalElement):
+	def __init__(self, input_grid, fiber_grid, mode, *args, **kwargs):
+		'''An array of single-mode fibers.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid on which the input wavefront is defined.
+		fiber_grid : Grid
+			The centers of each of the single-mode fibers.
+		mode : function
+			The mode of the single-mode fibers. The function should take a grid 
+			and return the amplitude of the fiber mode.
+		'''
+		self.input_grid = input_grid
+		self.fiber_grid = fiber_grid
+
+		self.fiber_modes = [mode(input_grid.shifted(-p), *args, **kwargs) for p in fiber_grid]
+		self.fiber_modes = [mode / np.sum(np.abs(self.mode)**2 * self.input_grid.weights) for mode in self.fiber_modes]
+
+		self.projection_matrix = self.fiber_modes.transformation_matrix
+
+	def forward(self, wavefront):
+		res = self.projection_matrix.T.dot(wavefront.electric_field)
+		return Wavefront(Field(res, self.fiber_grid), wavefront.wavelength)
+	
+	def backward(self, wavefront):
+		res = self.projection_matrix.dot(wavefront.electric_field)
+		return Wavefront(Field(res, self.input_grid), wavefront.wavelength)
+	
+	def get_transformation_matrix_forward(self, wavelength=1):
+		return self.projection_matrix.T
+	
+	def get_transformation_matrix_backward(self, wavelength=1):
+		return self.projection_matrix

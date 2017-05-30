@@ -1,10 +1,10 @@
 import numpy as np
+from ..field import Field
 
 def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None, non_linear_axes=False, *args, **kwargs):
 	import matplotlib as mpl
 	import matplotlib.pyplot as plt
 	from matplotlib.image import NonUniformImage
-	from ..field import Field
 
 	if ax is None:
 		ax = plt.gca()
@@ -115,7 +115,7 @@ def contourf_field(field, grid=None, ax=None, *args, **kwargs):
 
 	return cs
 
-def complex_field_to_rgb(X, theme='dark', rmin=None, rmax=None):
+def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None):
 	"""
 	Takes an array of complex number and converts it to an array of [r, g, b],
 	where phase gives hue and saturaton/value are given by the absolute value.
@@ -123,19 +123,28 @@ def complex_field_to_rgb(X, theme='dark', rmin=None, rmax=None):
 	"""
 	import matplotlib as mpl
 
+	if not field.is_scalar_field:
+		raise ValueError('Field must be a scalar field.')
+
 	if rmin is None:
-		rmin = np.abs(X).min()
+		rmin = np.nanmin(np.abs(field))
 	if rmax is None:
-		rmax = np.abs(X).max()
-	Y = np.zeros(X.shape + (3,), dtype='float')
-	Y[..., 0] = np.angle(X) / (2 * np.pi) % 1
-	t = np.clip((np.abs(X) - rmin) / (rmax - rmin), 0, 1)
+		rmax = np.nanmax(np.abs(field))
+	
+	hsv = np.zeros((field.size, 3), dtype='float')
+	hsv[..., 0] = np.angle(field) / (2 * np.pi) % 1
+
+	t = np.clip((np.abs(field) - rmin) / (rmax - rmin), 0, 1)
 	if theme == 'light':
-		Y[..., 1] = t
-		Y[..., 2] = 1
+		hsv[..., 1] = t
+		hsv[..., 2] = 1
 	elif theme == 'dark':
-		Y[..., 1] = 1
-		Y[..., 2] = t
-	Y = mpl.colors.hsv_to_rgb(Y[np.newaxis,...])
-	Y = Y.reshape(Y.shape[1:])
-	return Y
+		hsv[..., 1] = 1
+		hsv[..., 2] = t
+
+	rgb = mpl.colors.hsv_to_rgb(hsv)
+	alpha = np.isfinite(field)[:,np.newaxis]
+
+	res = np.concatenate((rgb, alpha), axis=1)
+
+	return Field(res, field.grid)

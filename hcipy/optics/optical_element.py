@@ -1,3 +1,5 @@
+import numpy as np
+
 class OpticalElement(object):
 	def __call__(self, wavefront):
 		return self.forward(wavefront)

@@ -9,7 +9,7 @@ class PerfectCoronagraph(OpticalElement):
 		modes = []
 
 		if coeffs is not None:
-			order = 2 * np.ceil(0.5 * (np.sqrt(8*len(coeffs) + 1) - 1))
+			order = int(2 * np.ceil(0.5 * (np.sqrt(8*len(coeffs) + 1) - 1)))
 			self.coeffs = coeffs
 		else:
 			self.coeffs = np.ones(int(order * (order / 2 + 1) / 4))

@@ -16,7 +16,11 @@ def make_propagator(monochromatic_propagator):
 		def get_monochromatic_propagator(self, wavelength):
 			if len(self.wavelengths) > 0:
 				i = np.argmin(np.abs(wavelength - np.array(self.wavelengths)))
-				return self.monochromatic_propagators[i]
+				wavelength_closest = self.wavelengths[i]
+
+				delta_wavelength = np.abs(wavelength - wavelength_closest)
+				if (delta_wavelength / wavelength) < 1e-6:
+					return self.monochromatic_propagators[i]
 			
 			m = monochromatic_propagator(*self.monochromatic_args, wavelength=wavelength, **self.monochromatic_kwargs)
 

@@ -7,6 +7,7 @@ class DeformableMirror(OpticalElement):
 	def __init__(self, influence_functions):
 		self.influence_functions = influence_functions
 		self.actuators = np.zeros(len(influence_functions))
+		self.input_grid = influence_functions[0].grid
 	
 	def forward(self, wavefront):
 		wf = wavefront.copy()
@@ -29,4 +30,5 @@ class DeformableMirror(OpticalElement):
 	
 	@property
 	def surface(self):
-		return self._transformation_matrix.dot(self.actuators)
+		surf = self._transformation_matrix.dot(self.actuators)
+		return Field(surf, self.input_grid)

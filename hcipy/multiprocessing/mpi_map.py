@@ -77,7 +77,7 @@ def _mpi_controller(sequence, *args, **kwargs):
     proc_name = MPI.Get_processor_name()
     status = MPI.Status()
 
-    process_list = range(1, MPI.COMM_WORLD.Get_size())
+    process_list = list(range(1, MPI.COMM_WORLD.Get_size()))
     workers_done = []
     results = {}
     if debug: print("Data:", sequence)
@@ -85,7 +85,7 @@ def _mpi_controller(sequence, *args, **kwargs):
     # Instead of distributing the actual elements, we just distribute
     # the index as the workers already have the sequence. This allows
     # objects to be used as well.
-    queue = iter(xrange(len(sequence)))
+    queue = iter(range(len(sequence)))
 
     if debug: print("Controller %i on %s: ready!" % (rank, proc_name))
 
@@ -105,7 +105,7 @@ def _mpi_controller(sequence, *args, **kwargs):
 
             # Get next item and send to worker
             try:
-                task = queue.next()
+                task = next(queue)
                 # Send job to worker
                 if debug: print("Controller: Sending task to %i" % status.source)
                 MPI.COMM_WORLD.send(task, dest=status.source, tag=10)

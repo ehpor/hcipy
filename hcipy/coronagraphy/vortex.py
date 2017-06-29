@@ -7,7 +7,7 @@ from ..fourier import FastFourierTransform
 from scipy.special import jv
 
 import matplotlib.pyplot as plt
-from ..plotting import imshow_field
+from ..plotting import imshow_field, complex_field_to_rgb
 
 class VortexCoronagraph(OpticalElement):
 	def __init__(self, pupil_grid, pupil_diameter=1, charge=2, method='gs', q=8, num_airy=128):
@@ -80,12 +80,32 @@ class VortexCoronagraph(OpticalElement):
 			imshow_field(np.angle(self.F), self.fourier.output_grid)
 			plt.colorbar()
 			plt.show()
+		elif method.lower() == 'inversion':
+			aperture = circular_aperture(pupil_diameter)(pupil_grid)
+			wf = Wavefront(aperture)
+			wf.total_power = 1
+
+			self.vortex = np.exp(1j * charge * self.focal_grid.as_('polar').theta)
+			self.vortex = Field(self.vortex, self.focal_grid)
+			self.vortex *= circular_aperture(num_airy)(self.focal_grid)
+
+			foc = self.prop.forward(wf)
+			foc_copy = foc.copy()
+			foc.electric_field *= self.vortex
+
+			pup = self.prop.backward(foc)
+			pup.electric_field[aperture < 0.5] = 0
+			
+			self.reference = pup.electric_field
 
 	def forward(self, wavefront):
-		if self.method == 'gs' or self.method == 'none':
+		if self.method == 'gs' or self.method == 'none' or self.method == 'inversion':
 			foc = self.prop(wavefront)
 			foc.electric_field *= self.vortex
-			return self.prop.backward(foc)
+			res = self.prop.backward(foc)
+			if self.method == 'inversion':
+				res.electric_field -= self.reference * np.sqrt(wavefront.total_power)
+			return res
 		elif self.method == 'convolution':
 			ft = self.fourier.forward(wavefront.electric_field)
 			ft *= self.F

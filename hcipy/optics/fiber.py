@@ -1,10 +1,13 @@
 import numpy as np
 from .detector import Detector
 from .optical_element import OpticalElement
+from .wavefront import Wavefront
+from ..mode_basis import ModeBasis
+from ..field import Field
 
 def fiber_mode_gaussian(grid, mode_field_diameter):
-	g = grid.as_('polar')
-	return np.exp(-(g.r/(0.5 * mode_field_diameter))**2)
+	r2 = grid.x**2 + grid.y**2
+	return np.exp(-r2/(mode_field_diameter**2))
 
 class SingleModeFiber(Detector):
 	def __init__(self, input_grid, mode_field_diameter, mode=None):
@@ -47,12 +50,13 @@ class SingleModeFiberArray(OpticalElement):
 		self.fiber_grid = fiber_grid
 
 		self.fiber_modes = [mode(input_grid.shifted(-p), *args, **kwargs) for p in fiber_grid]
-		self.fiber_modes = [mode / np.sum(np.abs(self.mode)**2 * self.input_grid.weights) for mode in self.fiber_modes]
+		self.fiber_modes = [mode / np.sqrt(np.sum(np.abs(mode)**2 * input_grid.weights)) for mode in self.fiber_modes]
+		self.fiber_modes = ModeBasis(self.fiber_modes)
 
 		self.projection_matrix = self.fiber_modes.transformation_matrix
 
 	def forward(self, wavefront):
-		res = self.projection_matrix.T.dot(wavefront.electric_field)
+		res = self.projection_matrix.T.dot(wavefront.electric_field * self.input_grid.weights)
 		return Wavefront(Field(res, self.fiber_grid), wavefront.wavelength)
 	
 	def backward(self, wavefront):

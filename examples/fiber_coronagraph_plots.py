@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 def fiber_principle():
 	x = np.linspace(-np.pi/1, np.pi/1, 400)
 
-	sigma = 0.87
+	sigma = 0.8715
 	mode = np.exp(-0.5 * (x/sigma)**2)
 
 	f1 = lambda x: np.cos(x)
@@ -23,7 +23,7 @@ def fiber_principle():
 		c = [np.sum(f(x-s) * mode) for s in shifts]
 		c = np.abs(c)
 
-		plt.subplot(3,3,3*i+1)
+		plt.subplot(3,3,i+1)
 		#plt.plot(x,0*x,'k', lw=3)
 		plt.fill_between(x,0,z * (z>0), edgecolor='k', facecolor=colors.blue)
 		plt.fill_between(x,0,z * (z<0), edgecolor='k', facecolor=colors.red)
@@ -33,7 +33,7 @@ def fiber_principle():
 		plt.gca().set_yticks([])
 		#plt.axis('off')
 
-		plt.subplot(3,3,3*i+2)
+		plt.subplot(3,3,i+4)
 		#plt.plot(x,0*x,'k', lw=3)
 		plt.fill_between(x,0,z**2, edgecolor='k', facecolor=colors.blue)
 		#plt.ylim(0,1.05)
@@ -42,7 +42,7 @@ def fiber_principle():
 		plt.gca().set_yticks([])
 		#plt.axis('off')
 
-		plt.subplot(3,3,3*i+3)
+		plt.subplot(3,3,i+7)
 		plt.plot(shifts, c/c.max(), c=colors.blue)
 		plt.yscale('log')
 		plt.xlim(-0.16, 0.16)

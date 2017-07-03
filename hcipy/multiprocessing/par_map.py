@@ -1,10 +1,11 @@
 import multiprocessing
+import os
+import numpy as np
 
 def fun(f, q_in, q_out, reseed):
 	if reseed:
-		rand = int(os.urandom(4).encode('hex'), 16)
-		np.random.seed(rand)
-		
+		np.random.seed()
+	
 	while True:
 		i, x = q_in.get()
 		if i is None:
@@ -22,8 +23,8 @@ def par_map(f, X, nprocs=multiprocessing.cpu_count(), reseed=True, use_progressb
 
 	if use_progressbar:
 		import progressbar
-		widgets = [Percentage(), ' ', Bar(), ' ', ETA()]
-		pbar = ProgressBar(widgets=widgets)
+		widgets = [progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()]
+		pbar = progressbar.ProgressBar(widgets=widgets)
 		sent = [q_in.put((i, x)) for i, x in enumerate(pbar(X))]
 	else:
 		sent = [q_in.put((i, x)) for i, x in enumerate(X)]

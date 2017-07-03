@@ -9,4 +9,9 @@ class ModeBasis(list):
 	@property
 	def orthogonalized(self):
 		q, r = np.linalg.qr(self.transformation_matrix)
-		return ModeBasis((q[:,i] for i in range(q.shape[1])))
+		if hasattr(self[0], 'grid'):
+			from ..field import Field
+			grid = self[0].grid
+			return ModeBasis((Field(q[:,i], grid) for i in range(q.shape[1])))
+		else:
+			return ModeBasis((q[:,i] for i in range(q.shape[1])))

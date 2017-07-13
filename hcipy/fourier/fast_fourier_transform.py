@@ -20,7 +20,7 @@ def make_fft_grid(input_grid, q=1, fov=1):
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 
 class FastFourierTransform(FourierTransform):
-	def __init__(self, input_grid, q=1, fov=1):
+	def __init__(self, input_grid, q=1, fov=1, shift=0):
 		# Check assumptions
 		if not input_grid.is_regular:
 			raise ValueError('The input_grid must be regular.')
@@ -34,7 +34,7 @@ class FastFourierTransform(FourierTransform):
 		self.size = input_grid.size
 		self.ndim = input_grid.ndim
 		
-		self.output_grid = make_fft_grid(input_grid, q, fov)
+		self.output_grid = make_fft_grid(input_grid, q, fov).shifted(shift)
 		
 		self.shape_out = self.output_grid.shape
 		self.internal_shape = (self.shape_in * q).astype('int')
@@ -49,18 +49,24 @@ class FastFourierTransform(FourierTransform):
 		
 		center = input_grid.zero + input_grid.delta * (np.array(input_grid.dims) // 2)
 		if np.allclose(center, 0):
-			self.shift = 1
+			self.shift_input = 1
 		else:
-			self.shift = np.exp(-1j * np.dot(center, self.output_grid.coords))
-			self.shift /= np.fft.ifftshift(self.shift.reshape(self.shape_out)).ravel()[0] # No piston shift (remove central shift phase)
+			self.shift_input = np.exp(-1j * np.dot(center, self.output_grid.coords))
+			self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0] # No piston shift (remove central shift phase)
+
+		shift = np.ones(self.input_grid.ndim) * shift
+		if np.allclose(shift, 0):
+			self.shift_output = 1
+		else:
+			self.shift_output = np.exp(-1j * np.dot(shift, self.input_grid.coords))
 	
 	def forward(self, field):
 		from ..field import Field
 		
 		f = np.zeros(self.internal_shape, dtype='complex')
-		f[self.cutout_input] = (field.ravel() * self.weights).reshape(self.shape_in)
+		f[self.cutout_input] = (field.ravel() * self.weights * self.shift_output).reshape(self.shape_in)
 		res = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(f)))
-		res = res[self.cutout_output].ravel() * self.shift
+		res = res[self.cutout_output].ravel() * self.shift_input
 		
 		return Field(res, self.output_grid)
 	
@@ -68,9 +74,9 @@ class FastFourierTransform(FourierTransform):
 		from ..field import Field
 
 		f = np.zeros(self.internal_shape, dtype='complex')
-		f[self.cutout_output] = (field.ravel() / self.shift).reshape(self.shape_out)
+		f[self.cutout_output] = (field.ravel() / self.shift_input).reshape(self.shape_out)
 		res = np.fft.fftshift(np.fft.ifftn(np.fft.ifftshift(f)))
-		res = res[self.cutout_input].ravel() / self.weights
+		res = res[self.cutout_input].ravel() / self.weights / self.shift_output
 		
 		return Field(res, self.input_grid)
 

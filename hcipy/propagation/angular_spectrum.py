@@ -10,7 +10,11 @@ from ..fourier import FastFourierTransform
 #
 class AngularSpectrumPropagatorMonochromatic(object):
 	def __init__(self, input_grid, distance, wavelength=1):
-		self.fft = FastFourierTransform(input_grid)
+		# Maintain symmetry in the fourier grid:
+		# shifts by half a pixel if the input grid has even dimensions.
+		shift = (1 - np.mod(input_grid.dims, 2)) * input_grid.delta / 2
+		self.fft = FastFourierTransform(input_grid, shift=shift)
+		
 		k = 2*np.pi / wavelength
 		k_squared = self.fft.output_grid.as_('polar').r**2
 		k_z = np.sqrt(k**2 - k_squared + 0j)

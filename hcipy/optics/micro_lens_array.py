@@ -15,7 +15,7 @@ class MicroLensArray(OpticalElement):
 		self.input_grid = input_grid
 		self.focal_length = focal_length
 		
-		self.mla_grid = lenslet_grid        
+		self.mla_grid = lenslet_grid
 		
 		if lenslet_shape is None:
 			indices, distances = closest_points(lenslet_grid, input_grid)

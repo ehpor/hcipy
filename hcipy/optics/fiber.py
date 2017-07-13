@@ -7,7 +7,7 @@ from ..field import Field
 
 def fiber_mode_gaussian(grid, mode_field_diameter):
 	r2 = grid.x**2 + grid.y**2
-	return np.exp(-r2/(mode_field_diameter**2))
+	return np.exp(-r2/((0.5 * mode_field_diameter)**2))
 
 class SingleModeFiber(Detector):
 	def __init__(self, input_grid, mode_field_diameter, mode=None):

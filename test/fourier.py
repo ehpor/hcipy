@@ -2,12 +2,14 @@ from hcipy import *
 import matplotlib.pyplot as plt
 import numpy as np
 
-def check_energy_conservation(shift, scale, q, fov, dims):
-	grid = make_pupil_grid(dims).shifted(shift).scaled(scale)
+def check_energy_conservation(shift_input, scale, shift_output, q, fov, dims):
+	print(shift_input, scale, shift_output, q, fov, dims)
+	
+	grid = make_pupil_grid(dims).shifted(shift_input).scaled(scale)
 	f_in = Field(np.random.randn(grid.size), grid)
-	f_in = Field(np.exp(-30 * grid.as_('polar').r**2), grid)
+	#f_in = Field(np.exp(-30 * grid.as_('polar').r**2), grid)
 
-	fft = FastFourierTransform(grid, q=q, fov=fov)
+	fft = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output)
 	mft = MatrixFourierTransform(grid, fft.output_grid)
 	nft = NaiveFourierTransform(grid, fft.output_grid)
 
@@ -47,9 +49,10 @@ def check_energy_conservation(shift, scale, q, fov, dims):
 	print(np.array(patterns_match).reshape((len(fourier_transforms), len(fourier_transforms))))
 
 if __name__ == '__main__':
-	for shift in [[0,0],[0.1]]:
+	for shift_input in [[0,0],[0.1]]:
 		for scale in [1,2]:
-			for q in [1,4]:
-				for fov in [1,0.5,0.8]:
-					for dims in [[32,32],[32,64]]:
-						check_energy_conservation(shift, scale, q, fov, dims)
+			for shift_output in [[0,0], [0.1]]:
+				for q in [1,4]:
+					for fov in [1,0.5,0.8]:
+						for dims in [[32,32],[32,64]]:
+							check_energy_conservation(shift_input, scale, shift_output, q, fov, dims)

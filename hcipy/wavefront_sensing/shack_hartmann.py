@@ -3,6 +3,7 @@ from ..optics import *
 from ..field import *
 from ..aperture import *
 from ..propagation import FresnelPropagator
+from ..multiprocessing import par_map
 
 import numpy as np
 
@@ -40,20 +41,19 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
 
 		centroids = np.empty([self.unique_indices.size, 2])
 		
-		for i, index in enumerate(self.unique_indices):
-			# Select individual subapertures based on mla_index
+		def get_centroid(index):
 			mask = self.mla_index == index
 
-			# Mask off this part
 			subimage = image[mask]
 			x = image.grid.x[mask]
 			y = image.grid.y[mask]
 
-			# Find centroid
 			centroid_x = np.sum(subimage * x) / np.sum(subimage)
 			centroid_y = np.sum(subimage * y) / np.sum(subimage)
 
-			# Subtract lenslet position and store.
-			centroids[i,:] = np.array((centroid_x, centroid_y)) - self.mla_grid[index]
+			centroid = np.array((centroid_x, centroid_y)) - self.mla_grid[index]
+			return centroid
+		
+		centroids = np.array(par_map(get_centroid, self.unique_indices, use_progressbar=False))
 
 		return Field(centroids, self.mla_grid)

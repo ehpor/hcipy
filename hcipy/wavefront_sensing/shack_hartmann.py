@@ -38,8 +38,6 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
 		
 	def estimate(self, images):
 		image = images[0]
-
-		centroids = np.empty([self.unique_indices.size, 2])
 		
 		def get_centroid(index):
 			mask = self.mla_index == index

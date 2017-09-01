@@ -31,10 +31,13 @@ class SquareShackHartmannWavefrontSensorOptics(ShackHartmannWavefrontSensorOptic
 		ShackHartmannWavefrontSensorOptics.__init__(self, input_grid, self.micro_lens_array)
 
 class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
-	def __init__(self, mla_grid, mla_index):
+	def __init__(self, mla_grid, mla_index, estimation_subapertures=None):
 		self.mla_grid = mla_grid
 		self.mla_index = mla_index
-		self.unique_indices = np.unique(self.mla_index)
+		if estimation_subapertures is None:
+			self.estimation_subapertures = np.unique(self.mla_index)
+		else:
+			self.estimation_subapertures = estimation_subapertures
 		
 	def estimate(self, images):
 		image = images[0]
@@ -52,6 +55,5 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
 			centroid = np.array((centroid_x, centroid_y)) - self.mla_grid[index]
 			return centroid
 		
-		centroids = np.array(par_map(get_centroid, self.unique_indices, use_progressbar=False))
-
+		centroids = np.array(par_map(get_centroid, self.estimation_subapertures, use_progressbar=False))
 		return Field(centroids, self.mla_grid)

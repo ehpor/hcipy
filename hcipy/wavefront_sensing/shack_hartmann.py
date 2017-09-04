@@ -37,7 +37,8 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
 		if estimation_subapertures is None:
 			self.estimation_subapertures = np.unique(self.mla_index)
 		else:
-			self.estimation_subapertures = estimation_subapertures
+			self.estimation_subapertures = np.flatnonzero(np.array(estimation_subapertures))
+		self.estimation_grid = self.mla_grid.subset(estimation_subapertures)
 		
 	def estimate(self, images):
 		image = images[0]
@@ -56,4 +57,4 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
 			return centroid
 		
 		centroids = np.array(par_map(get_centroid, self.estimation_subapertures, use_progressbar=False))
-		return Field(centroids, self.mla_grid)
+		return Field(centroids, self.estimation_grid)

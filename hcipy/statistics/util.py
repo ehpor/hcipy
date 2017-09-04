@@ -1,4 +1,5 @@
 import numpy as np
+from ..field import Field
 
 def large_poisson(lam, thresh=1e6):
 	"""
@@ -26,5 +27,8 @@ def large_poisson(lam, thresh=1e6):
 	n = np.zeros(len(lam))
 	n[large] = np.round(lam[large] + np.random.normal(size=np.sum(large)) * np.sqrt(lam[large]))
 	n[small] = np.random.poisson(lam[small], size=np.sum(small))
+
+	if hasattr(lam, 'grid'):
+		n = Field(n, lam.grid)
 	
 	return n

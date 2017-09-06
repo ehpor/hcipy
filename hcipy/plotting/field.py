@@ -115,7 +115,7 @@ def contourf_field(field, grid=None, ax=None, *args, **kwargs):
 
 	return cs
 
-def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None):
+def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
 	"""
 	Takes an array of complex number and converts it to an array of [r, g, b],
 	where phase gives hue and saturaton/value are given by the absolute value.
@@ -126,15 +126,17 @@ def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None):
 	if not field.is_scalar_field:
 		raise ValueError('Field must be a scalar field.')
 
-	if rmin is None:
-		rmin = np.nanmin(np.abs(field))
-	if rmax is None:
-		rmax = np.nanmax(np.abs(field))
+	if norm is None:
+		if rmin is None:
+			rmin = np.nanmin(np.abs(field))
+		if rmax is None:
+			rmax = np.nanmax(np.abs(field))
+		norm = mpl.colors.Normalize(rmin, rmax)
 	
 	hsv = np.zeros((field.size, 3), dtype='float')
 	hsv[..., 0] = np.angle(field) / (2 * np.pi) % 1
 
-	t = np.clip((np.abs(field) - rmin) / (rmax - rmin), 0, 1)
+	t = norm(np.abs(field))
 	if theme == 'light':
 		hsv[..., 1] = t
 		hsv[..., 2] = 1

@@ -23,13 +23,15 @@ class VortexCoronagraph(OpticalElement):
 
 			self.vortex = np.exp(1j * charge * self.focal_grid.as_('polar').theta)
 			self.vortex = Field(self.vortex, self.focal_grid)
+			i = self.focal_grid.closest_to((0,0))
+			self.vortex[i] = 0
 
 			foc = self.prop(wf)
 
 			for i in range(100):
 				foc2 = foc.copy()
 				foc2.electric_field *= self.vortex
-				foc2.electric_field *= circular_aperture(num_airy)(self.focal_grid)
+				foc2.electric_field *= circular_aperture(num_airy*2)(self.focal_grid)
 
 				pup = self.prop.backward(foc2)
 				pup.electric_field[aperture < 0.5] = 0
@@ -49,6 +51,9 @@ class VortexCoronagraph(OpticalElement):
 			#plt.show()
 		elif self.method.lower() == 'none':
 			self.vortex = np.exp(1j * charge * self.focal_grid.as_('polar').theta)
+			self.vortex = Field(self.vortex, self.focal_grid)
+			i = self.focal_grid.closest_to((0,0))
+			self.vortex[i] = 0
 		elif self.method.lower() == 'convolution':
 			pup_pol = pupil_grid.as_('polar')
 			L = 512 # size of the focal-plane mask in lambda/D
@@ -87,7 +92,9 @@ class VortexCoronagraph(OpticalElement):
 
 			self.vortex = np.exp(1j * charge * self.focal_grid.as_('polar').theta)
 			self.vortex = Field(self.vortex, self.focal_grid)
-			self.vortex *= circular_aperture(num_airy)(self.focal_grid)
+			self.vortex *= circular_aperture(num_airy*2)(self.focal_grid)
+			i = self.focal_grid.closest_to((0,0))
+			self.vortex[i] = 0
 
 			foc = self.prop.forward(wf)
 			foc_copy = foc.copy()

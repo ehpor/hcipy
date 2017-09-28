@@ -1,34 +1,7 @@
 import numpy as np
 from math import sqrt, floor
 from scipy.special import eval_genlaguerre
-
-# Indexing
-def noll_to_zernike(i):
-	n = int(sqrt(2*i-1) + 0.5) - 1
-	if n % 2:
-		m = 2*int((2*(i+1) - n*(n+1))//4) - 1
-	else:
-		m = 2*int((2*i+1 - n*(n+1))//4)
-	return n, m*(-1)**(i%2)
-
-def ansi_to_zernike(i):
-	n = int((sqrt(8*i+1)-1)/2)
-	m = 2*i - n*(n+2)
-	return (n, m)
-
-def zernike_to_ansi(n, m):
-	return (m+n*n)//2 + n
-
-def zernike_to_noll(n, m):
-	i = int(((n+0.5)**2 + 1) / 2) + 1
-	Nn = (n+1)*(n+2)//2+1
-
-	# Brute force search
-	for j in range(i, i+Nn):
-		nn, mm = noll_to_zernike(j)
-		if nn==n and mm==m:
-			return j
-	raise ValueError('Could not find noll index for (%d,%d)' % n, m)
+from .zernike import ansi_to_zernike
 
 def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
 	from ..field import Field
@@ -51,7 +24,10 @@ def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
 		# The mode
 		lg = (r*sqrt(2))**(abs(l)) * np.exp(-r2) * np.exp(-1j*l*phi) * eval_genlaguerre(p, abs(l), 2*r2)
 	
-	return Field(z, grid)
+	# Numerically norm the modes
+	lg /= np.sum(np.abs(lg)**2 * grid.weights)
+
+	return Field(lg, grid)
 
 def gaussian_laguerre_ansi(i, mode_field_diameter=1, grid=None):
 	# Map mode index to p, l coordinates

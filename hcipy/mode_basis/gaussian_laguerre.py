@@ -30,7 +30,7 @@ def gaussian_laguerre_ansi(i, mode_field_diameter=1, grid=None):
 	return gaussian_laguerre(p, l, mode_field_diameter, grid)
 
 # High level functions
-def make_gaussian_laguerre_basis(num_modes, mode_field_diameter, grid, starting_mode=0):
+def make_gaussian_laguerre_basis( grid, num_modes, mode_field_diameter, starting_mode=0):
 	from .mode_basis import ModeBasis
 
 	modes = [gaussian_laguerre_ansi(i, mode_field_diameter, grid) for i in range(starting_mode, starting_mode+num_modes)]

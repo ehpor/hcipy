@@ -1,9 +1,8 @@
 __all__ = ['ModeBasis']
 __all__ += ['make_gaussian_pokes']
+__all__ += ['make_gaussian_laguerre_basis', 'gaussian_laguerre']
 __all__ += ['make_sine_basis', 'make_cosine_basis', 'make_fourier_basis', 'make_complex_fourier_basis']
 __all__ += ['make_zernike_basis', 'zernike']
-__all__ += ['make_gaussian_laguerre', 'gaussian_laguerre']
-#__all__ += ['make_gaussian_laguerre', 'gaussian_laguerre']
 
 from .disk_harmonic import *
 from .fourier import *

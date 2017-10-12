@@ -15,7 +15,7 @@ def make_fft_grid(input_grid, q=1, fov=1):
 	
 	delta = (2*np.pi / (input_grid.delta * input_grid.dims)) / q
 	dims = (input_grid.dims * fov * q).astype('int')
-	zero = delta * (-dims/2).astype('int')
+	zero = delta * (-dims/2 + np.mod(dims, 2) * 0.5)
 	
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 

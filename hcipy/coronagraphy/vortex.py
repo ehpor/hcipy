@@ -93,11 +93,8 @@ class VortexCoronagraph(OpticalElement):
 			self.vortex = np.exp(1j * charge * self.focal_grid.as_('polar').theta)
 			self.vortex = Field(self.vortex, self.focal_grid)
 			self.vortex *= circular_aperture(num_airy*2)(self.focal_grid)
-<<<<<<< HEAD
+
 			i = self.focal_grid.closest_to((0,0))
-=======
-			i = vortex.focal_grid.closest_to((0,0))
->>>>>>> d1a8972bd54743544e19df7a7569de5bd594a034
 			self.vortex[i] = 0
 
 			foc = self.prop.forward(wf)

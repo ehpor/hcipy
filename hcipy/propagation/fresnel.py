@@ -6,10 +6,7 @@ from ..fourier import FastFourierTransform
 
 class FresnelPropagatorMonochromatic(object):
 	def __init__(self, input_grid, distance, wavelength=1):
-		# Maintain symmetry in the fourier grid:
-		# shifts by half a pixel if the input grid has even dimensions.
-		shift = (1 - np.mod(input_grid.dims, 2)) * input_grid.delta / 2
-		self.fft = FastFourierTransform(input_grid, shift=shift)
+		self.fft = FastFourierTransform(input_grid)
 		
 		k = 2*np.pi / wavelength
 		k_squared = self.fft.output_grid.as_('polar').r**2

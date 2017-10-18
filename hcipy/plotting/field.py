@@ -91,6 +91,7 @@ def contour_field(field, grid=None, ax=None, *args, **kwargs):
 	return cs
 
 def contourf_field(field, grid=None, ax=None, *args, **kwargs):
+	import matplotlib.pyplot as plt
 	if ax is None:
 		ax = plt.gca()
 

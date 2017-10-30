@@ -138,7 +138,7 @@ def von_karman_psd(grid, u_o=0.1):
 
 def modified_von_karman_psd(grid, u_o=0.1, u_i=100):
 	u = grid.as_('polar').r
-	res = von_karman_psd(u, u_o) * np.exp(-u**2/u_i**2)
+	res = von_karman_psd(grid, u_o) * np.exp(-u**2/u_i**2)
 	res[grid.closest_to(0)] = 0
 	return Field(res, grid)
 

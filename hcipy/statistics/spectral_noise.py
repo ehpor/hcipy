@@ -64,11 +64,13 @@ class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
 	
 		self.period = output_grid.coords.delta * output_grid.coords.shape
 
-		self.C = np.sqrt(self.psd(self.input_grid, *psd_args, **psd_kwargs) / self.input_grid.weights)
+		# * (2*np.pi)**self.input_grid.ndim is due to conversion from PSD from "per Hertz" to "per radian", which yields a factor of 2pi per dimension
+		self.C = np.sqrt(self.psd(self.input_grid, *psd_args, **psd_kwargs) / self.input_grid.weights * (2*np.pi)**self.input_grid.ndim)
 
 	def make_random(self):
 		N = self.input_grid.size
 		C = self.C * (np.random.randn(N) + 1j * np.random.randn(N))
+		C = Field(C, self.input_grid)
 
 		return SpectralNoiseFFT(self, C)
 	
@@ -117,9 +119,10 @@ class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 		mask_1 = self.input_grid_1.as_('polar').r < boundary
 		mask_2 = self.input_grid_2.as_('polar').r >= boundary
 
-		self.C_1 = np.sqrt(psd(self.input_grid_1, *psd_args, **psd_kwargs) / self.input_grid_1.weights)
+		# * (2*np.pi)**self.input_grid.ndim is due to conversion from PSD from "per Hertz" to "per radian", which yields a factor of 2pi per dimension
+		self.C_1 = np.sqrt(psd(self.input_grid_1, *psd_args, **psd_kwargs) / self.input_grid_1.weights * (2*np.pi)**self.input_grid.ndim)
 		self.C_1[mask_1] = 0
-		self.C_2 = np.sqrt(psd(self.input_grid_2, *psd_args, **psd_kwargs) / self.input_grid_2.weights)
+		self.C_2 = np.sqrt(psd(self.input_grid_2, *psd_args, **psd_kwargs) / self.input_grid_2.weights * (2*np.pi)**self.input_grid.ndim)
 		self.C_2[mask_2] = 0
 	
 	def make_random(self):

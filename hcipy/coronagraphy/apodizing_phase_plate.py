@@ -30,10 +30,27 @@ def generate_app_keller(wavefront, propagator, propagator_max, contrast, num_ite
 	return wf
 
 def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterations=1):
-	'''Make an apodizing phase plate coronagraph using a globally optimal algorithm.
+	'''Optimize a one-sided APP using a globally optimal algorithm. This algorithm does not
+	apply any symmetries for two-sided dark zones or circularly-symmetric pupils. This 
+	function requires that you have installed the Gurobi optimizer.
 
-	This function requires that you have installed gurobi.
-	This function is untested, use at your own risk.
+	Parameters
+	----------
+	wavefont : Wavefront
+		The input aperture as a wavefront.
+	propagator : Propagator
+		The propagator from `wavefront` to the focal plane grid.
+	propagator_max : Propagator
+		The propagator from `wavefront` to the point in the focal-plane that we want to maximize.
+	contrast : array_like or scalar
+		The required contrast in the focal plane.
+	num_iterations : int
+		The number of iterations for the Strehl ratio to converge.
+	
+	Returns
+	-------
+	Field
+		The resultant electric field transmission function.
 	'''
 	import gurobipy as gp
 
@@ -52,7 +69,7 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 	M_max = np.concatenate((M_max.real, -M_max.imag))
 
 	m, n = M.shape
-	contrast = np.ones(m) * contrast
+	contrast_requirement = np.ones(m) * np.sqrt(contrast)
 
 	model = gp.Model('lp')
 	model.Params.Threads = 4
@@ -62,19 +79,19 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 	obj = gp.quicksum((x[i] * M_max[i] for i in range(n)))
 	model.setObjective(obj, gp.GRB.MAXIMIZE)
 
-	for i in range(n/2):
-		r2 = x[i]*x[i] + x[i+n/2]*x[i+n/2]
+	for i in range(n//2):
+		r2 = x[i]*x[i] + x[i+n//2]*x[i+n//2]
 		model.addQconstr(r2 <= 1)
 	
 	for i, ee in enumerate(M):
 		e = gp.quicksum((x[i] * ee[i] for i in range(n)))
-		model.addConstr(e <= contrast[i])
-		model.addConstr(e >= -contrast[i])
+		model.addConstr(e <= contrast_requirement[i])
+		model.addConstr(e >= -contrast_requirement[i])
 
 	model.optimize()
 
 	solution = np.array([x[i].x for i in range(n)])
-	solution = solution[:n/2] + 1j * solution[n/2:]
+	solution = solution[:n//2] + 1j * solution[n//2:]
 
 	return Field(solution, wavefront.electric_field.grid)
 

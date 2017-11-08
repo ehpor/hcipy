@@ -1,5 +1,4 @@
 import multiprocessing
-import os
 import numpy as np
 
 def fun(f, q_in, q_out, reseed):

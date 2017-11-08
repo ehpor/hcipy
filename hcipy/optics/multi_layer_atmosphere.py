@@ -40,6 +40,8 @@ class AtmosphericModel(OpticalElement):
 		self.Cn_squared = np.array([self.Cn_squared[i] for i in inds], dtype='float')
 
 		self.unwanted_modes = unwanted_modes
+
+		self.calculated_achromatic_screen = None
 	
 	@property
 	def t(self):
@@ -52,6 +54,7 @@ class AtmosphericModel(OpticalElement):
 			self._t = 0
 		else:
 			self._t = t
+		self.calculated_achromatic_screen = None
 	
 	def make_random(self):
 		self.t = None
@@ -83,19 +86,22 @@ class AtmosphericModel(OpticalElement):
 				prop = FresnelPropagator(wavefront.electric_field.grid, z)
 				wf = prop(wf)
 		else:
-			cumulated_phase_screen = self.phase_screen_factory.make_zero()
+			if self.calculated_achromatic_screen is None:
+				cumulated_phase_screen = self.phase_screen_factory.make_zero()
 
-			for height, velocity, Cn, phase_screen in self.layers:
-				shift = self.t * velocity - np.sin(self.off_axis_angle) * height / np.cos(self.zenith_angle)
-				phase_screen = phase_screen.shifted(shift) * np.sqrt(Cn * k**2 * 0.423)
-				cumulated_phase_screen += phase_screen
-			cumulated_phase_screen = cumulated_phase_screen()
+				for height, velocity, Cn, phase_screen in self.layers:
+					shift = self.t * velocity - np.sin(self.off_axis_angle) * height / np.cos(self.zenith_angle)
+					phase_screen = phase_screen.shifted(shift) * np.sqrt(Cn * 0.423)
+					cumulated_phase_screen += phase_screen
+				cumulated_phase_screen = cumulated_phase_screen()
 
-			if self.unwanted_modes is not None:
-				cumulated_phase_screen -= self._unwanted_modes_trans.dot(self._unwanted_modes_inv_trans(cumulated_phase_screen))
+				if self.unwanted_modes is not None:
+					cumulated_phase_screen -= self._unwanted_modes_trans.dot(self._unwanted_modes_inv_trans(cumulated_phase_screen))
+
+				self.calculated_achromatic_screen = cumulated_phase_screen
 
 			wf = wavefront.copy()
-			wf.electric_field *= np.exp(1j * cumulated_phase_screen)
+			wf.electric_field *= np.exp(1j * self.calculated_achromatic_screen * k)
 		return wf
 
 	@property

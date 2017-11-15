@@ -25,6 +25,13 @@ HCIPy introduces the notion of Fields, a physical quantity, typically a number o
    Field.is_valid_field
    Field.shaped
 
+To make it easier to work with tensor- and vector fields, we implemented the following methods:
+
+.. autosummary::
+   :toctree: _autosummary
+
+   field_einsum
+
 Coordinates
 ---------------------
 

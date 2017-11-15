@@ -27,6 +27,9 @@ def make_propagator(monochromatic_propagator):
 			self.wavelengths.append(wavelength)
 			self.monochromatic_propagators.append(m)
 
+			if len(self.monochromatic_propagators) > 50:
+				self.monochromatic_propagators.pop(0)
+
 			return m
 
 		def __call__(self, wavefront):

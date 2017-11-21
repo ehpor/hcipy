@@ -18,7 +18,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	
 	# If field is complex, draw complex
 	if np.iscomplexobj(field):
-		field = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
+		f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
 		vmin = None
 		vmax = None
 		norm = None
@@ -29,6 +29,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 			if vmax is None:
 				vmax = np.nanmax(field)
 			norm = mpl.colors.Normalize(vmin, vmax)
+		f = field
 	
 	# Get extent
 	c_grid = grid.as_('cartesian')
@@ -37,7 +38,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	if grid.is_separated and grid.is_('cartesian'):
 		# We can draw this directly
 		x, y = grid.coords.separated_coords
-		z = field.shaped
+		z = f.shaped
 	else:
 		# We can't draw this directly. 
 		raise NotImplementedError()
@@ -66,6 +67,22 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	
 	ax.set_xlim(min_x, max_x)
 	ax.set_ylim(min_y, max_y)
+
+	num_rows, num_cols = field.grid.shape
+	def format_coord(x, y):
+		col = int((x - min_x) / (max_x - min_x) * num_cols + 0.5)
+		row = int((y - min_y) / (max_y - min_y) * num_rows + 0.5)
+		
+		if col >= 0 and col < num_cols and row >= 0 and row < num_rows:
+			z = field.shaped[row, col]
+			if np.iscomplexobj(z):
+				return 'x=%0.3g, y=%0.3g, z=%0.3g + 1j * %0.3g' % (x, y, z.real, z.imag)
+			else:
+				return 'x=%0.3g, y=%0.3g, z=%0.3g' % (x, y, z)
+		else:
+			return 'x=%0.3g, y=%0.3g' % (x, y)
+
+	ax.format_coord = format_coord
 
 	ax._sci(im)
 

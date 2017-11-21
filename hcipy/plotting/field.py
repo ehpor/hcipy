@@ -16,12 +16,19 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	else:
 		field = Field(field, grid)
 	
-	if norm is None:
-		if vmin is None:
-			vmin = np.nanmin(field)
-		if vmax is None:
-			vmax = np.nanmax(field)
-		norm = mpl.colors.Normalize(vmin, vmax)
+	# If field is complex, draw complex
+	if np.iscomplexobj(field):
+		field = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
+		vmin = None
+		vmax = None
+		norm = None
+	else:
+		if norm is None:
+			if vmin is None:
+				vmin = np.nanmin(field)
+			if vmax is None:
+				vmax = np.nanmax(field)
+			norm = mpl.colors.Normalize(vmin, vmax)
 	
 	# Get extent
 	c_grid = grid.as_('cartesian')

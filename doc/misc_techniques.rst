@@ -3,11 +3,5 @@
 Miscellaneous Techniques
 =========================
 
-Electric Field Conjugation
---------------------------
-
-Stroke Minimization
--------------------
-
 Holography
 ------------

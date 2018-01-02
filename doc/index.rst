@@ -19,11 +19,8 @@ HCIPy is a framework written in Python for high contrast imaging simulation work
    :caption: Contents:
 
    introduction
-   fields
-   mode_bases
-   fourier_transforms
-   optical_systems
+   core
    adaptive_optics
    coronagraphy
-   misc_techniques
-   miscellaneous
+   data_reduction
+   

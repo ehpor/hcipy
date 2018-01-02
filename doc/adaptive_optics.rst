@@ -3,7 +3,11 @@
 Adaptive Optics
 ==================
 
-Wavefront Sensing
+Atmospheric turbulence
+----------------------
+
+
+Wavefront sensing
 -----------------
 
 Pyramid Wavefront Sensor
@@ -24,6 +28,18 @@ Phase Diversity
 Optical Diffentiation
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Control
--------
 
+Wavefront control
+----------------------
+
+Interaction matrices
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Speckle nulling
+~~~~~~~~~~~~~~~~~~
+
+Fast & Furious
+~~~~~~~~~~~~~~~~~~~
+
+Stroke minimzation
+~~~~~~~~~~~~~~~~~~~~~~~

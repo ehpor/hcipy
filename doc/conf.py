@@ -34,7 +34,6 @@ extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.autosummary',
-    'matplotlib.sphinxext.plot_directive',
     'numpydoc']
 
 autosummary_generate = True

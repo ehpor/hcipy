@@ -7,4 +7,9 @@ setup(name='hcipy',
 	author='Emiel Por',
 	author_email='por@strw.leidenuniv.nl',
 	packages=find_packages(),
-	zip_safe=False)
+	install_requires=[
+		"numpy",
+		"scipy",
+		"matplotlib"],
+	zip_safe=False
+	)

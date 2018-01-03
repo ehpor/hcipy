@@ -1,7 +1,8 @@
+from copy import copy
 import numpy as np
 from ..field import Field
 
-def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None, non_linear_axes=False, *args, **kwargs):
+def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None, non_linear_axes=False, cmap=None, mask=None, mask_color='k', *args, **kwargs):
 	import matplotlib as mpl
 	import matplotlib.pyplot as plt
 	from matplotlib.image import NonUniformImage
@@ -31,6 +32,12 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 			norm = mpl.colors.Normalize(vmin, vmax)
 		f = field
 	
+	if mask is not None:
+		f[~mask.astype('bool')] = np.nan
+
+		cmap = copy(mpl.cm.get_cmap(cmap))
+		cmap.set_bad(mask_color)
+	
 	# Get extent
 	c_grid = grid.as_('cartesian')
 	min_x, min_y, max_x, max_y = c_grid.x.min(), c_grid.y.min(), c_grid.x.max(), c_grid.y.max()
@@ -52,10 +59,10 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		y2 = np.concatenate(([1.5 * y[0] - 0.5 * y[1]], y_mid, [1.5 * y[-1] - 0.5 * y[-2]]))
 		X, Y = np.meshgrid(x2, y2)
 		
-		im = ax.pcolormesh(X, Y, z, norm=norm, *args, rasterized=True, **kwargs)
+		im = ax.pcolormesh(X, Y, z, *args, norm=norm, rasterized=True, cmap=cmap, **kwargs)
 	else:
 		# Use NonUniformImage to display
-		im = NonUniformImage(ax, extent=(min_x, max_x, min_y, max_y), interpolation=interpolation, norm=norm, *args, **kwargs)
+		im = NonUniformImage(ax, extent=(min_x, max_x, min_y, max_y), interpolation=interpolation, norm=norm, cmap=cmap, *args, **kwargs)
 		im.set_data(x, y, z)
 
 		from matplotlib.patches import Rectangle

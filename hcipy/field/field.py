@@ -32,6 +32,12 @@ class Field(np.ndarray):
 		'''The order of the tensor of the field.
 		'''
 		return self.ndim - 1
+
+	@property
+	def tensor_shape(self):
+		'''The shape of the tensor of the field.
+		'''
+		return np.array(self.shape)[:-1]
 	
 	@property
 	def is_scalar_field(self):
@@ -49,7 +55,7 @@ class Field(np.ndarray):
 	def is_valid_field(self):
 		'''True if the field corresponds with its grid.
 		'''
-		return self.shape[0] == self.grid.size
+		return self.shape[-1] == self.grid.size
 	
 	@property
 	def shaped(self):
@@ -64,7 +70,7 @@ class Field(np.ndarray):
 			raise ValueError('This field doesn\'t have a shape.')
 
 		if self.tensor_order > 0:
-			new_shape = np.concatenate([self.grid.shape, np.array(self.shape)[1:]])
+			new_shape = np.concatenate([np.array(self.shape)[:-1], self.grid.shape])
 			return self.reshape(new_shape)
 
 		return self.reshape(self.grid.shape)
@@ -84,7 +90,7 @@ class Field(np.ndarray):
 
 		'''
 		i = self.grid.closest_to(p)
-		return self[i]
+		return self[...,i]
 
 def field_einsum(subscripts, *operands, **kwargs):
 	'''Evaluates the Einstein summation convention on the operand fields.
@@ -165,10 +171,10 @@ def field_einsum(subscripts, *operands, **kwargs):
 	unused_index = [a for a in string.ascii_lowercase if a not in subscripts][0]
 
 	# Add the field dimension to field operands.
-	ss = [unused_index + s if is_field[i] else s for i,s in enumerate(ss)]
+	ss = [s + unused_index if is_field[i] else s for i,s in enumerate(ss)]
 	if '->' in subscripts:
 		i = ss[-1].find('->')
-		ss[-1] = ss[-1][:i] + '->' + unused_index + ss[-1][i+2:]
+		ss[-1] = ss[-1][:i] + '->' + ss[-1][i+2:] + unused_index
 	subscripts_new = ','.join(ss)
 
 	res = np.einsum(subscripts_new, *operands, **kwargs)

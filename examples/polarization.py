@@ -17,14 +17,14 @@ print('Everything is valid:', E.is_valid_field)
 wf = Wavefront(E)
 prop = FraunhoferPropagator(pupil_grid, focal_grid)
 '''
-a = Field(np.random.randn(pupil_grid.size,3,3), pupil_grid)
-b = Field(np.random.randn(pupil_grid.size,3), pupil_grid)
+a = Field(np.random.randn(3,3,pupil_grid.size), pupil_grid)
+b = Field(np.random.randn(3,pupil_grid.size), pupil_grid)
 c = np.random.randn(3,3)
 
 print(a.grid.size)
 print(b.grid.size)
 
 res = field_trace(a)
-res2 = np.array([np.trace(a[i,...]) for i in range(pupil_grid.size)])
+res2 = np.array([np.trace(a[...,i]) for i in range(pupil_grid.size)])
 
 print(np.allclose(res, res2))

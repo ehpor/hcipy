@@ -3,7 +3,7 @@ __all__ += ['UnstructuredCoords', 'SeparatedCoords', 'RegularCoords']
 __all__ += ['CartesianGrid']
 __all__ += ['PolarGrid']
 __all__ += []
-__all__ += ['Field']
+__all__ += ['Field', 'field_einsum', 'field_dot', 'field_trace', 'field_inv']
 __all__ += ['make_pupil_grid', 'make_focal_grid', 'make_hexagonal_grid', 'make_chebyshev_grid', ]
 
 from .grid import *

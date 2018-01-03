@@ -1,4 +1,5 @@
 import numpy as np
+from ..field import Field
 
 class FourierTransform(object):
 	def forward(self, field):
@@ -42,6 +43,30 @@ def time_it(function, t_max=5, n_max=100):
 	return np.median(times)
 
 def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='estimate'):
+	'''Construct a FourierTransform object.
+
+	The most time-efficient Fourier transform method will be chosen according to actual or estimated performance.
+
+	Parameters
+	----------
+	input_grid : Grid
+		The grid that will be used for the Field passed to the Fourier transform.
+	output_grid : None or Grid
+		The grid of the resulting field. If it is None, a optimal grid will be chosen, according to `q` and `fov`.
+	q : scalar
+		Describes how many samples to take in the Fourier domain. A value of 1 means critcally sampled in the Fourier domain.
+	fov : scalar
+		Describes how far out the Fourier domain extends. A value of 1 means the same amount of samples as the spatial domain.
+	planner : string
+		If it is 'estimate', performance of the different methods will be estimated from theoretical complexity estimates. 
+		If it is 'measure', actual Fourier transforms will be performed to get the actual performance. The latter takes longer,
+		but is more accurate.
+	
+	Returns
+	-------
+	FourierTransform
+		The Fourier transform that was requested.
+	'''
 	from .fast_fourier_transform import FastFourierTransform, make_fft_grid
 	from .matrix_fourier_transform import MatrixFourierTransform
 	from .naive_fourier_transform import NaiveFourierTransform
@@ -98,3 +123,15 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 		return MatrixFourierTransform(input_grid, output_grid)
 	elif method == 'naive':
 		return NaiveFourierTransform(input_grid, output_grid)
+
+def multiplex_for_tensor_fields(func):
+	def inner(self, field):
+		if field.is_scalar_field:
+			return func(self, field)
+		else:
+			f = field.reshape((-1,field.grid.size))
+			res = [func(self, ff) for ff in f]
+			new_shape = np.concatenate((field.tensor_shape, [-1]))
+			return Field(np.array(res).reshape(new_shape), res[0].grid)
+
+	return inner

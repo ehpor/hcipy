@@ -1,9 +1,10 @@
 import numpy as np
-from .optical_element import OpticalElement
+from .optical_element import OpticalElement, make_polychromatic
 
-class Apodizer(OpticalElement):
-	def __init__(self, apodization):
+class ApodizerMonochromatic(object):
+	def __init__(self, apodization, wavelength=1):
 		self.apodization = apodization
+		self.wavelength = wavelength
 	
 	def forward(self, wavefront):
 		wf = wavefront.copy()
@@ -15,13 +16,24 @@ class Apodizer(OpticalElement):
 		wf.electric_field /= self.apodization
 		return wf
 
-class PhaseApodizer(Apodizer):
-	def __init__(self, phase):
+Apodizer = make_polychromatic(["apodization"])(ApodizerMonochromatic)
+
+class PhaseApodizerMonochromatic(object):
+	def __init__(self, phase, wavelength=1):
 		self.phase = phase
+		self.wavelength
 	
-	@property
-	def apodization(self):
-		return np.exp(1j * self.phase)
+	def forward(self, wavefront):
+		wf = wavefront.copy()
+		wf.electric_field *= np.exp(1j * self.phase)
+		return wf
+	
+	def backward(self, wavefront):
+		wf = wavefront.copy()
+		wf.electric_field *= np.exp(-1j * self.phase)
+		return wf
+
+PhaseApodizer = make_polychromatic(["phase"])(PhaseApodizerMonochromatic)
 
 class ThinLens(OpticalElement):
 	def __init__(self, focal_length):

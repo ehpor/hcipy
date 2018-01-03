@@ -7,6 +7,7 @@ print(HalfWavePlate(lambda wl: 0).get_instance(None, 3))
 pupil_grid = make_pupil_grid(32)
 focal_grid = make_focal_grid(pupil_grid, 8, 16)
 aperture = circular_aperture(1)
+
 '''
 E = np.empty((pupil_grid.size, 3))
 E = Field(E, pupil_grid)
@@ -20,6 +21,9 @@ prop = FraunhoferPropagator(pupil_grid, focal_grid)
 a = Field(np.random.randn(3,3,pupil_grid.size), pupil_grid)
 b = Field(np.random.randn(3,pupil_grid.size), pupil_grid)
 c = np.random.randn(3,3)
+
+f = FresnelPropagator(pupil_grid, 2)
+print(f.forward(Wavefront(a)).electric_field.tensor_shape)
 
 print(a.grid.size)
 print(b.grid.size)

@@ -1,5 +1,5 @@
 import numpy as np
-from .fourier_transform import FourierTransform
+from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
 
 class MatrixFourierTransform(FourierTransform):
 	def __init__(self, input_grid, output_grid):
@@ -28,6 +28,7 @@ class MatrixFourierTransform(FourierTransform):
 			self.M1 = np.exp(-1j * np.dot(output_grid.coords.separated_coords[1][:,np.newaxis], input_grid.coords.separated_coords[1][np.newaxis,:]))
 			self.M2 = np.exp(-1j * np.dot(output_grid.coords.separated_coords[0][:,np.newaxis], input_grid.coords.separated_coords[0][np.newaxis,:])).T
 	
+	@multiplex_for_tensor_fields
 	def forward(self, field):
 		from ..field import Field
 
@@ -40,6 +41,7 @@ class MatrixFourierTransform(FourierTransform):
 		
 		return Field(res, self.output_grid)
 	
+	@multiplex_for_tensor_fields
 	def backward(self, field):
 		from ..field import Field
 		

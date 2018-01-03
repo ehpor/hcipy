@@ -1,5 +1,5 @@
 import numpy as np
-from .fourier_transform import FourierTransform
+from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
 
 def make_fft_grid(input_grid, q=1, fov=1):
 	from ..field import CartesianGrid, RegularCoords
@@ -60,6 +60,7 @@ class FastFourierTransform(FourierTransform):
 		else:
 			self.shift_output = np.exp(-1j * np.dot(shift, self.input_grid.coords))
 	
+	@multiplex_for_tensor_fields
 	def forward(self, field):
 		from ..field import Field
 		
@@ -70,6 +71,7 @@ class FastFourierTransform(FourierTransform):
 		
 		return Field(res, self.output_grid)
 	
+	@multiplex_for_tensor_fields
 	def backward(self, field):
 		from ..field import Field
 

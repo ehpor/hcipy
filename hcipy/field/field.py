@@ -1,4 +1,5 @@
 import numpy as np
+import string
 
 class Field(np.ndarray):
 	'''The value of some physical quantity for each point in some coordinate system.
@@ -144,27 +145,30 @@ def field_einsum(subscripts, *operands, **kwargs):
 	Raises
 	------
 	ValueError
-		If none of the operands is a Field. If all of the fields don't have	
-		the same size. If the number of operands is not equal to the
-		subscripts specified.
+		If all of the fields don't have	the same grid size. If the number of
+		operands is not equal to the number of subscripts specified.
 	'''
 	is_field = [isinstance(o, Field) for o in operands]
 	if not np.count_nonzero(is_field):
-		raise ValueError('At least one of the operands must be a field.')
+		return np.einsum(subscripts, *operands, **kwargs)
 	
-	field_sizes = [o.size for i, o in enumerate(operands) if is_field[i]]
+	field_sizes = [o.grid.size for i, o in enumerate(operands) if is_field[i]]
 	if not np.allclose(field_sizes, field_sizes[0]):
 		raise ValueError('All fields must be the same size for a field_einsum().')
 
 	ss = subscripts.split(',')
 
 	if len(ss) != len(operands):
-		raise ValueError('Number of operands is not equal to indexing operands.')
+		raise ValueError('Number of operands is not equal to number of indexing operands.')
+	
+	# Find an indexing letter that can be used for field dimension.
+	unused_index = [a for a in string.ascii_lowercase if a not in subscripts][0]
 
-	ss = ['...' + s if is_field[i] else s for i,s in enumerate(ss)]
+	# Add the field dimension to field operands.
+	ss = [unused_index + s if is_field[i] else s for i,s in enumerate(ss)]
 	if '->' in subscripts:
 		i = ss[-1].find('->')
-		ss[-1] = ss[-1][:i] + '->...' + ss[-1][i+2:]
+		ss[-1] = ss[-1][:i] + '->' + unused_index + ss[-1][i+2:]
 	subscripts_new = ','.join(ss)
 
 	res = np.einsum(subscripts_new, *operands, **kwargs)
@@ -173,3 +177,57 @@ def field_einsum(subscripts, *operands, **kwargs):
 	if 'out' in kwargs:
 		kwargs['out'] = Field(res, grid)
 	return Field(res, grid)
+
+def field_dot(a, b, out=None):
+	# Find out if a or b are vectors or higher dimensional tensors
+	if hasattr(a, 'tensor_order'):
+		amat = a.tensor_order > 1
+	elif np.isscalar(a):
+		if out is None:
+			return a * b
+		else:
+			return np.multiply(a, b, out)
+	else:
+		amat = a.ndim > 1
+	
+	if hasattr(b, 'tensor_order'):
+		bmat = b.tensor_order > 1
+	elif np.isscalar(b):
+		if out is None:
+			return a * b
+		else:
+			return np.multiply(a, b, out)
+	else:
+		bmat = b.ndim > 1
+	
+	# Select correct multiplication behaviour.
+	if amat and bmat:
+		subscripts = '...ij,...jk->...ik'
+	elif amat and not bmat:
+		subscripts = '...i,...i->...'
+	elif not amat and bmat:
+		subscripts = '...i,...ij->...j'
+	elif not amat and not bmat:
+		subscripts = '...i,...i->...'
+
+	# Perform calculation and return.
+	if out is None:
+		return field_einsum(subscripts, a, b)
+	else:
+		return field_einsum(subscripts, a, b, out=out)
+
+def field_trace(a, out=None):
+	if out is None:
+		return field_einsum('ii', a)
+	else:
+		return field_einsum('ii', a, out=out)
+
+def field_inv(a):
+	if hasattr(a, 'grid'):
+		if a.tensor_order != 2:
+			raise ValueError("Only tensor fields of order 2 can be inverted.")
+		
+		res = np.rollaxis(np.linalg.inv(np.rollaxis(a, -1)), 0, -1)
+		return Field(res, a.grid)
+	else:
+		return np.linalg.inv(a)

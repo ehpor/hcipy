@@ -46,6 +46,8 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		# We can draw this directly
 		x, y = grid.coords.separated_coords
 		z = f.shaped
+		if np.iscomplexobj(field):
+			z = np.rollaxis(z, 0, z.ndim)
 	else:
 		# We can't draw this directly. 
 		raise NotImplementedError()
@@ -181,4 +183,4 @@ def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
 
 	res = np.concatenate((rgb, alpha), axis=1)
 
-	return Field(res, field.grid)
+	return Field(res.T, field.grid)

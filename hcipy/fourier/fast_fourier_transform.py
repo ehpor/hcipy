@@ -1,5 +1,8 @@
+from __future__ import division
+
 import numpy as np
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
+
 
 def make_fft_grid(input_grid, q=1, fov=1):
 	from ..field import CartesianGrid, RegularCoords

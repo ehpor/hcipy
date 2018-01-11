@@ -120,9 +120,9 @@ class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 		mask_2 = self.input_grid_2.as_('polar').r >= boundary
 
 		# * (2*np.pi)**self.input_grid.ndim is due to conversion from PSD from "per Hertz" to "per radian", which yields a factor of 2pi per dimension
-		self.C_1 = np.sqrt(psd(self.input_grid_1, *psd_args, **psd_kwargs) / self.input_grid_1.weights * (2*np.pi)**self.input_grid.ndim)
+		self.C_1 = np.sqrt(psd(self.input_grid_1, *psd_args, **psd_kwargs) / self.input_grid_1.weights * (2*np.pi)**self.input_grid_1.ndim)
 		self.C_1[mask_1] = 0
-		self.C_2 = np.sqrt(psd(self.input_grid_2, *psd_args, **psd_kwargs) / self.input_grid_2.weights * (2*np.pi)**self.input_grid.ndim)
+		self.C_2 = np.sqrt(psd(self.input_grid_2, *psd_args, **psd_kwargs) / self.input_grid_2.weights * (2*np.pi)**self.input_grid_1.ndim)
 		self.C_2[mask_2] = 0
 	
 	def make_random(self):

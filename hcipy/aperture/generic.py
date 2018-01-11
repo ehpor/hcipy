@@ -75,3 +75,16 @@ def regular_polygon_aperture(num_sides, circum_diameter):
 # Convenience function
 def hexagonal_aperture(circum_diameter):
 	return regular_polygon_aperture(6, circum_diameter)
+
+def segmented_aperture(subaperture_shape, subaperture_grid):
+	def func(grid):
+		ap = 0
+		for p in subaperture_grid.points:
+			ap += subaperture_shape(grid.shifted(-p))
+		return Field(ap, grid)
+	return func
+
+def obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio):
+	def func(grid):
+		return circular_aperture(pupil_diameter)(grid) - circular_aperture(central_obscuration_diameter)(grid)
+	return func

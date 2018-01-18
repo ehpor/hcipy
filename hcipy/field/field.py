@@ -249,7 +249,7 @@ def field_inv(a):
 		if a.tensor_order != 2:
 			raise ValueError("Only tensor fields of order 2 can be inverted.")
 		
-		res = np.rollaxis(np.linalg.inv(np.rollaxis(a, -1)), 0, -1)
+		res = np.rollaxis(np.linalg.inv(np.rollaxis(a, -1)), 0, a.tensor_order + 2)
 		return Field(res, a.grid)
 	else:
 		return np.linalg.inv(a)

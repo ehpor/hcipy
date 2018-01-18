@@ -174,7 +174,7 @@ def field_einsum(subscripts, *operands, **kwargs):
 	ss = [s + unused_index if is_field[i] else s for i,s in enumerate(ss)]
 	if '->' in subscripts:
 		i = ss[-1].find('->')
-		ss[-1] = ss[-1][:i] + '->' + ss[-1][i+2:] + unused_index
+		ss[-1] = ss[-1][:i] + unused_index + '->' + ss[-1][i+2:]
 	subscripts_new = ','.join(ss)
 
 	res = np.einsum(subscripts_new, *operands, **kwargs)
@@ -185,6 +185,22 @@ def field_einsum(subscripts, *operands, **kwargs):
 	return Field(res, grid)
 
 def field_dot(a, b, out=None):
+	'''Perform a dot product of `a` and `b` multiplexed over the field dimension.
+
+	Parameters
+	----------
+	a : Field or array_like
+		Left argument of the dot product.
+	b : Field or array_like
+		Right argument of the dot product.
+	out : Field or array_like
+		If provided, the calculation is done into this array.
+
+	Returns
+	-------
+	Field
+		The result of the dot product.
+	'''
 	# Find out if a or b are vectors or higher dimensional tensors
 	if hasattr(a, 'tensor_order'):
 		amat = a.tensor_order > 1

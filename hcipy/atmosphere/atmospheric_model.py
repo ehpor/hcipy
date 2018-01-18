@@ -111,6 +111,9 @@ class MultiLayerAtmosphere(OpticalElement):
 			if self.scintilation and i < len(propagators):
 				self.elements.append(propagators[i])
 		
+		if self.scintilation and sorted_heights[-1] > 0:
+			self.elements.append(FresnelPropagator(grid, sorted_heights[-1]))
+		
 		self._dirty = False
 	
 	@property

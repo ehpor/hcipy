@@ -23,6 +23,7 @@ from .field import *
 from .fourier import *
 from .io import *
 from .math_util import *
+from .metrics import *
 from .mode_basis import *
 from .multiprocessing import *
 from .optics import *
@@ -41,6 +42,7 @@ __all__.extend(field.__all__)
 __all__.extend(fourier.__all__)
 __all__.extend(io.__all__)
 __all__.extend(math_util.__all__)
+__all__.extend(metrics.__all__)
 __all__.extend(mode_basis.__all__)
 __all__.extend(multiprocessing.__all__)
 __all__.extend(optics.__all__)

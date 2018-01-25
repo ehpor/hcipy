@@ -163,7 +163,12 @@ def field_einsum(subscripts, *operands, **kwargs):
 		raise ValueError('All fields must be the same size for a field_einsum().')
 
 	# Decompose the subscript into input and output
-	ss_input, ss_output = subscripts.split('->')
+	splitted_string = subscripts.split('->')
+	if len(splitted_string)==2:
+		ss_input, ss_output = splitted_string
+	else:
+		ss_input = splitted_string[0]
+		ss_output = ''
 	
 	# split the input operands in separate strings
 	ss = ss_input.split(',')
@@ -177,7 +182,10 @@ def field_einsum(subscripts, *operands, **kwargs):
 	ss = [s + unused_index if is_field[i] else s for i,s in enumerate(ss)]
 
 	# Recombine all operands into the final subscripts
-	subscripts_new = ','.join(ss) + '->' + ss_output + unused_index
+	if len(splitted_string)==2:
+		subscripts_new = ','.join(ss) + '->' + ss_output + unused_index
+	else:
+		subscripts_new = ','.join(ss)
 
 	res = np.einsum(subscripts_new, *operands, **kwargs)
 	grid = operands[np.flatnonzero(np.array(is_field))[0]].grid

@@ -164,7 +164,7 @@ def field_einsum(subscripts, *operands, **kwargs):
 
 	# Decompose the subscript into input and output
 	splitted_string = subscripts.split('->')
-	if len(splitted_string)==2:
+	if len(splitted_string) == 2:
 		ss_input, ss_output = splitted_string
 	else:
 		ss_input = splitted_string[0]
@@ -182,7 +182,7 @@ def field_einsum(subscripts, *operands, **kwargs):
 	ss = [s + unused_index if is_field[i] else s for i,s in enumerate(ss)]
 
 	# Recombine all operands into the final subscripts
-	if len(splitted_string)==2:
+	if len(splitted_string) == 2:
 		subscripts_new = ','.join(ss) + '->' + ss_output + unused_index
 	else:
 		subscripts_new = ','.join(ss)

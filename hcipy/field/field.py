@@ -162,20 +162,22 @@ def field_einsum(subscripts, *operands, **kwargs):
 	if not np.allclose(field_sizes, field_sizes[0]):
 		raise ValueError('All fields must be the same size for a field_einsum().')
 
-	ss = subscripts.split(',')
-
+	# Decompose the subscript into input and output
+	ss_input, ss_output = subscripts.split('->')
+	
+	# split the input operands in separate strings
+	ss = ss_input.split(',')
 	if len(ss) != len(operands):
 		raise ValueError('Number of operands is not equal to number of indexing operands.')
 	
 	# Find an indexing letter that can be used for field dimension.
 	unused_index = [a for a in string.ascii_lowercase if a not in subscripts][0]
 
-	# Add the field dimension to field operands.
+	# Add the field dimension to the input field operands.
 	ss = [s + unused_index if is_field[i] else s for i,s in enumerate(ss)]
-	if '->' in subscripts:
-		i = ss[-1].find('->')
-		ss[-1] = ss[-1][:i] + unused_index + '->' + ss[-1][i+2:]
-	subscripts_new = ','.join(ss)
+
+	# Recombine all operands into the final subscripts
+	subscripts_new = ','.join(ss) + '->' + ss_output + unused_index
 
 	res = np.einsum(subscripts_new, *operands, **kwargs)
 	grid = operands[np.flatnonzero(np.array(is_field))[0]].grid

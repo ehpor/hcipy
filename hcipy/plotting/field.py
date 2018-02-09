@@ -97,6 +97,38 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 
 	return im
 
+def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, mask=None, mask_color='w', cmap=None):
+	import matplotlib as mpl
+	import matplotlib.pyplot as plt
+
+	if grid is None:
+		grid = field.grid
+	else:
+		field = Field(field, grid)
+	
+	# If field is complex, draw complex
+	if np.iscomplexobj(field):
+		f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
+		vmin = None
+		vmax = None
+		norm = None
+	else:
+		if norm is None:
+			if vmin is None:
+				vmin = np.nanmin(field)
+			if vmax is None:
+				vmax = np.nanmax(field)
+			norm = mpl.colors.Normalize(vmin, vmax)
+		f = field
+	
+	if mask is not None:
+		f[~mask.astype('bool')] = np.nan
+
+	cmap = copy(mpl.cm.get_cmap(cmap))
+	cmap.set_bad(mask_color)
+
+	plt.imsave(filename, f.shaped, cmap=cmap, vmin=vmin, vmax=vmax)
+
 def contour_field(field, grid=None, ax=None, *args, **kwargs):
 	import matplotlib.pyplot as plt
 	if ax is None:
@@ -165,7 +197,7 @@ def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
 			rmin = np.nanmin(np.abs(field))
 		if rmax is None:
 			rmax = np.nanmax(np.abs(field))
-		norm = mpl.colors.Normalize(rmin, rmax)
+		norm = mpl.colors.Normalize(rmin, rmax, True)
 	
 	hsv = np.zeros((field.size, 3), dtype='float')
 	hsv[..., 0] = np.angle(field) / (2 * np.pi) % 1

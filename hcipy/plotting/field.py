@@ -64,7 +64,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		im = ax.pcolormesh(X, Y, z, *args, norm=norm, rasterized=True, cmap=cmap, **kwargs)
 	else:
 		# Use NonUniformImage to display
-		im = NonUniformImage(ax, extent=(min_x, max_x, min_y, max_y), interpolation=interpolation, norm=norm, cmap=cmap, *args, **kwargs)
+		im = NonUniformImage(ax, extent=(min_x, max_x, min_y, max_y), interpolation=interpolation , norm=norm, cmap=cmap, *args, **kwargs)
 		im.set_data(x, y, z)
 
 		from matplotlib.patches import Rectangle
@@ -79,8 +79,8 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 
 	num_rows, num_cols = field.grid.shape
 	def format_coord(x, y):
-		col = int((x - min_x) / (max_x - min_x) * num_cols + 0.5)
-		row = int((y - min_y) / (max_y - min_y) * num_rows + 0.5)
+		col = int((x - min_x) / (max_x - min_x) * (num_cols - 1))
+		row = int((y - min_y) / (max_y - min_y) * (num_rows - 1))
 		
 		if col >= 0 and col < num_cols and row >= 0 and row < num_rows:
 			z = field.shaped[row, col]

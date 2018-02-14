@@ -16,7 +16,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		grid = field.grid
 	else:
 		field = Field(field, grid)
-	
+
 	# If field is complex, draw complex
 	if np.iscomplexobj(field):
 		f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
@@ -24,19 +24,23 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		vmax = None
 		norm = None
 	else:
-		if norm is None:
-			if vmin is None:
-				vmin = np.nanmin(field)
-			if vmax is None:
-				vmax = np.nanmax(field)
-			norm = mpl.colors.Normalize(vmin, vmax)
 		f = field
-	
+
+	# Possibly add masking
 	if mask is not None:
+		f = f.copy()
 		f[~mask.astype('bool')] = np.nan
 
 		cmap = copy(mpl.cm.get_cmap(cmap))
 		cmap.set_bad(mask_color)
+	
+	# Automatically determine vmin, vmax, norm if not overridden
+	if norm is None and not np.iscomplexobj(field):
+		if vmin is None:
+			vmin = np.nanmin(f)
+		if vmax is None:
+			vmax = np.nanmax(f)
+		norm = mpl.colors.Normalize(vmin, vmax)
 	
 	# Get extent
 	c_grid = grid.as_('cartesian')

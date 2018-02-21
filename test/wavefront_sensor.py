@@ -17,7 +17,6 @@ def test_pupil_plane_wavefront_sensors():
 	zernike_wfs = ZernikeWavefrontSensorOptics(pupil_grid, q=32, num_airy=20)
 	god_wfs = gODWavefrontSensorOptics(40, 1/3, pupil_grid, pupil_separation=1.5, q=16, num_airy=40)
 	pod_wfs = PolgODWavefrontSensorOptics(40, 1/3, pupil_grid, pupil_separation=1.5, q=16, num_airy=40)
-	#pod_wfs.show_filters()
 
 	wavefront_sensors = (pyramid_wfs, zernike_wfs, god_wfs, pod_wfs)
 	num_wfs = len(wavefront_sensors)

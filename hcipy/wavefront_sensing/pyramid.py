@@ -7,6 +7,23 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 def pyramid_surface(refractive_index, separation, wavelength_0):
+	'''Creates a function which can create a pyramid surface on a grid.
+
+	Parameters
+	----------
+	separation : scalar
+		The separation of the pupils in pupil diameters.
+	wavelength_0 : scalar
+		The reference wavelength for the filter specifications.
+	refractive_index : lambda function
+		A lambda function for the refractive index which accepts a wavelength.
+	
+	Returns
+	----------
+	func : function
+		The returned function acts on a grid to create the pyramid surface for that grid.
+
+	'''
 	def func(grid):
 		surf = -separation / (refractive_index(wavelength_0) - 1) * (np.abs(grid.x) + np.abs(grid.y))
 		surf = Field(surf, grid)

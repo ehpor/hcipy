@@ -1,123 +1,77 @@
-'''
-from .wavefront_sensor import WavefrontSensor, WavefrontSensorNew
-from ..optics import *
+from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
-from ..aperture import *
-from ..field import *
-
+from ..plotting import imshow_field
+from ..optics import SurfaceApodizer, PhaseApodizer
+from ..field import make_pupil_grid, make_focal_grid, Field
 import numpy as np
+from matplotlib import pyplot as plt
 
-class PyramidWavefrontSensor(WavefrontSensor):
-	def __init__(self, input_grid, pupil_separation, num_pupil_pixels, detector, measurement_diameter=1, over_sampling=2, wavelength=1):
+def pyramid_surface(refractive_index, separation, wavelength_0):
+	def func(grid):
+		surf = -separation / (refractive_index(wavelength_0) - 1) * (np.abs(grid.x) + np.abs(grid.y))
+		surf = Field(surf, grid)
+		return SurfaceApodizer(surf, refractive_index)
+	return func
+
+class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
+	def __init__(self, pupil_grid, wavelength_0=1, pupil_separation=1.5, pupil_diameter=None, num_pupil_pixels=32, q=4, refractive_index=lambda x : 1.5, num_airy=None):
 		
-		Din = input_grid.x.max() - input_grid.x.min()
-		self.pupil_separation = pupil_separation
-		self.num_pupil_pixels = num_pupil_pixels
-		self.over_sampling = over_sampling
-
-		self.input_grid = input_grid
-		self.output_grid = make_pupil_grid( 2 * pupil_separation * num_pupil_pixels, 2 * pupil_separation * Din)
-		self.measurement_grid = make_pupil_grid( pupil_separation * num_pupil_pixels, pupil_separation * Din)
-		self.measurement_mask = circular_aperture(Din*measurement_diameter)(self.measurement_grid)>0
-
-		self.detector = detector()
-
-		self.optical_system = self.make_optical_system(self.input_grid, self.output_grid, wavelength)
-
-	def make_optical_system(self, input_grid, output_grid, wavelength):
-		fourier_grid = make_focal_grid(input_grid, q=2*self.pupil_separation*self.over_sampling, wavelength=wavelength)
-
-		fraunhofer_1 = FraunhoferPropagator(input_grid, fourier_grid, wavelength_0=wavelength)
-		a = 0.5 * self.pupil_separation * 2.0*np.pi / wavelength
-		b = 0.5 * self.pupil_separation * 2.0*np.pi / wavelength
+		if pupil_diameter is None:
+			pupil_diameter = pupil_grid.x.ptp()
 		
-		T = (fourier_grid.x>0) * (fourier_grid.y>0) * np.exp(1j* (a * fourier_grid.x + b * fourier_grid.y))
-		T += (fourier_grid.x>0) * (fourier_grid.y<0) * np.exp(1j* (a * fourier_grid.x - b * fourier_grid.y))
-		T += (fourier_grid.x<0) * (fourier_grid.y>0) * np.exp(1j* (-a * fourier_grid.x + b * fourier_grid.y))
-		T += (fourier_grid.x<0) * (fourier_grid.y<0) * np.exp(-1j* (a * fourier_grid.x + b * fourier_grid.y))
-
-		horizontal_edge_mask = abs(fourier_grid.x) < 1.0E-13
-		vertical_edge_mask = abs(fourier_grid.y) < 1.0E-13
-		T[horizontal_edge_mask] += 0.5 * (np.exp(1j* (a * fourier_grid.x + b * fourier_grid.y)) + np.exp(1j* (a * fourier_grid.x - b * fourier_grid.y)))[horizontal_edge_mask]
-		T[vertical_edge_mask] += 0.5 * (np.exp(1j* (a * fourier_grid.x + b * fourier_grid.y)) + np.exp(1j* (-a * fourier_grid.x + b * fourier_grid.y)))[vertical_edge_mask]
-		T = T/np.abs(T)
-
-		pyramid_prism = Apodizer(T)
-		fraunhofer_2 = FraunhoferPropagator(fourier_grid, output_grid, wavelength_0=wavelength)
-
-		return OpticalSystem((fraunhofer_1, pyramid_prism, fraunhofer_2))
-
-	def reduced_pupils(self, pupil_intensity):
-		B = np.reshape(pupil_intensity, pupil_intensity.grid.shape)
-
-		Nx = B.shape[0]//2
-		Ny = B.shape[1]//2
-
-		Ia = B[0:Nx,0:Ny]
-		Ib = B[Nx:(2*Nx),0:Ny]
-		Ic = B[Nx:(2*Nx),Ny:(2*Ny)]
-		Id = B[0:Nx,Ny:(2*Ny)]
-
-		I1 = (Ia+Ib-Ic-Id)/(Ia+Ib+Ic+Id)
-		I2 = (Ia-Ib-Ic+Id)/(Ia+Ib+Ic+Id)
-		return I1, I2
-
-	def measurement(self, pupil_intensity):
-		I1, I2 = self.reduced_pupils(pupil_intensity)
-		return np.concatenate( (I1.flatten()[self.measurement_mask], I2.flatten()[self.measurement_mask]) )
-
-def reduce_pyramid_image(img, pupil_mask):
-	img = img.shaped
-
-	sub_shape = img.grid.shape // 2
-
-	# Subpupils
-	I_a = img[:sub_shape[0], :sub_shape[1]]
-	I_b = img[sub_shape[0]:2*sub_shape[0], :sub_shape[1]]
-	I_c = img[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
-	I_d = img[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
-
-	norm = I_a + I_b + I_c + I_d
-
-	I_1 = (I_a + I_b - I_c - I_d) / norm
-	I_2 = (I_a - I_b - I_c + I_d) / norm
-
-	I_1 = I_1.ravel()# * pupil_mask
-	I_2 = I_2.ravel()# * pupil_mask
-
-	res = np.column_stack((I_1, I_2))
-	res = Field(res, pupil_mask.grid)
-	return res
-
-class PyramidWavefrontSensorNew(WavefrontSensorNew):
-	def __init__(self, pupil_grid, pupil_mask, pupil_separation, num_pupil_pixels, q, wavelength, refractive_index, detector):
-		pupil_diameter = pupil_grid.x[pupil_mask(pupil_grid) != 0].ptp()
-
-		self.detector_grid = make_pupil_grid(2 * pupil_separation * num_pupil_pixels, 2 * pupil_separation * pupil_diameter)
-		self.output_grid = make_pupil_grid(pupil_separation * num_pupil_pixels, pupil_separation * pupil_diameter)
-
-		self.pupil_mask = Field(pupil_mask, self.output_grid)
-
-		focal_grid = make_focal_grid(pupil_grid, q=2 * pupil_separation * q, wavelength=wavelength)
-
+		# Make mask
 		sep = 0.5 * pupil_separation * pupil_diameter
-		surf = -sep / (refractive_index(wavelength) - 1) * (np.abs(focal_grid.x) + np.abs(focal_grid.y))
-		surf = Field(surf, focal_grid)
+		
+		# Multiply by 2 because we want to have two pupils next to each other
+		output_grid_size = (pupil_separation + 1) * pupil_diameter
+		output_grid_pixels = np.ceil(num_pupil_pixels * (pupil_separation + 1))
 
-		self.pupil_to_focal = FraunhoferPropagator(pupil_grid, focal_grid, wavelength_0=wavelength)
-		self.pyramid = SurfaceApodizer(surf, refractive_index)
-		self.focal_to_pupil = FraunhoferPropagator(focal_grid, self.detector_grid, wavelength_0=wavelength)
+		# Need at least two times over sampling in the focal plane because we want to separate two pupils completely
+		if q < 2 * pupil_separation:
+			q = 2 * pupil_separation
 
-		self.detector = detector()
+		# Create the intermediate and final grids
+		self.output_grid = make_pupil_grid(output_grid_pixels, output_grid_size)
+		self.focal_grid = make_focal_grid(pupil_grid, q=q, num_airy=num_airy, wavelength=wavelength_0)
 
-	def integrate(self, wavefront, dt=1, weight=1):
-		wf = self.pupil_to_focal(wavefront)
-		wf = self.pyramid(wf)
+		# Make all the optical elements
+		self.pupil_to_focal = FraunhoferPropagator(pupil_grid, self.focal_grid, wavelength_0=wavelength_0)
+		self.pyramid = pyramid_surface(refractive_index, sep, wavelength_0)(self.focal_grid)
+		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.output_grid, wavelength_0=wavelength_0)
+
+	def forward(self, wavefront):
+		wf = wavefront.copy()
+		
+		wf = self.pupil_to_focal.forward(wf)
+		wf = self.pyramid.forward(wf)		
 		wf = self.focal_to_pupil(wf)
-		self.detector.integrate(wf, dt, weight)
 
-	def read_out(self):
-		self.detector_image = self.detector.read_out()
+		return wf
 
-		return reduce_pyramid_image(self.detector_image, self.pupil_mask)
-'''
+class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
+	def __init__(self, aperture, output_grid):
+		self.measurement_grid = make_pupil_grid(output_grid.shape[0]/2, output_grid.x.ptp()/2)
+		self.pupil_mask = aperture(self.measurement_grid)
+		self.num_measurements = 2 * int(np.sum(self.pupil_mask > 0))
+
+	def estimate(self, images):
+		image = images.shaped
+		sub_shape = image.grid.shape // 2
+
+		# Subpupils
+		I_a = image[:sub_shape[0], :sub_shape[1]]
+		I_b = image[sub_shape[0]:2*sub_shape[0], :sub_shape[1]]
+		I_c = image[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
+		I_d = image[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
+
+		norm = I_a + I_b + I_c + I_d
+
+		I_x = (I_a + I_b - I_c - I_d) / norm
+		I_y = (I_a - I_b - I_c + I_d) / norm
+
+		I_x = I_x.ravel()[self.pupil_mask>0]
+		I_y = I_y.ravel()[self.pupil_mask>0]
+
+		res = np.column_stack((I_x, I_y))
+		res = Field(res, self.pupil_mask.grid)
+		return res

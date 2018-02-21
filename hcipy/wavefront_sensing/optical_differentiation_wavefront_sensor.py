@@ -302,19 +302,19 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 	
 	Parameters
 	----------
-		aperture : function
-			A function which mask the pupils for the normalized differences.
-		output_grid : Grid
-			The grid on which the output of an OD wavefront sensor is sampled.
+	aperture : function
+		A function which mask the pupils for the normalized differences.
+	output_grid : Grid
+		The grid on which the output of an OD wavefront sensor is sampled.
 			
 	Attributes
 	----------
-		measurement_grid : Grid
-			The grid on which the normalized differences are defined.
-		pupil_mask : array_like
-			A mask for the normalized differences.
-		num_measurements : int
-			The number of pixels in the output vector.
+	measurement_grid : Grid
+		The grid on which the normalized differences are defined.
+	pupil_mask : array_like
+		A mask for the normalized differences.
+	num_measurements : int
+		The number of pixels in the output vector.
 	'''
 
 	def __init__(self, aperture, output_grid):
@@ -323,16 +323,17 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 		self.num_measurements = 2 * int(np.sum(self.pupil_mask > 0))
 
 	def estimate(self, images):
-		'''	A function which estimates the wavefront slope from a ODWFS image.
+		'''A function which estimates the wavefront slope from a ODWFS image.
 
-			Parameters
-			----------
-				images - List
-					A list of scalar intensity fields containing OD wavefront sensor images.
-			Returns
-			-------
-				res - Field
-					A field with wavefront sensor slopes.
+		Parameters
+		----------
+		images : List
+			A list of scalar intensity fields containing OD wavefront sensor images.
+			
+		Returns
+		-------
+		res : Field
+			A field with wavefront sensor slopes.
 		'''
 		image = images.shaped
 		sub_shape = image.grid.shape // 2

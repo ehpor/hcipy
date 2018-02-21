@@ -117,19 +117,19 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 	
 	Parameters
 	----------
-		aperture : function
-			A function which mask the pupils for the normalized differences.
-		output_grid : Grid
-			The grid on which the output of a pyramid wavefront sensor is sampled.
+	aperture : function
+		A function which mask the pupils for the normalized differences.
+	output_grid : Grid
+		The grid on which the output of a pyramid wavefront sensor is sampled.
 			
 	Attributes
 	----------
-		measurement_grid : Grid
-			The grid on which the normalized differences are defined.
-		pupil_mask : array_like
-			A mask for the normalized differences.
-		num_measurements : int
-			The number of pixels in the output vector.
+	measurement_grid : Grid
+		The grid on which the normalized differences are defined.
+	pupil_mask : array_like
+		A mask for the normalized differences.
+	num_measurements : int
+		The number of pixels in the output vector.
 	'''
 	def __init__(self, aperture, output_grid):
 		self.measurement_grid = make_pupil_grid(output_grid.shape[0]/2, output_grid.x.ptp()/2)
@@ -137,16 +137,17 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 		self.num_measurements = 2 * int(np.sum(self.pupil_mask > 0))
 
 	def estimate(self, images):
-		'''	A function which estimates the wavefront slope from a pyramid image.
+		'''A function which estimates the wavefront slope from a pyramid image.
 
-			Parameters
-			----------
-				images - List
-					A list of scalar intensity fields containing pyramid wavefront sensor images.
-			Returns
-			-------
-				res - Field
-					A field with wavefront sensor slopes.
+		Parameters
+		----------
+		images - List
+			A list of scalar intensity fields containing pyramid wavefront sensor images.
+			
+		Returns
+		-------
+		res - Field
+			A field with wavefront sensor slopes.
 		'''
 		image = images.shaped
 		sub_shape = image.grid.shape // 2

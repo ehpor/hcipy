@@ -77,7 +77,7 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.output_grid, wavelength_0=wavelength_0)
 
 	def forward(self, wavefront):
-	'''Propagates a wavefront through the pyramid wavefront sensor.
+	'''Propagates a wavefront through the wavefront sensor.
 
 	Parameters
 	----------		
@@ -98,12 +98,46 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		return wf
 
 class ZernikeWavefrontSensorEstimator(WavefrontSensorEstimator):
+	'''Estimates the wavefront slopes from pyramid wavefront sensor images.
+	
+	Parameters
+	----------
+		aperture : function
+			A function which mask the output phase measurements.
+		output_grid : Grid
+			The grid on which the output of a pyramid wavefront sensor is sampled.
+		reference : Field
+			A reference image to subtract from the Zernike wavefront sensor data.
+			
+	Attributes
+	----------
+		measurement_grid : Grid
+			The grid on which the phase measurements are defined.
+		pupil_mask : array_like
+			A mask for the phase measurements.
+		num_measurements : int
+			The number of pixels in the output vector.
+		reference : Field
+			A reference image to subtract from the Zernike wavefront sensor data.
+	'''
 	def __init__(self, aperture, output_grid, reference):
 		self.measurement_grid = output_grid
 		self.pupil_mask = aperture(self.measurement_grid)
 		self.reference = reference
+		self.num_measurements = int(np.sum(self.pupil_mask > 0))
 
 	def estimate(self, images):
+		'''	A function which estimates the phase from a Zernike wavefront sensor image.
+
+			Parameters
+			----------
+				images - List
+					A list of scalar intensity fields containing Zernike wavefront sensor images.
+			Returns
+			-------
+				res - Field
+					A field with phase estimates.
+		'''
 		image = images[0]
 
 		intensity_measurements = (image-self.reference).ravel() * self.pupil_mask

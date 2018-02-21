@@ -14,6 +14,41 @@ def pyramid_surface(refractive_index, separation, wavelength_0):
 	return func
 
 class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
+	'''The optical elements for a pyramid wavefront sensor.
+
+	Parameters
+	----------
+	pupil_grid : Grid
+		The input pupil grid.
+	pupil_diameter : scalar
+		The size of the pupil.
+		If it is set to None the pupil_diameter will be the diameter of the pupil_grid.
+	pupil_separation : scalar
+		The separation distance between the pupils in pupil diameters.
+	num_pupil_pixels : int
+		The number of pixels that are used to sample the output pupil.
+	q : scalar
+		The focal plane oversampling coefficient.
+	wavelength_0 : scalar
+		The reference wavelength which determines the physical scales.
+	refractive_index : function
+		A function that returns the refractive index as function of wavelength.
+	num_airy : int
+		The size of the intermediate focal plane grid that is used in terms of lambda/D at the reference wavelength.
+
+	Attributes
+	----------
+	output_grid : Grid
+		The output grid of the wavefront sensor.
+	focal_grid : Grid
+		The intermediate focal plane grid where the focal plane is sampled.
+	pupil_to_focal : FraunhoferPropagator
+		A propagator for the input pupil plane to the intermediate focal plane.
+	focal_to_pupil : FraunhoferPropagator
+		A propagator for the intermediate focal plane to the output pupil plane.
+	pyramid : SurfaceApodizer
+		The filter that is applied in the focal plane.
+	'''
 	def __init__(self, pupil_grid, wavelength_0=1, pupil_separation=1.5, pupil_diameter=None, num_pupil_pixels=32, q=4, refractive_index=lambda x : 1.5, num_airy=None):
 		
 		if pupil_diameter is None:
@@ -40,6 +75,18 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.output_grid, wavelength_0=wavelength_0)
 
 	def forward(self, wavefront):
+	'''Propagates a wavefront through the pyramid wavefront sensor.
+
+	Parameters
+	----------		
+	wavefront : Wavefront
+		The input wavefront that will propagate through the system.
+
+	Returns
+	-------
+	wf : Wavefront
+		The output wavefront.
+	'''
 		wf = wavefront.copy()
 		
 		wf = self.pupil_to_focal.forward(wf)

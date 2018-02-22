@@ -81,10 +81,10 @@ def make_polychromatic(evaluated_arguments=None, num_in_cache=50):
 			def backward(self, wavefront):
 				return self.get_instance(wavefront.electric_field.grid, wavefront.wavelength).backward(wavefront)
 			
-			def get_transformation_matrix_forward(self, input_grid, wavefront):
+			def get_transformation_matrix_forward(self, input_grid, wavelength):
 				return self.get_instance(input_grid, wavelength).get_transformation_matrix_forward(input_grid, wavelength)
 			
-			def get_transformation_matrix_backward(self, input_grid, wavefront):
+			def get_transformation_matrix_backward(self, input_grid, wavelength):
 				return self.get_instance(input_grid, wavelength).get_transformation_matrix_backward(input_grid, wavelength)
 		
 		return PolychromaticOpticalElement

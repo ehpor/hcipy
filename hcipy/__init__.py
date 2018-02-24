@@ -1,5 +1,6 @@
 # Import all submodules.
 from . import aperture
+from . import atmosphere
 from . import control
 from . import coronagraphy
 from . import field
@@ -17,6 +18,7 @@ from . import wavefront_sensing
 
 # Import all core submodules in default namespace.
 from .aperture import *
+from .atmosphere import *
 from .control import *
 from .coronagraphy import *
 from .field import *
@@ -36,6 +38,7 @@ from .wavefront_sensing import *
 # Export default namespaces.
 __all__ = []
 __all__.extend(aperture.__all__)
+__all__.extend(atmosphere.__all__)
 __all__.extend(control.__all__)
 __all__.extend(coronagraphy.__all__)
 __all__.extend(field.__all__)

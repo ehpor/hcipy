@@ -3,8 +3,8 @@ from ..propagation import FraunhoferPropagator
 from ..plotting import imshow_field
 from ..optics import SurfaceApodizer, PhaseApodizer
 from ..field import make_pupil_grid, make_focal_grid, Field
+
 import numpy as np
-from matplotlib import pyplot as plt
 
 def pyramid_surface(refractive_index, separation, wavelength_0):
 	'''Creates a function which can create a pyramid surface on a grid.
@@ -26,8 +26,7 @@ def pyramid_surface(refractive_index, separation, wavelength_0):
 	'''
 	def func(grid):
 		surf = -separation / (refractive_index(wavelength_0) - 1) * (np.abs(grid.x) + np.abs(grid.y))
-		surf = Field(surf, grid)
-		return SurfaceApodizer(surf, refractive_index)
+		return SurfaceApodizer(Field(surf, grid), refractive_index)
 	return func
 
 class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
@@ -67,7 +66,6 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		The filter that is applied in the focal plane.
 	'''
 	def __init__(self, pupil_grid, wavelength_0=1, pupil_separation=1.5, pupil_diameter=None, num_pupil_pixels=32, q=4, refractive_index=lambda x : 1.5, num_airy=None):
-		
 		if pupil_diameter is None:
 			pupil_diameter = pupil_grid.x.ptp()
 		
@@ -104,8 +102,6 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		wf : Wavefront
 			The output wavefront.
 		'''
-		wf = wavefront.copy()
-		
 		wf = self.pupil_to_focal.forward(wf)
 		wf = self.pyramid.forward(wf)		
 		wf = self.focal_to_pupil(wf)
@@ -132,7 +128,7 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 		The number of pixels in the output vector.
 	'''
 	def __init__(self, aperture, output_grid):
-		self.measurement_grid = make_pupil_grid(output_grid.shape[0]/2, output_grid.x.ptp()/2)
+		self.measurement_grid = make_pupil_grid(output_grid.shape[0] / 2, output_grid.x.ptp() / 2)
 		self.pupil_mask = aperture(self.measurement_grid)
 		self.num_measurements = 2 * int(np.sum(self.pupil_mask > 0))
 

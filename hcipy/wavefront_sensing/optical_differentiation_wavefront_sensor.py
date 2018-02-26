@@ -3,8 +3,8 @@ from ..propagation import FraunhoferPropagator
 from ..plotting import imshow_field
 from ..optics import SurfaceApodizer, PhaseApodizer, MultiplexedComplexSurfaceApodizer
 from ..field import make_pupil_grid, make_focal_grid, Field
+
 import numpy as np
-from matplotlib import pyplot as plt
 
 def optical_differentiation_surface(filter_size, amplitude_filter, separation, wavelength_0, refractive_index):
 	'''Creates a function which can create the complex multiplexed surface for the ODWFS on a grid.
@@ -29,7 +29,6 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 
 	'''
 	def func(grid):
-	
 		# The surfaces which tilt the beam
 		# This positions the pupils
 		surf1 = -separation / (refractive_index(wavelength_0) - 1) * grid.x
@@ -37,42 +36,34 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 		surf3 = -separation / (refractive_index(wavelength_0) - 1) * grid.y
 		surf4 = -separation / (refractive_index(wavelength_0) - 1) * -grid.y
 		
-		surf = ( Field(surf1, grid),
-			Field(surf2, grid),
-			Field(surf3, grid),
-			Field(surf4, grid))
+		surf = (Field(surf1, grid), Field(surf2, grid), Field(surf3, grid), Field(surf4, grid))
 
 		# The physical boundaries of the mask
-		filter_mask = (abs(grid.x)<filter_size) * (abs(grid.y)<filter_size)
+		filter_mask = (np.abs(grid.x) < filter_size) * (np.abs(grid.y) < filter_size)
 
-		x_mask = abs(grid.x)<1E-15
-		y_mask = abs(grid.y)<1E-15
+		x_mask = np.abs(grid.x) < 1e-15
+		y_mask = np.abs(grid.y) < 1e-15
 
 		# NOTE : be carefull with the plus and minus signs of the filters
 		# For energy conservation the squared sum of the filters should be <= 1
 		# For electric field conservation the second filter has to have opposite sign.
-		filter_1 = amplitude_filter(grid.x/filter_size)
-		filter_1[x_mask] = 1/2
+		filter_1 = amplitude_filter(grid.x / filter_size)
+		filter_1[x_mask] = 1 / 2
 		filter_1 *= filter_mask
 
-		filter_2 = -amplitude_filter(-grid.x/filter_size) * filter_mask
-		filter_2[x_mask] = -1/2
+		filter_2 = -amplitude_filter(-grid.x / filter_size)
+		filter_2[x_mask] = -1 / 2
 		filter_2 *= filter_mask
 		
-		filter_3 = amplitude_filter(grid.y/filter_size) * filter_mask
-		filter_3[y_mask] = 1/2
+		filter_3 = amplitude_filter(grid.y / filter_size)
+		filter_3[y_mask] = 1 / 2
 		filter_3 *= filter_mask
 
-		filter_4 = -amplitude_filter(-grid.y/filter_size) * filter_mask
-		filter_4[y_mask] = -1/2
+		filter_4 = -amplitude_filter(-grid.y / filter_size)
+		filter_4[y_mask] = -1 / 2
 		filter_4 *= filter_mask
 
-		amp = (
-			Field(filter_1, grid),
-			Field(filter_2, grid),
-			Field(filter_3, grid),
-			Field(filter_4, grid)
-			)
+		amp = (Field(filter_1, grid), Field(filter_2, grid), Field(filter_3, grid), Field(filter_4, grid))
 
 		return MultiplexedComplexSurfaceApodizer(amp, surf, refractive_index)
 	return func
@@ -138,7 +129,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 		if filter_size is None:
 			filter_size = self.focal_grid.x.max()
 		else:
-			filter_size = filter_size*wavelength_0/pupil_diameter
+			filter_size = filter_size * wavelength_0 / pupil_diameter
 
 		# Make all the optical elements
 		self.pupil_to_focal = FraunhoferPropagator(pupil_grid, self.focal_grid, wavelength_0=wavelength_0)
@@ -159,9 +150,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 		wf : Wavefront
 			The output wavefront.
 		'''
-		wf = wavefront.copy()
-		
-		wf = self.pupil_to_focal.forward(wf)
+		wf = self.pupil_to_focal.forward(wavefront)
 		wf = self.focal_mask.forward(wf)		
 		wf = self.focal_to_pupil(wf)
 
@@ -203,8 +192,8 @@ class RooftopWavefrontSensorOptics(OpticalDifferentiationWavefrontSensorOptics):
 	focal_mask : MultiplexedComplexSurfaceApodizer
 		The filter that is applied in the focal plane.
 	'''
-	def __init__(self, pupil_grid, pupil_diameter, pupil_separation, num_pupil_pixels, q, wavelength_0, refractive_index, num_airy=None):
-		amplitude_filter = lambda x : (x<0)/np.sqrt(2)
+	def __init__(self, pupil_grid, pupil_diameter, pupil_diameter=None, pupil_separation=1.5, num_pupil_pixels=32, q=4, wavelength_0=1, refractive_index=lambda x: 1.5, num_airy=None):
+		amplitude_filter = lambda x: (x < 0) / np.sqrt(2)
 		OpticalDifferentiationWavefrontSensorOptics.__init__(self, num_airy, amplitude_filter, pupil_grid, pupil_diameter, pupil_separation, num_pupil_pixels, q, wavelength_0, refractive_index, num_airy)
 
 class gODWavefrontSensorOptics(OpticalDifferentiationWavefrontSensorOptics):
@@ -248,8 +237,8 @@ class gODWavefrontSensorOptics(OpticalDifferentiationWavefrontSensorOptics):
 	focal_mask : MultiplexedComplexSurfaceApodizer
 		The filter that is applied in the focal plane.
 	'''
-	def __init__(self, filter_size, beta, pupil_grid, pupil_diameter=None, pupil_separation=1.5, num_pupil_pixels=32, q=4, wavelength_0=1, refractive_index=lambda x : 1.5, num_airy=None):
-		amplitude_filter = lambda x : ((x>0) * beta + (1 - beta)*(1+x)/2)/np.sqrt(2)
+	def __init__(self, filter_size, beta, pupil_grid, pupil_diameter=None, pupil_separation=1.5, num_pupil_pixels=32, q=4, wavelength_0=1, refractive_index=lambda x: 1.5, num_airy=None):
+		amplitude_filter = lambda x: ((x > 0) * beta + (1 - beta) * (1 + x) / 2) / np.sqrt(2)
 		OpticalDifferentiationWavefrontSensorOptics.__init__(self, filter_size, amplitude_filter, pupil_grid, pupil_diameter, pupil_separation, num_pupil_pixels, q, wavelength_0, refractive_index, num_airy)
 
 class PolgODWavefrontSensorOptics(OpticalDifferentiationWavefrontSensorOptics):
@@ -293,8 +282,8 @@ class PolgODWavefrontSensorOptics(OpticalDifferentiationWavefrontSensorOptics):
 	focal_mask : MultiplexedComplexSurfaceApodizer
 		The filter that is applied in the focal plane.
 	'''
-	def __init__(self, filter_size, beta, pupil_grid, pupil_diameter=None, pupil_separation=1.5, num_pupil_pixels=32, q=4, wavelength_0=1, refractive_index=lambda x : 1.5, num_airy=None):
-		amplitude_filter = lambda x : np.sin(np.pi/2 * ((x>0) * beta + (1-beta)*(1+x)/2))/np.sqrt(2)
+	def __init__(self, filter_size, beta, pupil_grid, pupil_diameter=None, pupil_separation=1.5, num_pupil_pixels=32, q=4, wavelength_0=1, refractive_index=lambda x: 1.5, num_airy=None):
+		amplitude_filter = lambda x: np.sin(np.pi/2 * ((x > 0) * beta + (1 - beta) * (1 + x) / 2)) / np.sqrt(2)
 		OpticalDifferentiationWavefrontSensorOptics.__init__(self, filter_size, amplitude_filter, pupil_grid, pupil_diameter, pupil_separation, num_pupil_pixels, q, wavelength_0, refractive_index, num_airy)
 
 class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
@@ -318,7 +307,7 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 	'''
 
 	def __init__(self, aperture, output_grid):
-		self.measurement_grid = make_pupil_grid(output_grid.shape[0]/2, output_grid.x.ptp()/2)
+		self.measurement_grid = make_pupil_grid(output_grid.shape[0] / 2, output_grid.x.ptp() / 2)
 		self.pupil_mask = aperture(self.measurement_grid)
 		self.num_measurements = 2 * int(np.sum(self.pupil_mask > 0))
 

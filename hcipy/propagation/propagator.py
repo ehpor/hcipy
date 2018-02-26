@@ -28,7 +28,9 @@ def make_propagator(monochromatic_propagator):
 			self.monochromatic_propagators.append(m)
 
 			if len(self.monochromatic_propagators) > 50:
+				self.wavelengths.pop(0)
 				self.monochromatic_propagators.pop(0)
+				
 
 			return m
 

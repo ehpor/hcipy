@@ -48,7 +48,7 @@ def make_polychromatic(evaluated_arguments=None, num_in_cache=50):
 
 					delta_wavelength = np.abs(wavelength - wavelength_closest)
 					if (delta_wavelength / wavelength) < 1e-6:
-						return self.monochromatic_propagators[i]
+						return self.monochromatic_optical_elements[i]
 				
 				if evaluated_arguments is not None:
 					args = list(self.monochromatic_args)

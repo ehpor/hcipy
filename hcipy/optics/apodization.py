@@ -21,7 +21,7 @@ Apodizer = make_polychromatic(["apodization"])(ApodizerMonochromatic)
 class PhaseApodizerMonochromatic(object):
 	def __init__(self, phase, wavelength=1):
 		self.phase = phase
-		self.wavelength
+		self.wavelength = wavelength
 	
 	def forward(self, wavefront):
 		wf = wavefront.copy()

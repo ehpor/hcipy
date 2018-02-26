@@ -339,6 +339,5 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 		I_x = I_x.ravel()[self.pupil_mask>0]
 		I_y = I_y.ravel()[self.pupil_mask>0]
 
-		res = np.column_stack((I_x, I_y))
-		res = Field(res, self.pupil_mask.grid)
+		res = Field([I_x, I_y], self.pupil_mask.grid)
 		return res

@@ -324,6 +324,9 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 		res : Field
 			A field with wavefront sensor slopes.
 		'''
+		import warnings
+		warnings.warn("This function does not work as expected and will be changed in a future update.", RuntimeWarning)
+
 		image = images.shaped
 		sub_shape = image.grid.shape // 2
 

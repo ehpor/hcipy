@@ -145,6 +145,9 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 		res - Field
 			A field with wavefront sensor slopes.
 		'''
+		import warnings
+		warnings.warn("This function does not work as expected and will be changed in a future update.", RuntimeWarning)
+
 		image = images.shaped
 		sub_shape = image.grid.shape // 2
 
@@ -161,6 +164,6 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 
 		I_x = I_x.ravel()[self.pupil_mask>0]
 		I_y = I_y.ravel()[self.pupil_mask>0]
-		
+
 		res = Field([I_x, I_y], self.pupil_mask.grid)
 		return res

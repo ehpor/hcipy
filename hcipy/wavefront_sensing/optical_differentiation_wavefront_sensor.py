@@ -192,7 +192,7 @@ class RooftopWavefrontSensorOptics(OpticalDifferentiationWavefrontSensorOptics):
 	focal_mask : MultiplexedComplexSurfaceApodizer
 		The filter that is applied in the focal plane.
 	'''
-	def __init__(self, pupil_grid, pupil_diameter, pupil_diameter=None, pupil_separation=1.5, num_pupil_pixels=32, q=4, wavelength_0=1, refractive_index=lambda x: 1.5, num_airy=None):
+	def __init__(self, pupil_grid, pupil_diameter=None, pupil_separation=1.5, num_pupil_pixels=32, q=4, wavelength_0=1, refractive_index=lambda x: 1.5, num_airy=None):
 		amplitude_filter = lambda x: (x < 0) / np.sqrt(2)
 		OpticalDifferentiationWavefrontSensorOptics.__init__(self, num_airy, amplitude_filter, pupil_grid, pupil_diameter, pupil_separation, num_pupil_pixels, q, wavelength_0, refractive_index, num_airy)
 

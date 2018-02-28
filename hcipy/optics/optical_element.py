@@ -37,7 +37,7 @@ def make_polychromatic(evaluated_arguments=None, num_in_cache=50):
 						monochromatic_arg_names = list(inspect.signature(init).parameters.keys())[1:]
 					else:
 						# Python 2
-						monochromatic_arg_names = inspect.getfullargspec(init)[1:]
+						monochromatic_arg_names = inspect.getargspec(init).args
 					
 					self.evaluate_arg = [m in evaluated_arguments for m in monochromatic_arg_names]
 

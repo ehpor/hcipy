@@ -25,14 +25,6 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		norm = None
 	else:
 		f = field
-
-	# Possibly add masking
-	if mask is not None:
-		f = f.copy()
-		f[~mask.astype('bool')] = np.nan
-
-		cmap = copy(mpl.cm.get_cmap(cmap))
-		cmap.set_bad(mask_color)
 	
 	# Automatically determine vmin, vmax, norm if not overridden
 	if norm is None and not np.iscomplexobj(field):
@@ -50,7 +42,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		# We can draw this directly
 		x, y = grid.coords.separated_coords
 		z = f.shaped
-		if np.iscomplexobj(field):
+		if np.iscomplexobj(field) or field.tensor_order > 0:
 			z = np.rollaxis(z, 0, z.ndim)
 	else:
 		# We can't draw this directly. 
@@ -81,19 +73,26 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	ax.set_xlim(min_x, max_x)
 	ax.set_ylim(min_y, max_y)
 
+	if mask is not None:
+		one = np.ones(grid.size)
+		col = mpl.colors.to_rgb(mask_color)
+
+		m = np.array([one * col[0], one * col[1], one * col[2], 1 - mask / np.nanmax(mask)])
+
+		imshow_field(m, grid, ax=ax)
+
 	num_rows, num_cols = field.grid.shape
 	def format_coord(x, y):
 		col = int((x - min_x) / (max_x - min_x) * (num_cols - 1))
 		row = int((y - min_y) / (max_y - min_y) * (num_rows - 1))
-		
+
 		if col >= 0 and col < num_cols and row >= 0 and row < num_rows:
 			z = field.shaped[row, col]
 			if np.iscomplexobj(z):
 				return 'x=%0.3g, y=%0.3g, z=%0.3g + 1j * %0.3g' % (x, y, z.real, z.imag)
 			else:
 				return 'x=%0.3g, y=%0.3g, z=%0.3g' % (x, y, z)
-		else:
-			return 'x=%0.3g, y=%0.3g' % (x, y)
+		return 'x=%0.3g, y=%0.3g' % (x, y)
 
 	ax.format_coord = format_coord
 

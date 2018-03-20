@@ -1,4 +1,4 @@
-__all__ = ['generate_app_keller']
+__all__ = ['generate_app_keller', 'generate_app_por']
 __all__ += []
 __all__ += ['PerfectCoronagraph']
 __all__ += []

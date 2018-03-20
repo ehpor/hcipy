@@ -1,5 +1,6 @@
 import numpy as np
 from ..propagation import FraunhoferPropagator
+from ..field import Field
 
 def generate_app_keller(wavefront, propagator, propagator_max, contrast, num_iterations):
 	"""

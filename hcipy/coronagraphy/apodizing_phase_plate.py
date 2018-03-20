@@ -58,7 +58,7 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 	M_max = propagator_max.get_transformation_matrix_forward(wavefront.wavelength)
 
 	wf_0 = propagator.forward(wavefront).electric_field
-	M /= wf_0
+	M /= wf_0[:,np.newaxis]
 
 	M *= wavefront.electric_field
 	M_max *= wavefront.electric_field

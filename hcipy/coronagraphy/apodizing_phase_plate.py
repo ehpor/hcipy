@@ -81,7 +81,7 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 
 	for i in range(n//2):
 		r2 = x[i]*x[i] + x[i+n//2]*x[i+n//2]
-		model.addQconstr(r2 <= 1)
+		model.addQConstr(r2 <= 1)
 	
 	for i, ee in enumerate(M):
 		e = gp.quicksum((x[i] * ee[i] for i in range(n)))

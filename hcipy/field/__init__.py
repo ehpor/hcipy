@@ -1,7 +1,7 @@
 __all__ = ['Grid']
 __all__ += ['UnstructuredCoords', 'SeparatedCoords', 'RegularCoords']
 __all__ += ['CartesianGrid']
-__all__ += ['field_inverse_tikhonov', 'make_field_operation']
+__all__ += ['field_inverse_tikhonov', 'field_svd', 'make_field_operation']
 __all__ += ['PolarGrid']
 __all__ += []
 __all__ += ['Field', 'field_einsum', 'field_dot', 'field_trace', 'field_inv']

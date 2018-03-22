@@ -9,7 +9,7 @@ def generate_app_keller(wavefront, propagator, propagator_max, contrast, num_ite
 
 	for i in range(num_iterations):
 		image = propagator.forward(wf)
-		image_max = propagator_max.forward(wf).max()
+		image_max = propagator_max.forward(wf)
 
 		mask = image.intensity / image_max.intensity.max() > contrast
 
@@ -24,8 +24,9 @@ def generate_app_keller(wavefront, propagator, propagator_max, contrast, num_ite
 		wf.electric_field += delta_aperture.electric_field
 
 		epsilon = 1e-6
-		wf.electric_field[wf.amplitude < epsilon] = 0
-		wf.electric_field[wf.amplitude >= epsilon] /= wf.amplitude[wf.amplitude >= epsilon]
+		m = wavefront.amplitude < epsilon
+		wf.electric_field[m] = 0
+		wf.electric_field[~m] *= wavefront.amplitude[~m] / wf.amplitude[~m]
 	
 	return wf
 

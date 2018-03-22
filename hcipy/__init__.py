@@ -5,6 +5,7 @@ from . import control
 from . import coronagraphy
 from . import field
 from . import fourier
+from . import interpolation
 from . import io
 from . import math_util
 from . import mode_basis
@@ -23,6 +24,7 @@ from .control import *
 from .coronagraphy import *
 from .field import *
 from .fourier import *
+from .interpolation import *
 from .io import *
 from .math_util import *
 from .metrics import *
@@ -43,6 +45,7 @@ __all__.extend(control.__all__)
 __all__.extend(coronagraphy.__all__)
 __all__.extend(field.__all__)
 __all__.extend(fourier.__all__)
+__all__.extend(interpolation.__all__)
 __all__.extend(io.__all__)
 __all__.extend(math_util.__all__)
 __all__.extend(metrics.__all__)

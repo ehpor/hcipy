@@ -10,7 +10,7 @@ setup(name='hcipy',
 	install_requires=[
 		"numpy",
 		"scipy",
-		"matplotlib",
+		"matplotlib>=2.0.0",
 		"Pillow"],
 	zip_safe=False
 	)

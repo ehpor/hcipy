@@ -57,8 +57,8 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
 			return centroid
 		
 		if use_par_map:
-			centroids = np.array(par_map(get_centroid, self.estimation_subapertures, use_progressbar=False))
+			centroids = np.array(np.array(par_map(get_centroid, self.estimation_subapertures, use_progressbar=False)).T)
 		else:
-			centroids = np.array([get_centroid(index) for index in self.estimation_subapertures])
+			centroids = np.array([get_centroid(index) for index in self.estimation_subapertures]).T
 
 		return Field(centroids, self.estimation_grid)

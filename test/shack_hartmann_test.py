@@ -39,18 +39,19 @@ zernike_freeform = DeformableMirror(dm_modes)
 
 plt.ion()
 for i in range(num_modes):
-    ## Extract the centers of the lenslets
-    act_levels = np.zeros(num_modes)
-    act_levels[i] = 1e-7
-    zernike_freeform.actuators = act_levels
-    dm_wf = zernike_freeform(wf)
-    sh_wf = shwfs(dm_wf)
-    sh_img = sh_wf.intensity
-    lenslet_centers = shwfse.estimate([sh_img])
+	## Extract the centers of the lenslets
+	act_levels = np.zeros(num_modes)
+	act_levels[i] = 1e-7
+	zernike_freeform.actuators = act_levels
+	dm_wf = zernike_freeform(wf)
+	sh_wf = shwfs(dm_wf)
+	sh_img = sh_wf.intensity
+	lenslet_centers = shwfse.estimate([sh_img])
 
-    plt.clf()
-    imshow_field(sh_img)
-    plt.colorbar()
-    plt.draw()
-    plt.pause(0.00001)
+	plt.clf()
+	imshow_field(sh_img)
+	plt.plot(lenslet_centers[0,:], lenslet_centers[1,:], 'r,')
+	plt.colorbar()
+	plt.draw()
+	plt.pause(0.00001)
 plt.ioff()

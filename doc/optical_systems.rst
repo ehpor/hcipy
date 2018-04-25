@@ -10,9 +10,9 @@ Optical Elements
 --------------------
 
 Detectors
----------------------------------------
+----------
 
 .. currentmodule:: hcipy.propagation
 
 Propagations
--------------------------------
+--------------

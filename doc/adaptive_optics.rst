@@ -1,45 +1,9 @@
-.. currentmodule:: hcipy.coronagraphy
-
 Adaptive Optics
 ==================
 
-Atmospheric turbulence
-----------------------
+.. toctree::
+	:maxdepth: 2
 
-
-Wavefront sensing
------------------
-
-Pyramid Wavefront Sensor
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Shack Hartmann Wavefront Sensor
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Zernike Wavefront Sensor
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Holographic Modal Wavefront Sensor
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Phase Diversity
-~~~~~~~~~~~~~~~~~~~
-
-Optical Diffentiation
-~~~~~~~~~~~~~~~~~~~~~~~
-
-
-Wavefront control
-----------------------
-
-Interaction matrices
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Speckle nulling
-~~~~~~~~~~~~~~~~~~
-
-Fast & Furious
-~~~~~~~~~~~~~~~~~~~
-
-Stroke minimzation
-~~~~~~~~~~~~~~~~~~~~~~~
+	atmospheric_turbulence
+	wavefront_sensing
+	wavefront_control

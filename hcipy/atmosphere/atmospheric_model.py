@@ -7,7 +7,41 @@ from scipy.special import gamma, kv
 
 class AtmosphericLayer(OpticalElement):
 	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0):
+		'''A single infinitely-thin atmospheric layer.
 
+		This class serves as a base class for all atmospheric layers. Multiply
+		atmospheric layers can be combined into an :class:`MultiLayerAtmosphere` which
+		provides modelling of scintilation between layers.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid on which the wavefront will be defined.
+		Cn_squared : scalar
+			The integrated value of Cn^2 for the layer.
+		L0 : scalar
+			The outer scale of the layer.
+		velocity : scalar or array_like
+			The velocity of the layer. If a scalar is given, its direction is 
+			chosen randomly.
+		height : scalar
+			The height of the atmospheric layer above the ground.
+
+		Attributes
+		----------
+		input_grid : Grid
+			The grid on which the wavefront will be defined.
+		t : scalar
+			The current time.
+		Cn_squared : scalar
+			The integrated value of Cn^2 for the layer.
+		L0 : scalar
+			The outer scale of the phase structure function.
+		velocity : array_like
+			The two-dimensional velocity of the layer.
+		height : scalar
+			The height of the atmospheric layer above the ground.
+		'''
 		self.input_grid = input_grid
 		self.Cn_squared = Cn_squared
 		self.L0 = L0
@@ -19,10 +53,19 @@ class AtmosphericLayer(OpticalElement):
 		self._t = 0
 	
 	def evolve_until(self, t):
+		'''Evolve the atmospheric layer until time `t`.
+
+		Parameters
+		----------
+		t : scalar
+			The time to which to evolve the atmospheric layer.
+		'''
 		raise NotImplementedError()
 	
 	@property
 	def t(self):
+		'''The current time of the atmospheric layer.
+		'''
 		return self._t
 	
 	@t.setter
@@ -31,6 +74,8 @@ class AtmosphericLayer(OpticalElement):
 	
 	@property
 	def Cn_squared(self):
+		'''The integrated value of Cn^2 for the layer.
+		'''
 		return self._Cn_squared
 	
 	@Cn_squared.setter
@@ -39,6 +84,8 @@ class AtmosphericLayer(OpticalElement):
 
 	@property
 	def outer_scale(self):
+		'''The outer scale of the phase structure function.
+		'''
 		return self._outer_scale
 	
 	@outer_scale.setter
@@ -47,6 +94,8 @@ class AtmosphericLayer(OpticalElement):
 	
 	@property
 	def L0(self):
+		'''The outer scale of the phase structure function.
+		'''
 		return self.outer_scale
 	
 	@L0.setter
@@ -55,6 +104,8 @@ class AtmosphericLayer(OpticalElement):
 
 	@property
 	def velocity(self):
+		'''The two-dimensional velocity of the layer.
+		'''
 		return self._velocity
 
 	@velocity.setter
@@ -69,6 +120,15 @@ class AtmosphericLayer(OpticalElement):
 			self._velocity = velocity
 
 	def phase_for(self, wavelength):
+		'''Get the phase screen at a certain wavelength.
+
+		Each atmospheric layer is modelled as an infinitely-thin phase screen.
+
+		Parameters
+		----------
+		wavelength : scalar
+			The wavelength at which to calculate the phase screen.
+		'''
 		raise NotImplementedError()
 	
 	@property
@@ -87,6 +147,22 @@ class AtmosphericLayer(OpticalElement):
 
 class MultiLayerAtmosphere(OpticalElement):
 	def __init__(self, layers, scintilation=False):
+		'''A multi-layer atmospheric model.
+
+		This :class:`OpticalElement` can model turbulence and scintilation effects
+		due to atmospheric turbulence by propagating light through a series of 
+		infinitely-thin atmospheric phase screens at different altitudes. The distance
+		between two phase screens can be propagated using Fresnel propagation, or using
+		no :class:`Propagator`.
+
+		Parameters
+		----------
+		layers : list of AtmosphericLayer objects
+			The series of atmospheric layers in this model.
+		scintilation : bool
+			If True, then the distance between two phase screens is propagated using
+			a :class:`FresnelPropagator`. Otherwise, no propagator will be used.
+		'''
 		self.layers = layers
 		self._scintilation = scintilation
 		self._t = 0
@@ -95,6 +171,11 @@ class MultiLayerAtmosphere(OpticalElement):
 		self.calculate_propagators()
 
 	def calculate_propagators(self):
+		'''Recalculates the list of optical elements used for a propagation.
+
+		This function is called automatically by other functions, but a recalculation
+		can be forced by calling it explicitly.
+		'''
 		heights = np.array([l.height for l in self.layers])
 		layer_indices = np.argsort(-heights)
 
@@ -118,6 +199,8 @@ class MultiLayerAtmosphere(OpticalElement):
 	
 	@property
 	def layers(self):
+		'''A list of :class:`AtmosphericLayer: objects.
+		'''
 		return self._layers
 
 	@layers.setter
@@ -127,6 +210,8 @@ class MultiLayerAtmosphere(OpticalElement):
 	
 	@property
 	def scintilation(self):
+		'''Whether to include scintilation effects in the propagation.
+		'''
 		return self._scintilation
 
 	@scintilation.setter
@@ -135,12 +220,21 @@ class MultiLayerAtmosphere(OpticalElement):
 		self._scintilation = scintilation
 	
 	def evolve_until(self, t):
+		'''Evolve all atmospheric layers to a time t.
+
+		Parameters
+		----------
+		t : scalar
+			The time to which to evolve the atmospheric layers.
+		'''
 		for l in self.layers:
 			l.evolve_until(t)
 		self._t = t
 	
 	@property
 	def Cn_squared(self):
+		'''The total Cn^2 value of the simulated atmosphere.
+		'''
 		return np.sum([l.Cn_squared for l in self.layers])
 	
 	@Cn_squared.setter
@@ -151,6 +245,8 @@ class MultiLayerAtmosphere(OpticalElement):
 	
 	@property
 	def outer_scale(self):
+		'''The outer scale of all layers.
+		'''
 		return self.layers[0].outer_scale
 	
 	@outer_scale.setter
@@ -160,6 +256,8 @@ class MultiLayerAtmosphere(OpticalElement):
 	
 	@property
 	def t(self):
+		'''The current time.
+		'''
 		return self._t
 	
 	@t.setter
@@ -185,6 +283,8 @@ class MultiLayerAtmosphere(OpticalElement):
 		return wf
 
 def von_karman_psd(grid, r0, L0=0.1):
+	'''This function implements the von Karman power spectral density.
+	'''
 	u = grid.as_('polar').r + 1e-20
 	res = 0.0299 * ((u**2 + u_o**2) / (2 * np.pi)**2)**(-11 / 6.)
 

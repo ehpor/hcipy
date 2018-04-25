@@ -5,7 +5,7 @@ import time
 
 from hcipy.atmosphere import *
 
-pupil_grid = make_pupil_grid(256, 2)
+pupil_grid = make_pupil_grid(256, 1)
 focal_grid = make_focal_grid(pupil_grid, 8, 16)
 
 r0 = 0.3
@@ -16,24 +16,27 @@ height = 0
 stencil_length = 2
 oversampling = 128
 
-layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared_from_fried_parameter(r0, wavelength), L0, velocity, height, stencil_length)
-#layer = FiniteAtmosphericLayer(pupil_grid, Cn_squared_from_fried_parameter(r0, wavelength), L0, velocity, height, oversampling)
-
-start = time.time()
-N = 1000
-for i in range(N):
-	layer._extrude('left')
-end = time.time()
-
-print('columns per sec:', N / (end - start))
-print('phase screens per sec:', N / (end - start) / pupil_grid.shape[0])
+mode_basis = make_zernike_basis(500, 1, pupil_grid, 1)
 
 layers = []
-layers.append(InfiniteAtmosphericLayer(pupil_grid, Cn_squared_from_fried_parameter(r0, wavelength), L0, velocity, 0, stencil_length))
-layers.append(InfiniteAtmosphericLayer(pupil_grid, Cn_squared_from_fried_parameter(r0, wavelength), L0, velocity, 500, stencil_length))
+layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared_from_fried_parameter(r0, wavelength), L0, velocity, 0, stencil_length)
+layer2 = ModalAdaptiveOpticsLayer(layer, mode_basis, 1)
+layers.append(layer2)
+layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared_from_fried_parameter(r0, wavelength), L0, velocity, 0, stencil_length)
+layer3 = ModalAdaptiveOpticsLayer(layer, mode_basis, 1)
+layers.append(layer3)
+layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared_from_fried_parameter(r0, wavelength), L0, velocity, 0, stencil_length)
+layer4 = ModalAdaptiveOpticsLayer(layer, mode_basis, 1)
+layers.append(layer4)
+layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared_from_fried_parameter(r0, wavelength), L0, velocity, 0, stencil_length)
+layer5 = ModalAdaptiveOpticsLayer(layer, mode_basis, 1)
+layers.append(layer5)
+layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared_from_fried_parameter(r0, wavelength), L0, velocity, 0, stencil_length)
+layer6 = ModalAdaptiveOpticsLayer(layer, mode_basis, 1)
+layers.append(layer6)
 
-atmosphere = MultiLayerAtmosphere(layers, True)
-atmosphere.Cn_squared = Cn_squared_from_fried_parameter(1, wavelength)
+atmosphere = MultiLayerAtmosphere(layers, False)
+atmosphere.Cn_squared = Cn_squared_from_fried_parameter(1/40, wavelength)
 prop = FraunhoferPropagator(pupil_grid, focal_grid.scaled(wavelength))
 
 aperture = circular_aperture(1)(pupil_grid)
@@ -48,8 +51,8 @@ for t in np.linspace(0, 100, 5001):
 	
 	plt.clf()
 	plt.subplot(1,2,1)
-	imshow_field(wf2.intensity, cmap='gray')
+	imshow_field(wf2.phase, cmap='RdBu')
 	plt.subplot(1,2,2)
-	imshow_field(img)
+	imshow_field(np.log10(img / img.max()), vmin=-6)
 	plt.draw()
 	plt.pause(0.00001)

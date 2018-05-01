@@ -131,7 +131,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 
 			if planner == 'estimate':
 				# Estimate analytically from complexities
-				N_in = input_grid * q
+				N_in = input_grid.shape * q
 				N_out = output_grid.shape
 
 				if input_grid.ndim == 1:
@@ -166,7 +166,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 	
 	# Make the Fourier transform
 	if method == 'fft':
-		return FastFourierTransform(input_grid, q, fov_factor)
+		return FastFourierTransform(input_grid, q, fov)
 	elif method == 'mft':
 		return MatrixFourierTransform(input_grid, output_grid)
 	elif method == 'naive':

@@ -6,16 +6,16 @@ class Controller(object):
 		raise NotImplementedError()
 
 class FilteredController(Controller):
-	def __init__(self, control, reconstructors):
+	def __init__(self, control, filters):
 		self.control = control
-		if not hasattr(reconstructors, '__iter__'):
-			self.reconstructors = [reconstructors]
+		if not hasattr(filters, '__iter__'):
+			self.filters = [filters]
 		else:
-			self.reconstructors = reconstructors
+			self.filters = filters
 
 	def submit_wavefront(self, t, wavefront, covariances=None, wfs_number=0):
-		recon = self.reconstructors[wfs_number]
-		filtered_wf, filtered_cov = recon.reconstruct(t, wavefront, covariances)
+		fltr = self.filters[wfs_number]
+		filtered_wf, filtered_cov = fltr.filter(t, wavefront, covariances)
 
 		self.control.submit_wavefront(t, filtered_wf, filtered_cov, wfs_number)
 

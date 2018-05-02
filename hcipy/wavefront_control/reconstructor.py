@@ -3,7 +3,7 @@ import enum
 class CovarianceType(enum.Enum):
 	CovNone = 0
 	CovScalar = 1
-	CovVector = 2
+	CovDiagonal = 2
 	CovMatrix = 3
 
 class Reconstructor(object):

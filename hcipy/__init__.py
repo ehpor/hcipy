@@ -20,6 +20,7 @@ from . import wavefront_sensing
 # Import all core submodules in default namespace.
 from .aperture import *
 from .atmosphere import *
+from .config import *
 from .coronagraphy import *
 from .field import *
 from .fourier import *
@@ -41,6 +42,7 @@ from .wavefront_sensing import *
 __all__ = []
 __all__.extend(aperture.__all__)
 __all__.extend(atmosphere.__all__)
+__all__.extend(config.__all__)
 __all__.extend(coronagraphy.__all__)
 __all__.extend(field.__all__)
 __all__.extend(fourier.__all__)

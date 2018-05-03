@@ -11,7 +11,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 		AtmosphericLayer.__init__(self, layer.input_grid, layer.Cn_squared, layer.L0, layer.velocity, layer.height)
 
 		self.transformation_matrix = controlled_modes.transformation_matrix
-		self.transformation_matrix_inverse = inverse_tikhonov(self.transformation_matrix, 1e-4)
+		self.transformation_matrix_inverse = inverse_tikhonov(self.transformation_matrix, 1e-7)
 
 		self.corrected_coeffs = []
 		self.lag = lag

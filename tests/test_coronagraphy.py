@@ -1,0 +1,1 @@
+# All coronagraphs should suppress light.

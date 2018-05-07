@@ -46,6 +46,7 @@ def field_svd(f, full_matrices=True, compute_uv=True):
 		Whether to compute matrices U and Vh in addition to the singular values.
 	
 	Returns
+	-------
 	U : `Field`
 		The unitary matrices. Only returned if `compute_uv` is True.
 	S : `Field`

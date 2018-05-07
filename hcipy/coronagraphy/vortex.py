@@ -10,7 +10,25 @@ import matplotlib.pyplot as plt
 from ..plotting import imshow_field, complex_field_to_rgb
 
 class VortexCoronagraph(OpticalElement):
-	def __init__(self, input_grid, pupil_diameter=1, charge=2, scalings=4, scaling_factor=4):
+	'''An optical vortex coronagraph.
+
+	This :class:`OpticalElement` simulations the propagation of light through
+	a vortex in the focal plane. To resolve the singularity of this vortex
+	phase plate, a multi-scale approach is made. Discretisation errors made at
+	a certain level are corrected by the next level with finer sampling.
+
+	Parameters
+	----------
+	input_grid : Grid
+		The grid on which the incoming wavefront is defined.
+	charge : integer
+		The charge of the vortex.
+	levels : integer
+		The number of levels in the multi-scale sampling.
+	scaling_factor : scalar
+		The fractional increase in spatial frequency sampling per level.
+	'''
+	def __init__(self, input_grid, charge=2, scalings=4, scaling_factor=4):
 		self.input_grid = input_grid
 		
 		q_outer = 2
@@ -46,6 +64,19 @@ class VortexCoronagraph(OpticalElement):
 			self.props.append(prop)
 
 	def forward(self, wavefront):
+		'''Propagate a wavefront through the vortex coronagraph.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The wavefront to propagate. This wavefront is expected to be
+			in the pupil plane.
+		
+		Returns
+		-------
+		Wavefront
+			The Lyot plane wavefront.
+		'''
 		wavelength = wavefront.wavelength
 		wavefront.wavelength = 1
 
@@ -61,6 +92,21 @@ class VortexCoronagraph(OpticalElement):
 		return lyot
 	
 	def backward(self, wavefront):
+		'''Propagate backwards through the vortex coronagraph.
+
+		This essentially is a forward propagation through a the same vortex
+		coronagraph, but with the sign of the its charge flipped.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The Lyot plane wavefront.
+		
+		Returns
+		-------
+		Wavefront
+			The pupil-plane wavefront.
+		'''
 		wavelength = wavefront.wavelength
 		wavefront.wavelength = 1
 
@@ -74,3 +120,93 @@ class VortexCoronagraph(OpticalElement):
 
 		pup.wavelength = wavelength
 		return pup
+
+def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1):
+	'''Make field generators for the pupil and Lyot-stop masks for a
+	ring apodized vortex coronagraph.
+
+	The formulas were implmeneted according to Mawet et al. (2013)
+	"Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive ring apodizers".
+
+	Parameters
+	----------
+	central_obscuration : scalar
+		The diameter of the central obscuration.
+	charge : integer
+		The charge of the vortex coronagraph used.
+	pupil_diameter : scalar
+		The diameter of the pupil.
+	
+	Returns
+	-------
+	pupil_mask : Field generator
+		The complex transmission of the pupil mask.
+	lyot_mask : Field generator
+		The complex transmission of the Lyot-stop mask.
+	'''
+	R0 = central_obscuration / pupil_diameter
+
+	if charge == 2:
+		t1 = 1 - 0.25 * (R0**2 + R0 * np.sqrt(R0**2 + 8))
+		R1 = R0 / np.sqrt(1 - t1)
+
+		pupil1 = circular_aperture(pupil_diameter)
+		pupil2 = circular_aperture(pupil_diameter * R1)
+		co = circular_aperture(central_obscuration)
+
+		pupil_mask = lambda grid: (pupil2(grid) * t1 + pupil1(grid) * (1 - t1)) * (1 - co(grid))
+		lyot_stop = lambda grid: pupil1(grid) - pupil2(grid)
+	elif charge == 4:
+		R1 = np.sqrt(np.sqrt(R0**2 * (R0**2 + 4)) - 2*R0**2)
+		R2 = np.sqrt(R1**2 + R0**2)
+		t1 = 0
+		t2 = (R1**2 - R0**2) / (R1**2 + R0**2)
+
+		pupil1 = circular_aperture(pupil_diameter)
+		pupil2 = circular_aperture(pupil_diameter * R1)
+		pupil3 = circular_aperture(pupil_diameter * R2)
+		co = circular_aperture(central_obscuration)
+
+		pupil_mask = lambda grid: (pupil3(grid) * t2 + pupil2(grid) * (t1 - t2) + pupil1(grid) * (1 - t1)) * (1 - co(grid))
+		lyot_stop = lambda grid: pupil1(grid) - pupil2(grid)
+	else:
+		raise NotImplementedError()
+
+	return pupil_mask, lyot_stop
+
+def get_ravc_planet_transmission(central_obscuration_ratio, charge=2):
+	'''Get the planet transmission for a ring-apodized vortex coronagraph.
+
+	The formulas implemented in this function can be found in Mawet et al. (2013)
+	"Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive ring apodizers".
+
+	Parameters
+	----------
+	central_obscuration_ratio : scalar
+		The ratio of the central obscuration diameter and the pupil diameter.
+	charge : integer
+		The charge of the vortex coronagraph used.
+	
+	Returns
+	-------
+	scalar
+		The intensity transmission for a sufficiently off-axis point source 
+		for the ring-apodized vortex coronagraph. Point sources close to the vortex
+		singularity will be lower in intensity.
+	'''
+	R0 = central_obscuration_ratio
+
+	if charge == 2:
+		t1_opt = 1 - 0.25 * (R0**2 + R0 * np.sqrt(R0**2 + 8))
+		R1_opt = R0 / np.sqrt(1 - t1_opt)
+
+		return t1_opt**2 * (1 - R1_opt**2) / (1 - (R0**2))
+	elif charge == 4:
+		R1 = np.sqrt(np.sqrt(R0**2 * (R0**2 + 4)) - 2*R0**2)
+		R2 = np.sqrt(R1**2 + R0**2)
+		t1 = 0
+		t2 = (R1**2 - R0**2) / (R1**2 + R0**2)
+
+		return t2**2 * (1 - R2**2) / (1 - R0**2)
+	else:
+		raise NotImplementedError()

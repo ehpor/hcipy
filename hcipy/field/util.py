@@ -1,5 +1,43 @@
 import numpy as np
 
+def make_uniform_grid(dims, extent, center=0, has_center=False):
+	'''Create a uniformly-spaced :class:`Grid` of a certain shape and size.
+
+	Parameters
+	----------
+	dims : scalar or ndarray
+		The number of points in each dimension. If this is a scalar, it will
+		be multiplexed over all dimensions.
+	extent : scalar or ndarray
+		The total extent of the grid in each dimension.
+	center : scalar or ndarray
+		The center point. The grid will by symmetric around this point.
+	has_center : boolean
+		Does the grid has to have the center as one of its points. If this is
+		False, this does not mean that the grid will not have the center.
+
+	Returns
+	-------
+	Grid
+		A :class:`Grid` with :class:`RegularCoords`.
+	'''
+	from .cartesian_grid import CartesianGrid
+	from .coordinates import RegularCoords
+
+	num_dims = max(np.array([dims]).shape[-1], np.array([extent]).shape[-1], np.array([center]).shape[-1])
+
+	dims = (np.ones(num_dims) * dims).astype('float')
+	extent = (np.ones(num_dims) * extent).astype('int')
+	center = (np.ones(num_dims) * center).astype('float')
+
+	delta = extent / dims
+	zero = -extent / 2 + center + delta / 2
+
+	if has_center:
+		zero -= delta/2 * (1 - np.mod(dims, 2))
+
+	return CartesianGrid(RegularCoords(delta, dims, zero))
+
 def make_pupil_grid(N, D=1):
 	from .cartesian_grid import CartesianGrid
 	from .coordinates import RegularCoords
@@ -90,3 +128,9 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None):
 		sep_coords.append(c)
 	
 	return CartesianGrid(SeparatedCoords(sep_coords))
+
+def subsample_field(field, subsampling):
+	pass
+
+def evaluate_supersampled(field_generator, grid, oversampling):
+	pass

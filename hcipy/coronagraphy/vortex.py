@@ -28,7 +28,7 @@ class VortexCoronagraph(OpticalElement):
 	scaling_factor : scalar
 		The fractional increase in spatial frequency sampling per level.
 	'''
-	def __init__(self, input_grid, charge=2, scalings=4, scaling_factor=4):
+	def __init__(self, input_grid, charge=2, levels=4, scaling_factor=4):
 		self.input_grid = input_grid
 		
 		q_outer = 2
@@ -38,7 +38,7 @@ class VortexCoronagraph(OpticalElement):
 		self.focal_masks = []
 		self.props = []
 
-		for i in range(scalings):
+		for i in range(levels):
 			q = q_outer * scaling_factor**i
 			if i == 0:
 				num_airy = num_airy_outer
@@ -46,7 +46,6 @@ class VortexCoronagraph(OpticalElement):
 				num_airy = 32 / (q_outer * scaling_factor**(i-1))
 
 			focal_grid = make_focal_grid(input_grid, q, num_airy)
-			print(focal_grid.shape)
 			focal_mask = Field(np.exp(1j * charge * focal_grid.as_('polar').theta), focal_grid)
 
 			focal_mask *= 1 - circular_aperture(1e-9)(focal_grid)

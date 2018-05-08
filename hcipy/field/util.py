@@ -1,4 +1,7 @@
 import numpy as np
+from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
+from .field import Field
+from .cartesian_grid import CartesianGrid
 
 def make_uniform_grid(dims, extent, center=0, has_center=False):
 	'''Create a uniformly-spaced :class:`Grid` of a certain shape and size.
@@ -21,8 +24,6 @@ def make_uniform_grid(dims, extent, center=0, has_center=False):
 	Grid
 		A :class:`Grid` with :class:`RegularCoords`.
 	'''
-	from .cartesian_grid import CartesianGrid
-	from .coordinates import RegularCoords
 
 	num_dims = max(np.array([dims]).shape[-1], np.array([extent]).shape[-1], np.array([center]).shape[-1])
 
@@ -39,9 +40,6 @@ def make_uniform_grid(dims, extent, center=0, has_center=False):
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 
 def make_pupil_grid(N, D=1):
-	from .cartesian_grid import CartesianGrid
-	from .coordinates import RegularCoords
-
 	D = (np.ones(2) * D).astype('float')
 	N = (np.ones(2) * N).astype('int')
 
@@ -69,9 +67,6 @@ def make_focal_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1
 	return focal_grid
 
 def make_hexagonal_grid(circum_diameter, n_rings):
-	from .cartesian_grid import CartesianGrid
-	from .coordinates import UnstructuredCoords
-
 	apothem = circum_diameter * np.sqrt(3) / 4
 
 	q = [0]
@@ -105,9 +100,6 @@ def make_hexagonal_grid(circum_diameter, n_rings):
 	return CartesianGrid(UnstructuredCoords((x,y)), weight)
 
 def make_chebyshev_grid(dims, minimum=None, maximum=None):
-	from .cartesian_grid import CartesianGrid
-	from .coordinates import SeparatedCoords
-
 	if minimum is None:
 		minimum = -1
 	
@@ -129,8 +121,33 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None):
 	
 	return CartesianGrid(SeparatedCoords(sep_coords))
 
+def make_supersampled_grid(grid, oversampling):
+	oversampling = int(np.round(oversampling))
+
+	if grid.is_regular:
+		delta_new = grid.delta / oversampling
+		zero_new = grid.zero - grid.delta / 2 + delta_new / 2
+		dims_new = grid.dims * oversampling
+
+		return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
+	elif grid.is_separated:
+		raise NotImplementedError()
+	
+	raise ValueError('Cannot create a supersampled grid from a non-separated grid.')
+
 def subsample_field(field, subsampling):
 	pass
 
 def evaluate_supersampled(field_generator, grid, oversampling):
-	pass
+	oversampling = int(np.round(oversampling))
+
+	new_grid = make_supersampled_grid(grid, oversampling)
+	field = field_generator(new_grid)
+	
+	reshape = []
+	axes = []
+	for i, s in enumerate(grid.shape):
+		reshape.extend([s,oversampling])
+		axes.append(2*i+1)
+
+	return Field(field.reshape(tuple(reshape)).mean(axis=tuple(axes)).ravel(), grid)

@@ -83,12 +83,3 @@ class FastFourierTransform(FourierTransform):
 		res = res[self.cutout_input].ravel() / self.weights / self.shift_output
 		
 		return Field(res, self.input_grid)
-
-class ConvolveFFT(object):
-	pass
-
-class RotateFFT(object):
-	pass
-
-class FilterFFT(object):
-	pass

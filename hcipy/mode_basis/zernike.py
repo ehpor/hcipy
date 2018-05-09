@@ -49,7 +49,7 @@ def zernike(n, m, D=1, grid=None):
 	from ..field import Field
 
 	if grid is None:
-		return lambda grid: zernike(n, m, grid)
+		return lambda grid: zernike(n, m, D, grid)
 	
 	if grid.is_separated and grid.is_('polar'):
 		R, Theta = grid.separated_coords

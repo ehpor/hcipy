@@ -120,7 +120,7 @@ class VortexCoronagraph(OpticalElement):
 		pup.wavelength = wavelength
 		return pup
 
-def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1):
+def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_undersize=0):
 	'''Make field generators for the pupil and Lyot-stop masks for a
 	ring apodized vortex coronagraph.
 
@@ -135,6 +135,8 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1):
 		The charge of the vortex coronagraph used.
 	pupil_diameter : scalar
 		The diameter of the pupil.
+	lyot_undersize : scalar
+		The fraction of the pupil diameter to which to undersize the Lyot stop.
 	
 	Returns
 	-------
@@ -152,9 +154,11 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1):
 		pupil1 = circular_aperture(pupil_diameter)
 		pupil2 = circular_aperture(pupil_diameter * R1)
 		co = circular_aperture(central_obscuration)
+		pupil_mask = lambda grid: (pupil1(grid) * t1 + pupil2(grid) * (1 - t1)) * (1 - co(grid))
 
-		pupil_mask = lambda grid: (pupil2(grid) * t1 + pupil1(grid) * (1 - t1)) * (1 - co(grid))
-		lyot_stop = lambda grid: pupil1(grid) - pupil2(grid)
+		lyot1 = circular_aperture(pupil_diameter * R1 + pupil_diameter * lyot_undersize)
+		lyot2 = circular_aperture(pupil_diameter * (1 - lyot_undersize))
+		lyot_stop = lambda grid: lyot2(grid) - lyot1(grid)
 	elif charge == 4:
 		R1 = np.sqrt(np.sqrt(R0**2 * (R0**2 + 4)) - 2*R0**2)
 		R2 = np.sqrt(R1**2 + R0**2)
@@ -166,8 +170,11 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1):
 		pupil3 = circular_aperture(pupil_diameter * R2)
 		co = circular_aperture(central_obscuration)
 
-		pupil_mask = lambda grid: (pupil3(grid) * t2 + pupil2(grid) * (t1 - t2) + pupil1(grid) * (1 - t1)) * (1 - co(grid))
-		lyot_stop = lambda grid: pupil1(grid) - pupil2(grid)
+		pupil_mask = lambda grid: (pupil1(grid) * t2 + pupil3(grid) * (t1 - t2) + pupil2(grid) * (1 - t1)) * (1 - co(grid))
+
+		lyot1 = circular_aperture(pupil_diameter * R2 + pupil_diameter * lyot_undersize)
+		lyot2 = circular_aperture(pupil_diameter * (1 - lyot_undersize))
+		lyot_stop = lambda grid: lyot2(grid) - lyot1(grid)
 	else:
 		raise NotImplementedError()
 

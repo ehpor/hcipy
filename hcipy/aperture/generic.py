@@ -84,7 +84,28 @@ def segmented_aperture(subaperture_shape, subaperture_grid):
 		return Field(ap, grid)
 	return func
 
-def obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio):
+def obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,num_spiders =0):
 	def func(grid):
+		add_spiders
 		return circular_aperture(pupil_diameter)(grid) - circular_aperture(central_obscuration_diameter)(grid)
 	return func
+
+
+def make_spider(p1,p2,d):
+	calcangle 
+	spider = calc_rectangle_aperture()
+	def func(grid):
+		rotated_grid
+		return make_spider(1- spider(rotated_grid+shifted))
+	return func
+
+def make_spider_infinite(p,angle,d):
+	pass
+
+
+
+
+
+
+
+

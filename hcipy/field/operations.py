@@ -73,3 +73,28 @@ def field_svd(f, full_matrices=True, compute_uv=True):
 
 def make_field_operation(op):
 	pass
+'''
+def make_field_operation(op):
+	def inner(*args, **kwargs):
+		# Determine which args are fields.
+		is_field = [hasattr(arg, 'grid') for arg in args]
+
+		if not np.any(is_field):
+			return op(*args, **kwargs)
+
+		# At least one argument has a field
+		grid_size = np.flatnonzero(is_field)[0]].grid.size
+		
+		if len(args) == 1:
+			# Only one argument; use loop comprehension
+			res = np.array([op(args[0][...,i]) for i in range(grid_size)])
+
+			return Field(, args[0].grid)
+		
+		# More than one argument operation.
+		res = []
+		for i in range(grid_size):
+			a = tuple([args[j][...,i] if is_field[j] else args[j] for j in len(args)])
+			res.append(op(*a, **kwargs))
+		return Field(res, )
+		'''

@@ -20,16 +20,16 @@ class SimpleVibration(OpticalElement):
 	
 	@property
 	def phase(self):
-		return 2*np.pi * frequency * self.t + self.phase_0
+		return 2*np.pi * self.frequency * self.t + self.phase_0
 	
 	def forward(self, wavefront):
 		wf = wavefront.copy()
 
-		wf.electric_field *= np.exp(1j * (mode * amplitude / wf.wavelength * np.sin(self.phase)))
+		wf.electric_field *= np.exp(1j * (self.mode * self.amplitude / wf.wavelength * np.sin(self.phase)))
 		return wf
 	
 	def backward(self, wavefront):
 		wf = wavefront.copy()
 
-		wf.electric_field *= np.exp(-1j * (mode * amplitude / wf.wavelength * np.sin(self.phase)))
+		wf.electric_field *= np.exp(-1j * (self.mode * self.amplitude / wf.wavelength * np.sin(self.phase)))
 		return wf

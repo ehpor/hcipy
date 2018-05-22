@@ -8,7 +8,7 @@ __all__ += ['GaussianBeam']
 __all__ += ['MicroLensArray', 'closest_points']
 __all__ += ['AtmosphericModel', 'kolmogorov_psd', 'von_karman_psd', 'modified_von_karman_psd', 'make_standard_multilayer_atmosphere', 'scale_Cn_squared_to_fried_parameter', 'get_fried_parameter']
 __all__ += ['OpticalElement', 'OpticalSystem']
-__all__ += ['PhaseRetarder', 'LinearRetarder', 'CircularRetarder', 'QuarterWavePlate', 'HalfWavePlate']
+__all__ += ['PhaseRetarder', 'LinearRetarder', 'CircularRetarder', 'QuarterWavePlate', 'HalfWavePlate', 'LinearPolarizer']
 __all__ += ['SimpleVibration']
 __all__ += ['Wavefront']
 

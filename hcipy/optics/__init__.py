@@ -12,6 +12,9 @@ __all__ += ['PhaseRetarder', 'LinearRetarder', 'CircularRetarder', 'QuarterWaveP
 __all__ += ['SimpleVibration']
 __all__ += ['Wavefront']
 
+from .optical_element import *
+from .wavefront import *
+
 from .aberration import *
 from .apodization import *
 from .dynamic_optical_system import *
@@ -21,7 +24,5 @@ from .fiber import *
 from .gaussian_beam import *
 from .micro_lens_array import *
 from .multi_layer_atmosphere import *
-from .optical_element import *
 from .polarization import *
 from .vibration import *
-from .wavefront import *

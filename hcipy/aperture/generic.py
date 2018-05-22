@@ -84,26 +84,53 @@ def segmented_aperture(subaperture_shape, subaperture_grid):
 		return Field(ap, grid)
 	return func
 
-def obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,num_spiders =0):
+def make_spider(p1,p2,spider_width):
+		
+	delta_x = p2[0]-p1[0]
+	delta_y = p2[1]-p1[1]
+	shift_x = delta_x/2+p1[0]
+	shift_y = delta_y/2+p1[1]
+
+	spider_angle = np.arctan2(delta_y,delta_x)
+	
+	spider_length = np.sqrt((delta_x)**2+(delta_y)**2)
+	spider = rectangular_aperture((spider_length,spider_width))
+
 	def func(grid):
-		add_spiders
-		return circular_aperture(pupil_diameter)(grid) - circular_aperture(central_obscuration_diameter)(grid)
+		x,y = grid.shifted((-shift_x,-shift_y)).coords
+		x_new= x*np.cos(spider_angle)+y*np.sin(spider_angle)
+		y_new= y*np.cos(spider_angle)-x*np.sin(spider_angle)
+		spider_grid = CartesianGrid(UnstructuredCoords([x_new,y_new]))
+		return 1-spider(spider_grid)
+
 	return func
 
+def make_spider_infinite(p,angle,spider_width):
+	spider_angle = np.radians(angle)
 
-def make_spider(p1,p2,d):
-	calcangle 
-	spider = calc_rectangle_aperture()
 	def func(grid):
-		rotated_grid
-		return make_spider(1- spider(rotated_grid+shifted))
+		x,y = grid.shifted((p[0],p[1])).coords
+		y_new= y*np.cos(spider_angle)-x*np.sin(spider_angle)
+		infinite_spider = (np.abs(y_new)<=spider_width/2)
+		return Field(1-infinite_spider,grid)
 	return func
 
-def make_spider_infinite(p,angle,d):
-	pass
+def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,num_spiders =0,spider_width = 0.01):
+	central_obscuration_diameter = pupil_diameter*central_obscuration_ratio
 
-
-
+	def func(grid):	
+		pupil_outer = circular_aperture(pupil_diameter)(grid)
+		pupil_inner = circular_aperture(central_obscuration_diameter)(grid)
+		spiders =1
+		if num_spiders>0:
+			max_angle = 2*np.pi*(num_spiders-1)/num_spiders	
+			spider_angles = np.linspace(0,max_angle,num_spiders)
+			for i,angle in enumerate(spider_angles):
+				x = pupil_diameter*np.cos(angle)
+				y = pupil_diameter*np.sin(angle)
+				spiders*=make_spider((0,0),(x,y),spider_width)(grid)
+		return (pupil_outer-pupil_inner)*spiders
+	return func
 
 
 

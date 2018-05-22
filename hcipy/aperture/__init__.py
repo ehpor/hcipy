@@ -1,4 +1,4 @@
-__all__ = ['circular_aperture', 'rectangular_aperture', 'regular_polygon_aperture', 'hexagonal_aperture']
+__all__ = ['circular_aperture', 'rectangular_aperture', 'regular_polygon_aperture', 'hexagonal_aperture','make_magao_x_aperture','make_spider','make_spider_infinite','make_obstructed_circular_aperture']
 __all__ += []
 
 from .generic import *

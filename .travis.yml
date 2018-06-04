@@ -44,9 +44,10 @@ install:
 
 script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then source terryfy/test_tools.sh; fi
-  - python -m coverage run -m py.test ./tests
+  - if [[ $COVERAGE == "true" ]]; then python -m coverage run -m pytest ./tests; fi
+  - if [[ $COVERAGE == "false" ]]; then python -m pytest ./tests; fi
 
 after_success: |
-  if [[ $SETUP_CMD == 'test --coverage' ]]; then
+  if [[ $COVERAGE == "true" ]]; then
     coveralls --rcfile='hcipy/tests/coveragerc'
   fi

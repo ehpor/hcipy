@@ -34,21 +34,41 @@ matrix:
 
 before_install: |
   if [ "$TRAVIS_OS_NAME" == "osx" ]; then
-    git clone https://github.com/MacPython/terryfy.git
-    # Avoid printing the lines from the script below.
-    source terryfy/travis_tools.sh
-    get_python_environment $INSTALL_TYPE $VERSION $VENV
+    brew update
+    brew list python &>/dev/null || brew install python
+    brew list python3 &>/dev/null || brew install python3
+    brew install pyenv-virtualenv
+
+    case "${VERSION:-3}" in
+      2*)
+        Miniconda="Miniconda2"
+        ;;
+      3*)
+        Miniconda="Miniconda3"
+        ;;;
+    esac
+
+    wget http://repo.continuum.io/miniconda/${Miniconda}-latest-MacOSX-x86_64.sh -O miniconda.sh;
+
+    bash miniconda.sh -b -p $HOME/miniconda
+    export PATH=$HOME/miniconda/bin:$PATH
+    hash -r
+    conda info -a
+    conda config --set always_yet yes --set changeps1 no
+    conda update -q conda
+    conda dreate -q -n test-environment python="${VERSION:-3}" $*
+    source activate test-environment
+    conda update -q -y --all
+    pip install --upgrade pip
   fi
 
 install:
-  - python -m pip install -U pip
   - pip install -r requirements.txt
   - pip install coverage
   - pip install pytest
   - python setup.py install
 
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then source terryfy/test_tools.sh; fi
   - if [[ $COVERAGE == "true" ]]; then python -m coverage run -m pytest ./tests; fi
   - if [[ $COVERAGE == "false" ]]; then python -m pytest ./tests; fi
 

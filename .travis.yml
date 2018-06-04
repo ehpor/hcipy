@@ -45,7 +45,7 @@ before_install: |
         ;;
       3*)
         Miniconda="Miniconda3"
-        ;;;
+        ;;
     esac
 
     wget http://repo.continuum.io/miniconda/${Miniconda}-latest-MacOSX-x86_64.sh -O miniconda.sh;

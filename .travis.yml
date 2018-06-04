@@ -1,32 +1,52 @@
 # A workaround for supporting Python in MacOS:
 # https://pythonhosted.org/CodeChat/.travis.yml.html
 
-os:
-  - linux
-  - osx
-language: python
-python:
-  - "2.7"
-  - "3.4"
-  - "3.5"
-  - "3.5-dev"
-  - "3.6"
-  - "3.6-dev"
+matrix:
+  include:
+  - os: linux
+    python: "2.7"
+    env: COVERAGE=false
+  - os: linux
+    python: "3.4"
+    env: COVERAGE=false
+  - os: linux
+    python: "3.5"
+    env: COVERAGE=false
+  - os: linux
+    python: "3.6"
+    env: COVERAGE=true
+  - os: osx
+    language: generic
+    env: INSTALL_TYPE=macpython VERSION=2.7 VENV=venv COVERAGE=false
+  - os: osx
+    language: generic
+    env: INSTALL_TYPE=macpython VERSION=3.4 VENV=venv COVERAGE=false
+  - os: osx
+    language: generic
+    env: INSTALL_TYPE=macpython VERSION=3.5 VENV=venv COVERAGE=false
+  - os: osx
+    language: generic
+    env: INSTALL_TYPE=macpython VERSION=3.6 VENV=venv COVERAGE=false
+
 before_install: |
   if [ "$TRAVIS_OS_NAME" == "osx" ]; then
-    brew update
-    brew install openssl readline
-    brew outdated pyenv || brew upgrade pyenv
-    brew install pyenv-virtualenv
-    pyenv install $PYTHON
-    export PYENV_VERSION=$PYTHON
-    export PATH="/Users/travis/.pyenv/shims:${PATH}"
-    pyenv-virtualenv venv
-    source venv/bin/activate
-    python --version
+    git clone https://github.com/MacPython/terryfy.git
+    # Avoid printing the lines from the script below.
+    source terryfy/travis_tools.sh
+    get_python_environment $INSTALL_TYPE $VERSION $VENV
   fi
+
 install:
+  - python -m pip install -U pip
   - pip install -r requirements.txt
+  - pip install coverage
   - python setup.py install
+
 script:
-  - pytest --ignore examples --ignore examples2
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then source terryfy/test_tools.sh; fi
+  - python -m coverage run -m py.test ./tests
+
+after_success: |
+  if [[ $SETUP_CMD == 'test --coverage' ]]; then
+    coveralls --rcfile='hcipy/tests/coveragerc'
+  fi

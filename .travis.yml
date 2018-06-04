@@ -74,5 +74,5 @@ script: |
 
 after_success: |
   if [[ $COVERAGE == "true" ]]; then
-    coveralls --rcfile='hcipy/tests/coveragerc' || travis_terminate 1
+    coveralls || travis_terminate 1
   fi

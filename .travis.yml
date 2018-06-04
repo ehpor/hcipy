@@ -17,13 +17,13 @@ matrix:
     env: COVERAGE=true
   - os: osx
     language: generic
-    env: INSTALL_TYPE=macpython VERSION=2.7 VENV=venv COVERAGE=false
+    env: VERSION=2.7 COVERAGE=false
   - os: osx
     language: generic
-    env: INSTALL_TYPE=macpython VERSION=3.5 VENV=venv COVERAGE=false
+    env: VERSION=3.5 COVERAGE=false
   - os: osx
     language: generic
-    env: INSTALL_TYPE=macpython VERSION=3.6 VENV=venv COVERAGE=false
+    env: VERSION=3.6 COVERAGE=false
 
 before_install: |
   if [ "$TRAVIS_OS_NAME" == "osx" ]; then
@@ -52,6 +52,7 @@ before_install: |
     conda create -q -n test-environment python="${VERSION:-3}" $*
     source activate test-environment
     conda update -q -y --all
+    conda install python.app
     pip install --upgrade pip
   fi
 
@@ -61,11 +62,16 @@ install:
   - pip install pytest
   - python setup.py install
 
-script:
-  - if [[ $COVERAGE == "true" ]]; then python -m coverage run -m pytest ./tests; fi
-  - if [[ $COVERAGE == "false" ]]; then python -m pytest ./tests; fi
+script: |
+  if [[ $TRAVIS_OS_NAME == "osx" ]]; then
+    if [[ $COVERAGE == "true" ]]; then pythonw -m coverage run -m pytest ./tests || travis_terminate 1; fi
+    if [[ $COVERAGE == "false" ]]; then pythonw -m pytest ./tests || travis_terminate 1; fi
+  else
+    if [[ $COVERAGE == "true" ]]; then python -m coverage run -m pytest ./tests || travis_terminate 1; fi
+    if [[ $COVERAGE == "false" ]]; then python -m pytest ./tests || travis_terminate 1; fi
+  fi
 
 after_success: |
   if [[ $COVERAGE == "true" ]]; then
-    coveralls --rcfile='hcipy/tests/coveragerc'
+    coveralls --rcfile='hcipy/tests/coveragerc' || travis_terminate 1
   fi

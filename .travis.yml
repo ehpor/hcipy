@@ -55,8 +55,8 @@ before_install: |
     hash -r
     conda info -a
     conda config --set always_yet yes --set changeps1 no
-    conda update -q conda
-    conda dreate -q -n test-environment python="${VERSION:-3}" $*
+    conda update -q conda -y
+    conda create -q -n test-environment python="${VERSION:-3}" $*
     source activate test-environment
     conda update -q -y --all
     pip install --upgrade pip

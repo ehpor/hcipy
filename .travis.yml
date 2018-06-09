@@ -1,0 +1,78 @@
+# A workaround for supporting Python in MacOS:
+# https://pythonhosted.org/CodeChat/.travis.yml.html
+
+matrix:
+  include:
+  - os: linux
+    python: "2.7"
+    language: python
+    env: COVERAGE=false
+  - os: linux
+    python: "3.5"
+    language: python
+    env: COVERAGE=false
+  - os: linux
+    python: "3.6"
+    language: python
+    env: COVERAGE=true
+  - os: osx
+    language: generic
+    env: VERSION=2.7 COVERAGE=false
+  - os: osx
+    language: generic
+    env: VERSION=3.5 COVERAGE=false
+  - os: osx
+    language: generic
+    env: VERSION=3.6 COVERAGE=false
+
+before_install: |
+  if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+    brew update
+    brew list python &>/dev/null || brew install python
+    brew list python3 &>/dev/null || brew install python3
+    brew install pyenv-virtualenv
+
+    case "${VERSION:-3}" in
+      2*)
+        Miniconda="Miniconda2"
+        ;;
+      3*)
+        Miniconda="Miniconda3"
+        ;;
+    esac
+
+    wget http://repo.continuum.io/miniconda/${Miniconda}-latest-MacOSX-x86_64.sh -O miniconda.sh;
+
+    bash miniconda.sh -b -p $HOME/miniconda
+    export PATH=$HOME/miniconda/bin:$PATH
+    hash -r
+    conda info -a
+    conda config --set always_yes yes --set changeps1 no
+    conda update -q conda
+    conda create -q -n test-environment python="${VERSION:-3}" $*
+    source activate test-environment
+    conda update -q -y --all
+    conda install python.app
+    pip install --upgrade pip
+  fi
+
+install:
+  - pip install -r requirements.txt
+  - pip install coverage
+  - pip install python-coveralls
+  - pip install pytest
+  - python setup.py install
+
+script: |
+  if [[ $TRAVIS_OS_NAME == "osx" ]]; then
+    if [[ $COVERAGE == "true" ]]; then pythonw -m coverage run -m pytest ./tests || travis_terminate 1; fi
+    if [[ $COVERAGE == "false" ]]; then pythonw -m pytest ./tests || travis_terminate 1; fi
+  else
+    if [[ $COVERAGE == "true" ]]; then python -m coverage run -m pytest ./tests || travis_terminate 1; fi
+    if [[ $COVERAGE == "false" ]]; then python -m pytest ./tests || travis_terminate 1; fi
+  fi
+
+after_success: |
+  if [[ $COVERAGE == "true" ]]; then
+    coveralls || travis_terminate 1
+  fi

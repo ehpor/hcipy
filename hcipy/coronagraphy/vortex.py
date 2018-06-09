@@ -43,7 +43,7 @@ class VortexCoronagraph(OpticalElement):
 			if i == 0:
 				num_airy = num_airy_outer
 			else:
-				num_airy = 32 / (q_outer * scaling_factor**(i-1))
+				num_airy = 32.0 / (q_outer * scaling_factor**(i-1))
 
 			focal_grid = make_focal_grid(input_grid, q, num_airy)
 			focal_mask = Field(np.exp(1j * charge * focal_grid.as_('polar').theta), focal_grid)

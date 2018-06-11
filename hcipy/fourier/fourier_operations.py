@@ -1,3 +1,5 @@
+import numpy as np
+
 from .fast_fourier_transform import FastFourierTransform
 from .matrix_fourier_transform import MatrixFourierTransform
 
@@ -7,7 +9,6 @@ class ConvolveFFT(object):
 		self.kernel = kernel
 
 		fft = FastFourierTransform(input_grid, 2)
-		self.internal_grid = fft.internal_grid
 		self.internal_shape = fft.internal_shape
 		self.cutout = fft.cutout_input
 

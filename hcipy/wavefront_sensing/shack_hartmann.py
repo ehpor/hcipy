@@ -3,7 +3,7 @@ from ..optics import *
 from ..field import *
 from ..aperture import *
 from ..propagation import FresnelPropagator
-from ..multiprocessing import par_map
+from scipy import ndimage
 
 import numpy as np
 
@@ -40,25 +40,15 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
 			self.estimation_subapertures = np.flatnonzero(np.array(estimation_subapertures))
 		self.estimation_grid = self.mla_grid.subset(estimation_subapertures)
 		
-	def estimate(self, images, use_par_map=False):
+	def estimate(self, images, use_par_map=True):
 		image = images[0]
 		
-		def get_centroid(index):
-			mask = self.mla_index == index
+		fluxes = ndimage.measurements.sum(image, self.mla_index, self.estimation_subapertures)
+		sum_x = ndimage.measurements.sum(image * image.grid.x, self.mla_index, self.estimation_subapertures)
+		sum_y = ndimage.measurements.sum(image * image.grid.y, self.mla_index, self.estimation_subapertures)
 
-			subimage = image[mask]
-			x = image.grid.x[mask]
-			y = image.grid.y[mask]
+		centroid_x = sum_x / fluxes
+		centroid_y = sum_y / fluxes
 
-			centroid_x = np.sum(subimage * x) / np.sum(subimage)
-			centroid_y = np.sum(subimage * y) / np.sum(subimage)
-
-			centroid = np.array((centroid_x, centroid_y)) - self.mla_grid[index]
-			return centroid
-		
-		if use_par_map:
-			centroids = np.array(np.array(par_map(get_centroid, self.estimation_subapertures, use_progressbar=False)).T)
-		else:
-			centroids = np.array([get_centroid(index) for index in self.estimation_subapertures]).T
-
+		centroids = np.array((centroid_x, centroid_y)) - np.array(self.mla_grid.points[self.estimation_subapertures,:]).T
 		return Field(centroids, self.estimation_grid)

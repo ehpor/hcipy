@@ -8,7 +8,6 @@ from . import interpolation
 from . import io
 from . import math_util
 from . import mode_basis
-from . import multiprocessing
 from . import optics
 from . import plotting
 from . import propagation
@@ -29,7 +28,6 @@ from .io import *
 from .math_util import *
 from .metrics import *
 from .mode_basis import *
-from .multiprocessing import *
 from .optics import *
 from .plotting import *
 from .propagation import *
@@ -51,7 +49,6 @@ __all__.extend(io.__all__)
 __all__.extend(math_util.__all__)
 __all__.extend(metrics.__all__)
 __all__.extend(mode_basis.__all__)
-__all__.extend(multiprocessing.__all__)
 __all__.extend(optics.__all__)
 __all__.extend(plotting.__all__)
 __all__.extend(propagation.__all__)

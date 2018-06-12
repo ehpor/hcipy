@@ -1,5 +1,6 @@
 import numpy as np
 from ..propagation import FraunhoferPropagator
+from ..field import Field
 
 def generate_app_keller(wavefront, propagator, propagator_max, contrast, num_iterations):
 	"""
@@ -9,7 +10,7 @@ def generate_app_keller(wavefront, propagator, propagator_max, contrast, num_ite
 
 	for i in range(num_iterations):
 		image = propagator.forward(wf)
-		image_max = propagator_max.forward(wf).max()
+		image_max = propagator_max.forward(wf)
 
 		mask = image.intensity / image_max.intensity.max() > contrast
 
@@ -24,8 +25,9 @@ def generate_app_keller(wavefront, propagator, propagator_max, contrast, num_ite
 		wf.electric_field += delta_aperture.electric_field
 
 		epsilon = 1e-6
-		wf.electric_field[wf.amplitude < epsilon] = 0
-		wf.electric_field[wf.amplitude >= epsilon] /= wf.amplitude[wf.amplitude >= epsilon]
+		m = wavefront.amplitude < epsilon
+		wf.electric_field[m] = 0
+		wf.electric_field[~m] *= wavefront.amplitude[~m] / wf.amplitude[~m]
 	
 	return wf
 
@@ -54,11 +56,11 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 	'''
 	import gurobipy as gp
 
-	M = propagator.get_forward_transformation_matrix(wavefront.wavelength)
-	M_max = propagator_max.get_forward_transformation_matrix(wavefront.wavelength)
+	M = propagator.get_transformation_matrix_forward(wavefront.wavelength)
+	M_max = propagator_max.get_transformation_matrix_forward(wavefront.wavelength)
 
 	wf_0 = propagator.forward(wavefront).electric_field
-	M /= wf_0
+	M /= wf_0[:,np.newaxis]
 
 	M *= wavefront.electric_field
 	M_max *= wavefront.electric_field
@@ -81,7 +83,7 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 
 	for i in range(n//2):
 		r2 = x[i]*x[i] + x[i+n//2]*x[i+n//2]
-		model.addQconstr(r2 <= 1)
+		model.addQConstr(r2 <= 1)
 	
 	for i, ee in enumerate(M):
 		e = gp.quicksum((x[i] * ee[i] for i in range(n)))

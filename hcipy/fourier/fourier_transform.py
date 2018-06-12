@@ -2,13 +2,54 @@ import numpy as np
 from ..field import Field
 
 class FourierTransform(object):
+	'''The base class for all Fourier transform implementations.
+
+	Attributes
+	----------
+	input_grid : Grid
+		The grid that is expected for the input field.
+	output_grid : Grid
+		The grid that is produced by the Fourier transform.
+	'''
 	def forward(self, field):
+		'''Returns the forward Fourier transform of the :class:`Field` field.
+
+		Parameters
+		----------
+		field : Field
+			The field to Fourier transform.
+		
+		Returns
+		--------
+		Field
+			The Fourier transform of the field.
+		'''
 		raise NotImplementedError()
 	
 	def backward(self, field):
+		'''Returns the inverse Fourier transform of the :class:`Field` field.
+
+		Parameters
+		----------
+		field : Field
+			The field to inverse Fourier transform.
+		
+		Returns
+		--------
+		Field
+			The inverse Fourier transform of the field.
+		'''
 		raise NotImplementedError()
 	
 	def get_transformation_matrix_forward(self):
+		'''Returns the transformation matrix corresonding to the
+		Fourier transform.
+
+		Returns
+		--------
+		ndarray
+			A matrix representing the Fourier transform.
+		'''
 		coords_in = self.input_grid.as_('cartesian').coords
 		coords_out = self.output_grid.as_('cartesian').coords
 
@@ -18,6 +59,14 @@ class FourierTransform(object):
 		return A
 	
 	def get_transformation_matrix_backward(self):
+		'''Returns the transformation matrix corresonding to the
+		Fourier transform.
+
+		Returns
+		--------
+		ndarray
+			A matrix representing the Fourier transform.
+		'''
 		coords_in = self.input_grid.as_('cartesian').coords
 		coords_out = self.output_grid.as_('cartesian').coords
 
@@ -26,7 +75,6 @@ class FourierTransform(object):
 		A /= (2*np.pi)**self.input_grid.ndim
 
 		return A
-
 
 def time_it(function, t_max=5, n_max=100):
 	import time
@@ -83,7 +131,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 
 			if planner == 'estimate':
 				# Estimate analytically from complexities
-				N_in = input_grid * q
+				N_in = input_grid.shape * q
 				N_out = output_grid.shape
 
 				if input_grid.ndim == 1:
@@ -118,13 +166,22 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 	
 	# Make the Fourier transform
 	if method == 'fft':
-		return FastFourierTransform(input_grid, q, fov_factor)
+		return FastFourierTransform(input_grid, q, fov)
 	elif method == 'mft':
 		return MatrixFourierTransform(input_grid, output_grid)
 	elif method == 'naive':
 		return NaiveFourierTransform(input_grid, output_grid)
 
 def multiplex_for_tensor_fields(func):
+	'''A decorator for automatically multiplexing a function over the tensor directions.
+
+	This function is used internally for simplifying the implementation of the Fourier transforms.
+	
+	Parameters
+	----------
+	func : function
+		The function to multiplex. This function gets called for each of the tensor elements.
+	'''
 	def inner(self, field):
 		if field.is_scalar_field:
 			return func(self, field)

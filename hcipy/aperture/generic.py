@@ -3,6 +3,20 @@ import numpy as np
 from ..field import Field
 
 def circular_aperture(diameter, center=None):
+	'''Makes a Field generator for a circular aperture.
+
+	Parameters
+	----------
+	diameter : scalar
+		The diameter of the aperture.
+	center : array_like
+		The center of the aperture
+	
+	Returns
+	-------
+	Field generator
+		This function can be evaluated on a grid to get a Field.
+	'''
 	if center is None:
 		shift = np.zeros(2)
 	else:
@@ -20,6 +34,20 @@ def circular_aperture(diameter, center=None):
 	return func
 
 def rectangular_aperture(size, center=None):
+	'''Makes a Field generator for a rectangular aperture.
+
+	Parameters
+	----------
+	size : scalar or array_like
+		The length of the sides. If this is scalar, a square aperture is assumed.
+	center : array_like
+		The center of the aperture
+	
+	Returns
+	-------
+	Field generator
+		This function can be evaluated on a grid to get a Field.
+	'''
 	dim = size * np.ones(2)
 	
 	if center is None:
@@ -35,6 +63,20 @@ def rectangular_aperture(size, center=None):
 	return func
 
 def regular_polygon_aperture(num_sides, circum_diameter):
+	'''Makes a Field generator for a regular-polygon-shaped aperture.
+
+	Parameters
+	----------
+	num_sides : integer
+		The number of sides for the polygon.
+	circum_diameter : scalar
+		The circumdiameter of the polygon.
+	
+	Returns
+	-------
+	Field generator
+		This function can be evaluated on a grid to get a Field.
+	'''
 	if num_sides < 3:
 		raise ValueError('The number of sides for a regular polygon has to greater or equal to 3.')
 	
@@ -74,6 +116,18 @@ def regular_polygon_aperture(num_sides, circum_diameter):
 
 # Convenience function
 def hexagonal_aperture(circum_diameter):
+  '''Makes a Field generator for a hexagon aperture.
+
+	Parameters
+	----------
+	circum_diameter : scalar
+		The circumdiameter of the polygon.
+	
+	Returns
+	-------
+	Field generator
+		This function can be evaluated on a grid to get a Field.
+	'''
 	return regular_polygon_aperture(6, circum_diameter)
 
 def segmented_aperture(subaperture_shape, subaperture_grid):

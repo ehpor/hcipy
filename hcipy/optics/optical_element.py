@@ -37,7 +37,7 @@ def make_polychromatic(evaluated_arguments=None, num_in_cache=50):
 						monochromatic_arg_names = list(inspect.signature(init).parameters.keys())[1:]
 					else:
 						# Python 2
-						monochromatic_arg_names = inspect.getfullargspec(init)[1:]
+						monochromatic_arg_names = inspect.getargspec(init).args
 					
 					self.evaluate_arg = [m in evaluated_arguments for m in monochromatic_arg_names]
 
@@ -48,7 +48,7 @@ def make_polychromatic(evaluated_arguments=None, num_in_cache=50):
 
 					delta_wavelength = np.abs(wavelength - wavelength_closest)
 					if (delta_wavelength / wavelength) < 1e-6:
-						return self.monochromatic_propagators[i]
+						return self.monochromatic_optical_elements[i]
 				
 				if evaluated_arguments is not None:
 					args = list(self.monochromatic_args)
@@ -76,16 +76,16 @@ def make_polychromatic(evaluated_arguments=None, num_in_cache=50):
 				return elem
 			
 			def forward(self, wavefront):
-				return self.get_instance(self, wavefront.electric_field.grid, wavefront.wavelength).forward(wavefront)
+				return self.get_instance(wavefront.electric_field.grid, wavefront.wavelength).forward(wavefront)
 			
 			def backward(self, wavefront):
-				return self.get_instance(self, wavefront.electric_field.grid, wavefront.wavelength).backward(wavefront)
+				return self.get_instance(wavefront.electric_field.grid, wavefront.wavelength).backward(wavefront)
 			
-			def get_transformation_matrix_forward(self, input_grid, wavefront):
-				return self.get_instance(self, input_grid, wavelength).get_transformation_matrix_forward(input_grid, wavelength)
+			def get_transformation_matrix_forward(self, input_grid, wavelength):
+				return self.get_instance(input_grid, wavelength).get_transformation_matrix_forward(input_grid, wavelength)
 			
-			def get_transformation_matrix_backward(self, input_grid, wavefront):
-				return self.get_instance(self, input_grid, wavelength).get_transformation_matrix_backward(input_grid, wavelength)
+			def get_transformation_matrix_backward(self, input_grid, wavelength):
+				return self.get_instance(input_grid, wavelength).get_transformation_matrix_backward(input_grid, wavelength)
 		
 		return PolychromaticOpticalElement
 	return decorator

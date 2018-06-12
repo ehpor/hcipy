@@ -1,122 +1,218 @@
 import numpy as np
 from ..optics import OpticalElement, Wavefront
 from ..propagation import FraunhoferPropagator
-from ..field import make_focal_grid, Field
-from ..aperture import circular_aperture
-from ..fourier import FastFourierTransform
+from ..field import make_focal_grid, Field, make_pupil_grid
+from ..aperture import circular_aperture, rectangular_aperture
+from ..fourier import FastFourierTransform, MatrixFourierTransform
 from scipy.special import jv
 
 import matplotlib.pyplot as plt
 from ..plotting import imshow_field, complex_field_to_rgb
 
 class VortexCoronagraph(OpticalElement):
-	def __init__(self, pupil_grid, pupil_diameter=1, charge=2, method='gs', q=8, num_airy=128):
-		self.pupil_grid = pupil_grid
-		self.focal_grid = make_focal_grid(pupil_grid, q, num_airy)
-		self.prop = FraunhoferPropagator(pupil_grid, self.focal_grid)
+	'''An optical vortex coronagraph.
 
-		self.method = method.lower()
+	This :class:`OpticalElement` simulations the propagation of light through
+	a vortex in the focal plane. To resolve the singularity of this vortex
+	phase plate, a multi-scale approach is made. Discretisation errors made at
+	a certain level are corrected by the next level with finer sampling.
 
-		if self.method == 'gs':
-			aperture = circular_aperture(pupil_diameter)(pupil_grid)
-			wf = Wavefront(aperture)
+	Parameters
+	----------
+	input_grid : Grid
+		The grid on which the incoming wavefront is defined.
+	charge : integer
+		The charge of the vortex.
+	levels : integer
+		The number of levels in the multi-scale sampling.
+	scaling_factor : scalar
+		The fractional increase in spatial frequency sampling per level.
+	'''
+	def __init__(self, input_grid, charge=2, levels=4, scaling_factor=4):
+		self.input_grid = input_grid
+		
+		q_outer = 2
+		num_airy_outer = input_grid.shape[0]/2
 
-			self.vortex = np.exp(1j * charge * self.focal_grid.as_('polar').theta)
-			self.vortex = Field(self.vortex, self.focal_grid)
-			i = self.focal_grid.closest_to((0,0))
-			self.vortex[i] = 0
+		focal_grids = []
+		self.focal_masks = []
+		self.props = []
 
-			foc = self.prop(wf)
+		for i in range(levels):
+			q = q_outer * scaling_factor**i
+			if i == 0:
+				num_airy = num_airy_outer
+			else:
+				num_airy = 32.0 / (q_outer * scaling_factor**(i-1))
 
-			for i in range(100):
-				foc2 = foc.copy()
-				foc2.electric_field *= self.vortex
-				foc2.electric_field *= circular_aperture(num_airy*2)(self.focal_grid)
+			focal_grid = make_focal_grid(input_grid, q, num_airy)
+			focal_mask = Field(np.exp(1j * charge * focal_grid.as_('polar').theta), focal_grid)
 
-				pup = self.prop.backward(foc2)
-				pup.electric_field[aperture < 0.5] = 0
+			focal_mask *= 1 - circular_aperture(1e-9)(focal_grid)
 
-				foc3 = self.prop(pup)
-				#foc3.electric_field /= self.vortex
+			for j in range(i):
+				fft = FastFourierTransform(focal_grids[j])
+				mft = MatrixFourierTransform(focal_grid, fft.output_grid)
 
-				self.vortex -= foc3.electric_field / foc.electric_field
-				self.vortex = np.exp(1j * np.angle(self.vortex))
-
-			#plt.subplot(1,2,1)
-			#imshow_field(np.abs(self.vortex), self.focal_grid, vmax=1.2)
-			#plt.colorbar()
-			#plt.subplot(1,2,2)
-			#imshow_field(np.angle(self.vortex), self.focal_grid)
-			#plt.colorbar()
-			#plt.show()
-		elif self.method.lower() == 'none':
-			self.vortex = np.exp(1j * charge * self.focal_grid.as_('polar').theta)
-			self.vortex = Field(self.vortex, self.focal_grid)
-			i = self.focal_grid.closest_to((0,0))
-			self.vortex[i] = 0
-		elif self.method.lower() == 'convolution':
-			pup_pol = pupil_grid.as_('polar')
-			L = 512 # size of the focal-plane mask in lambda/D
-			r_scaled = 2*np.pi * L * pup_pol.r
-
-			if charge == 2:
-				F = np.exp(2j * pup_pol.theta) / (np.pi * pup_pol.r**2) * (-1 + jv(0,r_scaled) + 0.5 * r_scaled * jv(1, r_scaled))
-			elif charge == 4:
-				F = np.exp(4j * pup_pol.theta) / (np.pi * pup_pol.r**2) * (2 + 4 * jv(0, r_scaled) + (0.5 * r_scaled - 12 / r_scaled) * jv(1, r_scaled))
-			elif charge > 4:
-				pass
+				focal_mask -= mft.backward(fft.forward(self.focal_masks[j]))
 			
-			F *= circular_aperture(pupil_diameter)(pupil_grid)
-			self.fourier = FastFourierTransform(pupil_grid, 4, 1)
-			self.F = self.fourier.forward(F)
+			prop = FraunhoferPropagator(input_grid, focal_grid)
 
-			plt.subplot(1,2,1)
-			imshow_field(np.abs(F), self.fourier.input_grid)
-			plt.colorbar()
-			plt.subplot(1,2,2)
-			imshow_field(np.angle(F), self.fourier.input_grid)
-			plt.colorbar()
-			plt.figure()
-
-			plt.subplot(1,2,1)
-			imshow_field(np.abs(self.F), self.fourier.output_grid)
-			plt.colorbar()
-			plt.subplot(1,2,2)
-			imshow_field(np.angle(self.F), self.fourier.output_grid)
-			plt.colorbar()
-			plt.show()
-		elif method.lower() == 'inversion':
-			aperture = circular_aperture(pupil_diameter)(pupil_grid)
-			wf = Wavefront(aperture)
-			wf.total_power = 1
-
-			self.vortex = np.exp(1j * charge * self.focal_grid.as_('polar').theta)
-			self.vortex = Field(self.vortex, self.focal_grid)
-			self.vortex *= circular_aperture(num_airy*2)(self.focal_grid)
-
-			i = self.focal_grid.closest_to((0,0))
-			self.vortex[i] = 0
-
-			foc = self.prop.forward(wf)
-			foc_copy = foc.copy()
-			foc.electric_field *= self.vortex
-
-			pup = self.prop.backward(foc)
-			pup.electric_field[aperture < 0.5] = 0
-			
-			self.reference = pup.electric_field
+			focal_grids.append(focal_grid)
+			self.focal_masks.append(focal_mask)
+			self.props.append(prop)
 
 	def forward(self, wavefront):
-		if self.method == 'gs' or self.method == 'none' or self.method == 'inversion':
-			foc = self.prop(wavefront)
-			foc.electric_field *= self.vortex
-			res = self.prop.backward(foc)
-			if self.method == 'inversion':
-				res.electric_field -= self.reference * np.sqrt(wavefront.total_power)
-			return res
-		elif self.method == 'convolution':
-			ft = self.fourier.forward(wavefront.electric_field)
-			ft *= self.F
-			conv = self.fourier.backward(ft)
+		'''Propagate a wavefront through the vortex coronagraph.
 
-			return Wavefront(conv, wavefront.wavelength)
+		Parameters
+		----------
+		wavefront : Wavefront
+			The wavefront to propagate. This wavefront is expected to be
+			in the pupil plane.
+		
+		Returns
+		-------
+		Wavefront
+			The Lyot plane wavefront.
+		'''
+		wavelength = wavefront.wavelength
+		wavefront.wavelength = 1
+
+		for i, (mask, prop) in enumerate(zip(self.focal_masks, self.props)):
+			focal = prop(wavefront)
+			focal.electric_field *= mask
+			if i == 0:
+				lyot = prop.backward(focal)
+			else:
+				lyot.electric_field += prop.backward(focal).electric_field
+
+		lyot.wavelength = wavelength
+		return lyot
+	
+	def backward(self, wavefront):
+		'''Propagate backwards through the vortex coronagraph.
+
+		This essentially is a forward propagation through a the same vortex
+		coronagraph, but with the sign of the its charge flipped.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The Lyot plane wavefront.
+		
+		Returns
+		-------
+		Wavefront
+			The pupil-plane wavefront.
+		'''
+		wavelength = wavefront.wavelength
+		wavefront.wavelength = 1
+
+		for i, (mask, prop) in enumerate(zip(self.focal_masks, self.props)):
+			focal = prop(wavefront)
+			focal.electric_field *= mask.conj()
+			if i == 0:
+				pup = prop.backward(focal)
+			else:
+				pup.electric_field += prop.backward(focal).electric_field
+
+		pup.wavelength = wavelength
+		return pup
+
+def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_undersize=0):
+	'''Make field generators for the pupil and Lyot-stop masks for a
+	ring apodized vortex coronagraph.
+
+	The formulas were implmeneted according to Mawet et al. (2013)
+	"Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive ring apodizers".
+
+	Parameters
+	----------
+	central_obscuration : scalar
+		The diameter of the central obscuration.
+	charge : integer
+		The charge of the vortex coronagraph used.
+	pupil_diameter : scalar
+		The diameter of the pupil.
+	lyot_undersize : scalar
+		The fraction of the pupil diameter to which to undersize the Lyot stop.
+	
+	Returns
+	-------
+	pupil_mask : Field generator
+		The complex transmission of the pupil mask.
+	lyot_mask : Field generator
+		The complex transmission of the Lyot-stop mask.
+	'''
+	R0 = central_obscuration / pupil_diameter
+
+	if charge == 2:
+		t1 = 1 - 0.25 * (R0**2 + R0 * np.sqrt(R0**2 + 8))
+		R1 = R0 / np.sqrt(1 - t1)
+
+		pupil1 = circular_aperture(pupil_diameter)
+		pupil2 = circular_aperture(pupil_diameter * R1)
+		co = circular_aperture(central_obscuration)
+		pupil_mask = lambda grid: (pupil1(grid) * t1 + pupil2(grid) * (1 - t1)) * (1 - co(grid))
+
+		lyot1 = circular_aperture(pupil_diameter * R1 + pupil_diameter * lyot_undersize)
+		lyot2 = circular_aperture(pupil_diameter * (1 - lyot_undersize))
+		lyot_stop = lambda grid: lyot2(grid) - lyot1(grid)
+	elif charge == 4:
+		R1 = np.sqrt(np.sqrt(R0**2 * (R0**2 + 4)) - 2*R0**2)
+		R2 = np.sqrt(R1**2 + R0**2)
+		t1 = 0
+		t2 = (R1**2 - R0**2) / (R1**2 + R0**2)
+
+		pupil1 = circular_aperture(pupil_diameter)
+		pupil2 = circular_aperture(pupil_diameter * R1)
+		pupil3 = circular_aperture(pupil_diameter * R2)
+		co = circular_aperture(central_obscuration)
+
+		pupil_mask = lambda grid: (pupil1(grid) * t2 + pupil3(grid) * (t1 - t2) + pupil2(grid) * (1 - t1)) * (1 - co(grid))
+
+		lyot1 = circular_aperture(pupil_diameter * R2 + pupil_diameter * lyot_undersize)
+		lyot2 = circular_aperture(pupil_diameter * (1 - lyot_undersize))
+		lyot_stop = lambda grid: lyot2(grid) - lyot1(grid)
+	else:
+		raise NotImplementedError()
+
+	return pupil_mask, lyot_stop
+
+def get_ravc_planet_transmission(central_obscuration_ratio, charge=2):
+	'''Get the planet transmission for a ring-apodized vortex coronagraph.
+
+	The formulas implemented in this function can be found in Mawet et al. (2013)
+	"Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive ring apodizers".
+
+	Parameters
+	----------
+	central_obscuration_ratio : scalar
+		The ratio of the central obscuration diameter and the pupil diameter.
+	charge : integer
+		The charge of the vortex coronagraph used.
+	
+	Returns
+	-------
+	scalar
+		The intensity transmission for a sufficiently off-axis point source 
+		for the ring-apodized vortex coronagraph. Point sources close to the vortex
+		singularity will be lower in intensity.
+	'''
+	R0 = central_obscuration_ratio
+
+	if charge == 2:
+		t1_opt = 1 - 0.25 * (R0**2 + R0 * np.sqrt(R0**2 + 8))
+		R1_opt = R0 / np.sqrt(1 - t1_opt)
+
+		return t1_opt**2 * (1 - R1_opt**2) / (1 - (R0**2))
+	elif charge == 4:
+		R1 = np.sqrt(np.sqrt(R0**2 * (R0**2 + 4)) - 2*R0**2)
+		R2 = np.sqrt(R1**2 + R0**2)
+		t1 = 0
+		t2 = (R1**2 - R0**2) / (R1**2 + R0**2)
+
+		return t2**2 * (1 - R2**2) / (1 - R0**2)
+	else:
+		raise NotImplementedError()

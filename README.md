@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/ehpor/hcipy.svg?branch=master)](https://travis-ci.org/ehpor/hcipy)
+[![Build status](https://ci.appveyor.com/api/projects/status/gs01jf6mgpskwm1d/branch/master?svg=true)](https://ci.appveyor.com/project/ehpor/hcipy/branch/master)
+[![Coverage Status](https://coveralls.io/repos/ehpor/hcipy/badge.svg?branch=master)](https://coveralls.io/r/ehpor/hcipy?branch=master)
+
 # HCIPy
 
 This Python package provides a common framework for performing optical propagation simulations, meant for high contrast imaging.

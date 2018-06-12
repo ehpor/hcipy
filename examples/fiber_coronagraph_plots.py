@@ -49,7 +49,6 @@ def fiber_principle():
 		plt.ylim(1e-3,1.5)
 		plt.gca().set_xticks([])
 		plt.gca().set_yticks([])
-	plt.savefig('../../../FiberEFC/Figures/FiberPrinciple.pdf')
 	plt.show()
 
 if __name__ == '__main__':

@@ -162,20 +162,30 @@ def field_einsum(subscripts, *operands, **kwargs):
 	if not np.allclose(field_sizes, field_sizes[0]):
 		raise ValueError('All fields must be the same size for a field_einsum().')
 
-	ss = subscripts.split(',')
-
+	# Decompose the subscript into input and output
+	splitted_string = subscripts.split('->')
+	if len(splitted_string) == 2:
+		ss_input, ss_output = splitted_string
+	else:
+		ss_input = splitted_string[0]
+		ss_output = ''
+	
+	# split the input operands in separate strings
+	ss = ss_input.split(',')
 	if len(ss) != len(operands):
 		raise ValueError('Number of operands is not equal to number of indexing operands.')
 	
 	# Find an indexing letter that can be used for field dimension.
 	unused_index = [a for a in string.ascii_lowercase if a not in subscripts][0]
 
-	# Add the field dimension to field operands.
+	# Add the field dimension to the input field operands.
 	ss = [s + unused_index if is_field[i] else s for i,s in enumerate(ss)]
-	if '->' in subscripts:
-		i = ss[-1].find('->')
-		ss[-1] = ss[-1][:i] + '->' + ss[-1][i+2:] + unused_index
-	subscripts_new = ','.join(ss)
+
+	# Recombine all operands into the final subscripts
+	if len(splitted_string) == 2:
+		subscripts_new = ','.join(ss) + '->' + ss_output + unused_index
+	else:
+		subscripts_new = ','.join(ss)
 
 	res = np.einsum(subscripts_new, *operands, **kwargs)
 	grid = operands[np.flatnonzero(np.array(is_field))[0]].grid
@@ -185,6 +195,22 @@ def field_einsum(subscripts, *operands, **kwargs):
 	return Field(res, grid)
 
 def field_dot(a, b, out=None):
+	'''Perform a dot product of `a` and `b` multiplexed over the field dimension.
+
+	Parameters
+	----------
+	a : Field or array_like
+		Left argument of the dot product.
+	b : Field or array_like
+		Right argument of the dot product.
+	out : Field or array_like
+		If provided, the calculation is done into this array.
+
+	Returns
+	-------
+	Field
+		The result of the dot product.
+	'''
 	# Find out if a or b are vectors or higher dimensional tensors
 	if hasattr(a, 'tensor_order'):
 		amat = a.tensor_order > 1
@@ -233,7 +259,7 @@ def field_inv(a):
 		if a.tensor_order != 2:
 			raise ValueError("Only tensor fields of order 2 can be inverted.")
 		
-		res = np.rollaxis(np.linalg.inv(np.rollaxis(a, -1)), 0, -1)
+		res = np.rollaxis(np.linalg.inv(np.rollaxis(a, -1)), 0, 3)
 		return Field(res, a.grid)
 	else:
 		return np.linalg.inv(a)

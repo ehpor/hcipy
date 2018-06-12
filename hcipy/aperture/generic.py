@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np
-from ..field import Field
+from ..field import Field, CartesianGrid, UnstructuredCoords
 
 def circular_aperture(diameter, center=None):
 	'''Makes a Field generator for a circular aperture.
@@ -116,7 +116,7 @@ def regular_polygon_aperture(num_sides, circum_diameter):
 
 # Convenience function
 def hexagonal_aperture(circum_diameter):
-  '''Makes a Field generator for a hexagon aperture.
+	'''Makes a Field generator for a hexagon aperture.
 
 	Parameters
 	----------
@@ -131,6 +131,20 @@ def hexagonal_aperture(circum_diameter):
 	return regular_polygon_aperture(6, circum_diameter)
 
 def segmented_aperture(subaperture_shape, subaperture_grid):
+	'''Make a aperture with many similar subapertures.
+
+	Parameters
+	----------
+	subaperture_shape : Field generator
+		The shape of each subaperture.
+	subaperture_grid : Grid
+		The center of each of the subapertures.
+
+	Returns
+	-------
+	Field generator
+		The segmented aperture.
+	'''
 	def func(grid):
 		ap = 0
 		for p in subaperture_grid.points:
@@ -139,8 +153,24 @@ def segmented_aperture(subaperture_shape, subaperture_grid):
 	return func
 
 def make_spider(p1, p2, spider_width):
+	'''Make a rectangular obstruction from `p1` to `p2`.
+
+	Parameters
+	----------
+	p1 : list or ndarray
+		The starting coordinates of the spider.
+	p2 : list or ndarray
+		The end coordinates of the spider.
+	spider_width : scalar
+		The full width of the spider.
+	
+	Returns
+	-------
+	Field generator
+		The spider obstruction.
+	'''
 	delta = np.array(p2) - np.array(p1)
-	shift = delta / 2 + p1
+	shift = delta / 2 + np.array(p1)
 
 	spider_angle = np.arctan2(delta[1], delta[0])
 	spider_length = np.linalg.norm(delta)
@@ -158,6 +188,22 @@ def make_spider(p1, p2, spider_width):
 	return func
 
 def make_spider_infinite(p, angle, spider_width):
+	'''Make an infinite spider starting at `p` and extending at an angle `angle`.
+
+	Parameters
+	----------
+	p : list or ndarray
+		The starting coordinate of the spider.
+	angle : scalar
+		The angle to which the spider is pointing in degrees.
+	spider_width : scalar
+		The full width of the spider.
+
+	Returns
+	-------
+	Field generator
+		The spider obstruction.
+	'''
 	spider_angle = np.radians(angle)
 
 	def func(grid):
@@ -171,6 +217,24 @@ def make_spider_infinite(p, angle, spider_width):
 	return func
 
 def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio, num_spiders=0, spider_width=0.01):
+	'''Make a simple circular aperture with central obscuration and support structure.
+
+	Parameters
+	----------
+	pupil_diameter : scalar
+		The diameter of the circular aperture.
+	central_obscuration_ratio : scalar
+		The ratio of the diameter of the central obscuration compared to the pupil diameter.
+	num_spiders : int
+		The number of spiders holding up the central obscuration.
+	spider_width : scalar
+		The full width of the spiders.
+	
+	Returns
+	-------
+	Field generator
+		The circularly obstructed aperture.
+	'''
 	central_obscuration_diameter = pupil_diameter * central_obscuration_ratio
 
 	def func(grid):	
@@ -178,9 +242,9 @@ def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,
 		pupil_inner = circular_aperture(central_obscuration_diameter)(grid)
 		spiders = 1
 
-		spider_angles = np.linspace(0, 2 * np.pi, num_spiders, endpoint=False)
+		spider_angles = np.linspace(0, 2*np.pi, num_spiders, endpoint=False)
 
-		for i, angle in enumerate(spider_angles):
+		for angle in spider_angles:
 			x = pupil_diameter * np.cos(angle)
 			y = pupil_diameter * np.sin(angle)
 

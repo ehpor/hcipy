@@ -34,7 +34,8 @@ extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.autosummary',
-    'numpydoc']
+    'numpydoc',
+    'nbsphinx']
 
 autosummary_generate = True
 numpydoc_show_class_members = False

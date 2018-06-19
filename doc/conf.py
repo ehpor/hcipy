@@ -36,7 +36,8 @@ extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'numpydoc',
     'nbsphinx',
-    'jupyter_client']
+    'jupyter_client',
+    'ipykernel']
 
 autosummary_generate = True
 numpydoc_show_class_members = False

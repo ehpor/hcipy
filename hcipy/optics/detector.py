@@ -4,12 +4,51 @@ from ..statistics import large_poisson
 
 class Detector(object):
 	def integrate(self, wavefront, dt, weight=1):
+		'''Integrates the detector.
+  
+		Parameters
+		----------
+		wavefront : Wavefront or array_like
+			The wavefront sets the amount of power generated per unit time. 
+		dt : scalar
+			The integration time in units of time. 
+		weight : scalar
+			Weight of every unit of integration time. 
+		'''
 		raise NotImplementedError()
 	
 	def read_out(self):
+		'''Reads out the detector.
+
+		No noise will be added to the image.
+		
+		Returns
+		----------
+		output_field : array_like
+			The final detector image.
+		'''
 		raise NotImplementedError()
 	
 	def __call__(self, wavefront, dt=1, weight=1):
+		'''Integrate and read out the detector.
+
+		This is a convenience function to avoid having to call two functions
+		in quick succession.
+
+		Parameters
+		----------
+		wavefront : Wavefront or array_like
+			The wavefront sets the amount of power generated per unit time. 
+		dt : scalar
+			The integration time in units of time. 
+		weight : scalar
+			Weight of every unit of integration time.
+		
+		Returns
+		----------
+		output_field : array_like
+			The final detector image.
+		'''
 		self.integrate(wavefront, dt, weight)
 		return self.read_out()
 
@@ -23,9 +62,29 @@ class NoiselessDetector(Detector):
 		self.intensity = 0
 
 	def integrate(self, wavefront, dt, weight=1):
+		'''Integrates the detector.
+  
+		Parameters
+		----------
+		wavefront : Wavefront or array_like
+			The wavefront sets the amount of power generated per unit time. 
+		dt : scalar
+			The integration time in units of time. 
+		weight : scalar
+			Weight of every unit of integration time. 
+		'''
 		self.intensity += wavefront.power * dt * weight
 
 	def read_out(self):
+		'''Reads out the detector.
+
+		No noise will be added to the image.
+
+		Returns
+		----------
+		output_field : array_like
+			The final detector image.
+		'''
 		# Make sure not to overwrite output
 		output_field = self.intensity.copy()
 

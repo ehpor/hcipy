@@ -21,6 +21,19 @@ class OpticalElement(object):
 	def get_instance(self, input_grid, wavelength):
 		return self
 
+class EmptyOpticalElement(OpticalElement):
+	def forward(self, wavefront):
+		return wavefront
+	
+	def backward(self, wavefront):
+		return wavefront
+	
+	def get_transformation_matrix_forward(self, wavelength=1):
+		return 1
+	
+	def get_transformation_matrix_backward(self, wavelength=1):
+		return 1
+
 def make_polychromatic(evaluated_arguments=None, num_in_cache=50):
 	def decorator(optical_element):
 		class PolychromaticOpticalElement(OpticalElement):

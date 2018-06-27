@@ -1,5 +1,4 @@
 from hcipy import *
-import matplotlib.pyplot as plt
 import numpy as np
 
 def check_energy_conservation(shift_input, scale, shift_output, q, fov, dims):
@@ -28,31 +27,39 @@ def check_energy_conservation(shift_input, scale, shift_output, q, fov, dims):
 
 			pattern_match = np.abs(f_out - f_in).max() / f_in.max()
 
-			if False:#pattern_match > 0.0001:
-				plt.subplot(1,3,1)
-				imshow_field(f_in.imag)
-				plt.colorbar()
-				plt.subplot(1,3,2)
-				imshow_field(f_inter.imag)
-				plt.colorbar()
-				plt.subplot(1,3,3)
-				imshow_field(f_out.imag)
-				plt.colorbar()
-				plt.title(ft1.__class__.__name__ + ', ' + ft2.__class__.__name__)
-				plt.show()
-
+			if fov == 1:
+				# If the full fov is retained, energy and pattern should be conserved
+				# for all fourier transform combinations.
+				assert np.allclose(f_in, f_out)
+				assert np.allclose(energy_in, energy_out)
 			
 			energy_ratios.append(energy_ratio)
 			patterns_match.append(pattern_match)
 
-	print(np.array(energy_ratios).reshape((len(fourier_transforms), len(fourier_transforms))))
-	print(np.array(patterns_match).reshape((len(fourier_transforms), len(fourier_transforms))))
+	energy_ratios = np.array(energy_ratios).reshape((len(fourier_transforms), len(fourier_transforms)))
+	patterns_match = np.array(patterns_match).reshape((len(fourier_transforms), len(fourier_transforms)))
 
-if __name__ == '__main__':
+	# If the full fov is not retained, the pattern and energy loss should be the same
+	# for all fourier transform combinations.
+	if fov != 1:
+		assert np.allclose(energy_ratios, energy_ratios[0, 0])
+		assert np.allclose(patterns_match, patterns_match[0, 0])
+
+def test_fourier_energy_conservation():
 	for shift_input in [[0,0],[0.1]]:
 		for scale in [1,2]:
 			for shift_output in [[0,0], [0.1]]:
 				for q in [1,4]:
 					for fov in [1,0.5,0.8]:
-						for dims in [[32,32],[32,64]]:
+						for dims in [[8,8],[8,16],[9,9],[9,18]]:
 							check_energy_conservation(shift_input, scale, shift_output, q, fov, dims)
+
+def check_symmetry(scale, q, fov, dims):
+	pass
+
+def test_fourier_symmetries():
+	for scale in [1,2]:
+		for q in [1,4]:
+			for fov in [1,0.5,0.8]:
+				for dims in [[8,8],[8,16],[9,9],[9,18]]:
+					check_symmetry(scale, q, fov, dims)

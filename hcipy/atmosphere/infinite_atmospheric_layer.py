@@ -173,8 +173,17 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 	def phase_for(self, wavelength):
 		return self._achromatic_screen / wavelength
+
+	def reset(self):
+		self._make_initial_phase_screen()
+		self.center = np.zeros(2)
+		self._t = 0
 	
 	def evolve_until(self, t):
+		if t is None:
+			self.reset()
+			return
+		
 		old_center = np.round(self.center / self.input_grid.delta).astype('int')
 
 		self.center = self.velocity * t

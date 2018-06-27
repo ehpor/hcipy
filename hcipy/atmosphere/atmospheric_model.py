@@ -62,6 +62,13 @@ class AtmosphericLayer(OpticalElement):
 		'''
 		raise NotImplementedError()
 	
+	def reset(self):
+		'''Reset the phase screen.
+		
+		This will create a randomized uncorrelated phase screen.
+		'''
+		raise NotImplementedError()
+
 	@property
 	def t(self):
 		'''The current time of the atmospheric layer.
@@ -196,6 +203,10 @@ class MultiLayerAtmosphere(OpticalElement):
 			self.elements.append(FresnelPropagator(grid, sorted_heights[-1]))
 		
 		self._dirty = False
+	
+	def reset(self):
+		for l in self.layers:
+			l.reset()
 	
 	@property
 	def layers(self):

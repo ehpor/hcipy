@@ -11,6 +11,8 @@ setup(name='hcipy',
 		"numpy",
 		"scipy",
 		"matplotlib>=2.0.0",
-		"Pillow"],
+		"Pillow",
+		"progressbar2",
+		"pyyaml"],
 	zip_safe=False
 	)

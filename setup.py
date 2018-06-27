@@ -13,6 +13,7 @@ setup(name='hcipy',
 		"matplotlib>=2.0.0",
 		"Pillow",
 		"progressbar2",
-		"pyyaml"],
+		"pyyaml",
+		"enum34"],
 	zip_safe=False
 	)

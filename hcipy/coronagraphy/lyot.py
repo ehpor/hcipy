@@ -1,4 +1,5 @@
 from ..optics import Apodizer, OpticalElement
+from ..propagation import FraunhoferPropagator
 
 class LyotCoronagraph(OpticalElement):
 	'''A Lyot coronagraph with a small focal-plane mask.

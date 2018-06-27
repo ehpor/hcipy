@@ -1,19 +1,7 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jun 27 10:26:39 2018
-
-@author: maaikevankooten
-"""
-
-#simple test for the filter class
 
 from hcipy import *
 import numpy as np
 import matplotlib.pyplot as plt
-from integrator_controller import *
-from modal_filter import *
-
 
 ## Create aperture and pupil grid
 wavelength =1e-6
@@ -57,7 +45,7 @@ calibrate_filter(my_filter,n,wf,shwfs,shwfse)
 zernike_freeform.actuators=np.zeros(num_modes)
 zernike_freeform.actuators[10]=wavelength*0.075
 wf1=zernike_freeform.forward(wf)
-print(np.sqrt(np.mean(np.square(wf1.phase))))
+#print(np.sqrt(np.mean(np.square(wf1.phase))))
 #measure the wavefront and filter it to see what we get
 img = shwfs(wf1).intensity
 slopes = shwfse.estimate([img]).ravel()

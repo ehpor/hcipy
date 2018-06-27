@@ -1,19 +1,7 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 14 09:02:12 2017
 
-@author: maaikevankooten
-
-"""
-
-import sys
-sys.path.insert(0, "/Users/maaikevankooten/surfdrive/school/PhD/code/hcipy")
 from hcipy import *
 import numpy as np
 import matplotlib.pyplot as plt
-from integrator_controller import *
-from modal_filter import *
 
 ## Create aperture and pupil grid
 wavelength =1e-6

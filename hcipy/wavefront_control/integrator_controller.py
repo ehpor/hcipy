@@ -1,9 +1,13 @@
-from hcipy import *
 import numpy as np
+import matplotlib.pyplot as plt
+from ..field import make_pupil_grid
+from ..optics import DeformableMirror
+from ..mode_basis import ModeBasis
+from ..math_util import inverse_truncated
+
 class Integrator_Controller(object):
 	def __init__(self, gain, interaction_matrix=None,leak=None, reference=0):
 		
-		self.mode_basis = mode_basis
 		self.flr=None
 		self.gain = gain
 		self.leak = leak

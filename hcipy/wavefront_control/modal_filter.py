@@ -1,6 +1,10 @@
 import numpy as np
-from hcipy import *
 import matplotlib.pyplot as plt
+from ..field import make_pupil_grid
+from ..optics import DeformableMirror
+from ..mode_basis import ModeBasis
+from ..math_util import inverse_truncated
+
 class Modal_Filter(object):
 	def __init__(self, mode_basis):
 		

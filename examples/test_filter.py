@@ -39,8 +39,8 @@ zernike_freeform = DeformableMirror(modes)
 ##Create our filter to do the reconstruction
 n = 40
 modes_filter = make_zernike_basis(n, D, pupil_grid, 2, False)
-my_filter=my_filter=Modal_Filter(modes_filter)
-calibrate_filter(my_filter,n,wf,shwfs,shwfse)
+my_filter=ModalReconstructor(modes_filter)
+calibrate_modal_reconstructor(my_filter,n,wf,shwfs,shwfse)
 
 zernike_freeform.actuators=np.zeros(num_modes)
 zernike_freeform.actuators[10]=wavelength*0.075
@@ -50,7 +50,7 @@ wf1=zernike_freeform.forward(wf)
 img = shwfs(wf1).intensity
 slopes = shwfse.estimate([img]).ravel()
 
-measured_zernike=my_filter.filter(slopes,0)
+measured_zernike=my_filter.estimate(slopes,0)
 
 plt.figure()
 plt.plot(measured_zernike,'*',label='Measured')

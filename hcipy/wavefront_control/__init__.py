@@ -1,11 +1,11 @@
-__all__ = ['Controller', 'FilteredController', 'CovarianceType']
-__all__ += ['Reconstructor']
-__all__ += ['Modal_Filter', 'calibrate_filter']
-__all__ += ['Integrator_Controller','make_interaction_matrix']
-
-
+__all__ = ['Controller', 'ObserverController', 'CovarianceType']
+__all__ += ['Observer']
+__all__ += ['ModalReconstructor', 'calibrate_modal_reconstructor']
+__all__ += ['IntegratorController','make_interaction_matrix']
 
 from .controller import *
-from .reconstructor import *
-from .modal_filter import *
+from .observer import *
+from .modal_reconstructor import *
 from .integrator_controller import *
+from .kalman_filter import *
+from .lmmse_estimator import *

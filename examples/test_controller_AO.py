@@ -41,11 +41,11 @@ zernike_offsetter = DeformableMirror(phase_modes)
 
 #want to reconstruct the phase and then go to actuator space - need filter with controller
 #first make our filter which acts like a reconstructor
-my_filter=Modal_Filter(modes)
-calibrate_filter(my_filter,num_modes,wf,shwfs,shwfse)
+my_filter = ModalReconstructor(modes)
+calibrate_modal_reconstructor(my_filter,num_modes,wf,shwfs,shwfse)
 
 #set up controller now that takes in the filtered measurements
-int_controller=Integrator_Controller(0.2, interaction_matrix=None,leak=0.01)
+int_controller = IntegratorController(0.2, interaction_matrix=None,leakage=0.01)
 make_interaction_matrix(int_controller,zernike_freeform,wf,shwfs,shwfse,amplitude=0.005,f=my_filter)
 
 #lets get the proper lenslet measurements we want
@@ -55,21 +55,18 @@ num_measurements = ref.shape[0]
 
 plt.ion()
 input_wf=0
-plt.figure()
 
 # Ref psf
 psf = prop(wf)
 Inorm = psf.intensity.max()
-imshow_field(np.log10(psf.intensity/Inorm +1E-15))
-plt.show()
 
-zernike_freeform.actuators =  np.zeros(num_modes)
-voltages=zernike_freeform.actuators*wavelength
+zernike_freeform.actuators = np.zeros(num_modes)
+voltages = zernike_freeform.actuators * wavelength
 
-zernike_offsetter.actuators[5]= 0.5
-zernike_offsetter.actuators[7]= 0.4
-zernike_offsetter.actuators[3]= 0.4
-wf.electric_field=(aperture(pupil_grid) * np.exp(-1j*zernike_offsetter.surface))
+zernike_offsetter.actuators[5] = 0.5
+zernike_offsetter.actuators[7] = 0.4
+zernike_offsetter.actuators[3] = 0.4
+wf.electric_field = aperture(pupil_grid) * np.exp(-1j*zernike_offsetter.surface)
 psf = prop(wf)
 Inorm = psf.intensity.max()
 
@@ -89,14 +86,14 @@ plt.subplot(2,2,4)
 imshow_field(np.log10(psf.intensity/Inorm +1E-15))
 plt.colorbar()
 
-for ii in range(20):
+for ii in range(200):
      dm_wf = zernike_freeform.forward(wf)
 
      sh_wf = shwfs.forward(dm_wf) 
      
      sh_img = sh_wf.intensity
      meas_vec = (shwfse.estimate([sh_img]))
-     phase=my_filter.filter(meas_vec.ravel()-ref,0)
+     phase=my_filter.estimate(meas_vec.ravel()-ref,0)
       
      int_controller.submit_wavefront(0, phase, 0, 1)
      zernike_freeform.actuators=int_controller.actuators*wavelength

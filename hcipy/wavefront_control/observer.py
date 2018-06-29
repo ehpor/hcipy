@@ -6,9 +6,9 @@ class CovarianceType(enum.Enum):
 	CovDiagonal = 2
 	CovMatrix = 3
 
-class Reconstructor(object):
+class Observer(object):
 	def __init__(self, covariance_required=CovarianceType.CovNone):
 		self.covariance_required = covariance_required
 	
-	def reconstruct(self, t, wavefront, covariances=None):
+	def estimate(self, t, wavefront, covariances=None):
 		raise NotImplementedError()

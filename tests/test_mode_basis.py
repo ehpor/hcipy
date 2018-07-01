@@ -24,3 +24,19 @@ def test_zernike_indices():
 
 		n, m = ansi_to_zernike(i)
 		assert i == zernike_to_ansi(n, m)
+
+def test_disk_harmonic_modes():
+	grid = make_pupil_grid(128)
+	aperture_mask = circular_aperture(1)(grid) > 0
+
+	num_modes = 20
+
+	for bc in ['dirichlet', 'neumann']:
+		modes = make_disk_harmonic_basis(grid, num_modes, bc=bc)
+		
+		for i, m1 in enumerate(modes):
+			for j, m2 in enumerate(modes):
+				product = np.sum((m1 * m2)[aperture_mask] * grid.weights[aperture_mask])
+				print(product)
+
+				assert np.abs(product - np.eye(num_modes)[i,j]) < 1e-2

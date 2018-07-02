@@ -28,7 +28,7 @@ def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
 		The disk harmonic function evaluated on `grid`.
 	'''
 	polar_grid = grid.as_('polar')
-	r = polar_grid.r / (D / 2)
+	r = 2 * polar_grid.r / D
 	theta = polar_grid.theta
 
 	m_negative = m < 0

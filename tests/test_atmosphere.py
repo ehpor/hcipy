@@ -117,20 +117,34 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
 	'''
 	assert np.all(np.abs(variances_simulated / variances_theory - 1) < 1)
 
+def test_finite_atmosphere_total_variance():
+	# Check some selected parameter sets.
+	check_total_variance(0.5e-6, 1, 0.1, 10, False)
+	check_total_variance(2e-6, 1, 0.1, 10, False)
+	check_total_variance(0.5e-6, 8, 0.1, 10, False)
+	check_total_variance(0.5e-6, 1, 0.3, 10, False)
+	check_total_variance(0.5e-6, 1, 0.1, 40, False)
+
 def test_infinite_atmosphere_total_variance():
 	# Check some selected parameter sets.
-	for propagate_phase_screen in [False, True]:
-		check_total_variance(0.5e-6, 1, 0.1, 10, propagate_phase_screen)
-		check_total_variance(2e-6, 1, 0.1, 10, propagate_phase_screen)
-		check_total_variance(0.5e-6, 8, 0.1, 10, propagate_phase_screen)
-		check_total_variance(0.5e-6, 1, 0.3, 10, propagate_phase_screen)
-		check_total_variance(0.5e-6, 1, 0.1, 40, propagate_phase_screen)
+	check_total_variance(0.5e-6, 1, 0.1, 10, True)
+	check_total_variance(2e-6, 1, 0.1, 10, True)
+	check_total_variance(0.5e-6, 8, 0.1, 10, True)
+	check_total_variance(0.5e-6, 1, 0.3, 10, True)
+	check_total_variance(0.5e-6, 1, 0.1, 40, True)
+
+def test_finite_atmosphere_zernike_variances():
+	# Check some selected parameter sets.
+	check_zernike_variances(0.5e-6, 1, 0.1, 10, False)
+	check_zernike_variances(2e-6, 1, 0.1, 10, False)
+	check_zernike_variances(0.5e-6, 8, 0.1, 10, False)
+	check_zernike_variances(0.5e-6, 1, 0.3, 10, False)
+	check_zernike_variances(0.5e-6, 1, 0.1, 40, False)
 
 def test_infinite_atmosphere_zernike_variances():
 	# Check some selected parameter sets.
-	for propagate_phase_screen in [False, True]:
-		check_zernike_variances(0.5e-6, 1, 0.1, 10, propagate_phase_screen)
-		check_zernike_variances(2e-6, 1, 0.1, 10, propagate_phase_screen)
-		check_zernike_variances(0.5e-6, 8, 0.1, 10, propagate_phase_screen)
-		check_zernike_variances(0.5e-6, 1, 0.3, 10, propagate_phase_screen)
-		check_zernike_variances(0.5e-6, 1, 0.1, 40, propagate_phase_screen)
+	check_zernike_variances(0.5e-6, 1, 0.1, 10, True)
+	check_zernike_variances(2e-6, 1, 0.1, 10, True)
+	check_zernike_variances(0.5e-6, 8, 0.1, 10, True)
+	check_zernike_variances(0.5e-6, 1, 0.3, 10, True)
+	check_zernike_variances(0.5e-6, 1, 0.1, 40, True)

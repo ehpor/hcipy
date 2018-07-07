@@ -1,3 +1,5 @@
+from __future__ import division
+
 from ..optics import OpticalElement
 from ..field import Field
 from ..propagation import FresnelPropagator

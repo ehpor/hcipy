@@ -1,3 +1,5 @@
+from __future__ import division
+
 from .atmospheric_model import AtmosphericLayer, phase_covariance_von_karman, fried_parameter_from_Cn_squared
 from ..statistics import SpectralNoiseFactoryMultiscale
 from ..field import Field, RegularCoords, UnstructuredCoords, CartesianGrid

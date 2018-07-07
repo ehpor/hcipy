@@ -39,7 +39,7 @@ def zernike_variance_von_karman(n, m, R, k0, Cn_squared, wavelength):
 	return coeffs_all * (term11 * term12 + term21 * term22)
 
 def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propagate_phase_screen):
-	velocity = 10 # meters/sec
+	velocity = 10.0 # meters/sec
 	num_modes = 1000
 
 	pupil_grid = make_pupil_grid(64, D_tel)
@@ -65,12 +65,12 @@ def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propag
 	variance_theory = 0
 	for i in range(num_modes):
 		n, m = noll_to_zernike(i + 2)
-		variance_theory += zernike_variance_von_karman(n, m, D_tel / 2, 1 / outer_scale, layer.Cn_squared, wavelength)
+		variance_theory += zernike_variance_von_karman(n, m, D_tel / 2., 1. / outer_scale, layer.Cn_squared, wavelength)
 	
 	assert (variance_measured / variance_theory - 1) < 0.1
 
 def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, propagate_phase_screen):
-	velocity = 10 # meters/sec
+	velocity = 10.0 # meters/sec
 	num_modes = 50
 
 	pupil_grid = make_pupil_grid(128, D_tel)
@@ -104,7 +104,7 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
 	variances_theory = []
 	for j in range(num_modes):
 		n, m = noll_to_zernike(j + 2)
-		variances_theory.append(zernike_variance_von_karman(n, m, D_tel / 2, 1 / outer_scale, layer.Cn_squared, wavelength))
+		variances_theory.append(zernike_variance_von_karman(n, m, D_tel / 2., 1. / outer_scale, layer.Cn_squared, wavelength))
 	variances_theory = np.array(variances_theory)
 	'''
 	plt.plot(variances_simulated, label='simulated')

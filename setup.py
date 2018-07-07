@@ -13,7 +13,7 @@ setup(name='hcipy',
 		"matplotlib>=2.0.0",
 		"Pillow",
 		"progressbar2",
-		"pyyaml,
+		"pyyaml",
 		"mpmath"],
 	zip_safe=False,
 	classifiers=(

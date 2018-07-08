@@ -49,7 +49,7 @@ def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propag
 	Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
 	layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, velocity)
 
-	num_iterations = 500
+	num_iterations = 300
 	total_variance = []
 
 	for it in range(num_iterations):
@@ -87,7 +87,7 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
 	transformation_matrix = zernike_modes.transformation_matrix
 	projection_matrix = inverse_tikhonov(transformation_matrix, 1e-9)
 
-	num_iterations = 100
+	num_iterations = 50
 	mode_coeffs = []
 
 	for it in range(num_iterations):

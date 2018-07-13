@@ -13,7 +13,7 @@ import time
 import warnings
 
 class InfiniteAtmosphericLayer(AtmosphericLayer):
-	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=True):
+	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=False):
 		self._initialized = False
 
 		AtmosphericLayer.__init__(self, input_grid, Cn_squared, L0, velocity, height)

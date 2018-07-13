@@ -45,8 +45,12 @@ my_filter = ModalReconstructor(modes)
 calibrate_modal_reconstructor(my_filter,num_modes,wf,shwfs,shwfse)
 
 #set up controller now that takes in the filtered measurements
-int_controller = IntegratorController(0.2, interaction_matrix=None,leakage=0.01)
-make_interaction_matrix(int_controller,zernike_freeform,wf,shwfs,shwfse,amplitude=0.005,f=my_filter)
+#can try first an integrator
+#controller = IntegratorController(0.2, interaction_matrix=None,leakage=0.01)
+#or we can try the pid
+controller = PIDController(0.1,0.2,0.1, interaction_matrix=None)
+
+make_interaction_matrix(controller,zernike_freeform,wf,shwfs,shwfse,amplitude=0.005,f=my_filter)
 
 #lets get the proper lenslet measurements we want
 img = shwfs(wf).intensity
@@ -86,7 +90,7 @@ plt.subplot(2,2,4)
 imshow_field(np.log10(psf.intensity/Inorm +1E-15))
 plt.colorbar()
 
-for ii in range(200):
+for ii in range(50):
      dm_wf = zernike_freeform.forward(wf)
 
      sh_wf = shwfs.forward(dm_wf) 
@@ -95,8 +99,8 @@ for ii in range(200):
      meas_vec = (shwfse.estimate([sh_img]))
      phase=my_filter.estimate(meas_vec.ravel()-ref,0)
       
-     int_controller.submit_wavefront(0, phase, 0, 1)
-     zernike_freeform.actuators=int_controller.actuators*wavelength
+     controller.submit_wavefront(0, phase, 0, 1)
+     zernike_freeform.actuators=controller.actuators*wavelength
 
 
      #correct using the dm in close loop

@@ -1,7 +1,9 @@
 __all__ = ['Controller', 'ObserverController', 'CovarianceType']
 __all__ += ['Observer']
-__all__ += ['ModalReconstructor', 'calibrate_modal_reconstructor']
-__all__ += ['IntegratorController','make_interaction_matrix']
+__all__ += ['ModalReconstructor']
+__all__ += ['IntegratorController']
+__all__ += ['PIDController']
+__all__ += ['make_interaction_matrix','calibrate_modal_reconstructor']
 
 from .controller import *
 from .observer import *
@@ -9,3 +11,5 @@ from .modal_reconstructor import *
 from .integrator_controller import *
 from .kalman_filter import *
 from .lmmse_estimator import *
+from .pid_controller import *
+from .calibration import *

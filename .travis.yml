@@ -65,11 +65,11 @@ install:
 
 script: |
   if [[ $TRAVIS_OS_NAME == "osx" ]]; then
-    if [[ $COVERAGE == "true" ]]; then pythonw -m coverage run -m pytest ./tests || travis_terminate 1; fi
-    if [[ $COVERAGE == "false" ]]; then pythonw -m pytest ./tests || travis_terminate 1; fi
+    if [[ $COVERAGE == "true" ]]; then travis_wait 30 pythonw -m coverage run -m pytest ./tests || travis_terminate 1; fi
+    if [[ $COVERAGE == "false" ]]; then travis_wait 30 pythonw -m pytest ./tests || travis_terminate 1; fi
   else
-    if [[ $COVERAGE == "true" ]]; then python -m coverage run -m pytest ./tests || travis_terminate 1; fi
-    if [[ $COVERAGE == "false" ]]; then python -m pytest ./tests || travis_terminate 1; fi
+    if [[ $COVERAGE == "true" ]]; then travis_wait 30 python -m coverage run -m pytest ./tests || travis_terminate 1; fi
+    if [[ $COVERAGE == "false" ]]; then travis_wait 30 python -m pytest ./tests || travis_terminate 1; fi
   fi
 
 after_success: |

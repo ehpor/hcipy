@@ -27,8 +27,8 @@ def make_uniform_grid(dims, extent, center=0, has_center=False):
 
 	num_dims = max(np.array([dims]).shape[-1], np.array([extent]).shape[-1], np.array([center]).shape[-1])
 
-	dims = (np.ones(num_dims) * dims).astype('float')
-	extent = (np.ones(num_dims) * extent).astype('int')
+	dims = (np.ones(num_dims) * dims).astype('int')
+	extent = (np.ones(num_dims) * extent).astype('float')
 	center = (np.ones(num_dims) * center).astype('float')
 
 	delta = extent / dims

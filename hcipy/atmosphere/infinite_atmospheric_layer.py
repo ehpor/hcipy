@@ -204,7 +204,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			else:
 				self._extrude('top')
 		
-		if use_interpolation:
+		if self.use_interpolation:
 			# Use bilinear interpolation to interpolate the achromatic phase screen to the correct position.
 			# This is to avoid sudden shifts by discrete pixels.
 			ps = self._achromatic_screen.shaped

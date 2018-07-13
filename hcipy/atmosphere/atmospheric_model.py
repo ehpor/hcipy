@@ -221,6 +221,24 @@ class MultiLayerAtmosphere(OpticalElement):
 		self._layers = layers
 		self._dirty = True
 	
+	def phase_for(self, wavelength):
+		'''Get the unwrapped phase for the atmosphere.
+
+		Parameters
+		----------
+		wavelength : scalar
+			The wavelength at which to calculate the phase screen.
+		
+		Returns
+		-------
+		Field
+			The total unwrapped phase screen.
+		'''
+		if self.scintilation:
+			raise ValueError('Cannot get the unwrapped phase for an atmosphere with scintilation.')
+		
+		return np.sum([l.phase_for(wavelength) for l in self.layers], axis=0)
+	
 	@property
 	def scintilation(self):
 		'''Whether to include scintilation effects in the propagation.

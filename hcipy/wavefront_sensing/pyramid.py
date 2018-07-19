@@ -89,7 +89,7 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		self.pyramid = pyramid_surface(refractive_index, sep, wavelength_0)(self.focal_grid)
 		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.output_grid, wavelength_0=wavelength_0)
 
-	def forward(self, wavefront):
+	def forward(self, wf):
 		'''Propagates a wavefront through the pyramid wavefront sensor.
 
 		Parameters

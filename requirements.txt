@@ -5,3 +5,4 @@ Pillow
 progressbar2
 pyyaml
 enum34
+mpmath

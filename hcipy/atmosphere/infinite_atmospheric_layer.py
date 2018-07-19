@@ -1,3 +1,5 @@
+from __future__ import division
+
 from .atmospheric_model import AtmosphericLayer, phase_covariance_von_karman, fried_parameter_from_Cn_squared
 from ..statistics import SpectralNoiseFactoryMultiscale
 from ..field import Field, RegularCoords, UnstructuredCoords, CartesianGrid
@@ -5,12 +7,13 @@ from .finite_atmospheric_layer import FiniteAtmosphericLayer
 
 import numpy as np
 from scipy import linalg
+from scipy.ndimage import affine_transform
 
-import matplotlib.pyplot as plt
 import time
+import warnings
 
 class InfiniteAtmosphericLayer(AtmosphericLayer):
-	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, stencil_length=2):
+	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=False):
 		self._initialized = False
 
 		AtmosphericLayer.__init__(self, input_grid, Cn_squared, L0, velocity, height)
@@ -24,6 +27,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			raise ValueError('Input grid must be two-dimensional.')
 
 		self.stencil_length = stencil_length
+		self.use_interpolation = use_interpolation
 
 		self._make_stencils()
 		self._make_covariance_matrices()
@@ -65,7 +69,6 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		self.num_stencils_horizontal = np.sum(self.stencil_left)
 	
 	def _make_covariance_matrices(self):
-		#phase_covariance = phase_covariance_von_karman(fried_parameter_from_Cn_squared(self.Cn_squared, 1), self.L0)
 		phase_covariance = phase_covariance_von_karman(fried_parameter_from_Cn_squared(1, 1), self.L0)
 
 		# Vertical
@@ -131,9 +134,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		oversampling = 16
 		layer = FiniteAtmosphericLayer(self.input_grid, self.Cn_squared, self.outer_scale, self.velocity, self.height, oversampling)
 		self._achromatic_screen = layer.phase_for(1)
-		#self._achromatic_screen = Field(np.zeros(self.input_grid.size), self.input_grid)
-		#for n in range(10 * self.input_grid.dims[0]):
-		#	self._extrude('left')
+		self._shifted_achromatic_screen = self._achromatic_screen
 
 	def _extrude(self, where=None):
 		flipped = (where == 'top') or (where == 'right')
@@ -172,7 +173,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			self._achromatic_screen = screen.ravel()
 
 	def phase_for(self, wavelength):
-		return self._achromatic_screen / wavelength
+		return self._shifted_achromatic_screen / wavelength
 
 	def reset(self):
 		self._make_initial_phase_screen()
@@ -202,19 +203,24 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 				self._extrude('bottom')
 			else:
 				self._extrude('top')
-	
+		
+		if self.use_interpolation:
+			# Use bilinear interpolation to interpolate the achromatic phase screen to the correct position.
+			# This is to avoid sudden shifts by discrete pixels.
+			ps = self._achromatic_screen.shaped
+			sub_delta = self.center - new_center * self.input_grid.delta
+			with warnings.catch_warnings():
+				warnings.filterwarnings('ignore', message='The behaviour of affine_transform with a one-dimensional array supplied for the matrix parameter has changed in scipy 0.18.0.')
+				self._shifted_achromatic_screen = affine_transform(ps, np.array([1,1]), (sub_delta / self.input_grid.delta)[::-1], mode='nearest', order=1).ravel()
+		else:
+			self._shifted_achromatic_screen = self._achromatic_screen
+
 	@property
 	def Cn_squared(self):
 		return self._Cn_squared
 	
 	@Cn_squared.setter
 	def Cn_squared(self, Cn_squared):
-		#if self._initialized:
-		#	old_Cn_squared = self.Cn_squared
-
-		#	self.B_vertical *= np.sqrt(Cn_squared / old_Cn_squared)
-		#	self.B_horizontal *= np.sqrt(Cn_squared / old_Cn_squared)
-
 		self._Cn_squared = Cn_squared
 	
 	@property

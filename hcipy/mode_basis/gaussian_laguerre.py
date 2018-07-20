@@ -3,15 +3,17 @@ from math import sqrt, floor
 from scipy.special import eval_genlaguerre
 
 def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
-	'''Creates a Gaussian-Hermite mode.
+	r'''Creates a Gaussian-Hermite mode.
 
 	This function evaluates a (p,l) order Gaussian-Laguerre mode on a grid.
 	The definition of the modes are the following,
-	.. math:: 
-		exp^{-\frac{r^2}{w_0^2}} L_p^{|l|}\left(\frac{2r^2}{w_0^2} \right) \left(\sqrt{2}\frac{r}{w_0}\right)
-	Here :math: `w_0` is the mode_field_radius, which is :math: `\mathrm{MFD}/2`.
-	And :math: `L_p^{|l|}` are the generalized Laguerre Polynomials.
-	The modes are numerical normalized to have a total power of 1.
+
+	.. math::
+		\exp{\left(-\frac{r^2}{w_0^2}\right)} L_p^{|l|}\left(\frac{2r^2}{w_0^2} \right) \left(\sqrt{2}\frac{r}{w_0}\right)
+
+	Here :math:`w_0` is the mode_field_radius, which is :math:`\mathrm{MFD}/2`.
+	And :math:`L_p^{|l|}` are the generalized Laguerre Polynomials.
+	All modes are numerical normalized to have a total power of 1.
 
 	More details on generalized Laguerre Polynomials can be found on:
 	http://mathworld.wolfram.com/AssociatedLaguerrePolynomial.html
@@ -32,7 +34,6 @@ def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
 	Field
 		The evaluated mode.
 	'''
-
 	from ..field import Field
 
 	if grid.is_separated and grid.is_('polar'):

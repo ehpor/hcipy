@@ -68,6 +68,11 @@ def disk_harmonic_energy(n, m, bc='dirichlet'):
 	bc : string
 		The boundary conditions to use. This can be either 'dirichlet', or 
 		'neumann' for a Dirichlet or Neumann boundary condition respectively.
+	
+	Returns
+	-------
+	scalar
+		The energy corresponding to the mode.
 	'''
 	m = abs(m)
 

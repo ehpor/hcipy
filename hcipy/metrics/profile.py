@@ -8,7 +8,6 @@ def binned_profile(y, x, bins=20):
 	
 	Parameters
 	----------
-	
 	y : array_like
 		The y-coordinates of the data points. This should be 1-dimensional.
 	x : array_like

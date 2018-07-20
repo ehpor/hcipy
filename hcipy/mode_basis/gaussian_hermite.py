@@ -30,19 +30,19 @@ def index_to_hermite(i):
 	return n, m
 	
 def gaussian_hermite(n, m, mode_field_diameter=1, grid=None):
-	'''Creates a Gaussian-Hermite mode.
+	r'''Creates a Gaussian-Hermite mode.
 
 	This function evaluates a (n, m) order Gaussian-Hermite mode on a grid.
 	The definition of the modes are the following,
-	.. math:: 
-		exp^{-\frac{r^2}{w_0^2}} H_n\left(\sqrt{2}\frac{x}{w_0}\right) H_m\left(\sqrt{2}\frac{y}{w_0}\right).
-	Here :math: `w_0` is the mode_field_radius, which is :math: `\mathrm{MFD}/2`.
-	This defintion follows the Physicists definition of the Hermite polynomials.
-	The modes are numerical normalized to have a total power of 1.
 
-	More details on the Hermite Polynomials can be found on:
-	http://mathworld.wolfram.com/HermitePolynomial.html
+	.. math:: 
+		\exp{\left(-\frac{r^2}{w_0^2}\right)} H_n\left(\sqrt{2}\frac{x}{w_0}\right) H_m\left(\sqrt{2}\frac{y}{w_0}\right).
 	
+	Here :math:`w_0` is the mode_field_radius, which is :math:`\mathrm{MFD}/2`. This defintion follows 
+	the Physicists definition of the Hermite polynomials. The modes are numerical normalized to have a 
+	total power of 1.
+
+	More details on the Hermite Polynomials can be found on: http://mathworld.wolfram.com/HermitePolynomial.html
 
 	Parameters
 	----------

@@ -4,42 +4,67 @@ Introduction
 What is HCIPy?
 ------------------
 
-HCIPy is a framework written in Python for high contrast imaging simulation work. It implements adaptive optics simulation, coronagraphy and optical diffraction calculations.
+
+HCIPy is an open-source object-oriented framework written in Python for performing end-to-end simulations of high-contrast imaging instruments for astronomy.
+
+The library defines wavefronts and optical elements for defining an optical system, and provides both Fraunhofer and Fresnel diffraction propgators. Polarization is supported using Jones calculus, with polarizers and waveplates included out of the box. It implements atmospheric turbulence using thin infinitely-long phase screens, and can model scintillation using Fresnel propagation between individual layers. Many wavefront sensors are implemented including a Shack-Hartmann and Pyramid wavefront sensor. Implemented coronagraphs include the vortex, Lyot and APP coronagraph.
+
+By including simulation of both adaptive optics and coronagraphy into a single framework, HCIPy allows simulations including feedback from post-coronagraphic focal-plane wavefront sensors to the AO system.
 
 Installation
 ----------------------
 
-Installation is done as any standard Python package. First clone the git repository with::
+HCIPy can be installed from PyPI as usual:
 
-    git clone https://gitlab.strw.leidenuniv.nl/por/hcipy.git
+.. code-block:: shell
 
-Installation can then be done by::
+    pip install hcipy
 
+To install the latest development version from Github, however, do:
+
+.. code-block:: shell
+
+    git clone https://github.com/ehpor/hcipy
+	cd hcipy
     python setup.py develop
 
-If you don't intend to receive continous updates, you can also do::
+If you don't intend to receive continous updates, you can also do:
+
+.. code-block:: shell
 
     python setup.py install
 
-To receive updates, just pull the git repository, as::
+To receive updates, just pull the git repository, as:
+
+.. code-block:: shell
 
     git pull
+
+Citing
+------
+
+If you use HCIPy for your own research, please include the following acknowledgement in your publication:
+
+    This research made use of HCIPy, an open-source object-oriented framework written in Python for performing end-to-end simulations of high-contrast imaging instruments (Por et al. 2018).
+
+The BibTeX citation can be found below:
+
+.. code-block:: bib
+
+	@inproceedings{por2018hcipy,
+		author = {Por, E.~H. and Haffert, S.~Y. and Radhakrishnan, V.~M. and Doelman, D.~S. and Van Kooten, M. and Bos, S.~P.},
+		title = "{High Contrast Imaging for Python (HCIPy): an open-source adaptive optics and coronagraph simulator}",
+		booktitle = {Adaptive Optics Systems VI},
+		year = 2018,
+		series = {Proc. {{SPIE}}},
+		volume = 10703,
+		doi = {10.1117/12.2314407},
+		URL = {https://doi.org/10.1117/12.2314407}
+	}
 
 Contributing
 ------------
 
-Contributions are strongly encouraged. Contributions in this case must be library style code, using the PEP8 code style conventions. Simulation code for personal use will not be accepted.
+If you have something to add, or want something added to HCIPy, please let us know. We actively support external contributions to HCIPy, whether small or large. We are operating in a `feature branching workflow`_.
 
-This package is developed using a `feature branching model <https://www.atlassian.com/git/tutorials/comparing-workflows#feature-branch-workflow>`_. This means that each feature will be developed on its own branch to be merged later into the *master* branch. To start contribution on a new feature of fix, do::
-
-    git checkout -b new_feature
-
-This will start a new branch named ``new_feature``. A feature must be an accurate description of the feature you want to add. Normal ``git`` commits can then be used to develop the feature locally. Use::
-
-    git push -u origin new_feature
-
-to add your feature to the repository on Gitlab for all others to see. Use::
-
-    git push
-
-afterwards  if you want to push updates to the server. When you are done with development, issue a merge request on the Gitlab website. The merge request will be granted if there are no conflicts with existing code and formatting requirements.
+.. _feature branching workflow: https://www.atlassian.com/git/tutorials/comparing-workflows#feature-branch-workflow

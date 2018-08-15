@@ -37,7 +37,14 @@ class Grid(object):
 		Parameters
 		----------
 		criterium : function or array_like
-			The criterium used to select points. A function will be evaluated for every point. Otherwise, this must be a boolean array of integer array, used for slicing the points.
+			The criterium used to select points. A function will be evaluated for every point. 
+			Otherwise, this must be a boolean array of integer array, used for slicing the points.
+		
+		Returns
+		-------
+		Grid
+			A new grid with UnstructuredCoords that includes only the points for which the criterium 
+			was true.
 		'''
 		from .coordinates import UnstructuredCoords
 		
@@ -300,6 +307,44 @@ class Grid(object):
 		grid.shift(shift)
 		return grid
 	
+	def rotate(self, angle, axis=None):
+		'''Rotate the grid in-place.
+
+		Parameters
+		----------
+		angle : scalar
+			The angle in radians.
+		axis : ndarray or None
+			The axis of rotation. For two-dimensional grids, it is ignored. For
+			three-dimensional grids it is required.
+		
+		Returns
+		-------
+		Grid
+			Itself to allow for chaining these transformations.
+		'''
+		raise NotImplementedError()
+	
+	def rotated(self, angle, axis=None):
+		'''A rotated copy of this grid.
+
+		Parameters
+		----------
+		angle : scalar
+			The angle in radians.
+		axis : ndarray or None
+			The axis of rotation. For two-dimensional grids, it is ignored. For
+			three-dimensional grids it is required.
+		
+		Returns
+		-------
+		Grid
+			The rotated grid.
+		'''
+		grid = self.copy()
+		grid.rotate(angle, axis)
+		return grid
+
 	def reverse(self):
 		'''Reverse the order of the points in-place.
 
@@ -328,7 +373,7 @@ class Grid(object):
 		raise NotImplementedError()
 	
 	def __str__(self):
-		return str(self.__class__) + '(' + str(self.coords.__class__) + ')'
+		return str(self.__class__.__name__) + '(' + str(self.coords.__class__.__name__) + ')'
 
 	def closest_to(self, p):
 		'''Get the index of the point closest to point `p`.

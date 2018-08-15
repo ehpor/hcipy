@@ -79,6 +79,24 @@ class PolarGrid(Grid):
 		grid.shift(shift)
 		return grid
 	
+	def rotate(self, angle, axis=None):
+		'''Rotate the grid in-place.
+
+		Parameters
+		----------
+		angle : scalar
+			The angle in radians.
+		axis : ndarray or None
+			The axis of rotation. For this (polar) grid, it is ignored.
+		
+		Returns
+		-------
+		Grid
+			Itself to allow for chaining these transformations.
+		'''
+		self.theta += angle
+		return self
+	
 	@staticmethod
 	def _get_automatic_weights(coords):
 		return None

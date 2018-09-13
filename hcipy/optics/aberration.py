@@ -27,7 +27,7 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
 		trans_inv = inverse_tikhonov(trans, 1e-6)
 		screen -= trans.dot(trans_inv.dot(screen))
 	
-	return Field(np.exp(2j*np.pi * screen) * aperture, pupil_grid)
+	return Field(screen * aperture, pupil_grid)
 
 class SurfaceAberration(SurfaceApodizer):
 	def __init__(self, pupil_grid, ptv, diameter, exponent=-2.5, refractive_index=-1, aperture=None, remove_modes=None):

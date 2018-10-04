@@ -28,6 +28,11 @@ def inverse_truncated_modal(M, num_modes, svd=None):
 		svd = SVD(M, num_modes)
 
 	U, S, Vt = svd.svd
+
+	U = U[:,:num_modes]
+	S = S[:num_modes]
+	Vt = Vt[:num_modes,:]
+
 	return (Vt.T / S).dot(U.T)
 
 def inverse_truncated(M, rcond=1e-15, svd=None):

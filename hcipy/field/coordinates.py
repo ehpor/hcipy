@@ -170,7 +170,10 @@ class SeparatedCoords(CoordsBase):
 	def __getitem__(self, i):
 		'''The `i`-th point for these coordinates.
 		'''
-		return np.meshgrid(*self.separated_coords)[i].ravel()
+		s0 = (1,) * len(self)
+		j = len(self) - i - 1
+		output = self.separated_coords[i].reshape(s0[:j] + (-1,) + s0[j + 1:])
+		return np.broadcast_as(output, self.shape).ravel()
 
 	@property
 	def size(self):
@@ -293,7 +296,11 @@ class RegularCoords(CoordsBase):
 	def __getitem__(self, i):
 		'''The `i`-th point for these coordinates.
 		'''
-		return np.meshgrid(*self.separated_coords)[i].ravel()
+		s0 = (1,) * len(self)
+		j = len(self) - i - 1
+		t = s0[:j] + (-1,) + s0[j + 1:]
+		output = self.separated_coords[i].reshape(t)
+		return np.broadcast_to(output, self.shape).ravel()
 	
 	def __iadd__(self, b):
 		'''Add `b` to the coordinates separately in-place.

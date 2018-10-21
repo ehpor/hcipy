@@ -79,8 +79,11 @@ def regular_polygon_aperture(num_sides, circum_diameter):
 	'''
 	if num_sides < 3:
 		raise ValueError('The number of sides for a regular polygon has to greater or equal to 3.')
+
+	epsilon = 1e-6
 	
 	apothem = np.cos(np.pi / num_sides) * circum_diameter / 2
+	apothem += apothem * epsilon
 
 	# Make use of symmetry
 	if num_sides % 2 == 0:
@@ -104,11 +107,11 @@ def regular_polygon_aperture(num_sides, circum_diameter):
 		# Make use of symmetry
 		if num_sides % 2 == 0:
 			for theta in thetas:
-				f[m] *= (np.abs(np.cos(theta) * x + np.sin(theta) * y) < apothem)
+				f[m] *= (np.abs(np.cos(theta) * x + np.sin(theta) * y) <= apothem)
 		else:
 			for theta in thetas:
 				print(theta)
-				f[m] *= ((np.abs(np.sin(theta) * x) + -np.cos(theta) * y) < apothem)
+				f[m] *= ((np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem)
 		
 		return Field(f, grid)
 	
@@ -211,7 +214,7 @@ def make_spider_infinite(p, angle, spider_width):
 
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
-		infinite_spider = np.logical_or(np.abs(y_new) <= (spider_width / 2), x_new <= 0)
+		infinite_spider = np.logical_and(np.abs(y_new) <= (spider_width / 2), x_new >= 0)
 
 		return Field(1 - infinite_spider, grid)
 	return func
@@ -251,4 +254,47 @@ def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,
 			spiders *= make_spider((0, 0), (x, y), spider_width)(grid)
 		
 		return (pupil_outer - pupil_inner) * spiders
+	return func
+
+def make_obstruction(aperture):
+	'''Create an obstruction of `aperture`.
+
+	Parameters
+	----------
+	aperture : Field generator
+		The aperture to invert.
+	
+	Returns
+	-------
+	Field generator
+		The obstruction.
+	'''
+	return lambda grid: 1 - aperture(grid)
+
+def make_segmented_aperture(segment_shape, segment_positions, segment_transmissions=1):
+	'''Create a segmented aperture.
+
+	Parameters
+	----------
+	segment_shape : Field generator
+		The shape for each of the segments.
+	segment_positions : Grid
+		The center position for each of the segments.
+	segment_transmissions : scalar or ndarray
+		The transmission for each of the segments. If this is a scalar, the same transmission is used for all segments.
+	
+	Returns
+	-------
+	Field generator
+		The segmented aperture.
+	'''
+	segment_transmissions = np.ones(segment_positions.size) * segment_transmissions
+
+	def func(grid):
+		res = np.zeros(grid.size, dtype=segment_transmissions.dtype)
+
+		for p, t in zip(segment_positions.points, segment_transmissions):
+			res[segment_shape(grid.shifted(-p)) > 0.5] = t
+		
+		return Field(res, grid)
 	return func

@@ -35,7 +35,7 @@ def make_uniform_grid(dims, extent, center=0, has_center=False):
 	zero = -extent / 2 + center + delta / 2
 
 	if has_center:
-		zero -= delta/2 * (1 - np.mod(dims, 2))
+		zero -= delta / 2 * (1 - np.mod(dims, 2))
 
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 

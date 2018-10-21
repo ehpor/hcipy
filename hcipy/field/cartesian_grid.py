@@ -58,7 +58,7 @@ class CartesianGrid(Grid):
 
 		Parameters
 		----------
-		scale : array_like
+		scale : array_like or scalar
 			The factor with which to scale the grid.
 		
 		Returns
@@ -66,7 +66,7 @@ class CartesianGrid(Grid):
 		Grid
 			Itself to allow for chaining these transformations.
 		'''
-		self.weights *= np.abs(scale)**self.ndim
+		self.weights *= np.prod(np.abs(scale))
 		self.coords *= scale
 		return self
 

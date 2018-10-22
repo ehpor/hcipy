@@ -133,28 +133,6 @@ def hexagonal_aperture(circum_diameter):
 	'''
 	return regular_polygon_aperture(6, circum_diameter)
 
-def segmented_aperture(subaperture_shape, subaperture_grid):
-	'''Make a aperture with many similar subapertures.
-
-	Parameters
-	----------
-	subaperture_shape : Field generator
-		The shape of each subaperture.
-	subaperture_grid : Grid
-		The center of each of the subapertures.
-
-	Returns
-	-------
-	Field generator
-		The segmented aperture.
-	'''
-	def func(grid):
-		ap = 0
-		for p in subaperture_grid.points:
-			ap += subaperture_shape(grid.shifted(-p))
-		return Field(ap, grid)
-	return func
-
 def make_spider(p1, p2, spider_width):
 	'''Make a rectangular obstruction from `p1` to `p2`.
 

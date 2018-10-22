@@ -5,6 +5,8 @@ import mpmath
 import scipy
 import matplotlib.pyplot as plt
 
+import pytest
+
 def zernike_variance_von_karman(n, m, R, k0, Cn_squared, wavelength):
 	'''Calculate the variance of the Zernike mode (`n`,`m`), using a von Karman turbulence spectrum.
 
@@ -49,7 +51,7 @@ def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propag
 	Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
 	layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, velocity)
 
-	num_iterations = 300
+	num_iterations = 1000
 	total_variance = []
 
 	for it in range(num_iterations):
@@ -87,7 +89,7 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
 	transformation_matrix = zernike_modes.transformation_matrix
 	projection_matrix = inverse_tikhonov(transformation_matrix, 1e-9)
 
-	num_iterations = 50
+	num_iterations = 150
 	mode_coeffs = []
 
 	for it in range(num_iterations):
@@ -118,32 +120,44 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
 	assert np.all(np.abs(variances_simulated / variances_theory - 1) < 1)
 
 def test_finite_atmosphere_total_variance():
-	# Check some selected parameter sets.
 	check_total_variance(0.5e-6, 1, 0.1, 10, False)
+
+@pytest.mark.slow
+def test_finite_atmosphere_total_variance_in_depth():
+	# Check some selected parameter sets.
 	check_total_variance(2e-6, 1, 0.1, 10, False)
 	check_total_variance(0.5e-6, 8, 0.1, 10, False)
 	check_total_variance(0.5e-6, 1, 0.3, 10, False)
 	check_total_variance(0.5e-6, 1, 0.1, 40, False)
 
 def test_infinite_atmosphere_total_variance():
-	# Check some selected parameter sets.
 	check_total_variance(0.5e-6, 1, 0.1, 10, True)
+
+@pytest.mark.slow
+def test_infinite_atmosphere_total_variance_in_depth():
+	# Check some selected parameter sets.
 	check_total_variance(2e-6, 1, 0.1, 10, True)
 	check_total_variance(0.5e-6, 8, 0.1, 10, True)
 	check_total_variance(0.5e-6, 1, 0.3, 10, True)
 	check_total_variance(0.5e-6, 1, 0.1, 40, True)
 
 def test_finite_atmosphere_zernike_variances():
-	# Check some selected parameter sets.
 	check_zernike_variances(0.5e-6, 1, 0.1, 10, False)
+
+@pytest.mark.slow
+def test_finite_atmosphere_zernike_variances_in_depth():
+	# Check some selected parameter sets.
 	check_zernike_variances(2e-6, 1, 0.1, 10, False)
 	check_zernike_variances(0.5e-6, 8, 0.1, 10, False)
 	check_zernike_variances(0.5e-6, 1, 0.3, 10, False)
 	check_zernike_variances(0.5e-6, 1, 0.1, 40, False)
 
 def test_infinite_atmosphere_zernike_variances():
-	# Check some selected parameter sets.
 	check_zernike_variances(0.5e-6, 1, 0.1, 10, True)
+
+@pytest.mark.slow
+def test_infinite_atmosphere_zernike_variances_in_depth():
+	# Check some selected parameter sets.
 	check_zernike_variances(2e-6, 1, 0.1, 10, True)
 	check_zernike_variances(0.5e-6, 8, 0.1, 10, True)
 	check_zernike_variances(0.5e-6, 1, 0.3, 10, True)

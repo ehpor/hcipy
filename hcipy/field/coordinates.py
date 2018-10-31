@@ -173,7 +173,7 @@ class SeparatedCoords(CoordsBase):
 		s0 = (1,) * len(self)
 		j = len(self) - i - 1
 		output = self.separated_coords[i].reshape(s0[:j] + (-1,) + s0[j + 1:])
-		return np.broadcast_as(output, self.shape).ravel()
+		return np.broadcast_to(output, self.shape).ravel()
 
 	@property
 	def size(self):

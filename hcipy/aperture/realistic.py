@@ -64,7 +64,33 @@ def make_keck_aperture():
 	pass
 
 def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1):
-	# Based on FALCO IV
+	'''Make the LUVOIR A aperture.
+
+	This aperture changes frequently. This one is based on [1]_. Spiders and segment gaps 
+	can be included or excluded, and the transmission for each of the segments can also be changed.
+	
+	.. [1] Ruane et al. 2018 "Fast linearized coronagraph optimizer (FALCO) IV: coronagraph design 
+		survey for obstructed and segmented apertures." Space Telescopes and Instrumentation 2018: 
+		Optical, Infrared, and Millimeter Wave. Vol. 10698. International Society for Optics and Photonics, 2018.
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 15.0 meters.
+	with_spiders : boolean
+		Include the secondary mirror support structure in the aperture.
+	with_segment_gaps : boolean
+		Include the gaps between individual segments in the aperture.
+	segment_transmissions : scalar or array_like
+		The transmission for each of the segments. If this is a scalar, this transmission will
+		be used for all segments.
+	
+	Returns
+	-------
+	Field generator
+		The LUVOIR A aperture.
+	'''
 	pupil_diameter = 15.0 # m
 	segment_circum_diameter = 2 / np.sqrt(3) * pupil_diameter / 12
 	num_rings = 6

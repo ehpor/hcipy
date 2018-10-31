@@ -1,7 +1,7 @@
 __all__ = ['make_power_law_error', 'SurfaceAberration', 'SurfaceAberrationAtDistance']
 __all__ += ['Apodizer', 'PhaseApodizer', 'ThinLens', 'SurfaceApodizer', 'ComplexSurfaceApodizer', 'MultiplexedComplexSurfaceApodizer']
 __all__ += ['DynamicOpticalSystem']
-__all__ += ['DeformableMirror']
+__all__ += ['make_xinetics_influence_functions', 'DeformableMirror']
 __all__ += ['Detector', 'NoiselessDetector', 'NoisyDetector']
 __all__ += ['SingleModeFiber', 'fiber_mode_gaussian', 'SingleModeFiberArray']
 __all__ += ['GaussianBeam']

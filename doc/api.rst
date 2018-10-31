@@ -41,6 +41,11 @@ Optical systems
 	:undoc-members:
 	:show-inheritance:
 
+.. automodule:: hcipy.aperture
+	:members:
+	:undoc-members:
+	:show-inheritance:
+
 Adaptive optics
 ---------------
 
@@ -102,14 +107,6 @@ Metrics
 ~~~~~~~
 
 .. automodule:: hcipy.metrics
-	:members:
-	:undoc-members:
-	:show-inheritance:
-
-Multiprocessing
-~~~~~~~~~~~~~~~
-
-.. automodule:: hcipy.multiprocessing
 	:members:
 	:undoc-members:
 	:show-inheritance:

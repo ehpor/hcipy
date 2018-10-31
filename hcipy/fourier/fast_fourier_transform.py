@@ -67,9 +67,9 @@ class FastFourierTransform(FourierTransform):
 		from ..field import Field
 		
 		f = np.zeros(self.internal_shape, dtype='complex')
-		f[self.cutout_input] = (field.ravel() * self.weights * self.shift_output).reshape(self.shape_in)
+		f[tuple(self.cutout_input)] = (field.ravel() * self.weights * self.shift_output).reshape(self.shape_in)
 		res = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(f)))
-		res = res[self.cutout_output].ravel() * self.shift_input
+		res = res[tuple(self.cutout_output)].ravel() * self.shift_input
 		
 		return Field(res, self.output_grid)
 	
@@ -78,8 +78,8 @@ class FastFourierTransform(FourierTransform):
 		from ..field import Field
 
 		f = np.zeros(self.internal_shape, dtype='complex')
-		f[self.cutout_output] = (field.ravel() / self.shift_input).reshape(self.shape_out)
+		f[tuple(self.cutout_output)] = (field.ravel() / self.shift_input).reshape(self.shape_out)
 		res = np.fft.fftshift(np.fft.ifftn(np.fft.ifftshift(f)))
-		res = res[self.cutout_input].ravel() / self.weights / self.shift_output
+		res = res[tuple(self.cutout_input)].ravel() / self.weights / self.shift_output
 		
 		return Field(res, self.input_grid)

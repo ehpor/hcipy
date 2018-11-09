@@ -26,7 +26,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 		self.layer.evolve_until(t)
 
 		coeffs = self.transformation_matrix_inverse.dot(self.layer.phase_for(1))
-		if len(self.corrected_coeffs) >= self.lag:
+		if len(self.corrected_coeffs) > self.lag:
 			self.corrected_coeffs.pop(0)
 		self.corrected_coeffs.append(coeffs)
 	

@@ -10,9 +10,10 @@ def check_energy_conservation(shift_input, scale, shift_output, q, fov, dims):
 
 	fft = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output)
 	mft = MatrixFourierTransform(grid, fft.output_grid)
-	nft = NaiveFourierTransform(grid, fft.output_grid)
+	nft = NaiveFourierTransform(grid, fft.output_grid, True)
+	nft2 = NaiveFourierTransform(grid, fft.output_grid, False)
 
-	fourier_transforms = [fft, mft, nft]
+	fourier_transforms = [fft, mft, nft, nft2]
 
 	energy_ratios = []
 	patterns_match = []

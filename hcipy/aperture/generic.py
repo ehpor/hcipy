@@ -62,7 +62,7 @@ def rectangular_aperture(size, center=None):
 	
 	return func
 
-def regular_polygon_aperture(num_sides, circum_diameter):
+def regular_polygon_aperture(num_sides, circum_diameter, angle=0):
 	'''Makes a Field generator for a regular-polygon-shaped aperture.
 
 	Parameters
@@ -87,9 +87,9 @@ def regular_polygon_aperture(num_sides, circum_diameter):
 
 	# Make use of symmetry
 	if num_sides % 2 == 0:
-		thetas = np.arange(int(num_sides / 2), dtype='float') * np.pi / int(num_sides / 2)
+		thetas = np.arange(int(num_sides / 2), dtype='float') * np.pi / int(num_sides / 2) + angle
 	else:
-		thetas = np.arange(int(num_sides / 2) + 1) * (num_sides - 2) * np.pi / (num_sides / 2)
+		thetas = np.arange(int(num_sides / 2) + 1) * (num_sides - 2) * np.pi / (num_sides / 2) + angle
 
 	mask = rectangular_aperture(circum_diameter*4)
 
@@ -118,7 +118,7 @@ def regular_polygon_aperture(num_sides, circum_diameter):
 	return func
 
 # Convenience function
-def hexagonal_aperture(circum_diameter):
+def hexagonal_aperture(circum_diameter, angle=0):
 	'''Makes a Field generator for a hexagon aperture.
 
 	Parameters
@@ -131,7 +131,7 @@ def hexagonal_aperture(circum_diameter):
 	Field generator
 		This function can be evaluated on a grid to get a Field.
 	'''
-	return regular_polygon_aperture(6, circum_diameter)
+	return regular_polygon_aperture(6, circum_diameter, angle)
 
 def make_spider(p1, p2, spider_width):
 	'''Make a rectangular obstruction from `p1` to `p2`.

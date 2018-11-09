@@ -134,13 +134,13 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 
 	num_rows, num_cols = field.grid.shape
 	def format_coord(x, y):
-		col = int((x - min_x) / (max_x - min_x) * (num_cols - 1))
-		row = int((y - min_y) / (max_y - min_y) * (num_rows - 1))
+		col = int(np.round((x - min_x) / (max_x - min_x) * (num_cols - 1)))
+		row = int(np.round((y - min_y) / (max_y - min_y) * (num_rows - 1)))
 
 		if col >= 0 and col < num_cols and row >= 0 and row < num_rows:
 			z = field.shaped[row, col]
 			if np.iscomplexobj(z):
-				return 'x=%0.3g, y=%0.3g, z=%0.3g + 1j * %0.3g' % (x, y, z.real, z.imag)
+				return 'x=%0.3g, y=%0.3g, z=%0.3g + 1j * %0.3g = %0.3g * exp(1j * %0.2f)' % (x, y, z.real, z.imag, np.abs(z), np.angle(z))
 			else:
 				return 'x=%0.3g, y=%0.3g, z=%0.3g' % (x, y, z)
 		return 'x=%0.3g, y=%0.3g' % (x, y)

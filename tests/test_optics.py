@@ -36,7 +36,7 @@ def test_statistics_noisy_detector():
                 # The std that we expect given the input.
                 expected_std = np.sqrt(test_wavefront[0] * t + rn**2 + dc * t)
 
-                assert np.isclose(expected_std, std_measurement, rtol=1e-02, atol=1e-05)z
+                assert np.isclose(expected_std, std_measurement, rtol=1e-02, atol=1e-05)
 
     #Now we test the flat field separately.
     

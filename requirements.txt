@@ -5,3 +5,4 @@ Pillow
 progressbar2
 pyyaml
 mpmath
+astropy

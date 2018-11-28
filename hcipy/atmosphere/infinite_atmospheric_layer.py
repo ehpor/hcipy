@@ -107,7 +107,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		BBt = cov_xx - self.A_vertical.dot(cov_zx)
 
 		U, S, Vt = np.linalg.svd(BBt)
-		L = np.sqrt(S[:self.input_grid.dims[1]])
+		L = np.sqrt(S[:self.input_grid.dims[0]])
 
 		self.B_vertical = U * L
 		
@@ -126,7 +126,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		BBt = cov_xx - self.A_horizontal.dot(cov_zx)
 
 		U, S, Vt = np.linalg.svd(BBt)
-		L = np.sqrt(S[:self.input_grid.dims[0]])
+		L = np.sqrt(S[:self.input_grid.dims[1]])
 
 		self.B_horizontal = U * L
 

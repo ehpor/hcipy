@@ -1,5 +1,6 @@
 import numpy as np
-from .optical_element import OpticalElement
+from .optical_element import OpticalElement, make_polychromatic
+from .wavefront import Wavefront
 from ..field import Field
 
 class MonochromaticMagnifier(OpticalElement):

@@ -37,11 +37,11 @@ def make_propagator(monochromatic_propagator):
 		def __call__(self, wavefront):
 			return self.forward(wavefront)
 		
-		def forward(self, wavefront):
-			return self.get_monochromatic_propagator(wavefront.wavelength).forward(wavefront)
+		def forward(self, wavefront, *args, **kwargs):
+			return self.get_monochromatic_propagator(wavefront.wavelength).forward(wavefront, *args, **kwargs)
 		
-		def backward(self, wavefront):
-			return self.get_monochromatic_propagator(wavefront.wavelength).backward(wavefront)
+		def backward(self, wavefront, *args, **kwargs):
+			return self.get_monochromatic_propagator(wavefront.wavelength).backward(wavefront, *args, **kwargs)
 		
 		def get_transformation_matrix_forward(self, wavelength=1):
 			return self.get_monochromatic_propagator(wavelength).get_transformation_matrix_forward()

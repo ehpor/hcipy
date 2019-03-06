@@ -71,6 +71,117 @@ def field_svd(f, full_matrices=True, compute_uv=True):
 	else:
 		return S
 
+def field_conjugate_transpose(a):
+	'''Performs the conjugate transpose of a rank 2 tensor field.
+
+	Parameters
+	----------
+	a : Field
+		The field to conjugate transpose
+
+	Returns
+	-------
+	Field
+		The conjugate transposed field
+	'''
+	
+	if a.tensor_order != 2:
+		raise ValueError('Need a tensor field of rank 2.')
+
+	return Field(np.swapaxes(a.conj(),0,1), a.grid)
+
+def field_transpose(a):
+	'''Performs the transpose of a rank 2 tensor field.
+
+	Parameters
+	----------
+	a : Field
+		The field to transpose
+
+	Returns
+	-------
+	Field
+		The transposed field
+	'''
+	if a.tensor_order != 2:
+		raise ValueError('Need a tensor field of rank 2.')
+
+	return Field(np.swapaxes(a,0,1), a.grid)
+
+def field_determinant(a):
+	'''Calculates the determinant of a tensor field.
+
+	Parameters
+	----------
+	a : Field
+		The field for which the determinant needs to be calculated
+
+	Returns
+	-------
+	Field
+		The field that contains the determinant on every spatial position
+	'''
+	if a.tensor_order == 1:
+		raise ValueError('Only tensor fields of order 2 or higher have a determinant.')
+		
+	if a.tensor_order > 2:
+		raise NotImplementedError()
+		
+	if not np.all(a.tensor_shape == a.tensor_shape[0]):
+		raise ValueError('Need square matrix for determinant.')
+	
+	#First we need to swap the axes in order to use np.linalg.det
+	Temp = np.swapaxes(a, 0, 2)
+
+	return Field(np.linalg.det(Temp), a.grid)
+
+def field_adjoint(a):
+	'''Calculates the adjoint of a tensor field.
+
+	Parameters
+	----------
+	a : Field
+		The field for which the adjoint needs to be calculated
+
+	Returns
+	-------
+	Field
+		The adjointed field
+	'''
+	if a.tensor_order != 2:
+		raise ValueError('Only tensor fields of order 2 can be inverted.')
+	
+	#Calculating the determinant.
+	determinant = field_determinant(a)    
+	
+	if np.any(np.isclose(determinant, 0)):
+		raise ValueError('Matrix is non-invertible due to zero determinant.')
+
+	return Field(determinant[np.newaxis,np.newaxis,:] * field_inv(a), a.grid)
+
+def field_cross(a, b):
+	'''Calculates the cross product of two vector fields.
+
+	Parameters
+	----------
+	a : Field
+		The first field of the cross product
+	b : Field
+		The second field of the cross product
+
+	Returns
+	-------
+	Field
+		The cross product field
+	'''
+	if a.tensor_order != 1 or b.tensor_order != 1:
+		raise ValueError('Only tensor fields of order 1 can have a cross product.')
+
+	if a.shape[0] != 3 or b.shape[0] != 3:
+		raise ValueError('Vector needs to be of length 3 for cross product.')
+
+	return Field(np.cross(a, b, axis = 0), a.grid)
+
 def make_field_operation(op):
 	pass
 '''

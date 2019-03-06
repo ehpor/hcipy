@@ -45,3 +45,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 	@outer_scale.setter
 	def L0(self, L0):
 		self.layer.L0 = L0
+	
+	def reset(self):
+		self.corrected_coeffs = []
+		self.layer.reset()

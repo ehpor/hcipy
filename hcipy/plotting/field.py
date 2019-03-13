@@ -13,11 +13,11 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	field : Field or ndarray
 		The field that we want to display. If this is an ndarray,
 		then the parameter `grid` needs to be supplied. If the field
-		is complex, then it will be automatically fed into :func:`complex_field_to_rgb'.
+		is complex, then it will be automatically fed into :func:`complex_field_to_rgb`.
 		If the field is a vector field with length 3 or 4, these will be 
 		interpreted as an RGB or RGBA field.
 	grid : Grid or None
-		If a grid is supplied, it will be used instead of the grid of `field.
+		If a grid is supplied, it will be used instead of the grid of `field`.
 	ax : matplotlib axes
 		The axes which to draw on. If it is not given, the current axes will be used.
 	vmin : scalar
@@ -30,10 +30,11 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		If 'auto', changes the image aspect ratio to match that of the axes.
 		If 'equal', changes the axes aspect ratio to match that of the image.
 	norm : Normalize
-		A Normalize instance is used to scale the input to the (0,1) range for
+		A Normalize instance is used to scale the input to the (0, 1) range for
 		input to the `cmap`. If it is not given, a linear scale will be used.
 	interpolation : string
-
+		The interpolation method used. The default is 'nearest'. Supported values
+		are {'nearest', 'bilinear'}.
 	non_linear_axes : boolean
 		If axes are scaled in a non-linear way, for example on a log plot, then imshow_field
 		needs to use a more expensive implementation. This parameter is to indicate that this
@@ -45,7 +46,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		If part of the image needs to be masked, this mask is overlayed on top of the image.
 		This is for example useful when plotting a phase pattern on a certain aperture, which
 		has no meaning outside of the aperture. Masks can be partially translucent, and will
-		be automatically scaled between (0,1). Zero means invisible, one means visible.
+		be automatically scaled between (0, 1). Zero means invisible, one means visible.
 	mask_color : Color
 		The color of the mask, if it is used.
 	

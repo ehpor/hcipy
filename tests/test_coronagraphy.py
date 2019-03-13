@@ -1,6 +1,5 @@
 from hcipy import *
 import numpy as np
-import matplotlib.pyplot as plt
 
 def test_vortex_coronagraph():
 	pupil_grid = make_pupil_grid(256)
@@ -69,3 +68,31 @@ def test_ravc():
 			transmission_theoretical = get_ravc_planet_transmission(co, charge)
 
 			assert abs(transmission - transmission_theoretical) < 0.01
+
+def test_perfect_coronagraph():
+	pupil_grid = make_pupil_grid(256)
+	aperture = circular_aperture(1)(pupil_grid)
+
+	tilts = np.logspace(-3, -1, 51)
+
+	for order in [2, 4, 6, 8]:
+		coro = PerfectCoronagraph(aperture, order)
+
+		# Test suppression for on-axis point source
+		wf = Wavefront(aperture)
+		wf.total_power = 1
+		assert coro(wf).total_power < 1e-10
+
+		# Test suppression off-axis
+		coronagraph_leakage = []
+		for tilt in tilts:
+			leakage = coro(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilt))).total_power
+			coronagraph_leakage.append(leakage)
+		
+		y = np.log10(coronagraph_leakage)
+		x = np.log10(tilts)
+		n = len(x)
+		
+		# Do a linear fit on the log-log data to get the power-law coefficient
+		beta = ((x * y).sum() - x.sum() * y.sum() / n) / ((x * x).sum() - x.sum()**2 / n)
+		assert np.abs(beta - order) / order < 1e-3

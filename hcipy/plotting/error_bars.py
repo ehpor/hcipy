@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib as mpl
 
 def errorfill(x, y, y_err_pos, y_err_neg=None, color=None, alpha_fill=0.25, ax=None, **kwargs):
 	"""

@@ -88,17 +88,17 @@ def make_polychromatic(evaluated_arguments=None, num_in_cache=50):
 				
 				return elem
 			
-			def forward(self, wavefront):
-				return self.get_instance(wavefront.electric_field.grid, wavefront.wavelength).forward(wavefront)
+			def forward(self, wavefront, *args, **kwargs):
+				return self.get_instance(wavefront.electric_field.grid, wavefront.wavelength).forward(wavefront, *args, **kwargs)
 			
-			def backward(self, wavefront):
-				return self.get_instance(wavefront.electric_field.grid, wavefront.wavelength).backward(wavefront)
+			def backward(self, wavefront, *args, **kwargs):
+				return self.get_instance(wavefront.electric_field.grid, wavefront.wavelength).backward(wavefront, *args, **kwargs)
 			
-			def get_transformation_matrix_forward(self, input_grid, wavelength):
-				return self.get_instance(input_grid, wavelength).get_transformation_matrix_forward(input_grid, wavelength)
+			def get_transformation_matrix_forward(self, input_grid, wavelength, *args, **kwargs):
+				return self.get_instance(input_grid, wavelength).get_transformation_matrix_forward(input_grid, wavelength, *args, **kwargs)
 			
-			def get_transformation_matrix_backward(self, input_grid, wavelength):
-				return self.get_instance(input_grid, wavelength).get_transformation_matrix_backward(input_grid, wavelength)
+			def get_transformation_matrix_backward(self, input_grid, wavelength, *args, **kwargs):
+				return self.get_instance(input_grid, wavelength).get_transformation_matrix_backward(input_grid, wavelength, *args, **kwargs)
 		
 		return PolychromaticOpticalElement
 	return decorator

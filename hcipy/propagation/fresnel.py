@@ -1,6 +1,6 @@
 import numpy as np
-from .propagator import MonochromaticPropagator, make_propagator
-from ..optics import Wavefront
+from .propagator import MonochromaticPropagator
+from ..optics import Wavefront, make_polychromatic
 from ..field import Field
 from ..fourier import FastFourierTransform
 
@@ -23,4 +23,4 @@ class FresnelPropagatorMonochromatic(object):
 		ft /= self.transfer_function
 		return Wavefront(self.fft.backward(ft), wavefront.wavelength)
 
-FresnelPropagator = make_propagator(FresnelPropagatorMonochromatic)
+FresnelPropagator = make_polychromatic()(FresnelPropagatorMonochromatic)

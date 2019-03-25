@@ -1,10 +1,11 @@
 import numpy as np
-from ..optics import OpticalElement, Wavefront
+from ..optics import OpticalElement, Wavefront, make_polychromatic
 
 class MonochromaticPropagator(OpticalElement):
 	def __init__(self, wavelength):
 		self.wavelength = wavelength
 
+'''
 def make_propagator(monochromatic_propagator):
 	class Propagator(OpticalElement):
 		def __init__(self, *args, **kwargs):
@@ -50,3 +51,5 @@ def make_propagator(monochromatic_propagator):
 			return self.get_monochromatic_propagator(wavelength).get_transformation_matrix_backward()
 
 	return Propagator
+
+'''

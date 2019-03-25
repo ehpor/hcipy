@@ -1,6 +1,6 @@
 import numpy as np
-from .propagator import MonochromaticPropagator, make_propagator
-from ..optics import Wavefront
+from .propagator import MonochromaticPropagator
+from ..optics import Wavefront, make_polychromatic
 from ..field import Field
 
 class FraunhoferPropagatorMonochromatic(MonochromaticPropagator):
@@ -37,4 +37,4 @@ class FraunhoferPropagatorMonochromatic(MonochromaticPropagator):
 		# Ignore input wavelength and just use the internal one.
 		return self.fourier_transform.get_transformation_matrix_backward() / self.norm_factor
 	
-FraunhoferPropagator = make_propagator(FraunhoferPropagatorMonochromatic)
+FraunhoferPropagator = make_polychromatic()(FraunhoferPropagatorMonochromatic)

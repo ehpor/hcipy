@@ -23,4 +23,4 @@ class FresnelPropagatorMonochromatic(object):
 		ft /= self.transfer_function
 		return Wavefront(self.fft.backward(ft), wavefront.wavelength)
 
-FresnelPropagator = make_polychromatic()(FresnelPropagatorMonochromatic)
+FresnelPropagator = make_polychromatic(["refractive_index"])(FresnelPropagatorMonochromatic)

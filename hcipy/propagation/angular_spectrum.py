@@ -9,13 +9,10 @@ from ..fourier import FastFourierTransform
 # Real domain impulse response function is:
 #
 class AngularSpectrumPropagatorMonochromatic(object):
-	def __init__(self, input_grid, distance, wavelength=1):
-		# Maintain symmetry in the fourier grid:
-		# shifts by half a pixel if the input grid has even dimensions.
-		shift = (1 - np.mod(input_grid.dims, 2)) * input_grid.delta / 2
-		self.fft = FastFourierTransform(input_grid, shift=shift)
+	def __init__(self, input_grid, distance, wavelength=1, refractive_index=1):
+		self.fft = FastFourierTransform(input_grid)
 		
-		k = 2*np.pi / wavelength
+		k = 2*np.pi / wavelength * refractive_index
 		k_squared = self.fft.output_grid.as_('polar').r**2
 		k_z = np.sqrt(k**2 - k_squared + 0j)
 		self.transfer_function = np.exp(1j * k_z * distance)
@@ -30,4 +27,4 @@ class AngularSpectrumPropagatorMonochromatic(object):
 		ft /= self.transfer_function
 		return Wavefront(self.fft.backward(ft), wavefront.wavelength)
 
-AngularSpectrumPropagator = make_polychromatic()(AngularSpectrumPropagatorMonochromatic)
+AngularSpectrumPropagator = make_polychromatic(["refractive_index"])(AngularSpectrumPropagatorMonochromatic)

@@ -69,3 +69,27 @@ def test_ravc():
 			transmission_theoretical = get_ravc_planet_transmission(co, charge)
 
 			assert abs(transmission - transmission_theoretical) < 0.01
+
+def test_app_keller():
+	pupil_grid = make_pupil_grid(256)
+	focal_grid = make_focal_grid(pupil_grid, 4, 32)
+	propagator = FraunhoferPropagator(pupil_grid, focal_grid)
+
+	aperture = evaluate_supersampled(circular_aperture(1), pupil_grid, 8)
+	wavefront = Wavefront(aperture)
+	wavefront.total_power = 1
+
+	# reference PSF without APP
+	img_ref = propagator.forward(wavefront)
+
+	# small rectangular dark zone with 1e-7 contrast
+	mask = rectangular_aperture(size=(6,2), center=(9,0))(focal_grid)
+	contrast = 1 - mask + 1e-7
+
+	# APP with aggressive acceleration
+	app = generate_app_keller(wavefront, propagator, contrast,
+		num_iterations = 150, beta = 0.98)
+	img = propagator.forward(app)
+
+	assert img.intensity.max() / img_ref.intensity.max() > 0.92 # Strehl
+	assert np.mean(img.intensity * mask) / np.mean(mask) < 1.5e-8 # contrast

@@ -143,5 +143,115 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 		return Field(res, grid)
 	return func
 
+def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1):
+	'''Make the HiCAT pupil mask.
+
+	This function is a WIP. It should NOT be used for actual designs. Current pupil should be taken as 
+	representative only.
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 15.0 meters.
+	with_spiders : boolean
+		Include the secondary mirror support structure in the aperture.
+	with_segment_gaps : boolean
+		Include the gaps between individual segments in the aperture.
+	segment_transmissions : scalar or array_like
+		The transmission for each of the segments. If this is a scalar, this transmission will
+		be used for all segments.
+	
+	Returns
+	-------
+	Field generator
+		The HiCAT aperture.
+	'''
+	pupil_diameter = 0.019725 # m
+	segment_circum_diameter = 2 / np.sqrt(3) * pupil_diameter / 7
+	num_rings = 3
+	segment_gap = 90e-6
+	spider_width = 350e-6
+
+	if not with_segment_gaps:
+		segment_gap = 0
+
+	if normalized:
+		segment_circum_diameter /= pupil_diameter
+		segment_gap /= pupil_diameter
+		spider_width /= pupil_diameter
+		pupil_diameter = 1.0
+
+	segment_positions = make_hexagonal_grid(segment_circum_diameter / 2 * np.sqrt(3), num_rings)
+	segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
+
+	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap)
+	def segment(grid):
+		return hexagon(grid.rotated(np.pi/2))
+
+	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions)
+
+	if with_spiders:
+		spider1 = make_spider_infinite([0, 0], 60, spider_width)
+		spider2 = make_spider_infinite([0, 0], 120, spider_width)
+		spider3 = make_spider_infinite([0, 0], 240, spider_width)
+		spider4 = make_spider_infinite([0, 0], 300, spider_width)
+
+	def func(grid):
+		res = segmented_aperture(grid)
+
+		if with_spiders:
+			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
+		
+		return Field(res, grid)
+	return func
+
+def make_hicat_lyot_stop(normalized=False, with_spiders=True):
+	'''Make the HiCAT Lyot stop.
+
+	This function is a WIP. It should NOT be used for actual designs. Current Lyot stop should be taken as 
+	representative only.
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 15.0 meters.
+	with_spiders : boolean
+		Include the secondary mirror support structure in the aperture.
+	
+	Returns
+	-------
+	Field generator
+		The HiCAT Lyot stop.
+	'''
+	pupil_diameter = 19.9e-3
+	lyot_outer = 15.9e-3
+	lyot_inner = 6.8e-3
+	spider_width = 700e-6
+
+	if normalized:
+		lyot_inner /= pupil_diameter
+		lyot_outer /= pupil_diameter
+		spider_width /= pupil_diameter
+
+	aperture = circular_aperture(lyot_outer)
+	obscuration = circular_aperture(lyot_inner)
+
+	if with_spiders:
+		spider1 = make_spider_infinite([0, 0], 60, spider_width)
+		spider2 = make_spider_infinite([0, 0], 120, spider_width)
+		spider3 = make_spider_infinite([0, 0], 240, spider_width)
+		spider4 = make_spider_infinite([0, 0], 300, spider_width)
+	
+	def func(grid):
+		res = aperture(grid) - obscuration(grid)
+
+		if with_spiders:
+			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
+		
+		return Field(res, grid)
+	return func
+
 def make_elt_aperture():
 	pass

@@ -64,14 +64,13 @@ def make_keck_aperture():
 	pass
 
 def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1):
-	'''Make the LUVOIR A aperture.
+	'''Make the LUVOIR A aperture and Lyot Stop.
 
-	This aperture changes frequently. This one is based on [1]_. Spiders and segment gaps 
-	can be included or excluded, and the transmission for each of the segments can also be changed.
-	
-	.. [1] Ruane et al. 2018 "Fast linearized coronagraph optimizer (FALCO) IV: coronagraph design 
-		survey for obstructed and segmented apertures." Space Telescopes and Instrumentation 2018: 
-		Optical, Infrared, and Millimeter Wave. Vol. 10698. International Society for Optics and Photonics, 2018.
+	This aperture changes frequently. This one is based on LUVOIR Apertures slide deck 
+	by Matt Bolcar. LUVOIR lead engineer. From SCDA meeting of 30 October 2017, Aperture 5
+	- however in subsequent design rounds the support struts were straightened. Spiders and 
+	segment gaps can be included or excluded, and the transmission for each of the 
+	segments can also be changed.
 
 	Parameters
 	----------
@@ -91,12 +90,16 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 	Field generator
 		The LUVOIR A aperture.
 	'''
-	pupil_diameter = 15.0 # m
-	segment_circum_diameter = 2 / np.sqrt(3) * pupil_diameter / 12
-	num_rings = 6
-	segment_gap = 0.001 * pupil_diameter
-	spider_width = 0.005 * pupil_diameter
-	spider_relative_offset = 0.9 # as estimated from the paper, not an actual value
+	pupil_diameter =  15.2 #m actual circumscribed diameter, used for lam/D calculations
+	actual_segment_flat_diameter = 1.242 #actual segment flat-to-flat diameter
+	gap_padding = 2
+	actual_segment_gap = 0.006 #m actual gapsize
+	segment_gap =  actual_segment_gap * gap_padding #padding out the segmentation gaps so they are visible and not sub-pixel
+	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
+	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter #segment circumscribed diameter 
+	num_rings = 6 #number of full rings of hexagons around central segment
+	
+	spider_width = 0.150 #m actual strut size
 
 	if not with_segment_gaps:
 		segment_gap = 0
@@ -107,38 +110,26 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 		spider_width /= pupil_diameter
 		pupil_diameter = 1.0
 
-	segment_positions = make_hexagonal_grid(segment_circum_diameter / 2 * np.sqrt(3), num_rings)
-	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.98))
+	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
+	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.98)) #corner clipping
 	segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
 
-	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap)
+	hexagon = hexagonal_aperture(segment_circum_diameter)
 	def segment(grid):
 		return hexagon(grid.rotated(np.pi/2))
 	
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 90, spider_width)
-
-		p1 = np.array([-segment_circum_diameter * 0.5 * spider_relative_offset, 0])
-		p2 = np.array([p1[0], -np.sqrt(3) * segment_circum_diameter + (segment_circum_diameter * 0.5 * (1 - spider_relative_offset)) * np.sqrt(3)])
-		spider2 = make_spider(p1, p2, spider_width)
-
-		p3 = p2 - np.array([pupil_diameter / 2, pupil_diameter * np.sqrt(3) / 2])
-		spider3 = make_spider(p2, p3, spider_width)
-
-		p4 = p1 * np.array([-1, 1])
-		p5 = p2 * np.array([-1, 1])
-		p6 = p3 * np.array([-1, 1])
-
-		spider4 = make_spider(p4, p5, spider_width)
-		spider5 = make_spider(p5, p6, spider_width)
-	
+        spider2 = make_spider_infinite([0, 0], 255, spider_width)
+        spider3 = make_spider_infinite([0, 0], 285, spider_width)
+		
 	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions)
 
 	def func(grid):
 		res = segmented_aperture(grid)
 		
 		if with_spiders:
-			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider5(grid)
+			res *= spider1(grid) * spider2(grid) * spider3(grid)
 
 		return Field(res, grid)
 	return func

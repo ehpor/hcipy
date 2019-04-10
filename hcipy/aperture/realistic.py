@@ -21,7 +21,7 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 		diameter of the pupil will be 6.5 meters.
 	with_spiders: boolean
 		If this is False, the spiders will be left out.
-	
+
 	Returns
 	-------
 	Field generator
@@ -30,7 +30,7 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 	pupil_diameter = 6.5 #m
 	spider_width1 = 0.75 * 0.0254 #m
 	spider_width2 = 1.5 * 0.0254 #m
-	central_obscuration_ratio = 0.29 
+	central_obscuration_ratio = 0.29
 	spider_offset = [0,0.34] #m
 
 	if normalized:
@@ -63,13 +63,13 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 def make_keck_aperture():
 	pass
 
-def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1):
+def make_luvoir_a_aperture(normalized=True, with_spiders=True, with_segment_gaps=True, segment_transmissions=1):
 	'''Make the LUVOIR A aperture and Lyot Stop.
 
-	This aperture changes frequently. This one is based on LUVOIR Apertures slide deck 
+	This aperture changes frequently. This one is based on LUVOIR Apertures slide deck
 	by Matt Bolcar. LUVOIR lead engineer. From SCDA meeting of 30 October 2017, Aperture 5
-	- however in subsequent design rounds the support struts were straightened. Spiders and 
-	segment gaps can be included or excluded, and the transmission for each of the 
+	- however in subsequent design rounds the support struts were straightened. Spiders and
+	segment gaps can be included or excluded, and the transmission for each of the
 	segments can also be changed.
 
 	Parameters
@@ -84,21 +84,25 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 	segment_transmissions : scalar or array_like
 		The transmission for each of the segments. If this is a scalar, this transmission will
 		be used for all segments.
-	
+
 	Returns
 	-------
 	Field generator
 		The LUVOIR A aperture.
 	'''
+
 	pupil_diameter =  15.2 #m actual circumscribed diameter, used for lam/D calculations
 	actual_segment_flat_diameter = 1.242 #actual segment flat-to-flat diameter
-	gap_padding = 2
+
 	actual_segment_gap = 0.006 #m actual gapsize
+	gap_padding = 5 #arbitratry padding of gap size to represent gaps on smaller arrays - effectively makes the gaps larger
+	# and the segments smaller to preserve the same segment pitch
+
 	segment_gap =  actual_segment_gap * gap_padding #padding out the segmentation gaps so they are visible and not sub-pixel
 	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
-	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter #segment circumscribed diameter 
+	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter #segment circumscribed diameter
 	num_rings = 6 #number of full rings of hexagons around central segment
-	
+
 	spider_width = 0.150 #m actual strut size
 
 	if not with_segment_gaps:
@@ -106,7 +110,8 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 
 	if normalized:
 		segment_circum_diameter /= pupil_diameter
-		segment_gap /= pupil_diameter
+		actual_segment_flat_diameter /= pupil_diameter
+		actual_segment_gap /= pupil_diameter
 		spider_width /= pupil_diameter
 		pupil_diameter = 1.0
 
@@ -117,17 +122,17 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 	hexagon = hexagonal_aperture(segment_circum_diameter)
 	def segment(grid):
 		return hexagon(grid.rotated(np.pi/2))
-	
+
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 90, spider_width)
-        spider2 = make_spider_infinite([0, 0], 255, spider_width)
-        spider3 = make_spider_infinite([0, 0], 285, spider_width)
-		
+		spider2 = make_spider_infinite([0, 0], 255, spider_width)
+		spider3 = make_spider_infinite([0, 0], 285, spider_width)
+
 	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions)
 
 	def func(grid):
 		res = segmented_aperture(grid)
-		
+
 		if with_spiders:
 			res *= spider1(grid) * spider2(grid) * spider3(grid)
 
@@ -137,7 +142,7 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1):
 	'''Make the HiCAT pupil mask.
 
-	This function is a WIP. It should NOT be used for actual designs. Current pupil should be taken as 
+	This function is a WIP. It should NOT be used for actual designs. Current pupil should be taken as
 	representative only.
 
 	Parameters
@@ -152,7 +157,7 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 	segment_transmissions : scalar or array_like
 		The transmission for each of the segments. If this is a scalar, this transmission will
 		be used for all segments.
-	
+
 	Returns
 	-------
 	Field generator
@@ -193,14 +198,14 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 
 		if with_spiders:
 			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
-		
+
 		return Field(res, grid)
 	return func
 
 def make_hicat_lyot_stop(normalized=False, with_spiders=True):
 	'''Make the HiCAT Lyot stop.
 
-	This function is a WIP. It should NOT be used for actual designs. Current Lyot stop should be taken as 
+	This function is a WIP. It should NOT be used for actual designs. Current Lyot stop should be taken as
 	representative only.
 
 	Parameters
@@ -210,7 +215,7 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True):
 		diameter of the pupil will be 15.0 meters.
 	with_spiders : boolean
 		Include the secondary mirror support structure in the aperture.
-	
+
 	Returns
 	-------
 	Field generator
@@ -234,13 +239,13 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True):
 		spider2 = make_spider_infinite([0, 0], 120, spider_width)
 		spider3 = make_spider_infinite([0, 0], 240, spider_width)
 		spider4 = make_spider_infinite([0, 0], 300, spider_width)
-	
+
 	def func(grid):
 		res = aperture(grid) - obscuration(grid)
 
 		if with_spiders:
 			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
-		
+
 		return Field(res, grid)
 	return func
 

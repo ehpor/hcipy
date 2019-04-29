@@ -1,0 +1,35 @@
+light_source = LaserSpectrum(wavelength)
+light_source.num_photons_per_second = 1e9 # photons / sec
+
+star = StarSpectrum(spectral_type)
+star.set_magnitude(mag, band='V')
+
+tophat = TopHatSpectrum(center_wavelength, relative_spectral_bandwidth)
+light_source.num_photons_per_second = 1e9
+
+def AnalyticSpectrum.approximate(num_samples, wavelength_min, wavelength_max)
+
+@property
+def Spectrum.is_analytic(self):
+	return self._is_analytic
+
+def Spectrum.get_specific_intensity(telescope_area, wavelengths=None):
+	# wavelengths must be given if spectrum is analytic
+	# if wavelengths is given for a non-analytic spectrum then raise error
+	# This function can still ignore wavelengths (for laser spectrum)
+	return ...
+
+SpectralFilter()	# Base class
+qe_curve = TabulatedSpectralFilter()	# Derived
+v_bandpass = SpectralBand('V')	# Derived
+v_bandpass = TopHatSpectralFilter(w0, dw)	# Derived
+spectral_band = qe_curve * v_bandpass * ...
+
+light_source = LightSource(spectrum, spectral_band, telescope_area)
+
+def LightSource::compute_cumulative_specific_intensity():
+	pass
+
+for wavelength, power in light_source.sample(num_samples): # power in photons / s
+	wf = Wavefront(aperture, wavelength)
+	wf.total_power = power

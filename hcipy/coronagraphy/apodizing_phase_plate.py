@@ -2,19 +2,20 @@ import numpy as np
 from ..propagation import FraunhoferPropagator
 from ..field import Field
 
-def generate_app_keller(wavefront, propagator, contrast, num_iterations,
-	beta = 0):
+def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0):
 	"""
 	Accelerated Gerchberg-Saxton-like algorithm for APP design by
-	Christoph Keller and based on Douglas-Rachford operator splitting.
-	The acceleration was inspired by the paper by Jim Fienup (1978,
-	Optics Letters 3, 27). The acceleration can provide speed-ups of up
-	to two orders of magnitude and produce better APPs.
+	Christoph Keller [1]_ and based on Douglas-Rachford operator splitting.
+	The acceleration was inspired by the paper by Jim Fienup [2_]. The 
+	acceleration can provide speed-ups of up to two orders of magnitude and 
+	produce better APPs.
 
-	Citation: Keller C.U., 2016, "Novel instrument concepts for
+	.. [1] Keller C.U., 2016, "Novel instrument concepts for
 		characterizing directly imaged exoplanets", Proc. SPIE 9908,
-		Ground-based and Airborne Instrumentation for Astronomy VI, 99089V;
+		Ground-based and Airborne Instrumentation for Astronomy VI, 99089V
 		doi: 10.1117/12.2232633; https://doi.org/10.1117/12.2232633
+	.. [2] J. R. Fienup, 1976, "Reconstruction of an object from the modulus 
+		of its Fourier transform," Opt. Lett. 3, 27-29
 
 	Parameters
 	----------
@@ -29,7 +30,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations,
 		contrast such as 1e-5.
 	num_iterations : int
 		The maximum number of iterations.
-	beta : float
+	beta : scalar
 		The acceleration parameter. The default is 0 (no acceleration).
 		Good values for beta are typically between 0.3 and 0.9. Values larger
 		than 1.0 will not work.
@@ -38,7 +39,14 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations,
 	-------
 	Wavefront
 		The APP as a wavefront.
+	
+	Raises
+	------
+	ValueError
+		If beta is not between 0 and 1.
 	"""
+	if beta < 0 or beta > 1:
+		raise ValueError('Beta should be between 0 and 1.')
 
 	# initialize APP with wavefront
 	app = wavefront.copy()
@@ -78,7 +86,6 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations,
 			app.amplitude[aperture] / app.amplitude[aperture])
 
 	return app
-
 
 def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterations=1):
 	'''Optimize a one-sided APP using a globally optimal algorithm. This algorithm does not

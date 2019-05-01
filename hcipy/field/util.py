@@ -64,12 +64,7 @@ def make_pupil_grid(dims, diameter=1):
 		A :class:`CartesianGrid` with :class:`RegularCoords`.
 	'''
 	diameter = (np.ones(2) * diameter).astype('float')
-	dims = (np.ones(2) * dims).astype('int')
-
-	delta = diameter / (dims - 1)
-	zero = -diameter / 2
-
-	return CartesianGrid(RegularCoords(delta, dims, zero))
+	return make_uniform_grid(dims, diameter)
 
 def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1):
 	from ..fourier import make_fft_grid
@@ -89,7 +84,7 @@ def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length
 	
 	return focal_grid
 
-def make_focal_grid_replacement(q, num_airy, spatial_resolution=1):
+def make_focal_grid_replacement(q, num_airy, spatial_resolution=None, pupil_diameter=None, focal_length=None, reference_wavelength=None):
 	'''Make a grid for a focal plane.
 
 	This grid will be a CartesianGrid with RegularCoords, and supports different resolutions, samplings,
@@ -101,6 +96,7 @@ def make_focal_grid_replacement(q, num_airy, spatial_resolution=1):
 
 	where :math:`\lambda` is the wavelength, :math:`f` is the effective focal length before the focal plane,
 	:math:`D` is the diameter of the pupil, and :math:`F` is the F-number of the incoming light beam.
+	Either the spatial resolution or a set of focal length, reference wavelength and pupil diameter must be given.
 
 	The grid will always contain the origin (0, 0) point.
 
@@ -114,13 +110,33 @@ def make_focal_grid_replacement(q, num_airy, spatial_resolution=1):
 		The spatial extent of the grid in radius in resolution elements (= lambda f / D).
 	spatial_resolution : scalar	or array_like
 		The physical size of a resolution element (= lambda f / D). Setting this to 1 will use normalized
-		coordinates for the focal grid. Otherwise, this is assumed to be in physical units.
+		coordinates for the focal grid. Otherwise, this is assumed to be in physical units. If it is not given,
+		the spatial resolution will be calculated from the given `focal_length`, `reference_wavelength` and
+		`pupil_diameter`.
+	pupil_diameter : scalar or array_like
+		The diameter of the pupil. If it is an array, this indicates the diameter in x and y.
+	focal_length : scalar
+		The focal length used for calculating the spatial resolution at the focal plane.
+	reference_wavelength : scalar
+		The reference wavelength used for calculating the spatial resolution at the focal plane.
 	
 	Returns
 	-------
 	Grid
 		A Grid describing the sampling for a focal plane.
+	
+	Raises
+	------
+	ValueError
+		If no spatial resolution or set of focal length, reference wavelength and pupil diameter is given.
 	'''
+	if spatial_resolution is None:
+		if pupil_diameter is None or focal_length is None or reference_wavelength is None:
+			raise ValueError('Either a spatial resolution or a set of focal length, reference wavelength and pupil diameter must be supplied.')
+		
+		pupil_diameter = np.ones(2) * pupil_diameter
+		spatial_resolution = reference_wavelength * focal_length / pupil_diameter
+
 	delta = spatial_resolution / q * np.ones(2)
 	dims = (2 * num_airy * q * np.ones(2)).astype('int')
 	zero = delta * (-dims / 2 + np.mod(dims, 2) * 0.5)

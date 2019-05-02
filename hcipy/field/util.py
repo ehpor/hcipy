@@ -96,7 +96,8 @@ def make_focal_grid_replacement(q, num_airy, spatial_resolution=None, pupil_diam
 
 	where :math:`\lambda` is the wavelength, :math:`f` is the effective focal length before the focal plane,
 	:math:`D` is the diameter of the pupil, and :math:`F` is the F-number of the incoming light beam.
-	Either the spatial resolution or a set of focal length, reference wavelength and pupil diameter must be given.
+	You can supply either the spatial resolution or a set of focal length, reference wavelength and pupil diameter.
+	If none are supplied, a spatial resolution of 1 will be assumed, meaning normalized units.
 
 	The grid will always contain the origin (0, 0) point.
 
@@ -109,10 +110,9 @@ def make_focal_grid_replacement(q, num_airy, spatial_resolution=None, pupil_diam
 	num_airy : scalar or array_like
 		The spatial extent of the grid in radius in resolution elements (= lambda f / D).
 	spatial_resolution : scalar	or array_like
-		The physical size of a resolution element (= lambda f / D). Setting this to 1 will use normalized
-		coordinates for the focal grid. Otherwise, this is assumed to be in physical units. If it is not given,
-		the spatial resolution will be calculated from the given `focal_length`, `reference_wavelength` and
-		`pupil_diameter`.
+		The physical size of a resolution element (= lambda f / D). It this is not given, 
+		the spatial resolution will be calculated from the given `focal_length`, 
+		`reference_wavelength` and `pupil_diameter`.
 	pupil_diameter : scalar or array_like
 		The diameter of the pupil. If it is an array, this indicates the diameter in x and y.
 	focal_length : scalar
@@ -128,14 +128,18 @@ def make_focal_grid_replacement(q, num_airy, spatial_resolution=None, pupil_diam
 	Raises
 	------
 	ValueError
-		If no spatial resolution or set of focal length, reference wavelength and pupil diameter is given.
+		If both no spatial resolution and no complete set of (focal length, reference wavelength and pupil diameter) was supplied.
 	'''
 	if spatial_resolution is None:
 		if pupil_diameter is None or focal_length is None or reference_wavelength is None:
-			raise ValueError('Either a spatial resolution or a set of focal length, reference wavelength and pupil diameter must be supplied.')
-		
-		pupil_diameter = np.ones(2) * pupil_diameter
-		spatial_resolution = reference_wavelength * focal_length / pupil_diameter
+			if not (pupil_diameter is None and focal_length is None and reference_wavelength is None):
+				# Only a few arguments in this set were supplied.
+				raise ValueError('Supply either a (pupil_diameter, focal_length, reference wavelength) or a spatial_resolution.')
+			
+			spatial_resolution = 1
+		else:
+			pupil_diameter = np.ones(2) * pupil_diameter
+			spatial_resolution = reference_wavelength * focal_length / pupil_diameter
 
 	delta = spatial_resolution / q * np.ones(2)
 	dims = (2 * num_airy * q * np.ones(2)).astype('int')

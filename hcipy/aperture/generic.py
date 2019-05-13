@@ -71,6 +71,8 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0):
 		The number of sides for the polygon.
 	circum_diameter : scalar
 		The circumdiameter of the polygon.
+	angle : scalar
+		The angle by which to turn the polygon.
 	
 	Returns
 	-------
@@ -125,6 +127,8 @@ def hexagonal_aperture(circum_diameter, angle=0):
 	----------
 	circum_diameter : scalar
 		The circumdiameter of the polygon.
+	angle : scalar
+		The angle by which to turn the hexagon.
 	
 	Returns
 	-------
@@ -273,6 +277,6 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 
 		for p, t in zip(segment_positions.points, segment_transmissions):
 			res[segment_shape(grid.shifted(-p)) > 0.5] = t
-		
+
 		return Field(res, grid)
 	return func

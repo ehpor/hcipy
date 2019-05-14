@@ -21,7 +21,7 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 		diameter of the pupil will be 6.5 meters.
 	with_spiders: boolean
 		If this is False, the spiders will be left out.
-
+	
 	Returns
 	-------
 	Field generator
@@ -30,7 +30,7 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 	pupil_diameter = 6.5 #m
 	spider_width1 = 0.75 * 0.0254 #m
 	spider_width2 = 1.5 * 0.0254 #m
-	central_obscuration_ratio = 0.29
+	central_obscuration_ratio = 0.29 
 	spider_offset = [0,0.34] #m
 
 	if normalized:
@@ -63,20 +63,18 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 def make_keck_aperture():
 	pass
 
-def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, with_segment_gaps=True, segment_transmissions=1, header = True):
-    
-	'''Make the LUVOIR A aperture and Lyot Stop.
+def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1):
+	'''Make the LUVOIR A aperture.
 
-	This aperture changes frequently. This one is based on LUVOIR Apertures dimensions 
-	from Matt Bolcar, LUVOIR lead engineer (as of 10 April 2019)
-	Spiders and segment gaps can be included or excluded, and the transmission for each 
-	of the segments can also be changed.
+	This aperture changes frequently. This one is based on [1]_. Spiders and segment gaps 
+	can be included or excluded, and the transmission for each of the segments can also be changed.
+	
+	.. [1] Ruane et al. 2018 "Fast linearized coronagraph optimizer (FALCO) IV: coronagraph design 
+		survey for obstructed and segmented apertures." Space Telescopes and Instrumentation 2018: 
+		Optical, Infrared, and Millimeter Wave. Vol. 10698. International Society for Optics and Photonics, 2018.
 
 	Parameters
 	----------
-	gap_padding: float
-		arbitratry padding of gap size to represent gaps on smaller arrays - effectively 
-		makes the gaps larger and the segments smaller to preserve the same segment pitch 
 	normalized : boolean
 		If this is True, the outer diameter will be scaled to 1. Otherwise, the
 		diameter of the pupil will be 15.0 meters.
@@ -85,127 +83,70 @@ def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, 
 	with_segment_gaps : boolean
 		Include the gaps between individual segments in the aperture.
 	segment_transmissions : scalar or array_like
-		The transmission for each of the segments. If this is a scalar, this transmission 
-		will be used for all segments.
+		The transmission for each of the segments. If this is a scalar, this transmission will
+		be used for all segments.
 	
 	Returns
 	-------
 	Field generator
 		The LUVOIR A aperture.
-	
-	aperture_header: dictionary
-		dictionary of keywords to build aperture fits header
 	'''
-	
-	pupil_diameter = 15.0 #m actual circumscribed diameter, used for lam/D calculations other measurements normalized by this diameter
-	pupil_inscribed = 13.5 #m actual inscribed diameter
-	actual_segment_flat_diameter = 1.2225 #m actual segment flat-to-flat diameter
-	actual_segment_gap=0.006 #m actual gap size between segments
-	spider_width=0.150 #m actual strut size
-	lower_spider_angle = 12.7 #deg angle at which lower spiders are offset from vertical
-	spid_start = 0.30657 #m spider starting point distance from center of aperture
-
-	segment_gap =  actual_segment_gap * gap_padding #padding out the segmentation gaps so they are visible and not sub-pixel
-	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
-	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter #segment circumscribed diameter
-	
-	num_rings = 6 #number of full rings of hexagons around central segment
-
-	lower_spider_angle = 12.7 #deg spiders are upside-down 'Y' shaped; degree the lower two spiders are offset from vertical by this amount
+	pupil_diameter = 15.0 # m
+	segment_circum_diameter = 2 / np.sqrt(3) * pupil_diameter / 12
+	num_rings = 6
+	segment_gap = 0.001 * pupil_diameter
+	spider_width = 0.005 * pupil_diameter
+	spider_relative_offset = 0.9 # as estimated from the paper, not an actual value
 
 	if not with_segment_gaps:
 		segment_gap = 0
 
-	aperture_header = {'TELESCOP':'LUVOIR A','D_CIRC': pupil_diameter, 'D_INSC':pupil_inscribed,\
-						'SEG_F2F_D':actual_segment_flat_diameter,'SEG_GAP':actual_segment_gap, \
-						'STRUT_W':spider_width,'STRUT_AN':lower_spider_angle,'NORM':normalized, \
-						'SEG_TRAN':segment_transmissions,'GAP_PAD':gap_padding, 'STRUT_ST':spid_start, \
-						'PROV':'MBolcar ppt 20180815'}
-	
 	if normalized:
 		segment_circum_diameter /= pupil_diameter
-		actual_segment_flat_diameter /= pupil_diameter
-		actual_segment_gap /= pupil_diameter
+		segment_gap /= pupil_diameter
 		spider_width /= pupil_diameter
-		spid_start /= pupil_diameter
 		pupil_diameter = 1.0
 
-	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
-	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.98)) #corner clipping
+	segment_positions = make_hexagonal_grid(segment_circum_diameter / 2 * np.sqrt(3), num_rings)
+	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.98))
 	segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
 
-	hexagon = hexagonal_aperture(segment_circum_diameter)
+	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap)
 	def segment(grid):
 		return hexagon(grid.rotated(np.pi/2))
 	
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 90, spider_width)
-		spider2 = make_spider_infinite([spid_start, 0], 270 - lower_spider_angle, spider_width)
-		spider3 = make_spider_infinite([-spid_start, 0], 270 + lower_spider_angle, spider_width)
 
+		p1 = np.array([-segment_circum_diameter * 0.5 * spider_relative_offset, 0])
+		p2 = np.array([p1[0], -np.sqrt(3) * segment_circum_diameter + (segment_circum_diameter * 0.5 * (1 - spider_relative_offset)) * np.sqrt(3)])
+		spider2 = make_spider(p1, p2, spider_width)
+
+		p3 = p2 - np.array([pupil_diameter / 2, pupil_diameter * np.sqrt(3) / 2])
+		spider3 = make_spider(p2, p3, spider_width)
+
+		p4 = p1 * np.array([-1, 1])
+		p5 = p2 * np.array([-1, 1])
+		p6 = p3 * np.array([-1, 1])
+
+		spider4 = make_spider(p4, p5, spider_width)
+		spider5 = make_spider(p5, p6, spider_width)
+	
 	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions)
 
 	def func(grid):
 		res = segmented_aperture(grid)
-
+		
 		if with_spiders:
-			res *= spider1(grid) * spider2(grid) * spider3(grid)
+			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider5(grid)
 
 		return Field(res, grid)
-	
-	blah = 1
-	
-	return func, aperture_header
-	
-
-def make_luvoir_a_lyot_stop(ls_id, ls_od, lyot_ref_diameter, spid_oversize=1, normalized=True, spiders=False, header = False):
-
-	pupil_diameter=15.0 #m actual circumscribed diameter, used for lam/D calculations other measurements normalized by this diameter
-
-	spider_width=0.150 #m actual strut size
-	lower_spider_angle = 12.7 #deg angle at which lower spiders are offset from vertical
-	spid_start = 0.30657 #m spider starting point offset from center of aperture
-
-
-	outer_D = lyot_ref_diameter*ls_od
-	inner_D = lyot_ref_diameter*ls_id
-	pad_spid_width = spider_width * spid_oversize
-
-	ls_header = {'LS_ID':ls_id, 'LS_OD':ls_od,'LS_REF_D':lyot_ref_diameter, 'NORM':normalized, 'STRUT_ST':spid_start}
-
-	if spiders:
-		ls_header['STRUT_W']  = spider_width
-		ls_header['STRUT_AN'] = lower_spider_angle
-		ls_header['STRUT_P']  = spid_oversize
-
-	if normalized:
-		outer_D /= pupil_diameter
-		inner_D /= pupil_diameter
-		pad_spid_width /= pupil_diameter
-		spid_start /= pupil_diameter
-
-	outer_diameter = circular_aperture(outer_D)
-	central_obscuration = circular_aperture(inner_D)
-
-	if spiders:
-		spider1 = make_spider_infinite([0, 0], 90, pad_spid_width)
-		spider2 = make_spider_infinite([spid_start,0], 270 - lower_spider_angle, pad_spid_width)
-		spider3 = make_spider_infinite([-spid_start,0], 270 + lower_spider_angle, pad_spid_width)
-
-	def aper(grid):
-		tmp_result = (outer_diameter(grid) - central_obscuration(grid)) 
-		if spiders:
-			tmp_result *= spider1(grid) * spider2(grid) * spider3(grid)
-		return tmp_result    
-	if header:
-		return aper, ls_header
-	
-	return aper
+	return func
 
 def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1):
 	'''Make the HiCAT pupil mask.
 
-	This function is a WIP. It should NOT be used for actual designs. Current pupil should be taken as
+	This function is a WIP. It should NOT be used for actual designs. Current pupil should be taken as 
 	representative only.
 
 	Parameters
@@ -220,7 +161,7 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 	segment_transmissions : scalar or array_like
 		The transmission for each of the segments. If this is a scalar, this transmission will
 		be used for all segments.
-
+	
 	Returns
 	-------
 	Field generator
@@ -261,14 +202,14 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 
 		if with_spiders:
 			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
-
+		
 		return Field(res, grid)
 	return func
 
-def make_hicat_lyot_stop(normalized=False, with_spiders=False):
+def make_hicat_lyot_stop(normalized=False, with_spiders=True):
 	'''Make the HiCAT Lyot stop.
 
-	This function is a WIP. It should NOT be used for actual designs. Current Lyot stop should be taken as
+	This function is a WIP. It should NOT be used for actual designs. Current Lyot stop should be taken as 
 	representative only.
 
 	Parameters
@@ -278,7 +219,7 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=False):
 		diameter of the pupil will be 15.0 meters.
 	with_spiders : boolean
 		Include the secondary mirror support structure in the aperture.
-
+	
 	Returns
 	-------
 	Field generator
@@ -302,13 +243,13 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=False):
 		spider2 = make_spider_infinite([0, 0], 120, spider_width)
 		spider3 = make_spider_infinite([0, 0], 240, spider_width)
 		spider4 = make_spider_infinite([0, 0], 300, spider_width)
-
+	
 	def func(grid):
 		res = aperture(grid) - obscuration(grid)
 
 		if with_spiders:
 			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
-
+		
 		return Field(res, grid)
 	return func
 

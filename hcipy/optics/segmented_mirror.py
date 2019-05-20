@@ -8,7 +8,6 @@ from ..field import Field, make_hexagonal_grid, make_pupil_grid, evaluate_supers
 from ..io import write_fits
 from ..plotting import imshow_field
 
-pupil_size = 1024
 PUP_DIAMETER = 15.   # m
 
 def get_atlast_aperture(normalized=False, with_segment_gaps=True, segment_transmissions=1, return_segment_positions=False):
@@ -178,7 +177,7 @@ class SegmentedMirror(OpticalElement):
 		self._seg_indices = dict()
 
 		pupil_grid = make_pupil_grid(dims=npix, diameter=PUP_DIAMETER)
-		aper_num, seg_positions = get_atlast_aperture(normalized=False, segment_transmissions=np.arange(1, self.segnum + 1), return_segment_positions=True)
+		aper_num = get_atlast_aperture(normalized=False, segment_transmissions=np.arange(1, self.segnum + 1))
 		aper_num = aper_num(pupil_grid)
 
 		self._seg_mask = np.copy(aper_num)

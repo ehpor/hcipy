@@ -115,9 +115,9 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.98))
 	segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
 
-	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap)
+	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap, np.pi / 2)
 	def segment(grid):
-		return hexagon(grid.rotated(np.pi/2))
+		return hexagon(grid)
 	
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 90, spider_width)
@@ -197,9 +197,9 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 	segment_positions = make_hexagonal_grid(segment_circum_diameter / 2 * np.sqrt(3), num_rings)
 	segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
 
-	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap)
+	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap, np.pi / 2)
 	def segment(grid):
-		return hexagon(grid.rotated(np.pi/2))
+		return hexagon(grid)
 
 	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions)
 

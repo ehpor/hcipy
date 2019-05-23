@@ -3,31 +3,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from .optical_element import OpticalElement
-from ..aperture import circular_aperture, hexagonal_aperture, make_segmented_aperture, make_hicat_aperture
-from ..field import Field, make_hexagonal_grid, make_pupil_grid
-from ..io import write_fits
+from ..field import Field
 from ..plotting import imshow_field
 
-PUP_DIAMETER = 0.019725   # m
 
 class SegmentedMirror(OpticalElement):
 	"""A segmented mirror from a segmented aperture.
 
 	Parameters:
 	----------
-	aperture : Field
-		The segmented aperture of the mirror.
+	indexed_aperture : Field
+		The *indexed* segmented aperture of the mirror, all pixels each segment being filled with its number for
+		segment identification. Segment gaps must be strictly zero.
 	seg_pos : CartesianGrid(UnstructuredCoords)
 		Segment positions of the aperture.
 	"""
 
-	def __init__(self, aperture, seg_pos):
-		self.aperture = aperture
+	def __init__(self, indexed_aperture, seg_pos):
+		self.ind_aper = indexed_aperture
 		self.segnum = len(seg_pos.x)
 		self.segmentlist = np.arange(1, self.segnum + 1)
 		self._coef = np.zeros((self.segnum, 3))
 		self.seg_pos = seg_pos
-		self.input_grid = aperture.grid
+		self.input_grid = indexed_aperture.grid
 		self._last_npix = np.nan  # see _setup_grids for this
 		self._surface = None
 
@@ -80,6 +78,13 @@ class SegmentedMirror(OpticalElement):
 		self._surface = None
 		return self._coef
 
+	def show_numbers(self):
+		""" Display the mirror pupil with numbered segments.
+		"""
+		imshow_field(self.ind_aper)
+		for i, par in enumerate(self.seg_pos):
+			plt.annotate(s=i+1, xy=par, xytext=par, color='white', fontweight='bold') #TODO: scale text size by segment size
+
 	def flatten(self):
 		""" Flatten the DM by setting all segment coefficients to zero."""
 		self._surface = None
@@ -105,7 +110,7 @@ class SegmentedMirror(OpticalElement):
 		This is relatively slow, but we only need to do this once for
 		each size of input grids.
 		"""
-		npix = self.aperture.shaped.shape[0]
+		npix = self.ind_aper.shaped.shape[0]
 		if npix == self._last_npix:
 			return
 		else:
@@ -113,32 +118,18 @@ class SegmentedMirror(OpticalElement):
 
 		x, y = self.input_grid.coords
 
-		self._seg_mask = np.zeros_like(x)
 		self._seg_x = np.zeros_like(x)
 		self._seg_y = np.zeros_like(y)
 		self._seg_indices = dict()
 
-		pupil_grid = make_pupil_grid(dims=npix, diameter=PUP_DIAMETER)
-		aper_num = make_hicat_aperture(normalized=False, with_spiders=False, segment_transmissions=np.arange(1, self.segnum + 1))
-		aper_num = aper_num(pupil_grid)
-
-		self._seg_mask = np.copy(aper_num)
-
 		for i in self.segmentlist:
-			wseg = np.where(self._seg_mask == i)
+			wseg = np.where(self.ind_aper == i)
 			self._seg_indices[i] = wseg
 
 			cenx, ceny = self.seg_pos.points[i - 1]
 
 			self._seg_x[wseg] = x[wseg] - cenx
 			self._seg_y[wseg] = y[wseg] - ceny
-
-			# Set gaps to zero
-			bad_gaps_x = np.where(
-				np.abs(self._seg_x) > 0.1 * PUP_DIAMETER)  # *PUP_DIAMETER generalizes it for any size pupil field
-			self._seg_x[bad_gaps_x] = 0
-			bad_gaps_y = np.where(np.abs(self._seg_y) > 0.1 * PUP_DIAMETER)
-			self._seg_y[bad_gaps_y] = 0
 
 	def apply_coef(self):
 		""" Apply the DM shape from its own segment coefficients to make segmented mirror surface.

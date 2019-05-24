@@ -63,7 +63,7 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 def make_keck_aperture():
 	pass
 
-def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, with_segment_gaps=True, segment_transmissions=1, header = True):
+def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, with_segment_gaps=True, segment_transmissions=1, header = True, return_segment_positions=False):
     
 	'''Make the LUVOIR A aperture and Lyot Stop.
 
@@ -87,6 +87,8 @@ def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, 
 	segment_transmissions : scalar or array_like
 		The transmission for each of the segments. If this is a scalar, this transmission 
 		will be used for all segments.
+	return_segment_positions : boolean
+		Will also return the segment positions as segment_position
 	
 	Returns
 	-------
@@ -154,7 +156,9 @@ def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, 
 		return Field(res, grid)
 	
 	blah = 1
-	
+
+	if return_segment_positions:
+		return func, aperture_header, segment_positions
 	return func, aperture_header
 	
 

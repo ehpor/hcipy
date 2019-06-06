@@ -68,6 +68,11 @@ class Grid(object):
 		'''
 		return self.coords.size
 	
+	def __len__(self):
+		'''The number of points in this grid.
+		'''
+		return self.size
+	
 	@property
 	def dims(self):
 		'''The number of elements in each dimension for a separated grid.
@@ -392,3 +397,78 @@ class Grid(object):
 		'''
 		rel_points = self.points - np.array(p) * np.ones(self.ndim)
 		return np.argmin(np.sum(rel_points**2, axis=-1))
+	
+	def zeros(self, tensor_shape=None, dtype=None):
+		'''Create a field of zeros from this `Grid`.
+
+		Parameters
+		----------
+		tensor_shape : array_like or None
+			The shape of the tensors in the to be created field. If this is None, 
+			a scalar field will be created.
+		dtype : data-type
+			The numpy data-type with which to create the field.
+		
+		Returns
+		-------
+		Field
+			A zeros field.
+		'''
+		from .field import Field
+
+		if tensor_shape is None:
+			shape = [self.size]
+		else:
+			shape = np.concatenate((self.size, tensor_shape))
+
+		return Field(np.zeros(shape, dtype), self)
+	
+	def ones(self, tensor_shape=None, dtype=None):
+		'''Create a field of ones from this `Grid`.
+
+		Parameters
+		----------
+		tensor_shape : array_like or None
+			The shape of the tensors in the to be created field. If this is None, 
+			a scalar field will be created.
+		dtype : data-type
+			The numpy data-type with which to create the field.
+		
+		Returns
+		-------
+		Field
+			A ones field.
+		'''
+		from .field import Field
+
+		if tensor_shape is None:
+			shape = [self.size]
+		else:
+			shape = np.concatenate((self.size, tensor_shape))
+
+		return Field(np.ones(shape, dtype=dtype), self)
+
+	def empty(self, tensor_shape=None, dtype=None):
+		'''Create an empty Field from this `Grid`.
+
+		Parameters
+		----------
+		tensor_shape : array_like or None
+			The shape of the tensors in the to be created field. If this is None, 
+			a scalar field will be created.
+		dtype : data-type
+			The numpy data-type with which to create the field.
+		
+		Returns
+		-------
+		Field
+			A empty field.
+		'''
+		from .field import Field
+
+		if tensor_shape is None:
+			shape = [self.size]
+		else:
+			shape = np.concatenate((self.size, tensor_shape))
+
+		return Field(np.empty(shape, dtype=dtype), self)

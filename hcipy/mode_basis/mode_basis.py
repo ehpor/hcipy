@@ -58,6 +58,53 @@ class ModeBasis(object):
 		'''
 		return not self.is_sparse
 	
+	def to_sparse(self, copy=False):
+		'''Convert the mode basis to a sparse mode basis.
+
+		Parameters
+		----------
+		copy : boolean
+			Whether to force a copy or not. A copy is always made if 
+			the current ModeBasis is not sparse.
+		
+		Returns
+		-------
+		ModeBasis
+			The sparsified ModeBasis.
+		'''
+		if self.is_sparse:
+			if copy:
+				return ModeBasis(self._transformation_matrix.copy(), self.grid)
+			else:
+				return self
+		else:
+			T = scipy.sparse.csc_matrix(self._transformation_matrix)
+			T.eliminate_zeros()
+			return ModeBasis(T, self.grid)
+	
+	def to_dense(self, copy=False):
+		'''Convert the mode basis to a dense mode basis.
+
+		Parameters
+		----------
+		copy : boolean
+			Whether to force a copy or not. A copy is always made if 
+			the current ModeBasis is not dense.
+		
+		Returns
+		-------
+		ModeBasis
+			The densified ModeBasis.
+		'''
+		if self.is_dense:
+			if copy:
+				return ModeBasis(self._transformation_matrix.copy(), self.grid)
+			else:
+				return self
+		else:
+			T = self._transformation_matrix.todense()
+			return ModeBasis(T, self.grid)
+
 	@property
 	def transformation_matrix(self):
 		'''The transformation matrix of this mode basis.

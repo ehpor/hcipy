@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from .optical_element import OpticalElement
 from ..field import Field
 from ..plotting import imshow_field
-from ..mode_basis import SparseModeBasis
+from ..mode_basis import ModeBasis
 from .deformable_mirror import DeformableMirror
 
 class SegmentedDeformableMirror(DeformableMirror):
@@ -26,11 +26,11 @@ class SegmentedDeformableMirror(DeformableMirror):
 
 		tip = segments.transformation_matrix * segments.grid.x
 		tip -= segments.transformation_matrix * (tip.mean(axis=0) / norm)
-		tip = SparseModeBasis(tip)
+		tip = ModeBasis(tip)
 		
 		tilt = segments.transformation_matrix * segments.grid.y
 		tilt -= segments.transformation_matrix * (tilt.mean(axis=0) / norm)
-		tilt = SparseModeBasis(tilt)
+		tilt = ModeBasis(tilt)
 		
 		self.influence_functions = segments + tip + tilt
 	

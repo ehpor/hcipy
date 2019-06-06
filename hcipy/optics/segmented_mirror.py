@@ -5,8 +5,47 @@ import matplotlib.pyplot as plt
 from .optical_element import OpticalElement
 from ..field import Field
 from ..plotting import imshow_field
+from ..mode_basis import SparseModeBasis
+from .deformable_mirror import DeformableMirror
 
+class SegmentedDeformableMirror(DeformableMirror):
+	def __init__(self, segments):
+		self.segments = segments
+		self.actuators = np.zeros(len(segments) * 3)
+		self.input_grid = segments.grid
+	
+	@property
+	def segments(self):
+		return self._segments
+	
+	@segments.setter
+	def segments(self, segments):
+		self._segments = segments
 
+		norm = (segments.transformation_matrix**2).mean(axis=0)
+
+		tip = segments.transformation_matrix * segments.grid.x
+		tip -= segments.transformation_matrix * (tip.mean(axis=0) / norm)
+		tip = SparseModeBasis(tip)
+		
+		tilt = segments.transformation_matrix * segments.grid.y
+		tilt -= segments.transformation_matrix * (tilt.mean(axis=0) / norm)
+		tilt = SparseModeBasis(tilt)
+		
+		self.influence_functions = segments + tip + tilt
+	
+	def get_segment_actuators(self, segment_id):
+		piston = self.actuators[segment_id]
+		tip = self.actuators[segment_id + len(self._segments)]
+		tilt = self.actuators[segment_id + 2 * len(self._segments)]
+
+		return (piston, tip, tilt)
+
+	def set_segment_actuators(self, segment_id, piston, tip, tilt):
+		self.actuators[segment_id] = piston
+		self.actuators[segment_id + len(self._segments)] = tip
+		self.actuators[segment_id + 2 * len(self._segments)] = tilt
+	
 class SegmentedMirror(OpticalElement):
 	"""A segmented mirror from a segmented aperture.
 

@@ -30,10 +30,14 @@ class ModeBasis(object):
 		The grid on which the modes are defined.
 	'''
 	def __init__(self, transformation_matrix, grid=None):
-		if scipy.sparse.issparse(transformation_matrix[0]):
-			self._transformation_matrix = scipy.sparse.csr_matrix(transformation_matrix)
+		if scipy.sparse.issparse(transformation_matrix):
+			self._transformation_matrix = transformation_matrix.to_csc()
+		elif scipy.sparse.issparse(transformation_matrix[0]):
+			self._transformation_matrix = scipy.sparse.bmat(transformation_matrix, format='csc')
+		elif isinstance(transformation_matrix, (list, tuple)):
+			self._transformation_matrix = np.stack(transformation_matrix, axis=-1)
 		else:
-			self._transformation_matrix = np.array(transformation_matrix)
+			self._transformation_matrix = transformation_matrix
 
 		if grid is not None:
 			self.grid = grid
@@ -58,7 +62,7 @@ class ModeBasis(object):
 	def transformation_matrix(self):
 		'''The transformation matrix of this mode basis.
 		'''
-		return self._transformation_matrix.T
+		return self._transformation_matrix
 	
 	def coefficients_for(self, b, dampening_factor=0):
 		'''Calculate the coefficients on this mode basis in a least squares fashion.
@@ -127,7 +131,7 @@ class ModeBasis(object):
 			A mode basis with orthogonalized modes.
 		'''
 		q, r = np.linalg.qr(self.transformation_matrix)
-		return ModeBasis(q.T, self.grid)
+		return ModeBasis(q, self.grid)
 
 	def __getitem__(self, item):
 		'''Get the `item`-th mode in the `ModeBasis`.
@@ -144,10 +148,17 @@ class ModeBasis(object):
 		Field or array_like or ModeBasis
 			The `item`-th mode in the `ModeBasis`.
 		'''
-		if self.grid is None:
-			return self._transformation_matrix[item]
+		T = self._transformation_matrix[..., item]
+		
+		if T.ndim == self._transformation_matrix.ndim:
+			# We are returning multiple modes; put these in a ModeBasis.
+			return ModeBasis(T, self.grid)
 		else:
-			return Field(self._transformation_matrix[item], self.grid)
+			# We are returning a single mode; return just this.
+			if self.grid is None:
+				return self._transformation_matrix[..., item]
+			else:
+				return Field(self._transformation_matrix[..., item], self.grid)
 	
 	def __len__(self):
 		'''The number of modes in the `ModeBasis`.

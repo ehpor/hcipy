@@ -107,6 +107,10 @@ class SegmentedDeformableMirror(DeformableMirror):
 		self.actuators[segment_id + len(self._segments)] = tip
 		self.actuators[segment_id + 2 * len(self._segments)] = tilt
 
+		# Changing actuators by index (as above) doesn't trigger the setter of
+		# the property, so disable cached version of DM surface manually here.
+		self._surface = None
+
 class SegmentedMirror(OpticalElement):
 	"""A segmented mirror from a segmented aperture.
 

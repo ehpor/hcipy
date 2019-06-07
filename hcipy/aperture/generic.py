@@ -253,7 +253,7 @@ def make_obstruction(aperture):
 	'''
 	return lambda grid: 1 - aperture(grid)
 
-def make_segmented_aperture(segment_shape, segment_positions, segment_transmissions=1):
+def make_segmented_aperture(segment_shape, segment_positions, segment_transmissions=1, return_segments=False):
 	'''Create a segmented aperture.
 
 	Parameters
@@ -264,19 +264,36 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 		The center position for each of the segments.
 	segment_transmissions : scalar or ndarray
 		The transmission for each of the segments. If this is a scalar, the same transmission is used for all segments.
+	return_segments : boolean
+		Whether to return a ModeBasis of all segments as well.
 	
 	Returns
 	-------
 	Field generator
 		The segmented aperture.
 	'''
+	import scipy.sparse
+	from ..mode_basis import ModeBasis
+
 	segment_transmissions = np.ones(segment_positions.size) * segment_transmissions
 
 	def func(grid):
 		res = np.zeros(grid.size, dtype=segment_transmissions.dtype)
 
-		for p, t in zip(segment_positions.points, segment_transmissions):
-			res[segment_shape(grid.shifted(-p)) > 0.5] = t
+		if return_segments:
+			segments = []
 
-		return Field(res, grid)
+		for p, t in zip(segment_positions.points, segment_transmissions):
+			segment = segment_shape(grid.shifted(-p))
+			res[segment > 0.5] = t
+
+			if return_segments:
+				segment = scipy.sparse.csr_matrix(segment)
+				segment.eliminate_zeros()
+				segments.append(segment)
+
+		if return_segments:
+			return Field(res, grid), ModeBasis(segments, grid)
+		else:
+			return Field(res, grid)
 	return func

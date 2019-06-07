@@ -31,13 +31,27 @@ class ModeBasis(object):
 	'''
 	def __init__(self, transformation_matrix, grid=None):
 		if scipy.sparse.issparse(transformation_matrix):
-			self._transformation_matrix = transformation_matrix.to_csc()
+			sparse = True
+			is_list = False
 		elif scipy.sparse.issparse(transformation_matrix[0]):
-			self._transformation_matrix = scipy.sparse.bmat(transformation_matrix, format='csc')
-		elif isinstance(transformation_matrix, (list, tuple)):
-			self._transformation_matrix = np.stack(transformation_matrix, axis=-1)
+			sparse = np.all([transformation_matrix[i].shape[0] == 1 for i in range(len(transformation_matrix))])
+			is_list = True
 		else:
-			self._transformation_matrix = transformation_matrix
+			sparse = False
+			is_list = isinstance(transformation_matrix, (list, tuple))
+		
+		if sparse:
+			if is_list:
+				self._modes = scipy.sparse.vstack(transformation_matrix, format='csr')
+				self._transformation_matrix = self._modes.T.tocsc()
+			else:
+				self._modes = transformation_matrix.tocsr()
+				self._transformation_matrix = transformation_matrix.tocsc()
+		else:
+			if is_list:
+				self._transformation_matrix = np.stack(transformation_matrix, axis=-1)
+			else:
+				self._transformation_matrix = transformation_matrix
 
 		if grid is not None:
 			self.grid = grid
@@ -45,19 +59,19 @@ class ModeBasis(object):
 			self.grid = transformation_matrix[0].grid
 		else:
 			self.grid = None
-	
+
 	@property
 	def is_sparse(self):
 		'''If the mode basis is sparse.
 		'''
 		return scipy.sparse.issparse(self._transformation_matrix)
-	
+
 	@property
 	def is_dense(self):
 		'''If the mode basis is dense.
 		'''
 		return not self.is_sparse
-	
+
 	def to_sparse(self, copy=False):
 		'''Convert the mode basis to a sparse mode basis.
 
@@ -71,6 +85,11 @@ class ModeBasis(object):
 		-------
 		ModeBasis
 			The sparsified ModeBasis.
+		
+		Raises
+		------
+			TypeError
+				If this ModeBasis cannot be sparsified.
 		'''
 		if self.is_sparse:
 			if copy:
@@ -78,10 +97,13 @@ class ModeBasis(object):
 			else:
 				return self
 		else:
+			if self._transformation_matrix.ndim != 2:
+				raise TypeError('Cannot sparsify a mode basis of tensor fields')
+			
 			T = scipy.sparse.csc_matrix(self._transformation_matrix)
 			T.eliminate_zeros()
 			return ModeBasis(T, self.grid)
-	
+
 	def to_dense(self, copy=False):
 		'''Convert the mode basis to a dense mode basis.
 
@@ -110,7 +132,7 @@ class ModeBasis(object):
 		'''The transformation matrix of this mode basis.
 		'''
 		return self._transformation_matrix
-	
+
 	def coefficients_for(self, b, dampening_factor=0):
 		'''Calculate the coefficients on this mode basis in a least squares fashion.
 
@@ -144,7 +166,7 @@ class ModeBasis(object):
 		else:
 			x, residuals, rank, s = np.linalg.lstsq(self._transformation_matrix, b)
 			return x
-	
+
 	def linear_combination(self, coefficients):
 		'''Calculate a linear combination using this mode basis.
 
@@ -158,11 +180,13 @@ class ModeBasis(object):
 		array_like or Field
 			The calculated linear combination.
 		'''
+		y = self._transformation_matrix.dot(coefficients)
+
 		if self.grid is None:
-			return self._transformation_matrix.dot(coefficients)
+			return y
 		else:
-			return Field(self._transformation_matrix.dot(coefficients), self.grid)
-	
+			return Field(y, self.grid)
+
 	@property
 	def orthogonalized(self):
 		'''Get an orthogonalized version of this ModeBasis.
@@ -176,14 +200,20 @@ class ModeBasis(object):
 		-------
 		ModeBasis
 			A mode basis with orthogonalized modes.
+		
+		Raises
+		------
+		NotImplementedError
+			If the mode basis is a mode basis containing non-scalar fields.
 		'''
-		q, r = np.linalg.qr(self.transformation_matrix)
+		if self._transformation_matrix.ndim != 2:
+			raise NotImplementedError('The mode basis contains non-scalar fields; orthogonalization is not implemented for these.')
+
+		q, r = np.linalg.qr(self._transformation_matrix)
 		return ModeBasis(q, self.grid)
 
 	def __getitem__(self, item):
 		'''Get the `item`-th mode in the `ModeBasis`.
-
-
 
 		Parameters
 		----------
@@ -197,16 +227,27 @@ class ModeBasis(object):
 		'''
 		T = self._transformation_matrix[..., item]
 		
-		if T.ndim == self._transformation_matrix.ndim:
+		return_mode_basis = False
+		if self.is_sparse:
+			if T.shape[-1] != 1:
+				return_mode_basis = True
+		if self.is_dense:
+			if T.ndim == self._transformation_matrix.ndim:
+				return_mode_basis = True
+		
+		if return_mode_basis:
 			# We are returning multiple modes; put these in a ModeBasis.
 			return ModeBasis(T, self.grid)
 		else:
 			# We are returning a single mode; return just this.
+			if self.is_sparse:
+				T = T.toarray()[...,0]
+			
 			if self.grid is None:
-				return self._transformation_matrix[..., item]
+				return T
 			else:
-				return Field(self._transformation_matrix[..., item], self.grid)
-	
+				return Field(T, self.grid)
+
 	def __len__(self):
 		'''The number of modes in the `ModeBasis`.
 
@@ -215,8 +256,8 @@ class ModeBasis(object):
 		int
 			The number of modes in the `ModeBasis`.
 		'''
-		return self.transformation_matrix.shape[0]
-	
+		return self.transformation_matrix.shape[-1]
+
 	def append(self, mode):
 		'''Append `mode` to this mode basis.
 
@@ -226,10 +267,10 @@ class ModeBasis(object):
 			The mode to add to the ModeBasis
 		'''
 		if self.is_sparse:
-			self._transformation_matrix = scipy.sparse.vstack((self._transformation_matrix, mode), 'csr')
+			self._transformation_matrix = scipy.sparse.hstack((self._transformation_matrix, mode), 'csc')
 		else:
-			self._transformation_matrix = np.vstack((self._transformation_matrix, mode))
-	
+			self._transformation_matrix = np.concatenate((self._transformation_matrix, [mode]), axis=-1)
+
 	def extend(self, modes):
 		'''Extend the mode basis with `modes`.
 
@@ -242,10 +283,11 @@ class ModeBasis(object):
 			modes = modes.transformation_matrix
 		
 		if self.is_sparse:
-			self._transformation_matrix = scipy.sparse.vstack((self._transformation_matrix, modes), 'csr')
+			self._transformation_matrix = scipy.sparse.hstack((self._transformation_matrix, modes), 'csc')
 		else:
-			self._transformation_matrix = np.vstack((self._transformation_matrix, modes))
-	
+			# TODO: worry about modes being in a list instead of transformation matrix or mode basis
+			self._transformation_matrix = np.concatenate((self._transformation_matrix, modes), axis=-1)
+
 	def __add__(self, mode_basis):
 		'''Merge two mode bases into one.
 
@@ -260,7 +302,7 @@ class ModeBasis(object):
 			The newly created `ModeBasis`.
 		'''
 		if self.is_sparse or mode_basis.is_sparse:
-			transformation_matrix = scipy.sparse.vstack((self._transformation_matrix, mode_basis.transformation_matrix), 'csr')
+			transformation_matrix = scipy.sparse.hstack((self._transformation_matrix, mode_basis.transformation_matrix), 'csc')
 		else:
-			transformation_matrix = np.vstack((self._transformation_matrix, mode_basis.transformation_matrix))
+			transformation_matrix = np.concatenate((self._transformation_matrix, mode_basis.transformation_matrix), axis=-1)
 		return ModeBasis(transformation_matrix, self.grid)

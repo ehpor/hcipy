@@ -68,11 +68,14 @@ def test_segmented_deformable_mirror():
 	num_pix = 256
 	grid = make_pupil_grid(num_pix)
 
-	for num_rings in [2, 4, 5, 10]:
+	for num_rings in [2, 4, 5]:
 		num_segments_expected = 3 * (num_rings + 1) * num_rings + 1
 
 		segment_positions = make_hexagonal_grid(0.5 / num_rings * np.sqrt(3) / 2, num_rings)
-		aperture, segments = make_segmented_aperture(hexagonal_aperture(0.5 / num_rings - 0.003, np.pi / 2), segment_positions, return_segments=True)(grid)
+		aperture, segments = make_segmented_aperture(hexagonal_aperture(0.5 / num_rings - 0.003, np.pi / 2), segment_positions, return_segments=True)
+
+		aperture = evaluate_supersampled(aperture, grid, 2)
+		segments = evaluate_supersampled(segments, grid, 2)
 
 		# Check number of generated segments
 		assert len(segments) == num_segments_expected
@@ -84,6 +87,10 @@ def test_segmented_deformable_mirror():
 
 		for i in np.random.randint(0, num_segments_expected, size=10):
 			piston = np.random.randn(1)
+
+			while np.abs(piston) < 1e-5:
+				piston = np.random.randn(1)
+
 			segmented_mirror.set_segment_actuators(i, piston, 0, 0)
 
 			# Mirror should have the correct piston
@@ -91,6 +98,13 @@ def test_segmented_deformable_mirror():
 			assert np.abs(np.ptp(segmented_mirror.surface) - piston) / piston < 1e-5
 
 			tip, tilt = np.random.randn(2)
+
+			while np.abs(tip) < 1e-5:
+				tip = np.random.randn(1)
+
+			while np.abs(tilt) < 1e-5:
+				tilt = np.random.randn(1)
+
 			segmented_mirror.set_segment_actuators(i, 0, tip, tilt)
 
 			# Mirror should be distorted with tip and tilt on a segment

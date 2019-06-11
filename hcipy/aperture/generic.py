@@ -271,29 +271,25 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 	-------
 	Field generator
 		The segmented aperture.
+	list of Field generators
+		The segments. Only returned if return_segments is True.
 	'''
-	import scipy.sparse
-	from ..mode_basis import ModeBasis
-
 	segment_transmissions = np.ones(segment_positions.size) * segment_transmissions
 
 	def func(grid):
 		res = np.zeros(grid.size, dtype=segment_transmissions.dtype)
 
-		if return_segments:
-			segments = []
-
 		for p, t in zip(segment_positions.points, segment_transmissions):
 			segment = segment_shape(grid.shifted(-p))
 			res[segment > 0.5] = t
 
-			if return_segments:
-				segment = scipy.sparse.csr_matrix(segment)
-				segment.eliminate_zeros()
-				segments.append(segment)
-
-		if return_segments:
-			return Field(res, grid), ModeBasis(segments, grid)
-		else:
-			return Field(res, grid)
-	return func
+		return Field(res, grid)
+	
+	if return_segments:
+		segments = []
+		for p, t in zip(segment_positions.points, segment_transmissions):
+			segments.append(lambda grid: segment_shape(grid.shifted(-p)) * t)
+		
+		return func, segments
+	else:
+		return func

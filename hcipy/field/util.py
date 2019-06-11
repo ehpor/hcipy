@@ -284,29 +284,52 @@ def subsample_field(field, subsampling, new_grid=None):
 		f = (field*weights).reshape(tuple(reshape)).sum(axis=tuple(axes))
 		return Field((f / w).reshape(tuple(new_shape)), new_grid)
 
-def evaluate_supersampled(field_generator, grid, oversampling):
+def evaluate_supersampled(field_generator, grid, oversampling, make_sparse=True):
 	'''Evaluate a Field generator on `grid`, with an oversampling.
 
 	Parameters
 	----------
-	field_generator : Field generator
-		The field generator to evaluate.
+	field_generator : Field generator or list of Field generators
+		The field generator to evaluate. If this is a list of Field generators,
+		each Field generator will be evaluated and stored in a ModeBasis.
 	grid : Grid
 		The grid on which to evaluate `field_generator`.
 	oversampling : integer or scalar or ndarray
 		The factor by which to oversample. If this is a scalar, it will be rounded to
 		the nearest integer. If this is an array, a different oversampling factor will
 		be used for each dimension.
+	make_sparse : boolean
+		If the resulting ModeBasis needs to be sparsified. This is ignored if
+		only a single Field generator is provided.
 
 	Returns
 	-------
-	Field
-		The evaluated field.
+	Field or ModeBasis
+		The evaluated field or mode basis.
 	'''
+	import scipy.sparse
+	from ..mode_basis import ModeBasis
+	
 	new_grid = make_supersampled_grid(grid, oversampling)
-	field = field_generator(new_grid)
 
-	return subsample_field(field, oversampling, grid)
+	if isinstance(field_generator, (list, tuple)):
+		modes = []
+
+		for fg in field_generator:
+			field = fg(new_grid)
+			field = subsample_field(field, oversampling, grid)
+
+			if make_sparse:
+				field = scipy.sparse.csr_matrix(field)
+				field.eliminate_zeros()
+			
+			modes.append(field)
+		
+		return ModeBasis(modes, grid)
+	else:
+		field = field_generator(new_grid)
+
+		return subsample_field(field, oversampling, grid)
 
 def make_uniform_vector_field(field, jones_vector):
 	'''Make an uniform vector field from a scalar field and a jones vector.

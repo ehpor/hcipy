@@ -6,8 +6,10 @@ class Field(np.ndarray):
 
 	Parameters
 	----------
-	arr : array_like
+	arr : array_like/'plane'/'spherical'
 		An array of values or tensors for each point in the :class:`Grid`.
+		'plane': Construct a plane wave
+		'spherical': Construct a spherical wave
 	grid : Grid
 		The corresponding :class:`Grid` on which the values are set.
 	
@@ -17,8 +19,15 @@ class Field(np.ndarray):
 		The grid on which the values are defined.
 
 	'''
-	def __new__(cls, arr, grid):
-		obj = np.asarray(arr).view(cls)
+	## Modfied by Rahul Bhadani to take 'plane', 'spherical' arguments to construct a plane wave
+	def __new__(cls, arr, grid, amplitude=1, on_axis=False, theta=None):
+		if isinstance(arr, np.ndarray):
+			obj = np.asarray(arr).view(cls)
+		elif isinstance(arr, str):
+			if(arr == 'plane'):
+				values = np.ones(grid.x.size)
+				obj = np.asarray(values).view(cls)
+				
 		obj.grid = grid
 		return obj
 	

@@ -231,7 +231,7 @@ def make_subsampled_grid(grid, undersampling):
 	
 	raise ValueError("Cannot create a subsampled grid from a non-separated grid.")
 
-def subsample_field(field, subsampling, new_grid=None):
+def subsample_field(field, subsampling, new_grid=None, method=np.mean):
 	'''Average the field over subsampling pixels in each dimension.
 
 	.. note ::
@@ -250,6 +250,9 @@ def subsample_field(field, subsampling, new_grid=None):
 		If this grid is given, no new grid will be calculated and this grid will
 		be used instead. This saves on calculation time if your new grid is already
 		known beforehand.
+	method : function
+		The mathematical operation that is used to bin the data points. The operation
+		has to have an axis keyword. The standard is np.mean to do a mean combine.
 
 	Returns
 	-------
@@ -275,16 +278,16 @@ def subsample_field(field, subsampling, new_grid=None):
 		new_shape = [-1]
 
 	if field.grid.is_regular:
-		# All weights will be the same, so a simple "mean" will do.
-		return Field(field.reshape(tuple(reshape)).mean(axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
+		# All weights will be the same, so the array can be combined without taking the weights into account.
+		return Field( method(field.reshape(tuple(reshape)), axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
 	else:
 		# Some weights will be different so calculate weighted mean instead.
 		weights = field.grid.weights
 		w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
-		f = (field*weights).reshape(tuple(reshape)).sum(axis=tuple(axes))
+		f = method((field*weights).reshape(tuple(reshape)), axis=tuple(axes))		
 		return Field((f / w).reshape(tuple(new_shape)), new_grid)
 
-def evaluate_supersampled(field_generator, grid, oversampling):
+def evaluate_supersampled(field_generator, grid, oversampling, method=np.mean):
 	'''Evaluate a Field generator on `grid`, with an oversampling.
 
 	Parameters
@@ -297,6 +300,8 @@ def evaluate_supersampled(field_generator, grid, oversampling):
 		The factor by which to oversample. If this is a scalar, it will be rounded to
 		the nearest integer. If this is an array, a different oversampling factor will
 		be used for each dimension.
+	method : function
+		The mathematical operation that is used to bin the data points. The standard is a mean combine.
 
 	Returns
 	-------
@@ -306,4 +311,4 @@ def evaluate_supersampled(field_generator, grid, oversampling):
 	new_grid = make_supersampled_grid(grid, oversampling)
 	field = field_generator(new_grid)
 
-	return subsample_field(field, oversampling, grid)
+	return subsample_field(field, oversampling, grid, method)

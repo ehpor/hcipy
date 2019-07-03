@@ -212,7 +212,7 @@ class MultiLayerAtmosphere(OpticalElement):
 	
 	@property
 	def layers(self):
-		'''A list of :class:`AtmosphericLayer: objects.
+		'''A list of :class:`AtmosphericLayer` objects.
 		'''
 		return self._layers
 

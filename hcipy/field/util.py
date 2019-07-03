@@ -342,3 +342,43 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean')
 	field = field_generator(new_grid)
 
 	return subsample_field(field, oversampling, grid, statistic)
+
+def make_uniform_vector_field(field, jones_vector):
+	'''Make an uniform vector field from a scalar field and a jones vector.
+	
+	Parameters
+	----------
+	field : Field
+		An input scalar field that is expanded to a vector field
+	jones_vector : array_like
+		The output vector at every pixel
+
+	Returns
+	-------
+	Field
+		The expanded vector field
+	'''
+	if field.is_scalar_field():
+		return Field([ei * field for ei in jones_vector], field.grid)
+
+def make_uniform_vector_field_generator(field_generator, jones_vector):
+	'''Make an uniform vector field generator from a scalar field generator and a jones vector.
+	
+	Parameters
+	----------
+	field_generator : Field generator
+		The field generator to evaluate.
+	jones_vector : array_like
+		The output vector at every grid coordinate
+
+	Returns
+	-------
+	Field generator
+		This function can be evaluated on a grid to get a Field.
+	'''
+	
+	def func(grid):
+		scalar_field = field_generator(grid)
+		return Field([ei * scalar_field for ei in jones_vector], grid)
+
+	return func

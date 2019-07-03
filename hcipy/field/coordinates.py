@@ -165,7 +165,8 @@ class SeparatedCoords(CoordsBase):
 		A tuple of a list of coordinates along each dimension.
 	'''
 	def __init__(self, separated_coords):
-		self.separated_coords = list(separated_coords)
+		# Make a copy to avoid modification from outside the class
+		self.separated_coords = [copy.deepcopy(s) for s in separated_coords]
 
 	def __getitem__(self, i):
 		'''The `i`-th point for these coordinates.

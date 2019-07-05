@@ -24,7 +24,7 @@ def large_poisson(lam, thresh=1e6):
 	small = ~large
 	
 	# Use normal approximation if the number of photons is large
-	n = np.zeros(len(lam))
+	n = np.zeros(lam.shape)
 	n[large] = np.round(lam[large] + np.random.normal(size=np.sum(large)) * np.sqrt(lam[large]))
 	n[small] = np.random.poisson(lam[small], size=np.sum(small))
 

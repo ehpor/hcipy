@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib
 from subprocess import Popen, PIPE, call
-from scipy.misc import imsave
+import imageio
 import os
 
 class GifWriter(object):
@@ -29,7 +29,7 @@ class GifWriter(object):
 			if not cmap is None:
 				arr = matplotlib.cm.get_cmap(cmap)(arr, bytes=True)
 			
-			imsave(dest, arr, format='png')
+			imageio.imwrite(dest, arr, format='png')
 	
 	def close(self):
 		if not self.closed:

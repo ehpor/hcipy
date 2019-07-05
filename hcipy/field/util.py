@@ -301,13 +301,13 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 		return Field(available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
 	else:
 		# Some weights will be different so calculate weighted mean instead.
-		if statistic in ['min', 'max']:
+		if statistic in ['min', 'max', 'sum']:
 			f = available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes))
 			return Field(f.reshape(tuple(new_shape)), new_grid)
-		elif statistic in ['sum', 'mean']:
+		elif statistic in ['mean']:
 			weights = field.grid.weights
 			w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
-			f = available_statistics[statistic]((field*weights).reshape(tuple(reshape)), axis=tuple(axes))
+			f = np.sum((field * weights).reshape(tuple(reshape)), axis=tuple(axes))
 			return Field((f / w).reshape(tuple(new_shape)), new_grid)
 		else:
 			raise NotImplementedError('The median statistic is not implemented for non-regular grids.')

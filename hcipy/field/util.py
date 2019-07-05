@@ -231,7 +231,7 @@ def make_subsampled_grid(grid, undersampling):
 	
 	raise ValueError("Cannot create a subsampled grid from a non-separated grid.")
 
-def subsample_field(field, subsampling, new_grid=None):
+def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 	'''Average the field over subsampling pixels in each dimension.
 
 	.. note ::
@@ -250,6 +250,15 @@ def subsample_field(field, subsampling, new_grid=None):
 		If this grid is given, no new grid will be calculated and this grid will
 		be used instead. This saves on calculation time if your new grid is already
 		known beforehand.
+	statistic : string or callable
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		  * 'mean' : compute the mean of values for points within each superpixel.
+		  * 'median' : compute the median of values for points within each superpixel.
+		  * 'sum' : compute the sum of values for points within each  superpixel. 
+		    This is identical to a weighted histogram.
+		  * 'min' : compute the minimum of values for points within each superpixel.
+		  * 'max' : compute the maximum of values for point within each superpixel.
 
 	Returns
 	-------
@@ -274,17 +283,34 @@ def subsample_field(field, subsampling, new_grid=None):
 	else:
 		new_shape = [-1]
 
+	available_statistics = {
+		'mean': np.mean,
+		'median': np.median,
+		'max': np.max,
+		'min': np.min,
+		'sum': np.sum
+	}
+
+	if statistic not in available_statistics:
+		raise ValueError('This statistic is not recognized.')
+	
 	if field.grid.is_regular:
-		# All weights will be the same, so a simple "mean" will do.
-		return Field(field.reshape(tuple(reshape)).mean(axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
+		# All weights will be the same, so the array can be combined without taking the weights into account.
+		return Field(available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
 	else:
 		# Some weights will be different so calculate weighted mean instead.
-		weights = field.grid.weights
-		w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
-		f = (field*weights).reshape(tuple(reshape)).sum(axis=tuple(axes))
-		return Field((f / w).reshape(tuple(new_shape)), new_grid)
+		if statistic in ['min', 'max']:
+			f = available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes))
+			return Field(f.reshape(tuple(new_shape)), new_grid)
+		elif statistic in ['sum', 'mean']:
+			weights = field.grid.weights
+			w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
+			f = available_statistics[statistic]((field*weights).reshape(tuple(reshape)), axis=tuple(axes))
+			return Field((f / w).reshape(tuple(new_shape)), new_grid)
+		else:
+			raise NotImplementedError('The median statistic is not implemented for non-regular grids.')
 
-def evaluate_supersampled(field_generator, grid, oversampling):
+def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean'):
 	'''Evaluate a Field generator on `grid`, with an oversampling.
 
 	Parameters
@@ -297,6 +323,15 @@ def evaluate_supersampled(field_generator, grid, oversampling):
 		The factor by which to oversample. If this is a scalar, it will be rounded to
 		the nearest integer. If this is an array, a different oversampling factor will
 		be used for each dimension.
+	statistic : string or callable
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		  * 'mean' : compute the mean of values for points within each superpixel.
+		  * 'median' : compute the median of values for points within each superpixel.
+		  * 'sum' : compute the sum of values for points within each  superpixel. 
+		    This is identical to a weighted histogram.
+		  * 'min' : compute the minimum of values for points within each superpixel.
+		  * 'max' : compute the maximum of values for point within each superpixel.
 
 	Returns
 	-------
@@ -306,7 +341,7 @@ def evaluate_supersampled(field_generator, grid, oversampling):
 	new_grid = make_supersampled_grid(grid, oversampling)
 	field = field_generator(new_grid)
 
-	return subsample_field(field, oversampling, grid)
+	return subsample_field(field, oversampling, grid, statistic)
 
 def make_uniform_vector_field(field, jones_vector):
 	'''Make an uniform vector field from a scalar field and a jones vector.

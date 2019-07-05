@@ -3,6 +3,8 @@ from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
 from .field import Field
 from .cartesian_grid import CartesianGrid
 
+import itertools
+
 def make_uniform_grid(dims, extent, center=0, has_center=False):
 	'''Create a uniformly-spaced :class:`Grid` of a certain shape and size.
 
@@ -339,9 +341,49 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean')
 		The evaluated field.
 	'''
 	new_grid = make_supersampled_grid(grid, oversampling)
-	field = field_generator(new_grid)
 
-	return subsample_field(field, oversampling, grid, statistic)
+	if grid.is_separated:
+		# Use sub grids to evaluate field generator. This avoids a huge memory usage 
+		# for large oversamplings. New grid is guaranteed to be able to be split up into
+		# oversampling^ndim parts. Each of these evaluations uses the same amount of
+		# memory as the final grid.
+		field = Field(np.empty(grid.size), grid)
+
+		for part in itertools.product(range(oversampling), repeat=grid.ndim):
+			sub_new_coords = []
+			sub_coords = []
+			mask = np.ones(grid.shape, dtype='bool')
+
+			# Create a sub grid and a mask on the original array where the subarray is located.
+			for i, (p, s) in enumerate(zip(part, grid.dims)):
+				print(p*s, new_grid.separated_coords[i].size)
+				sub_new_coords.append(new_grid.separated_coords[i][p*s:(p+1)*s])
+				sub_coords.append(grid.separated_coords[i][p*s//oversampling:(p+1)*s//oversampling])
+
+				# Mask out the parts outside of the current subgrid
+				slices = [slice(None)] * grid.ndim
+				slices[grid.ndim - i - 1] = slice(0, p * s // oversampling)
+				mask[tuple(slices)] = False
+				slices[grid.ndim - i - 1] = slice((p + 1) * s // oversampling, None)
+				mask[tuple(slices)] = False
+
+			# Create sub grids.
+			sub_new_grid = new_grid.__class__(SeparatedCoords(sub_new_coords))
+			sub_grid = grid.__class__(SeparatedCoords(sub_coords))
+
+			# Evaluate sub field
+			sub_new_field = field_generator(sub_new_grid)
+			sub_field = subsample_field(sub_new_field, oversampling, sub_grid, statistic)
+
+			# Insert sub field into final field at the correct pixels.
+			field[mask.ravel()] = sub_field
+
+		return field
+	else:
+		# Cannot use sub grids, so fall back to evaluation of generator on the full 
+		# supersampled grid.
+		field = field_generator(new_grid)
+		return subsample_field(field, oversampling, grid, statistic)
 
 def make_uniform_vector_field(field, jones_vector):
 	'''Make an uniform vector field from a scalar field and a jones vector.

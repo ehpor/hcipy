@@ -72,7 +72,7 @@ class Grid(object):
 		'''The number of points in this grid.
 		'''
 		return self.size
-	
+
 	@property
 	def dims(self):
 		'''The number of elements in each dimension for a separated grid.
@@ -195,6 +195,12 @@ class Grid(object):
 		'''True if the grid is regularly-spaced, False otherwise.
 		'''
 		return self.coords.is_regular
+	
+	@property
+	def is_unstructured(self):
+		'''True if the grid is unstructured, False otherwise.
+		'''
+		return self.coords.is_unstructured
 	
 	def is_(self, system):
 		'''Check if the coordinate system is `system`.

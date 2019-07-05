@@ -377,9 +377,8 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 
 			# Create a sub grid and a mask on the original array where the subarray is located.
 			for i, (p, s) in enumerate(zip(part, grid.dims)):
-				print(p*s, new_grid.separated_coords[i].size)
-				sub_new_coords.append(new_grid.separated_coords[i][p*s:(p+1)*s])
-				sub_coords.append(grid.separated_coords[i][p*s//oversampling:(p+1)*s//oversampling])
+				sub_new_coords.append(new_grid.separated_coords[i][p * s:(p + 1) * s])
+				sub_coords.append(grid.separated_coords[i][p * s // oversampling:(p + 1) * s // oversampling])
 
 				# Mask out the parts outside of the current subgrid
 				slices = [slice(None)] * grid.ndim

@@ -1,4 +1,6 @@
 from __future__ import division
+import functools
+
 import numpy as np
 from ..field import Field, CartesianGrid, UnstructuredCoords
 
@@ -71,6 +73,8 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0):
 		The number of sides for the polygon.
 	circum_diameter : scalar
 		The circumdiameter of the polygon.
+	angle : scalar
+		The angle by which to turn the polygon.
 	
 	Returns
 	-------
@@ -125,6 +129,8 @@ def hexagonal_aperture(circum_diameter, angle=0):
 	----------
 	circum_diameter : scalar
 		The circumdiameter of the polygon.
+	angle : scalar
+		The angle by which to turn the hexagon.
 	
 	Returns
 	-------
@@ -249,7 +255,7 @@ def make_obstruction(aperture):
 	'''
 	return lambda grid: 1 - aperture(grid)
 
-def make_segmented_aperture(segment_shape, segment_positions, segment_transmissions=1):
+def make_segmented_aperture(segment_shape, segment_positions, segment_transmissions=1, return_segments=False):
 	'''Create a segmented aperture.
 
 	Parameters
@@ -260,11 +266,15 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 		The center position for each of the segments.
 	segment_transmissions : scalar or ndarray
 		The transmission for each of the segments. If this is a scalar, the same transmission is used for all segments.
+	return_segments : boolean
+		Whether to return a ModeBasis of all segments as well.
 	
 	Returns
 	-------
 	Field generator
 		The segmented aperture.
+	list of Field generators
+		The segments. Only returned if return_segments is True.
 	'''
 	segment_transmissions = np.ones(segment_positions.size) * segment_transmissions
 
@@ -272,7 +282,19 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 		res = np.zeros(grid.size, dtype=segment_transmissions.dtype)
 
 		for p, t in zip(segment_positions.points, segment_transmissions):
-			res[segment_shape(grid.shifted(-p)) > 0.5] = t
-		
+			segment = segment_shape(grid.shifted(-p))
+			res[segment > 0.5] = t
+
 		return Field(res, grid)
-	return func
+	
+	if return_segments:
+		def seg(grid, p, t):
+			return segment_shape(grid.shifted(-p)) * t
+		
+		segments = []
+		for p, t in zip(segment_positions.points, segment_transmissions):
+			segments.append(functools.partial(seg, p=p, t=t))
+		
+		return func, segments
+	else:
+		return func

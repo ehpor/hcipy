@@ -63,10 +63,8 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 def make_keck_aperture():
 	pass
 
-def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, with_segment_gaps=True, segment_transmissions=1, header = True, return_segment_positions=False):
-    
-	'''Make the LUVOIR A aperture and Lyot Stop.
-
+def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, gap_padding=1, segment_transmissions=1, return_header=False, return_segments=False):
+	'''
 	This aperture changes frequently. This one is based on LUVOIR Apertures dimensions 
 	from Matt Bolcar, LUVOIR lead engineer (as of 10 April 2019)
 	Spiders and segment gaps can be included or excluded, and the transmission for each 
@@ -74,9 +72,6 @@ def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, 
 
 	Parameters
 	----------
-	gap_padding: float
-		arbitratry padding of gap size to represent gaps on smaller arrays - effectively 
-		makes the gaps larger and the segments smaller to preserve the same segment pitch 
 	normalized : boolean
 		If this is True, the outer diameter will be scaled to 1. Otherwise, the
 		diameter of the pupil will be 15.0 meters.
@@ -84,19 +79,28 @@ def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, 
 		Include the secondary mirror support structure in the aperture.
 	with_segment_gaps : boolean
 		Include the gaps between individual segments in the aperture.
+	gap_padding : scalar
+		arbitratry padding of gap size to represent gaps on smaller arrays - effectively 
+		makes the gaps larger and the segments smaller to preserve the same segment pitch 
 	segment_transmissions : scalar or array_like
 		The transmission for each of the segments. If this is a scalar, this transmission 
 		will be used for all segments.
-	return_segment_positions : boolean
-		Will also return the segment positions as segment_position
+	return_header : boolean
+		If this is True, a header will be returned giving all important values for the 
+		created aperture for reference.
+	return_segments : boolean
+		If this is True, the segments will also be returned as a ModeBasis.
 	
 	Returns
 	-------
-	Field generator
+	aperture : Field generator
 		The LUVOIR A aperture.
-	
-	aperture_header: dictionary
-		dictionary of keywords to build aperture fits header
+	aperture_header : dict
+		A dictionary containing all quantities used when making this aperture. Only returned if
+		`return_header` is True.
+	segments : ModeBasis
+		A ModeBasis containing all segments of the aperture. Only returned if `return_segments`
+		is True.
 	'''
 	
 	pupil_diameter = 15.0 #m actual circumscribed diameter, used for lam/D calculations other measurements normalized by this diameter
@@ -136,16 +140,17 @@ def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, 
 	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.98)) #corner clipping
 	segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
 
-	hexagon = hexagonal_aperture(segment_circum_diameter)
-	def segment(grid):
-		return hexagon(grid.rotated(np.pi/2))
+	segment = hexagonal_aperture(segment_circum_diameter, np.pi / 2)
 	
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 90, spider_width)
 		spider2 = make_spider_infinite([spid_start, 0], 270 - lower_spider_angle, spider_width)
 		spider3 = make_spider_infinite([-spid_start, 0], 270 + lower_spider_angle, spider_width)
 
-	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions)
+	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=return_segments)
+
+	if return_segments:
+		segmented_aperture, segments = segmented_aperture
 
 	def func(grid):
 		res = segmented_aperture(grid)
@@ -155,33 +160,55 @@ def make_luvoir_a_aperture(gap_padding = 5, normalized=True, with_spiders=True, 
 
 		return Field(res, grid)
 	
-	blah = 1
-
-	if return_segment_positions:
-		return func, aperture_header, segment_positions
-	return func, aperture_header
+	if with_spiders and return_segments:
+		segments = [lambda grid: s(grid) * spider1(grid) * spider2(grid) * spider3(grid) for s in segments]
 	
+	if return_header:
+		if return_segments:
+			return func, aperture_header, segments
+		else:
+			return func, aperture_header
+	elif return_segments:
+		return func, segments
+	else:
+		return func
 
-def make_luvoir_a_lyot_stop(ls_id, ls_od, lyot_ref_diameter, spid_oversize=1, normalized=True, spiders=False, header = False):
+def make_luvoir_a_lyot_stop(normalized=True, with_spiders=False, spider_oversize=1, inner_diameter_fraction=0.2, outer_diameter_fraction=0.9, return_header=False):
+	'''Make a LUVOIR-A Lyot stop for the APLC coronagraph.
 
-	pupil_diameter=15.0 #m actual circumscribed diameter, used for lam/D calculations other measurements normalized by this diameter
+	Parameters
+	----------
+	normalized : boolean
+	with_spiders : boolean
+	inner_diameter_fraction : scalar
+	outer_diameter_fraction : scalar
+	lyot_stop_reference_diameter : scalar
+	spider_oversize : scalar
+	return_header : boolean
 
-	spider_width=0.150 #m actual strut size
+	Returns
+	-------
+	aperture : Field generator
+	aperture_header : dict
+	'''
+	pupil_diameter = 15.0 #m actual circumscribed diameter, used for lam/D calculations other measurements normalized by this diameter
+	spider_width = 0.150 #m actual strut size
 	lower_spider_angle = 12.7 #deg angle at which lower spiders are offset from vertical
 	spid_start = 0.30657 #m spider starting point offset from center of aperture
 
+	outer_D = pupil_diameter * outer_diameter_fraction
+	inner_D = pupil_diameter * inner_diameter_fraction
+	pad_spid_width = spider_width * spider_oversize
 
-	outer_D = lyot_ref_diameter*ls_od
-	inner_D = lyot_ref_diameter*ls_id
-	pad_spid_width = spider_width * spid_oversize
+	lyot_reference_diameter = pupil_diameter
 
-	ls_header = {'TELESCOP':'LUVOIR A','D_CIRC': pupil_diameter,'D_INSC':13.5,
-				 'LS_ID':ls_id, 'LS_OD':ls_od,'LS_REF_D':lyot_ref_diameter, 'NORM':normalized, 'STRUT_ST':spid_start}
+	ls_header = {'TELESCOP':'LUVOIR A', 'D_CIRC': pupil_diameter, 'D_INSC': 13.5,
+				 'LS_ID': inner_diameter_fraction, 'LS_OD': outer_diameter_fraction, 'LS_REF_D': lyot_reference_diameter, 'NORM': normalized, 'STRUT_ST': spid_start}
 
-	if spiders:
+	if with_spiders:
 		ls_header['STRUT_W']  = spider_width
 		ls_header['STRUT_AN'] = lower_spider_angle
-		ls_header['STRUT_P']  = spid_oversize
+		ls_header['STRUT_P']  = spider_oversize
 
 	if normalized:
 		outer_D /= pupil_diameter
@@ -192,22 +219,24 @@ def make_luvoir_a_lyot_stop(ls_id, ls_od, lyot_ref_diameter, spid_oversize=1, no
 	outer_diameter = circular_aperture(outer_D)
 	central_obscuration = circular_aperture(inner_D)
 
-	if spiders:
+	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 90, pad_spid_width)
 		spider2 = make_spider_infinite([spid_start,0], 270 - lower_spider_angle, pad_spid_width)
 		spider3 = make_spider_infinite([-spid_start,0], 270 + lower_spider_angle, pad_spid_width)
 
 	def aper(grid):
-		tmp_result = (outer_diameter(grid) - central_obscuration(grid)) 
-		if spiders:
-			tmp_result *= spider1(grid) * spider2(grid) * spider3(grid)
-		return tmp_result    
-	if header:
+		result = outer_diameter(grid) - central_obscuration(grid)
+
+		if with_spiders:
+			result *= spider1(grid) * spider2(grid) * spider3(grid)
+		
+		return result    
+	if return_header:
 		return aper, ls_header
 	
 	return aper
 
-def make_hicat_aperture(with_spiders=True, with_segment_gaps=True):
+def make_hicat_aperture(normalized=True, with_spiders=True, with_segment_gaps=True, return_header=False, return_segments=False):
 	'''Make the HiCAT P3 apodizer mask
 
 	Parameters
@@ -219,17 +248,23 @@ def make_hicat_aperture(with_spiders=True, with_segment_gaps=True):
 		Include the secondary mirror support structure in the aperture.
 	with_segment_gaps : boolean
 		Include the gaps between individual segments in the aperture.
-
+	return_header : boolean
+		If this is True, a header will be returned giving all important values for the 
+		created aperture for reference.
+	return_segments : boolean
+		If this is True, the segments will also be returned as a ModeBasis.
+	
 	Returns
 	-------
-	Field generator
+	aperture : Field generator
 		The HiCAT aperture.
+	segments : ModeBasis
+		The segments. Only returned when `return_segments` is True.
 	'''
-	
 	gamma_21 = 0.423
 	gamma_31 = 1.008
 	
-#P2 - Iris AO
+	#P2 - Iris AO
 	p2_irisao_segment_size = 1.4e-3 # m (note: point to point)
 	p2_irisao_segment_side_length = p2_irisao_segment_size / 2
 	p2_irisao_segment_gap_size = 12e-6 # m
@@ -237,11 +272,11 @@ def make_hicat_aperture(with_spiders=True, with_segment_gaps=True):
 	p2_irisao_distance_between_segments = p2_irisao_segment_side_length * np.sqrt(3)
 	p2_irisao_segment_circumdiameter = (2 * p2_irisao_segment_side_length) - (2/np.sqrt(3)) * p2_irisao_segment_gap_size
 
-#P1 - Pupil Mask
+	#P1 - Pupil Mask
 	# Central segment
 	p1_pupil_mask_central_segment_size = 3.600e-3 # m
 	
-#P3 - Apodizer
+	#P3 - Apodizer
 	# Contour
 	p3_apodizer_size = 19.725e-3 # m
 	p2_apodizer_size = p3_apodizer_size * gamma_21 / gamma_31
@@ -257,20 +292,23 @@ def make_hicat_aperture(with_spiders=True, with_segment_gaps=True):
 	apodizer_mask_central_segment_oversize_factor_wrt_pupil_mask = p3_apodizer_mask_central_segment_size / p3_pupil_mask_central_segment_size
 	p3_irisao_segment_size = p2_irisao_segment_size * gamma_31 / gamma_21
 
-	#Spiders
+	# Spiders
 	p3_apodizer_mask_spiders_thickness = 0.350e-3 # m
 	
-	header = {'TELESCOP':'HiCAT','P3_APOD':p3_apodizer_size,'P3_CENT_SEG':p3_apodizer_mask_central_segment_size,
-				'P3_GAP':p3_apodizer_mask_gap_size,'P3_GAP_OVER':apodizer_mask_gap_oversize_factor_wrt_irisao,
-				'P3_STRUT':p3_apodizer_mask_spiders_thickness, 'PROV':'HiCAT spreadsheet'}
+	header = {'TELESCOP':'HiCAT', 'P3_APOD': p3_apodizer_size, 'P3_CENT_SEG': p3_apodizer_mask_central_segment_size,
+				'P3_GAP': p3_apodizer_mask_gap_size, 'P3_GAP_OVER': apodizer_mask_gap_oversize_factor_wrt_irisao,
+				'P3_STRUT': p3_apodizer_mask_spiders_thickness, 'PROV': 'HiCAT spreadsheet'}
 	
 	p3_irisao_segment_circumdiameter = p2_irisao_segment_circumdiameter * gamma_31 / gamma_21
 	p3_irisao_distance_between_segments = p2_irisao_distance_between_segments * gamma_31 / gamma_21
 	p3_apodizer_segment_circumdiameter = p3_irisao_segment_circumdiameter + (-p3_apodizer_mask_gap_size + p3_irisao_segment_gap_size) * (2/np.sqrt(3))
 
-	segment = hexagonal_aperture(p3_apodizer_segment_circumdiameter, np.pi/2)
+	segment = hexagonal_aperture(p3_apodizer_segment_circumdiameter, np.pi / 2)
 	segment_positions = make_hexagonal_grid(p3_irisao_distance_between_segments, 3, False)
-	segmentation = make_segmented_aperture(segment, segment_positions)
+	segmentation = make_segmented_aperture(segment, segment_positions, return_segments=return_segments)
+
+	if return_segments:
+		segmentation, segments = segmentation
 	
 	segment = hexagonal_aperture(p3_apodizer_size / 7 / np.sqrt(3) * 2, np.pi / 2)
 	distance_between_segments = p3_apodizer_size / 7
@@ -278,6 +316,9 @@ def make_hicat_aperture(with_spiders=True, with_segment_gaps=True):
 	contour = make_segmented_aperture(segment, segment_positions)
 	
 	central_segment = hexagonal_aperture(p3_apodizer_mask_central_segment_size, np.pi / 2)
+
+	if return_segments:
+		segments = [lambda grid: s(grid) * (contour(grid) - central_segment(grid)) for s in segments]
 	
 	if with_spiders:
 		spider1 = make_spider_infinite([0,0], 60, p3_apodizer_mask_spiders_thickness)
@@ -285,20 +326,31 @@ def make_hicat_aperture(with_spiders=True, with_segment_gaps=True):
 		spider3 = make_spider_infinite([0,0], -60, p3_apodizer_mask_spiders_thickness)
 		spider4 = make_spider_infinite([0,0], -120, p3_apodizer_mask_spiders_thickness)
 	
+		if return_segments:
+			segments = [lambda grid: s(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) for s in segments]
+	
 	def func(grid):
 		res = (contour(grid) - central_segment(grid)) 
 		
 		if with_segment_gaps:
-			res*= segmentation(grid)
+			res *= segmentation(grid)
 		
 		if with_spiders:
-			res*= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
+			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
 		
 		return Field(res, grid)
-		
-	return func, header
+	
+	if return_header:
+		if return_segments:
+			return func, header, segments
+		else:
+			return func, header
+	elif return_segments:
+		return func, segments
+	else:
+		return func
 
-def make_hicat_lyot_stop(ls_id, ls_od, with_spiders=False):
+def make_hicat_lyot_stop(normalized=False, with_spiders=False, inner_diameter=0.2, outer_diameter=0.9):
 	'''Make the HiCAT Lyot stop.
 
 	Parameters
@@ -327,7 +379,7 @@ def make_hicat_lyot_stop(ls_id, ls_od, with_spiders=False):
 	p3_apodizer_mask_central_segment_size = 3.950e-3 # m
 	p3_apodizer_size = 19.725e-3 # m
 	
-	p5_lyot_stop_size = ls_od # m
+	p5_lyot_stop_size = outer_diameter # m
 	p5_irisao_inscribed_circle_size = p2_irisao_inscribed_circle_size * gamma_51 / gamma_21
 	lyot_stop_mask_undersize_contour_wrt_inscribed_circle = p5_lyot_stop_size / p5_irisao_inscribed_circle_size
 
@@ -335,7 +387,7 @@ def make_hicat_lyot_stop(ls_id, ls_od, with_spiders=False):
 	p5_irisao_circumscribed_circle_size = p2_irisao_circumscribed_circle_size * gamma_51 / gamma_21
 
 	# Central segment
-	p5_lyot_stop_mask_central_segment_size = ls_id # m
+	p5_lyot_stop_mask_central_segment_size = inner_diameter # m
 	p5_apodizer_mask_central_segment_size = p3_apodizer_mask_central_segment_size * gamma_51 / gamma_31
 
 	p5_irisao_segment_size = p2_irisao_segment_size * gamma_51 / gamma_21

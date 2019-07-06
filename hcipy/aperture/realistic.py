@@ -151,7 +151,7 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 
 	return func
 
-def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1, return_segment_positions=False):
+def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1, return_segments=False):
 	'''Make the HiCAT pupil mask.
 
 	This function is a WIP. It should NOT be used for actual designs. Current pupil should be taken as 
@@ -201,7 +201,10 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 	def segment(grid):
 		return hexagon(grid)
 
-	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions)
+	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments)
+	
+	if return_segments:
+		segmented_aperture, segments = segmented_aperture
 
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 60, spider_width)
@@ -209,18 +212,21 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 		spider3 = make_spider_infinite([0, 0], 240, spider_width)
 		spider4 = make_spider_infinite([0, 0], 300, spider_width)
 
-	def func(grid):
+		for i, s in enumerate(segments):
+			s = lambda grid: s(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
+			
+	def aperture(grid):
 		res = segmented_aperture(grid)
 
 		if with_spiders:
 			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
 		
 		return Field(res, grid)
-
-	if return_segment_positions:
-			return func, segment_positions
-
-	return func
+	
+	if return_segments:
+			return aperture, segments
+	else:
+		return aperture
 
 def make_hicat_lyot_stop(normalized=False, with_spiders=True):
 	'''Make the HiCAT Lyot stop.

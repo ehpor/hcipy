@@ -4,7 +4,7 @@ import numpy as np
 def check_energy_conservation(shift_input, scale, shift_output, q, fov, dims):
 	print(shift_input, scale, shift_output, q, fov, dims)
 	
-	grid = make_pupil_grid(dims).shifted(shift_input).scaled(scale)
+	grid = make_uniform_grid(dims, 1).shifted(shift_input).scaled(scale)
 	f_in = Field(np.random.randn(grid.size), grid)
 	#f_in = Field(np.exp(-30 * grid.as_('polar').r**2), grid)
 
@@ -46,11 +46,20 @@ def check_energy_conservation(shift_input, scale, shift_output, q, fov, dims):
 		assert np.allclose(energy_ratios, energy_ratios[0, 0])
 		assert np.allclose(patterns_match, patterns_match[0, 0])
 
-def test_fourier_energy_conservation():
+def test_fourier_energy_conservation_1d():
+	for shift_input in [0,0.1]:
+		for scale in [1,2]:
+			for shift_output in [0,0.1]:
+				for q in [1,3,4]:
+					for fov in [1, 0.5, 0.8]:
+						for dims in [64, 65]:
+							check_energy_conservation(shift_input, scale, shift_output, q, fov, dims)
+
+def test_fourier_energy_conservation_2d():
 	for shift_input in [[0,0],[0.1]]:
 		for scale in [1,2]:
 			for shift_output in [[0,0], [0.1]]:
-				for q in [1,4]:
+				for q in [1,3,4]:
 					for fov in [1,0.5,0.8]:
 						for dims in [[8,8],[8,16],[9,9],[9,18]]:
 							check_energy_conservation(shift_input, scale, shift_output, q, fov, dims)
@@ -58,9 +67,9 @@ def test_fourier_energy_conservation():
 def check_symmetry(scale, q, fov, dims):
 	pass
 
-def test_fourier_symmetries():
+def test_fourier_symmetries_2d():
 	for scale in [1,2]:
-		for q in [1,4]:
+		for q in [1,3,4]:
 			for fov in [1,0.5,0.8]:
 				for dims in [[8,8],[8,16],[9,9],[9,18]]:
 					check_symmetry(scale, q, fov, dims)

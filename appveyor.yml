@@ -3,17 +3,19 @@ build: false
 environment:
   matrix:
     - PYTHON_VERSION: 2.7
-      MINICONDA: C:\Miniconda
+      MINICONDA: C:\Miniconda-x64
     - PYTHON_VERSION: 3.5
-      MINICONDA: C:\Miniconda35
+      MINICONDA: C:\Miniconda35-x64
     - PYTHON_VERSION: 3.6
-      MINICONDA: C:\Miniconda36
+      MINICONDA: C:\Miniconda36-x64
+    - PYTHON_VERSION: 3.7
+      MINICONDA: C:\Miniconda37-x64
 
 init:
   - "ECHO %PYTHON_VERSION% %MINICONDA%"
 
 install:
-  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
+  - CALL "%MINICONDA%\\Scripts\\activate.bat"
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
@@ -21,6 +23,7 @@ install:
   - activate test-environment
   - pip install -r requirements.txt
   - pip install pytest
+  - python --version
   - python setup.py install
 
 test_script:

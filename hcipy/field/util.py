@@ -3,6 +3,8 @@ from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
 from .field import Field
 from .cartesian_grid import CartesianGrid
 
+import itertools
+
 def make_uniform_grid(dims, extent, center=0, has_center=False):
 	'''Create a uniformly-spaced :class:`Grid` of a certain shape and size.
 
@@ -231,7 +233,7 @@ def make_subsampled_grid(grid, undersampling):
 	
 	raise ValueError("Cannot create a subsampled grid from a non-separated grid.")
 
-def subsample_field(field, subsampling, new_grid=None):
+def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 	'''Average the field over subsampling pixels in each dimension.
 
 	.. note ::
@@ -250,6 +252,15 @@ def subsample_field(field, subsampling, new_grid=None):
 		If this grid is given, no new grid will be calculated and this grid will
 		be used instead. This saves on calculation time if your new grid is already
 		known beforehand.
+	statistic : string or callable
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		  * 'mean' : compute the mean of values for points within each superpixel.
+		  * 'median' : compute the median of values for points within each superpixel.
+		  * 'sum' : compute the sum of values for points within each  superpixel. 
+		    This is identical to a weighted histogram.
+		  * 'min' : compute the minimum of values for points within each superpixel.
+		  * 'max' : compute the maximum of values for point within each superpixel.
 
 	Returns
 	-------
@@ -274,36 +285,162 @@ def subsample_field(field, subsampling, new_grid=None):
 	else:
 		new_shape = [-1]
 
+	available_statistics = {
+		'mean': np.mean,
+		'median': np.median,
+		'max': np.max,
+		'min': np.min,
+		'sum': np.sum
+	}
+
+	if statistic not in available_statistics:
+		raise ValueError('This statistic is not recognized.')
+	
 	if field.grid.is_regular:
-		# All weights will be the same, so a simple "mean" will do.
-		return Field(field.reshape(tuple(reshape)).mean(axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
+		# All weights will be the same, so the array can be combined without taking the weights into account.
+		return Field(available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
 	else:
 		# Some weights will be different so calculate weighted mean instead.
-		weights = field.grid.weights
-		w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
-		f = (field*weights).reshape(tuple(reshape)).sum(axis=tuple(axes))
-		return Field((f / w).reshape(tuple(new_shape)), new_grid)
+		if statistic in ['min', 'max', 'sum']:
+			f = available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes))
+			return Field(f.reshape(tuple(new_shape)), new_grid)
+		elif statistic in ['mean']:
+			weights = field.grid.weights
+			w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
+			f = np.sum((field * weights).reshape(tuple(reshape)), axis=tuple(axes))
+			return Field((f / w).reshape(tuple(new_shape)), new_grid)
+		else:
+			raise NotImplementedError('The median statistic is not implemented for non-regular grids.')
 
-def evaluate_supersampled(field_generator, grid, oversampling):
+def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean', make_sparse=True):
 	'''Evaluate a Field generator on `grid`, with an oversampling.
 
 	Parameters
 	----------
-	field_generator : Field generator
-		The field generator to evaluate.
+	field_generator : Field generator or list of Field generators
+		The field generator to evaluate. If this is a list of Field generators,
+		each Field generator will be evaluated and stored in a ModeBasis.
 	grid : Grid
 		The grid on which to evaluate `field_generator`.
 	oversampling : integer or scalar or ndarray
 		The factor by which to oversample. If this is a scalar, it will be rounded to
 		the nearest integer. If this is an array, a different oversampling factor will
 		be used for each dimension.
+	statistic : string or callable
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		  * 'mean' : compute the mean of values for points within each superpixel.
+		  * 'median' : compute the median of values for points within each superpixel.
+		  * 'sum' : compute the sum of values for points within each  superpixel. 
+		    This is identical to a weighted histogram.
+		  * 'min' : compute the minimum of values for points within each superpixel.
+		  * 'max' : compute the maximum of values for point within each superpixel.
+	make_sparse : boolean
+		If the resulting ModeBasis needs to be sparsified. This is ignored if
+		only a single Field generator is provided.
+
+	Returns
+	-------
+	Field or ModeBasis
+		The evaluated field or mode basis.
+	'''
+	import scipy.sparse
+	from ..mode_basis import ModeBasis
+
+	if isinstance(field_generator, (list, tuple)):
+		modes = []
+
+		for fg in field_generator:
+			field = evaluate_supersampled(fg, grid, oversampling, statistic)
+
+			if make_sparse:
+				field = scipy.sparse.csr_matrix(field)
+				field.eliminate_zeros()
+			
+			modes.append(field)
+		
+		return ModeBasis(modes, grid)
+	
+	new_grid = make_supersampled_grid(grid, oversampling)
+	
+	if grid.is_separated:
+		# Use sub grids to evaluate field generator. This avoids a huge memory usage 
+		# for large oversamplings. New grid is guaranteed to be able to be split up into
+		# oversampling^ndim parts. Each of these evaluations uses the same amount of
+		# memory as the final grid.
+		field = Field(np.empty(grid.size), grid)
+
+		for part in itertools.product(range(oversampling), repeat=grid.ndim):
+			sub_new_coords = []
+			sub_coords = []
+			mask = np.ones(grid.shape, dtype='bool')
+
+			# Create a sub grid and a mask on the original array where the subarray is located.
+			for i, (p, s) in enumerate(zip(part, grid.dims)):
+				sub_new_coords.append(new_grid.separated_coords[i][p * s:(p + 1) * s])
+				sub_coords.append(grid.separated_coords[i][p * s // oversampling:(p + 1) * s // oversampling])
+
+				# Mask out the parts outside of the current subgrid
+				slices = [slice(None)] * grid.ndim
+				slices[grid.ndim - i - 1] = slice(0, p * s // oversampling)
+				mask[tuple(slices)] = False
+				slices[grid.ndim - i - 1] = slice((p + 1) * s // oversampling, None)
+				mask[tuple(slices)] = False
+
+			# Create sub grids.
+			sub_new_grid = new_grid.__class__(SeparatedCoords(sub_new_coords))
+			sub_grid = grid.__class__(SeparatedCoords(sub_coords))
+
+			# Evaluate sub field
+			sub_new_field = field_generator(sub_new_grid)
+			sub_field = subsample_field(sub_new_field, oversampling, sub_grid, statistic)
+
+			# Insert sub field into final field at the correct pixels.
+			field[mask.ravel()] = sub_field
+
+		return field
+	else:
+		# Cannot use sub grids, so fall back to evaluation of generator on the full 
+		# supersampled grid.
+		field = field_generator(new_grid)
+		return subsample_field(field, oversampling, grid, statistic)
+
+def make_uniform_vector_field(field, jones_vector):
+	'''Make an uniform vector field from a scalar field and a jones vector.
+	
+	Parameters
+	----------
+	field : Field
+		An input scalar field that is expanded to a vector field
+	jones_vector : array_like
+		The output vector at every pixel
 
 	Returns
 	-------
 	Field
-		The evaluated field.
+		The expanded vector field
 	'''
-	new_grid = make_supersampled_grid(grid, oversampling)
-	field = field_generator(new_grid)
+	if field.is_scalar_field():
+		return Field([ei * field for ei in jones_vector], field.grid)
 
-	return subsample_field(field, oversampling, grid)
+def make_uniform_vector_field_generator(field_generator, jones_vector):
+	'''Make an uniform vector field generator from a scalar field generator and a jones vector.
+	
+	Parameters
+	----------
+	field_generator : Field generator
+		The field generator to evaluate.
+	jones_vector : array_like
+		The output vector at every grid coordinate
+
+	Returns
+	-------
+	Field generator
+		This function can be evaluated on a grid to get a Field.
+	'''
+	
+	def func(grid):
+		scalar_field = field_generator(grid)
+		return Field([ei * scalar_field for ei in jones_vector], grid)
+
+	return func

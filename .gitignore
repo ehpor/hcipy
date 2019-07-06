@@ -5,3 +5,5 @@
 tags
 /doc/_build/
 /doc/_autosummary/
+/.idea/
+/build/

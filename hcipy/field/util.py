@@ -301,24 +301,25 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 		return Field(available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
 	else:
 		# Some weights will be different so calculate weighted mean instead.
-		if statistic in ['min', 'max']:
+		if statistic in ['min', 'max', 'sum']:
 			f = available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes))
 			return Field(f.reshape(tuple(new_shape)), new_grid)
-		elif statistic in ['sum', 'mean']:
+		elif statistic in ['mean']:
 			weights = field.grid.weights
 			w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
-			f = available_statistics[statistic]((field*weights).reshape(tuple(reshape)), axis=tuple(axes))
+			f = np.sum((field * weights).reshape(tuple(reshape)), axis=tuple(axes))
 			return Field((f / w).reshape(tuple(new_shape)), new_grid)
 		else:
 			raise NotImplementedError('The median statistic is not implemented for non-regular grids.')
 
-def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean'):
+def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean', make_sparse=True):
 	'''Evaluate a Field generator on `grid`, with an oversampling.
 
 	Parameters
 	----------
-	field_generator : Field generator
-		The field generator to evaluate.
+	field_generator : Field generator or list of Field generators
+		The field generator to evaluate. If this is a list of Field generators,
+		each Field generator will be evaluated and stored in a ModeBasis.
 	grid : Grid
 		The grid on which to evaluate `field_generator`.
 	oversampling : integer or scalar or ndarray
@@ -334,14 +335,34 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean')
 		    This is identical to a weighted histogram.
 		  * 'min' : compute the minimum of values for points within each superpixel.
 		  * 'max' : compute the maximum of values for point within each superpixel.
+	make_sparse : boolean
+		If the resulting ModeBasis needs to be sparsified. This is ignored if
+		only a single Field generator is provided.
 
 	Returns
 	-------
-	Field
-		The evaluated field.
+	Field or ModeBasis
+		The evaluated field or mode basis.
 	'''
-	new_grid = make_supersampled_grid(grid, oversampling)
+	import scipy.sparse
+	from ..mode_basis import ModeBasis
 
+	if isinstance(field_generator, (list, tuple)):
+		modes = []
+
+		for fg in field_generator:
+			field = evaluate_supersampled(fg, grid, oversampling, statistic)
+
+			if make_sparse:
+				field = scipy.sparse.csr_matrix(field)
+				field.eliminate_zeros()
+			
+			modes.append(field)
+		
+		return ModeBasis(modes, grid)
+	
+	new_grid = make_supersampled_grid(grid, oversampling)
+	
 	if grid.is_separated:
 		# Use sub grids to evaluate field generator. This avoids a huge memory usage 
 		# for large oversamplings. New grid is guaranteed to be able to be split up into
@@ -356,9 +377,8 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean')
 
 			# Create a sub grid and a mask on the original array where the subarray is located.
 			for i, (p, s) in enumerate(zip(part, grid.dims)):
-				print(p*s, new_grid.separated_coords[i].size)
-				sub_new_coords.append(new_grid.separated_coords[i][p*s:(p+1)*s])
-				sub_coords.append(grid.separated_coords[i][p*s//oversampling:(p+1)*s//oversampling])
+				sub_new_coords.append(new_grid.separated_coords[i][p * s:(p + 1) * s])
+				sub_coords.append(grid.separated_coords[i][p * s // oversampling:(p + 1) * s // oversampling])
 
 				# Mask out the parts outside of the current subgrid
 				slices = [slice(None)] * grid.ndim

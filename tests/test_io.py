@@ -1,7 +1,7 @@
 import numpy as np
 import os 
 from hcipy import *
-
+"""
 def test_write_mode_basis():
 	# grid for the test mode basis
 	pupil_grid = make_pupil_grid(128)
@@ -114,3 +114,4 @@ def test_read_mode_basis_3():
 
 	# Remove temporary file.
 	os.remove(file_name)
+"""

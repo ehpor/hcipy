@@ -58,8 +58,20 @@ class DeformableMirror(OpticalElement):
 	'''
 	def __init__(self, influence_functions):
 		self.influence_functions = influence_functions
+
 		self.actuators = np.zeros(len(influence_functions))
-		self.input_grid = influence_functions[0].grid
+		self._actuators_for_cached_surface = None
+
+		self.input_grid = influence_functions.grid
+		self._surface = self.input_grid.zeros()
+	
+	@property
+	def actuators(self):
+		return self._actuators
+	
+	@actuators.setter
+	def actuators(self, actuators):
+		self._actuators = actuators
 	
 	def forward(self, wavefront):
 		'''Propagate a wavefront through the deformable mirror.
@@ -103,15 +115,28 @@ class DeformableMirror(OpticalElement):
 	
 	@influence_functions.setter
 	def influence_functions(self, influence_functions):
-		self._influence_functions = ModeBasis(influence_functions)
-		self._transformation_matrix = self._influence_functions.transformation_matrix
+		self._influence_functions = influence_functions
+		self._actuators_for_cached_surface = None
 	
 	@property
 	def surface(self):
 		'''The surface of the deformable mirror in meters.
 		'''
-		surf = self._transformation_matrix.dot(self.actuators)
-		return Field(surf, self.input_grid)
+		if self._actuators_for_cached_surface is not None:
+			if np.all(self.actuators == self._actuators_for_cached_surface):
+				return self._surface
+		
+		self._surface = self.influence_functions.linear_combination(self.actuators)
+		self._actuators_for_cached_surface = self.actuators.copy()
+		
+		return self._surface
+	
+	@property
+	def opd(self):
+		'''The optical path difference in meters that this deformable
+		mirror induces.
+		'''
+		return 2 * self.surface
 	
 	def phase_for(self, wavelength):
 		'''Get the phase that is added to a wavefront with a specified wavelength.
@@ -127,3 +152,8 @@ class DeformableMirror(OpticalElement):
 			The calculated phase deformation.
 		'''
 		return 2 * self.surface * 2*np.pi / wavelength
+	
+	def flatten(self):
+		'''Flatten the DM by setting all actuators to zero.
+		'''
+		self._actuators = np.zeros(len(self.influence_functions))

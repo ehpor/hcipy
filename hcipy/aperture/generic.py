@@ -1,4 +1,6 @@
 from __future__ import division
+import functools
+
 import numpy as np
 from ..field import Field, CartesianGrid, UnstructuredCoords
 
@@ -286,9 +288,12 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 		return Field(res, grid)
 	
 	if return_segments:
+		def seg(grid, p, t):
+			return segment_shape(grid.shifted(-p)) * t
+		
 		segments = []
 		for p, t in zip(segment_positions.points, segment_transmissions):
-			segments.append(lambda grid: segment_shape(grid.shifted(-p)) * t)
+			segments.append(functools.partial(seg, p=p, t=t))
 		
 		return func, segments
 	else:

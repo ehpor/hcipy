@@ -58,8 +58,12 @@ class DeformableMirror(OpticalElement):
 	'''
 	def __init__(self, influence_functions):
 		self.influence_functions = influence_functions
+
 		self.actuators = np.zeros(len(influence_functions))
+		self._actuators_for_cached_surface = None
+
 		self.input_grid = influence_functions.grid
+		self._surface = self.input_grid.zeros()
 	
 	@property
 	def actuators(self):
@@ -68,7 +72,6 @@ class DeformableMirror(OpticalElement):
 	@actuators.setter
 	def actuators(self, actuators):
 		self._actuators = actuators
-		self._surface = None
 	
 	def forward(self, wavefront):
 		'''Propagate a wavefront through the deformable mirror.
@@ -113,15 +116,27 @@ class DeformableMirror(OpticalElement):
 	@influence_functions.setter
 	def influence_functions(self, influence_functions):
 		self._influence_functions = influence_functions
-		self._surface = None
+		self._actuators_for_cached_surface = None
 	
 	@property
 	def surface(self):
 		'''The surface of the deformable mirror in meters.
 		'''
-		if self._surface is None:
-			self._surface = self.influence_functions.linear_combination(self.actuators)
+		if self._actuators_for_cached_surface is not None:
+			if np.all(self.actuators == self._actuators_for_cached_surface):
+				return self._surface
+		
+		self._surface = self.influence_functions.linear_combination(self.actuators)
+		self._actuators_for_cached_surface = self.actuators.copy()
+		
 		return self._surface
+	
+	@property
+	def opd(self):
+		'''The optical path difference in meters that this deformable
+		mirror induces.
+		'''
+		return 2 * self.surface
 	
 	def phase_for(self, wavelength):
 		'''Get the phase that is added to a wavefront with a specified wavelength.
@@ -142,4 +157,3 @@ class DeformableMirror(OpticalElement):
 		'''Flatten the DM by setting all actuators to zero.
 		'''
 		self._actuators = np.zeros(len(self.influence_functions))
-		self._surface = None

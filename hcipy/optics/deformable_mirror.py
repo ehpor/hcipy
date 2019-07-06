@@ -142,3 +142,4 @@ class DeformableMirror(OpticalElement):
 		'''Flatten the DM by setting all actuators to zero.
 		'''
 		self._actuators = np.zeros(len(self.influence_functions))
+		self._surface = None

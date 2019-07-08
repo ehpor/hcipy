@@ -212,8 +212,9 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 		spider3 = make_spider_infinite([0, 0], 240, spider_width)
 		spider4 = make_spider_infinite([0, 0], 300, spider_width)
 
-		for i, s in enumerate(segments):
-			s = lambda grid: s(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
+		if return_segments:
+			for i, s in enumerate(segments):
+				s = lambda grid: s(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
 			
 	def aperture(grid):
 		res = segmented_aperture(grid)

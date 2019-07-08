@@ -40,7 +40,7 @@ class AngularSpectrumPropagatorMonochromatic(object):
 			self.transfer_function = self.fft.forward(impulse_response)
 		else:
 			k_squared = self.fft.output_grid.as_('polar').r**2
-			k_z = np.real( np.sqrt(k**2 - k_squared + 0j) )
+			k_z = np.sqrt(k**2 - k_squared + 0j)
 			self.transfer_function = np.exp(1j * k_z * distance)
 
 	def forward(self, wavefront):

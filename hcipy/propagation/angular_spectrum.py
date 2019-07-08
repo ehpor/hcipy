@@ -39,7 +39,7 @@ class AngularSpectrumPropagatorMonochromatic(object):
 
 			r = np.sqrt(input_grid.as_('polar').r**2 + distance**2)
 			cos_theta = distance/r
-			impulse_response = cos_theta/(2*np.pi) * np.exp(1j * k * r) * (1/r**2 - 1j*k/r)
+			impulse_response = cos_theta / (2*np.pi) * np.exp(1j * k * r) * (1/r**2 - 1j * k / r)
 			
 			self.transfer_function = self.fft.forward(impulse_response)
 		else:

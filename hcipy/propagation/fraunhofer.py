@@ -8,7 +8,9 @@ class FraunhoferPropagatorMonochromatic(MonochromaticPropagator):
 
 		This implements the propagation of a wavefront through a perfect lens. The wavefront
 		is assumed to be exactly in the front focal plane of the lens and is propagated to the
-		 back focal plane. The implementation follows "Fourier Optics", J. W. Goodman.
+		back focal plane. The implementation follows [1]_.
+
+		.. [1] Goodman, J.W., 2005 Introduction to Fourier optics. Roberts and Company Publishers.
 	
 		Parameters
 		----------

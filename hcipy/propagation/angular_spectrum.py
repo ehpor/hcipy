@@ -3,8 +3,6 @@ from .propagator import MonochromaticPropagator
 from ..optics import Wavefront, make_polychromatic
 from ..field import Field
 from ..fourier import FastFourierTransform
-from ..plotting import imshow_field
-from matplotlib import pyplot as plt
 
 class AngularSpectrumPropagatorMonochromatic(object):
 	'''The monochromatic angular spectrum propagator for scalar fields.

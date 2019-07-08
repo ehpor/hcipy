@@ -5,3 +5,4 @@
 tags
 /doc/_build/
 /doc/_autosummary/
+/.pytest_cache/

@@ -51,7 +51,7 @@ def write_fits(data, filename, shape=None, overwrite=True):
 		hdu = fits.PrimaryHDU(data)
 
 	hdu.writeto(filename, overwrite=True)
-
+"""
 def write_mode_basis(mode_basis, filename):
 	'''A function that writes a mode basis as fits file.  
 
@@ -103,3 +103,4 @@ def read_mode_basis(filename, grid=None):
 
 	# Return the proper mode basis 
 	return ModeBasis(modes)
+"""

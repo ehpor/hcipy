@@ -47,8 +47,7 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
 	screen *= ptv / np.ptp(screen[aperture != 0])
 
 	if remove_modes is not None:
-		modes = make_zernike_basis(remove_modes, diameter, pupil_grid)
-		trans = modes.transformation_matrix
+		trans = remove_modes.transformation_matrix
 		trans_inv = inverse_tikhonov(trans, 1e-6)
 		screen -= trans.dot(trans_inv.dot(screen))
 	

@@ -63,7 +63,7 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 def make_keck_aperture():
 	pass
 
-def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1):
+def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1, return_segment_positions=False):
 	'''Make the LUVOIR A aperture.
 
 	This aperture changes frequently. This one is based on [1]_. Spiders and segment gaps 
@@ -85,11 +85,15 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 	segment_transmissions : scalar or array_like
 		The transmission for each of the segments. If this is a scalar, this transmission will
 		be used for all segments.
+	return_segment_positions : boolean
+		If this is True, the centers of each of the segments will get returned as well.
 	
 	Returns
 	-------
 	Field generator
 		The LUVOIR A aperture.
+	CartesianGrid
+		The segment positions. Only returned when `return_segment_positions` is True.
 	'''
 	pupil_diameter = 15.0 # m
 	segment_circum_diameter = 2 / np.sqrt(3) * pupil_diameter / 12
@@ -111,9 +115,9 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.98))
 	segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
 
-	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap)
+	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap, np.pi / 2)
 	def segment(grid):
-		return hexagon(grid.rotated(np.pi/2))
+		return hexagon(grid)
 	
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 90, spider_width)
@@ -141,9 +145,13 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider5(grid)
 
 		return Field(res, grid)
+
+	if return_segment_positions:
+			return func, segment_positions
+
 	return func
 
-def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1):
+def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, segment_transmissions=1, return_segments=False):
 	'''Make the HiCAT pupil mask.
 
 	This function is a WIP. It should NOT be used for actual designs. Current pupil should be taken as 
@@ -161,11 +169,15 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 	segment_transmissions : scalar or array_like
 		The transmission for each of the segments. If this is a scalar, this transmission will
 		be used for all segments.
+	return_segment_positions : boolean
+		If this is True, the centers of each of the segments will get returned as well.
 	
 	Returns
 	-------
 	Field generator
 		The HiCAT aperture.
+	CartesianGrid
+		The segment positions. Only returned when `return_segment_positions` is True.
 	'''
 	pupil_diameter = 0.019725 # m
 	segment_circum_diameter = 2 / np.sqrt(3) * pupil_diameter / 7
@@ -185,11 +197,14 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 	segment_positions = make_hexagonal_grid(segment_circum_diameter / 2 * np.sqrt(3), num_rings)
 	segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
 
-	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap)
+	hexagon = hexagonal_aperture(segment_circum_diameter - segment_gap, np.pi / 2)
 	def segment(grid):
-		return hexagon(grid.rotated(np.pi/2))
+		return hexagon(grid)
 
-	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions)
+	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments)
+	
+	if return_segments:
+		segmented_aperture, segments = segmented_aperture
 
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 60, spider_width)
@@ -197,14 +212,22 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 		spider3 = make_spider_infinite([0, 0], 240, spider_width)
 		spider4 = make_spider_infinite([0, 0], 300, spider_width)
 
-	def func(grid):
+		if return_segments:
+			for i, s in enumerate(segments):
+				s = lambda grid: s(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
+			
+	def aperture(grid):
 		res = segmented_aperture(grid)
 
 		if with_spiders:
 			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
 		
 		return Field(res, grid)
-	return func
+	
+	if return_segments:
+			return aperture, segments
+	else:
+		return aperture
 
 def make_hicat_lyot_stop(normalized=False, with_spiders=True):
 	'''Make the HiCAT Lyot stop.

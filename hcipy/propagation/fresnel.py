@@ -28,9 +28,9 @@ class FresnelPropagatorMonochromatic(object):
 		# The FFT requires a regular cartesian grid there we can use the cartesian coordinates.
 		Lmax = np.max([coord.ptp() for coord in input_grid.coords])
 		
-		if np.any(input_grid.delta > wavelength * distance / Lmax):
+		if np.any(input_grid.delta < wavelength * distance / Lmax):
 			r_squared = input_grid.as_('polar').r**2
-			impulse_response = np.exp(1j * k * distance)/(1j * wavelength * distance) * np.exp(1j * k * r_squared / (2*distance))
+			impulse_response = Field(np.exp(1j * k * distance)/(1j * wavelength * distance) * np.exp(1j * k * r_squared / (2*distance)), input_grid)
 			self.transfer_function = self.fft.forward(impulse_response)
 		else:
 			k_squared = self.fft.output_grid.as_('polar').r**2

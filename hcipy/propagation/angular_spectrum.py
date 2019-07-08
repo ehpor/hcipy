@@ -33,12 +33,10 @@ class AngularSpectrumPropagatorMonochromatic(object):
 		# The FFT requires a regular cartesian grid there we can use the cartesian coordinates.
 		Lmax = np.max([coord.ptp() for coord in input_grid.coords])
 		
-		if np.any(input_grid.delta > wavelength * distance / Lmax):
-
+		if np.any(input_grid.delta < wavelength * distance / Lmax):
 			r = np.sqrt(input_grid.as_('polar').r**2 + distance**2)
 			cos_theta = distance/r
-			impulse_response = cos_theta / (2*np.pi) * np.exp(1j * k * r) * (1/r**2 - 1j * k / r)
-			
+			impulse_response = Field(cos_theta / (2*np.pi) * np.exp(1j * k * r) * (1/r**2 - 1j * k / r), input_grid)
 			self.transfer_function = self.fft.forward(impulse_response)
 		else:
 			k_squared = self.fft.output_grid.as_('polar').r**2

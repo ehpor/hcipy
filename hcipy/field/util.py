@@ -448,7 +448,7 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 		# for large oversamplings. New grid is guaranteed to be able to be split up into
 		# oversampling^ndim parts. Each of these evaluations uses the same amount of
 		# memory as the final grid.
-		field = Field(np.empty(grid.size), grid)
+		field = None
 
 		for part in itertools.product(range(oversampling), repeat=grid.ndim):
 			sub_new_coords = []
@@ -476,6 +476,8 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 			sub_field = subsample_field(sub_new_field, oversampling, sub_grid, statistic)
 
 			# Insert sub field into final field at the correct pixels.
+			if field is None:
+				field = grid.empty(dtype=sub_field.dtype)
 			field[mask.ravel()] = sub_field
 
 		return field

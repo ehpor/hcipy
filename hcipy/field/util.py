@@ -1,3 +1,7 @@
+from __future__ import division
+
+import warnings
+
 import numpy as np
 from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
 from .field import Field
@@ -62,14 +66,9 @@ def make_pupil_grid(dims, diameter=1):
 		A :class:`CartesianGrid` with :class:`RegularCoords`.
 	'''
 	diameter = (np.ones(2) * diameter).astype('float')
-	dims = (np.ones(2) * dims).astype('int')
+	return make_uniform_grid(dims, diameter)
 
-	delta = diameter / (dims - 1)
-	zero = -diameter / 2
-
-	return CartesianGrid(RegularCoords(delta, dims, zero))
-
-def make_focal_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1):
+def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1):
 	from ..fourier import make_fft_grid
 
 	f_lambda = focal_length * wavelength
@@ -86,6 +85,87 @@ def make_focal_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1
 	focal_grid = uv.scaled(f_lambda / (2*np.pi))
 	
 	return focal_grid
+
+def make_focal_grid_replacement(q, num_airy, spatial_resolution=None, pupil_diameter=None, focal_length=None, reference_wavelength=None):
+	'''Make a grid for a focal plane.
+
+	This grid will be a CartesianGrid with RegularCoords, and supports different resolutions, samplings,
+	or extent in x and y. If `spatial_resolution` is 1, then the grid will be returned in normalized
+	(ie. homogenized) coordinates. Otherwise, it will be in physical units. The spatial resolution is
+	defined by:
+
+	.. math:: \Delta x = \lambda f / D = \lambda F
+
+	where :math:`\lambda` is the wavelength, :math:`f` is the effective focal length before the focal plane,
+	:math:`D` is the diameter of the pupil, and :math:`F` is the F-number of the incoming light beam.
+	You can supply either the spatial resolution or a set of focal length, reference wavelength and pupil diameter.
+	If none are supplied, a spatial resolution of 1 will be assumed, meaning normalized units.
+
+	The grid will always contain the origin (0, 0) point.
+
+	This function will be renamed to make_focal_grid_replacement after the next major update.
+
+	Parameters
+	----------
+	q : scalar or array_like
+		The number of pixels per resolution element (= lambda f / D).
+	num_airy : scalar or array_like
+		The spatial extent of the grid in radius in resolution elements (= lambda f / D).
+	spatial_resolution : scalar	or array_like
+		The physical size of a resolution element (= lambda f / D). It this is not given, 
+		the spatial resolution will be calculated from the given `focal_length`, 
+		`reference_wavelength` and `pupil_diameter`.
+	pupil_diameter : scalar or array_like
+		The diameter of the pupil. If it is an array, this indicates the diameter in x and y.
+	focal_length : scalar
+		The focal length used for calculating the spatial resolution at the focal plane.
+	reference_wavelength : scalar
+		The reference wavelength used for calculating the spatial resolution at the focal plane.
+	
+	Returns
+	-------
+	Grid
+		A Grid describing the sampling for a focal plane.
+	
+	Raises
+	------
+	ValueError
+		If both no spatial resolution and no complete set of (focal length, reference wavelength and pupil diameter) was supplied.
+	'''
+	if spatial_resolution is None:
+		if pupil_diameter is None or focal_length is None or reference_wavelength is None:
+			if not (pupil_diameter is None and focal_length is None and reference_wavelength is None):
+				# Only a few arguments in this set were supplied.
+				raise ValueError('Supply either a (pupil_diameter, focal_length, reference wavelength) or a spatial_resolution.')
+			
+			spatial_resolution = 1
+		else:
+			pupil_diameter = np.ones(2) * pupil_diameter
+			spatial_resolution = reference_wavelength * focal_length / pupil_diameter
+
+	delta = spatial_resolution / q * np.ones(2)
+	dims = (2 * num_airy * q * np.ones(2)).astype('int')
+	zero = delta * (-dims / 2 + np.mod(dims, 2) * 0.5)
+
+	return CartesianGrid(RegularCoords(delta, dims, zero))
+
+def make_focal_grid(*args, **kwargs):
+	# Figure out which function signature was used.
+	if len(args) == 0:
+		if 'pupil_grid' in kwargs:
+			func = make_focal_grid_from_pupil_grid
+		else:
+			func = make_focal_grid_replacement
+	else:
+		if hasattr(args[0], 'coords'):
+			func = make_focal_grid_from_pupil_grid
+		else:
+			func = make_focal_grid_replacement
+	
+	if func is make_focal_grid_from_pupil_grid:
+		warnings.warn('This functions signature is deprecated and will be removed with the next major update. Use the updated function signature or call make_focal_grid_from_pupil_grid() directly instead.', DeprecationWarning, stacklevel=2)
+	
+	return func(*args, **kwargs)
 
 def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None):
 	'''Make a regular hexagonal grid.

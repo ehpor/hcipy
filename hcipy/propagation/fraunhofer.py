@@ -23,21 +23,15 @@ class FraunhoferPropagatorMonochromatic(MonochromaticPropagator):
 		focal_length : scalar
 			The focal length of the lens system.
 	'''
-	def __init__(self, input_grid, output_grid, wavelength_0=1, focal_length=1, wavelength=1):
+	def __init__(self, input_grid, output_grid, focal_length=1, wavelength=1):
 		from ..fourier import make_fourier_transform
 
-		if focal_length is None:
-			f_lambda_ref = 1
-		else:
-			f_lambda_ref = wavelength_0 * focal_length
-		
-		f_lambda = f_lambda_ref * (wavelength / wavelength_0)
-		self.uv_grid = output_grid.scaled(2*np.pi / f_lambda)
+		self.uv_grid = output_grid.scaled(2*np.pi / (focal_length * wavelength))
 		self.fourier_transform = make_fourier_transform(input_grid, self.uv_grid)
 		self.output_grid = output_grid
 
 		# Intrinsic to Fraunhofer propagation
-		self.norm_factor = 1 / (1j * f_lambda)
+		self.norm_factor = 1 / (1j * (focal_length * wavelength))
 		self.input_grid = input_grid
 
 	def forward(self, wavefront):

@@ -3,6 +3,7 @@ from .propagator import MonochromaticPropagator
 from ..optics import Wavefront, make_polychromatic
 from ..field import Field
 from ..fourier import FastFourierTransform
+from ..field import evaluate_supersampled, make_pupil_grid, subsample_field
 
 class AngularSpectrumPropagatorMonochromatic(object):
 	'''The monochromatic angular spectrum propagator for scalar fields.
@@ -38,7 +39,7 @@ class AngularSpectrumPropagatorMonochromatic(object):
 		if not input_grid.is_regular or not input_grid.is_('cartesian'):
 			raise ValueError('The input grid must be a regular, Cartesian grid.')
 		
-		self.fft = FastFourierTransform(input_grid)
+		self.fft = FastFourierTransform(input_grid, q=2)
 
 		k = 2 * np.pi / wavelength * refractive_index
 		L_max = np.max(input_grid.dims * input_grid.delta)
@@ -48,7 +49,7 @@ class AngularSpectrumPropagatorMonochromatic(object):
 			self.fft_up_scale = FastFourierTransform(enlarged_input_grid)
 
 			def impulse_response_generator(grid):
-				r_squared = grid.x**2 + grid.y**2
+				r_squared = grid.x**2 + grid.y**2 + distance**2
 				r = np.sqrt(r_squared)
 				cos_theta = distance / r
 				return Field(cos_theta / (2 * np.pi) * np.exp(1j * k * r) * (1 / r_squared - 1j * k / r), grid)
@@ -56,6 +57,7 @@ class AngularSpectrumPropagatorMonochromatic(object):
 			impulse_response = evaluate_supersampled(impulse_response_generator, enlarged_input_grid, num_oversampling)
 
 			self.transfer_function = self.fft_up_scale.forward(impulse_response)
+
 		else:
 			def transfer_function_generator(grid):
 				k_squared = grid.as_('polar').r**2

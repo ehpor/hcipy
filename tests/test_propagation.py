@@ -1,6 +1,7 @@
 import numpy as np
 from hcipy import *
 import scipy.special
+from matplotlib import pyplot as plt
 
 def test_fraunhofer_propagation_circular():
 	for num_pix in [512, 1024]:
@@ -55,46 +56,56 @@ def test_fraunhofer_propagation_rectangular():
 					else:
 						assert False # This should never happen.
 
+
 def test_fresnel_propagation_rectangular():
-	for num_pix in [1024, 2048]:
-		for distance in [0.3, 0.6, 1]:
-			for wavelength in [500e-9, 700e-9]:
-				for a, b in [[0.001, 0.001], [0.0015, 0.001]]:
+	for num_pix in [512, 1024]:
+		for wavelength in [500e-9, 700e-9]:
+			for a, b in [[0.001, 0.001], [0.0015, 0.001]]:
+				for relative_distance, error_threshold in zip([0.2, 1, 5],[0.02, 0.01, 0.01]):
+					
 					wavenumber = 2 * np.pi / wavelength
 
-					pupil_grid = make_pupil_grid(num_pix, [32 * a, 32 * b])
-					prop = FresnelPropagator(pupil_grid, distance)
+					pupil_grid = make_pupil_grid(num_pix, [16 * a, 16 * b])
+					threshold_distance = np.min(pupil_grid.delta * np.array([16 * a, 16 * b]) / wavelength)
+					distance = relative_distance * threshold_distance
 
-					aperture = evaluate_supersampled(rectangular_aperture([2 * a, 2 * b]), pupil_grid, 1)
-
-					img = prop(Wavefront(aperture, wavelength)).intensity
-
-					w_x1 = np.sqrt(2 / (distance * wavelength)) * (pupil_grid.x - a)
-					w_x2 = np.sqrt(2 / (distance * wavelength)) * (pupil_grid.x + a)
-					w_y1 = np.sqrt(2 / (distance * wavelength)) * (pupil_grid.y - b)
-					w_y2 = np.sqrt(2 / (distance * wavelength)) * (pupil_grid.y + b)
+					prop = FresnelPropagator(pupil_grid, distance, num_oversampling=2)
 					
-					fresnel = scipy.special.fresnel
+					aperture = evaluate_supersampled(rectangular_aperture([2 * a, 2 * b]), pupil_grid, 2)
+					
+					img = prop(Wavefront(aperture, wavelength)).intensity
+					
+					def generate_reference_field(reference_grid):
+						w_x1 = np.sqrt(2 / (distance * wavelength)) * (reference_grid.x - a)
+						w_x2 = np.sqrt(2 / (distance * wavelength)) * (reference_grid.x + a)
+						w_y1 = np.sqrt(2 / (distance * wavelength)) * (reference_grid.y - b)
+						w_y2 = np.sqrt(2 / (distance * wavelength)) * (reference_grid.y + b)
+						
+						fresnel = scipy.special.fresnel
 
-					ssa_x1, csa_x1 = fresnel(w_x1)
-					ssa_x2, csa_x2 = fresnel(w_x2)
-					ssa_y1, csa_y1 = fresnel(w_y1)
-					ssa_y2, csa_y2 = fresnel(w_y2)
+						ssa_x1, csa_x1 = fresnel(w_x1)
+						ssa_x2, csa_x2 = fresnel(w_x2)
+						ssa_y1, csa_y1 = fresnel(w_y1)
+						ssa_y2, csa_y2 = fresnel(w_y2)
 
-					F_x1 = csa_x1 + 1j * ssa_x1
-					F_x2 = csa_x2 + 1j * ssa_x2
-					F_y1 = csa_y1 + 1j * ssa_y1
-					F_y2 = csa_y2 + 1j * ssa_y2
+						F_x1 = csa_x1 + 1j * ssa_x1
+						F_x2 = csa_x2 + 1j * ssa_x2
+						F_y1 = csa_y1 + 1j * ssa_y1
+						F_y2 = csa_y2 + 1j * ssa_y2
 
-					reference = (F_x2 - F_x1) * (F_y2 - F_y1)
-					reference *= -2j * np.exp(1j * wavenumber * distance)
-					reference *= np.exp(1j * wavenumber * (pupil_grid.x**2 + pupil_grid.y**2) / (2 * distance))
-					reference = np.abs(Field(reference, pupil_grid))**2
+						reference = (F_x2 - F_x1) * (F_y2 - F_y1)
+						reference *= -1j * np.exp(1j * wavenumber * distance) / 2
+						reference *= np.exp(1j * wavenumber * (reference_grid.x**2 + reference_grid.y**2) / (2 * distance))
+						reference = np.abs(Field(reference, reference_grid))**2
+
+						return reference
+					
+					reference_image = evaluate_supersampled(generate_reference_field, pupil_grid, 2)
 
 					img = subsample_field(img, 8)
-					reference = subsample_field(reference, 8)
+					reference_image = subsample_field(reference_image, 8)
+					
+					absolute_relative_error = np.abs(img - reference_image).max()
+					assert  absolute_relative_error < error_threshold
 
-					img /= np.sum(img)
-					reference /= np.sum(reference)
-
-					assert (np.abs(img - reference).max() / reference.max()) < 1e-2
+test_fresnel_propagation_rectangular()

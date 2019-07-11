@@ -60,7 +60,7 @@ class AngularSpectrumPropagatorMonochromatic(object):
 			def transfer_function_generator(grid):
 				k_squared = grid.as_('polar').r**2
 				k_z = np.sqrt(k**2 - k_squared + 0j)
-				return Fuekd(np.exp(1j * k_z * distance), grid)
+				return Field(np.exp(1j * k_z * distance), grid)
 
 			self.transfer_function = evaluate_supersampled(transfer_function_generator, self.fft.output_grid, num_oversampling)
 

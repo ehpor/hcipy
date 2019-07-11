@@ -158,5 +158,3 @@ def test_asp_propagation_rectangular():
 					
 					absolute_error = np.abs(img - reference_image).max()
 					assert  absolute_error < error_threshold
-
-test_asp_propagation_rectangular()

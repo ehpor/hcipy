@@ -3,10 +3,7 @@ from .propagator import MonochromaticPropagator
 from ..optics import Wavefront, make_polychromatic
 from ..field import Field
 from ..fourier import FastFourierTransform
-from matplotlib import pyplot as plt
-from ..plotting import imshow_field
 from ..field import evaluate_supersampled, make_pupil_grid, subsample_field
-from ..aperture import circular_aperture
 
 class FresnelPropagatorMonochromatic(object):
 	'''The monochromatic Fresnel propagator for scalar fields.

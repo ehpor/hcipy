@@ -10,6 +10,7 @@ __all__ += ['MicroLensArray', 'closest_points']
 __all__ += ['OpticalElement', 'OpticalSystem', 'make_polychromatic']
 __all__ += ['PhaseRetarder', 'LinearRetarder', 'CircularRetarder', 'QuarterWavePlate', 'HalfWavePlate', 'LinearPolarizer']
 __all__ += ['SegmentedDeformableMirror']
+__all__ += ['TipTiltMirror']
 __all__ += ['SimpleVibration']
 __all__ += ['Wavefront']
 
@@ -27,4 +28,5 @@ from .magnifier import *
 from .micro_lens_array import *
 from .polarization import *
 from .segmented_mirror import *
+from .tip_tilt_mirror import *
 from .vibration import *

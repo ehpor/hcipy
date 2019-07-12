@@ -137,7 +137,17 @@ class DeformableMirror(OpticalElement):
 		mirror induces.
 		'''
 		return 2 * self.surface
-	
+
+	def random(self, rms):
+		'''Set the dm actuators with random white noise of a certain rms.
+
+		Parameters
+		----------
+		rms : scalar
+			The dm surface rms.
+		'''
+		self._actuators = np.random.randn(self._actuators.size) * rms/2
+		
 	def phase_for(self, wavelength):
 		'''Get the phase that is added to a wavefront with a specified wavelength.
 

@@ -325,12 +325,12 @@ def make_hicat_aperture(normalized=True, with_spiders=True, with_segment_gaps=Tr
 		spider2 = make_spider_infinite([0,0], 120, p3_apodizer_mask_spiders_thickness)
 		spider3 = make_spider_infinite([0,0], -60, p3_apodizer_mask_spiders_thickness)
 		spider4 = make_spider_infinite([0,0], -120, p3_apodizer_mask_spiders_thickness)
-	
-		if return_segments:
+    
+    if return_segments:
 			segments = [lambda grid: s(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) for s in segments]
 	
 	def func(grid):
-		res = (contour(grid) - central_segment(grid)) 
+		res = contour(grid) - central_segment(grid)
 		
 		if with_segment_gaps:
 			res *= segmentation(grid)

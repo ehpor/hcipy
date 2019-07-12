@@ -7,3 +7,4 @@ tags
 /doc/_autosummary/
 /.idea/
 /build/
+/.pytest_cache/

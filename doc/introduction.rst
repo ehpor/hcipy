@@ -62,9 +62,30 @@ The BibTeX citation can be found below:
 		URL = {https://doi.org/10.1117/12.2314407}
 	}
 
-Contributing
-------------
+The Team
+--------
 
-If you have something to add, or want something added to HCIPy, please let us know. We actively support external contributions to HCIPy, whether small or large. We are operating in a `feature branching workflow`_.
+HCIPy was originally developed by a small team of astronomers at Leiden Observatory, but has since received external constributions from scientists and software developers around the world. Development takes place on Github at http://github.com/ehpor/hcipy. If you have something to add, or want something added to HCIPY, please let us know. We actively support external contributions to HCIPy, whether small or large.
 
-.. _feature branching workflow: https://www.atlassian.com/git/tutorials/comparing-workflows#feature-branch-workflow
+Direct contributors to HCIPy code
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ * Emiel Por (@ehpor)
+ * Sebastiaan Haffert (@syhaffert)
+ * Steven Bos (@spbos)
+ * Maaike van Kooten (@vkooten)
+ * Vikram Radhakrishnan (@VikramRadhakrishnan)
+ * David Doelman (@dsdoelman)
+ * Christoph Keller (@cukeller)
+ * Iva Laginja (@ivalaginja)
+ * Remi Soummer (@RemiSoummer)
+ * Kathryn St Laurent (@kstlaurent)
+ * Matthew Kenworthy (@mkenworthy)
+ * David Kleingeld (@dskleingeld)
+
+Testing and QA
+^^^^^^^^^^^^^^
+ * Aditya Sengupta (@aditya-sengupta)
+ * Rebecca Jensen-Clem (@rmjc)
+ * Jamie Noss (@jamienoss)
+ * Fedde Fagginger Auer (@fjfaggingerauer)
+ * Joost Wardenier (@jpw96)

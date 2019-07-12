@@ -86,12 +86,11 @@ def test_app_keller():
 	contrast = 1 - mask + 1e-7
 
 	# APP with aggressive acceleration
-	app = generate_app_keller(wavefront, propagator, contrast,
-		num_iterations = 150, beta = 0.98)
+	app = generate_app_keller(wavefront, propagator, contrast, num_iterations=150, beta=0.98)
 	img = propagator.forward(app)
 
-	assert img.intensity.max() / img_ref.intensity.max() > 0.92 # Strehl
-	assert np.mean(img.intensity * mask) / np.mean(mask) < 1.5e-8 # contrast
+	assert np.abs(img.intensity.max() / img_ref.intensity.max() - 0.90) < 0.01 # Strehl
+	assert np.mean(img.intensity * mask) / np.mean(mask) < 1.6e-8 # contrast
 
 def test_perfect_coronagraph():
 	pupil_grid = make_pupil_grid(256)

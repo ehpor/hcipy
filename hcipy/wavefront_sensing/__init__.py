@@ -1,6 +1,6 @@
 __all__ = ['WavefrontSensorOptics', 'WavefrontSensorEstimator']
 __all__ += ['optical_differentiation_surface', 'OpticalDifferentiationWavefrontSensorOptics', 'gODWavefrontSensorOptics','RooftopWavefrontSensorOptics', 'PolgODWavefrontSensorOptics', 'OpticalDifferentiationWavefrontSensorEstimator']
-__all__ += ['pyramid_surface', 'PyramidWavefrontSensorOptics', 'PyramidWavefrontSensorEstimator']
+__all__ += ['ModulatedPyramidWavefrontSensor', 'PyramidWavefrontSensorOptics', 'PyramidWavefrontSensorEstimator']
 __all__ += ['ShackHartmannWavefrontSensorOptics', 'SquareShackHartmannWavefrontSensorOptics', 'ShackHartmannWavefrontSensorEstimator']
 __all__ += ['phase_step_mask', 'ZernikeWavefrontSensorOptics', 'ZernikeWavefrontSensorEstimator']
 

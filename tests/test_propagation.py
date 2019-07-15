@@ -56,7 +56,7 @@ def test_fraunhofer_propagation_rectangular():
 					else:
 						assert False # This should never happen.
 
-def single_propagation_test( propagator, number_of_pixels, wavelength, a, b, distance, error_threshold):
+def single_propagation_test( propagator, number_of_pixels, wavelength, a, b, relative_distance, error_threshold):
 	wavenumber = 2 * np.pi / wavelength
 
 	pupil_grid = make_pupil_grid(number_of_pixels, [16 * a, 16 * b])

@@ -146,7 +146,7 @@ class DeformableMirror(OpticalElement):
 		rms : scalar
 			The dm surface rms.
 		'''
-		self._actuators = np.random.randn(self._actuators.size) * rms/2
+		self._actuators = np.random.randn(self._actuators.size) * rms
 		
 	def phase_for(self, wavelength):
 		'''Get the phase that is added to a wavefront with a specified wavelength.

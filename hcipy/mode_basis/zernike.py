@@ -130,9 +130,9 @@ def zernike_radial(n, m, r, cache=None):
 		p = n
 		q = m + 4
 
-		h3 = -4 * (q - 2) * (q - 3) / ((p + q - 2) * (p - q + 4))
-		h2 = h3 * (p + q) * (p - q + 2) / (4 * (q - 1)) + (q - 2)
-		h1 = q * (q - 1) / 2 - q * h2 + h3 * (p + q + 2) * (p - q) / 8
+		h3 = -4 * (q - 2) * (q - 3) / float((p + q - 2) * (p - q + 4))
+		h2 = h3 * (p + q) * (p - q + 2) / float(4 * (q - 1)) + (q - 2)
+		h1 = q * (q - 1) / 2.0 - q * h2 + h3 * (p + q + 2) * (p - q) / 8.0
 
 		r2 = zernike_radial(2, 2, r, cache)
 		res = h1 * zernike_radial(p, q, r, cache) + (h2 + h3 / r2) * zernike_radial(n, q - 2, r, cache)

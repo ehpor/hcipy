@@ -1,7 +1,8 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
 from ..plotting import imshow_field
-from ..optics import SurfaceApodizer, PhaseApodizer
+from ..aperture import circular_aperture
+from ..optics import SurfaceApodizer, PhaseApodizer, Apodizer
 from ..field import make_pupil_grid, make_focal_grid, Field
 
 import numpy as np
@@ -96,11 +97,11 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 			raise ValueError('The requested focal plane sampling is to low to sufficiently sample the wavefront sensor output.')
 
 		if num_airy is None:
-			self.num_airy = D / 2
+			self.num_airy = np.max((input_grid.shape-1)) / 2
 		else:
 			self.num_airy = num_airy
 		
-		self.focal_grid = make_focal_grid(q, num_airy, wavelength=wavelength_0, pupil_diamter=D)
+		self.focal_grid = make_focal_grid(q, self.num_airy, reference_wavelength=wavelength_0, pupil_diameter=D, focal_length=1)
 		self.wfs_grid = make_pupil_grid(qmin * input_grid.dims, qmin * D)
 		
 		# Make all the optical elements

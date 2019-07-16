@@ -85,45 +85,8 @@ def zernike_to_noll(n, m):
 			return j
 	raise ValueError('Could not find noll index for (%d,%d)' % n, m)
 
-def zernike_radial_direct(n, m, r, cache=None):
-	'''The radial component of a Zernike polynomial, calculated using a direct method.
-
-	This function optionally caches results of previous calls.
-
-	Parameters
-	----------
-	n : int
-		The radial Zernike order.
-	m : int
-		The azimuthal Zernike order.
-	r : array_like
-		The (normalized) radial coordinates on which to calculate the polynomial.
-	cache : dictionary or None
-		A dictionary containing previously calculated Zernike modes on the same grid.
-		This function is for speedup only, and therefore the cache is expected to be 
-		valid. You can reuse the cache for future calculations on the same exact grid.
-		The given dictionary is updated with the current calculation.
-	
-	Returns
-	-------
-	array_like
-		The radial component of the evaluated Zernike polynomial.
-	'''
-	m = abs(m)
-	
-	if cache is not None:
-		if ('rad', n, m) in cache:
-			return cache[('rad', n, m)]
-	
-	R = np.zeros_like(r)
-
-	for k in range((n - m) // 2 + 1):
-		R += (-1)**k * binom(n - k, k) * binom(n - 2 * k, (n - m) // 2 - k) * r**(n - 2 * k)
-	
-	return R
-
-def zernike_radial_q_recursive(n, m, r, cache=None):
-	'''The radial component of a Zernike polynomial, calculated using the q-recursive method.
+def zernike_radial(n, m, r, cache=None):
+	'''The radial component of a Zernike polynomial.
 
 	We use the q-recursive method, which uses recurrence relations to calculate the radial
 	Zernike polynomials without using factorials. A description of the method can be found
@@ -159,7 +122,10 @@ def zernike_radial_q_recursive(n, m, r, cache=None):
 	if n == m:
 		res = r**n
 	elif (n - m) == 2:
-		res = n * r**n - (n - 1) * r**(n - 2)
+		z1 = zernike_radial(n, n, r, cache)
+		z2 = zernike_radial(n - 2, n - 2, r, cache)
+
+		res = n * z1 - (n - 1) * z2
 	else:
 		p = n
 		q = m + 4
@@ -168,17 +134,18 @@ def zernike_radial_q_recursive(n, m, r, cache=None):
 		h2 = h3 * (p + q) * (p - q + 2) / (4 * (q - 1)) + (q - 2)
 		h1 = q * (q - 1) / 2 - q * h2 + h3 * (p + q + 2) * (p - q) / 8
 
-		res = h1 * zernike_radial_q_recursive(p, q, r, cache) + (h2 + h3 / r**2) * zernike_radial_q_recursive(n, q - 2, r, cache)
+		r2 = zernike_radial(2, 2, r, cache)
+		res = h1 * zernike_radial(p, q, r, cache) + (h2 + h3 / r2) * zernike_radial(n, q - 2, r, cache)
 
 	if cache is not None:
 		cache[('rad', n, m)] = res
 	
 	return res
 
-zernike_radial = zernike_radial_direct
-
 def zernike_azimuthal(m, theta, cache=None):
 	'''The azimuthal component of a Zernike polynomial.
+
+	This function optionally caches results of previous calls.
 
 	Parameters
 	----------

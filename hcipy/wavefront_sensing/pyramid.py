@@ -2,7 +2,7 @@ from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
 from ..plotting import imshow_field
 from ..aperture import circular_aperture
-from ..optics import SurfaceApodizer, PhaseApodizer, Apodizer
+from ..optics import SurfaceApodizer, PhaseApodizer, Apodizer, TipTiltMirror
 from ..field import make_pupil_grid, make_focal_grid, Field
 
 import numpy as np
@@ -22,13 +22,12 @@ class ModulatedPyramidWavefrontSensor(WavefrontSensorOptics):
 	def __init__(self, pyramid_wavefront_sensor, modulation, num_steps):
 		self.modulation = modulation
 		self.pyramid_wavefront_sensor = pyramid_wavefront_sensor
+		self.tip_tilt_mirror = TipTiltMirror(self.pyramid_wavefront_sensor.input_grid)
 
 		theta = np.linspace(0, 2 * np.pi, num_steps)
-		x_modulation = modulation * np.cos(theta)
-		y_modulation = modulation * np.sin(theta)
+		x_modulation = modulation / 2 * np.cos(theta)
+		y_modulation = modulation / 2 * np.sin(theta)
 		self.modulation_position = CartesianGrid(UnstructuredCoords(x_modulation, y_modulation))
-
-		self.input_grid = self.pyramid_wavefront_sensor.input_grid
 
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the modulated pyramid wavefront sensor.
@@ -45,13 +44,11 @@ class ModulatedPyramidWavefrontSensor(WavefrontSensorOptics):
 		'''
 
 		wf_modulated = []
-		for xi, yi in zip(self.modulation_positions.x, self.modulation_positions.y):
-			
-			# Modulate the input wavefront
-			phase = 2*np.pi / wavefront.wavelength * (self.input_grid.x * xi + self.input_grid.y * yi)
-			modulated_wavefront = Wavefront(wavefront.electric_field * np.exp(1j*phase), wavefront.wavelength)
 
-			# Measure the response
+		for point in self.modulation_positions.points:
+			self.tip_tilt_mirror.actuators = point
+			modulated_wavefront = self.tip_tilt_mirror.forward(wavefront)
+
 			wf_modulated.append(self.pyramid_wavefront_sensor.forward(modulated_wavefront))
 
 		return wf_modulated
@@ -89,7 +86,7 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		if separation is None:
 			separation = D
 
-		# Oversampling necessary to see all frequencies
+		# Oversampling necessary to see all frequencies in the output wavefront sensor plane
 		qmin = max(2 * separation / D, 1)
 		if q is None:
 			q = qmin 

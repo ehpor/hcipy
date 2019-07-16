@@ -30,6 +30,7 @@ python setup.py develop
 HCIPy can then be updated by running:
 ```
 git pull
+python setup.py egg_info
 ```
 inside the hcipy repository.
 
@@ -64,4 +65,4 @@ Afterwards, the built documentation should now be visible in ``doc/_build/html``
 
 # Contributions
 
-If you have something to add, or want something added to HCIPY, please let us know We actively support external contributions to HCIPy, whether small or large. We are working in a [feature branching workflow](https://www.atlassian.com/git/tutorials/comparing-workflows#feature-branch-workflow).
+If you have something to add, or want something added to HCIPy, please let us know We actively support external contributions to HCIPy, whether small or large. We are working in a [feature branching workflow](https://www.atlassian.com/git/tutorials/comparing-workflows#feature-branch-workflow).

@@ -7,14 +7,16 @@ with open(path.join(this_directory, 'README.md')) as f:
 	long_description = f.read()
 
 setup(name='hcipy',
-	version='0.2',
+	use_scm_version=True,
 	description='A framework for performing optical propagation simulations, meant for high contrast imaging, in Python.',
 	long_description=long_description,
 	long_description_content_type='text/markdown',
-	url='https://gitlab.strw.leidenuniv.nl/por/hcipy',
+	url='https://github.com/ehpor/hcipy/',
 	author='Emiel Por',
 	author_email='por@strw.leidenuniv.nl',
 	packages=find_packages(),
+	setup_requires=[
+		'setuptools_scm'],
 	install_requires=[
 		"numpy",
 		"scipy",
@@ -31,6 +33,12 @@ setup(name='hcipy',
 		"Operating System :: OS Independent",
 		"Programming Language :: Python :: 2",
 		"Programming Language :: Python :: 3",
+		"Programming Language :: Python :: 2.7",
+		"Programming Language :: Python :: 3.5",
+		"Programming Language :: Python :: 3.6",
+		"Programming Language :: Python :: 3.7",
 		"Topic :: Scientific/Engineering :: Astronomy"
-	)
+	),
+	license='MIT',
+	license_file='LICENSE'
 )

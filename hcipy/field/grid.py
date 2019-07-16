@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import warnings
+import xxhash
 
 class Grid(object):
 	'''A set of points on some coordinate system.
@@ -385,6 +386,23 @@ class Grid(object):
 	
 	def __str__(self):
 		return str(self.__class__.__name__) + '(' + str(self.coords.__class__.__name__) + ')'
+	
+	def __hash__(self):
+		h = xxhash.xxh64()
+		h.update(self._coordinate_system)
+
+		if self.is_regular:
+			h.update(self.delta)
+			h.update(self.dims)
+			h.update(self.zero)
+		elif self.is_separated:
+			for s in self.separated_coords:
+				h.update(s)
+		else:
+			for s in self.coords:
+				h.update(s)
+		
+		return h.intdigest()
 
 	def closest_to(self, p):
 		'''Get the index of the point closest to point `p`.

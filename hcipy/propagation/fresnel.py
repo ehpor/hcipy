@@ -40,7 +40,7 @@ class FresnelPropagatorMonochromatic(object):
 		k = 2 * np.pi / wavelength * refractive_index
 		L_max = np.max(input_grid.dims * input_grid.delta)
 		
-		if np.any(input_grid.delta < wavelength * distance / L_max):			
+		if np.any(input_grid.delta < wavelength * distance / L_max):
 			enlarged_input_grid = make_pupil_grid(2 * input_grid.dims, 2 * input_grid.delta * (input_grid.dims-1) )
 			self.fft_up_scale = FastFourierTransform(enlarged_input_grid)
 

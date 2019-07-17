@@ -44,21 +44,11 @@ class ModulatedPyramidWavefrontSensor(WavefrontSensorOptics):
 		'''
 
 		wf_modulated = []
-<<<<<<< HEAD
 
 		for point in self.modulation_positions.points:
 			self.tip_tilt_mirror.actuators = point
 			modulated_wavefront = self.tip_tilt_mirror.forward(wavefront)
 
-=======
-		for xi, yi in zip(self.modulation_positions.x, self.modulation_positions.y):
-			
-			# Modulate the input wavefront
-			phase = 2*np.pi / wavefront.wavelength * (self.input_grid.x * xi + self.input_grid.y * yi)
-			modulated_wavefront = Wavefront(wavefront.electric_field * np.exp(1j*phase), wavefront.wavelength)
-
-			# Measure the response
->>>>>>> c8f4fc99b3c8da854564a6b678f54136e83e799e
 			wf_modulated.append(self.pyramid_wavefront_sensor.forward(modulated_wavefront))
 
 		return wf_modulated
@@ -92,7 +82,6 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 
 		self.input_grid = input_grid
 		D = np.max(input_grid.delta * (input_grid.shape - 1))
-<<<<<<< HEAD
 		
 		if separation is None:
 			separation = D
@@ -112,27 +101,6 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		self.focal_grid = make_focal_grid(q, self.num_airy, reference_wavelength=wavelength_0, pupil_diameter=D, focal_length=1)
 		self.wfs_grid = make_pupil_grid(qmin * input_grid.dims, qmin * D)
 		
-=======
-		
-		if separation is None:
-			separation = D
-
-		# Oversampling necessary to see all frequencies
-		qmin = max(2 * separation / D, 1)
-		if q is None:
-			q = qmin 
-		elif q < qmin:
-			raise ValueError('The requested focal plane sampling is to low to sufficiently sample the wavefront sensor output.')
-
-		if num_airy is None:
-			self.num_airy = D / 2
-		else:
-			self.num_airy = num_airy
-		
-		self.focal_grid = make_focal_grid(q, num_airy, wavelength=wavelength_0, pupil_diamter=D)
-		self.wfs_grid = make_pupil_grid(qmin * input_grid.dims, qmin * D)
-		
->>>>>>> c8f4fc99b3c8da854564a6b678f54136e83e799e
 		# Make all the optical elements
 		self.spatial_filter = Apodizer(circular_aperture(2 * self.num_airy * wavelength_0 / D)(self.focal_grid))
 		pyramid_surface = -separation / (2 * (refractive_index(wavelength_0) - 1)) * (np.abs(self.focal_grid.x) + np.abs(self.focal_grid.y))

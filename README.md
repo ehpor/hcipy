@@ -63,6 +63,26 @@ make html
 
 Afterwards, the built documentation should now be visible in ``doc/_build/html`` as a static website.
 
+# Testing
+
+HCIPy includes a unit testing framework to make sure that no bugs creep in for previously written code. You can run the full test suite by calling
+```
+pytest ./tests
+```
+in the root directory of HCIPy. To run all tests, including tests that may take longer, call instead
+```
+pytest ./tests --runslow
+```
+
 # Contributions
 
-If you have something to add, or want something added to HCIPy, please let us know We actively support external contributions to HCIPy, whether small or large. We are working in a [feature branching workflow](https://www.atlassian.com/git/tutorials/comparing-workflows#feature-branch-workflow).
+If you have something to add, or want something added to HCIPy, please let us know. We actively support external contributions to HCIPy, whether small or large. To contribute a new feature:
+
+1. Fork it if you are not a collaborator yet.
+2. Create your feature branch (``git checkout -b my_new_feature``)
+3. Commit your changes as normal.
+4. Push to the branch (``git push origin my_new_feature``)
+5. Create a new Pull Request on GitHub.
+6. We will review the feature.
+
+If you encounter any problems during this process, do not hesitate to contact us.

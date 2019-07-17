@@ -118,7 +118,7 @@ class ModeBasis(object):
 		return self._transformation_matrix
 
 	def coefficients_for(self, b, dampening_factor=0):
-		'''Calculate the coefficients on this mode basis in a least squares fashion.
+		r'''Calculate the coefficients on this mode basis in a least squares fashion.
 
 		The vector `b` is projection onto the mode basis in a least squares fashion. This
 		means that the const function

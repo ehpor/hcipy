@@ -69,6 +69,40 @@ def make_pupil_grid(dims, diameter=1):
 	return make_uniform_grid(dims, diameter)
 
 def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1):
+	'''Make a grid for a focal plane from a pupil grid.
+
+	Calculate the focal grid corresponding to the pupil grid, using an FFT grid as a guide. The 
+	resulting grid focal will always contain the origin (0, 0) point. The extent of the pupil 
+	grid will be used as the diameter of the pupil. If the pupil is undersized on the pupil
+	grid, the resulting focal grid needs to be rescaled manually.
+	
+	.. note::
+		In almost all cases, it is preferable to use :func:`make_focal_grid_replacement`. This
+		function allows you to directly set the diameter, and doesn't require the user to pass
+		the pupil grid as an argument. `make_focal_grid_from_pupil_grid()` retains old functionality 
+		and serves as a backwards compatibility function, due to its ubiquitous usage in HCIPy code. 
+		`make_focal_grid_from_pupil_grid()` will be deprecated in future versions, and new code 
+		should aim to use its replacement.
+
+	Parameters
+	----------
+	pupil_grid : Grid
+		The pupil grid for which the focal grid needs to be calculated. The extent of this Grid
+		is used as the diameter of the pupil.
+	q : scalar or array_like
+		The number of pixels per resolution element (= lambda f / D).
+	num_airy : scalar or array_like
+		The spatial extent of the grid in radius in resolution elements (= lambda f / D).
+	focal_length : scalar
+		The focal length used for calculating the spatial resolution at the focal plane.
+	wavelength : scalar
+		The reference wavelength used for calculating the spatial resolution at the focal plane.
+	
+	Returns
+	-------
+	Grid
+		A Grid describing the sampling for a focal plane.
+	'''
 	from ..fourier import make_fft_grid
 
 	f_lambda = focal_length * wavelength
@@ -103,7 +137,7 @@ def make_focal_grid_replacement(q, num_airy, spatial_resolution=None, pupil_diam
 
 	The grid will always contain the origin (0, 0) point.
 
-	This function will be renamed to make_focal_grid_replacement after the next major update.
+	This function will be renamed to make_focal_grid after the next update.
 
 	Parameters
 	----------

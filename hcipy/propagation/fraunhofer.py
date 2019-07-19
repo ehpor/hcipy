@@ -1,10 +1,10 @@
 import numpy as np
-from .propagator import MonochromaticPropagator
+from .propagator import Propagator
 from ..optics import Wavefront, make_agnostic_optical_element
 from ..field import Field
 
 @make_agnostic_optical_element()
-class FraunhoferPropagator(MonochromaticPropagator):
+class FraunhoferPropagator(Propagator):
 	'''A monochromatic perfect lens propagator.
 
 		This implements the propagation of a wavefront through a perfect lens. The wavefront

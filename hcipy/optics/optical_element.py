@@ -269,31 +269,41 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 		grid_dependent_arguments = []
 
 	if wavelength_dependent_arguments is None:
-		wavelength_dependent_arguments
+		wavelength_dependent_arguments = []
 	
 	def decorator(optical_element_class):
-		class AgnotisticOpticalElement(OpticalElement):
+		gnostic_param_names = _get_function_parameters(optical_element_class.__init__)[1:]
+
+		grid_dependent = grid_dependent_arguments or 'input_grid' in gnostic_param_names
+		wavelength_dependent = wavelength_dependent_arguments or 'wavelength' in gnostic_param_names
+
+		class AgnosticOpticalElement(OpticalElement):
 			def __init__(self, *args, **kwargs):
 				self._cache = collections.OrderedDict()
 
-				# Get names of the args and kwargs for reference (remove the self parameter)
-				self.gnostic_param_names = _get_function_parameters(optical_element_class.__init__)[1:]
-
-				self._parameters = dict(zip(self.gnostic_param_names, args))
+				self._parameters = dict(zip(gnostic_param_names, args))
 				self._parameters.update(kwargs)
 			
 			def get_instance(self, input_grid=None, output_grid=None, wavelength=None):
-				if (input_grid is None) == (output_grid is None):
+				if grid_dependent and ((input_grid is None) == (output_grid is None)):
 					raise ValueError('You need to supply either an input or output grid.')
-				if wavelength is None:
+				
+				if wavelength_dependent and (wavelength is None):
 					raise ValueError('You need to supply a wavelength.')
+				
+				# Get cache key
+				cache_key = ()
 
-				# Use approximate wavelength as a key (match if within 1e-9 relatively).
-				wavelength_key = int(np.round(np.log(wavelength) / np.log(1 + 1e-9)))
-				if input_grid is not None:
-					cache_key = ('input', input_grid, wavelength_key)
-				else:
-					cache_key = ('output', output_grid, wavelength_key)
+				if grid_dependent:
+					if input_grid is not None:
+						cache_key += ('input', input_grid)
+					else:
+						cache_key += ('output', output_grid)
+				
+				if wavelength_dependent:
+					# Use approximate wavelength as a key (match if within 1e-9 relatively).
+					wavelength_key = int(np.round(np.log(wavelength) / np.log(1 + 1e-9)))
+					cache_key += (wavelength_key, )
 
 				# Is there an element in the cache.
 				if cache_key in self._cache:
@@ -312,9 +322,9 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 				# Create a new element.
 				element_parameters = dict(self._parameters)
 
-				if 'input_grid' in self.gnostic_param_names:
+				if 'input_grid' in gnostic_param_names:
 					element_parameters['input_grid'] = input_grid
-				if 'wavelength' in self.gnostic_param_names:
+				if 'wavelength' in gnostic_param_names:
 					element_parameters['wavelength'] = wavelength
 				
 				# Evaluate grid dependent arguments (including double-dependent arguments)
@@ -368,31 +378,34 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 							raise RuntimeError('The argument %s can not be evaluated.' % param_name)
 				
 				# Evaluate wavelength dependent arguments
-				if wavelength_dependent_arguments:
-					for param_name in wavelength_dependent_arguments:
-						if not callable(element_parameters[param_name]):
-							# Argument is not callable, so no evaluation can be done.
-							continue
-						
-						if param_name in grid_dependent_arguments:
-							# Argument already handled above.
-							continue
+				for param_name in wavelength_dependent_arguments:
+					if not callable(element_parameters[param_name]):
+						# Argument is not callable, so no evaluation can be done.
+						continue
+					
+					if param_name in grid_dependent_arguments:
+						# Argument already handled above.
+						continue
 
-						# Argument is a function of wavelength.
-						try:
-							element_parameters[param_name] = element_parameters[param_name](wavelength)
-						except Exception:
-							# Function evaluation failed. Raise exception.
-							raise RuntimeError('The argument %s can not be evaluated.' % param_name)
+					# Argument is a function of wavelength.
+					try:
+						element_parameters[param_name] = element_parameters[param_name](wavelength)
+					except Exception:
+						# Function evaluation failed. Raise exception.
+						raise RuntimeError('The argument %s can not be evaluated.' % param_name)
 				
 				# Create element.
 				elem = optical_element_class(**element_parameters)
 
 				# Add element to cache.
-				cache_key_output = ('output', elem.output_grid, wavelength_key)
-
 				self._cache[cache_key] = elem
-				self._cache[cache_key_output] = elem
+
+				if grid_dependent:
+					cache_key_output = ('output', elem.output_grid)
+					if wavelength_dependent:
+						cache_key_output += (wavelength_key, )
+
+					self._cache[cache_key_output] = elem
 
 				return elem
 				
@@ -406,9 +419,9 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 				return self.get_instance(input_grid=input_grid, wavelength=wavelength).get_transformation_matrix_forward(input_grid, wavelength, *args, **kwargs)
 			
 			def get_transformation_matrix_backward(self, output_grid, wavelength, *args, **kwargs):
-				return self.get_instance(output_grid=output_grid, wavelength=wavelength).get_transformation_matrix_backward(input_grid, wavelength, *args, **kwargs)
+				return self.get_instance(output_grid=output_grid, wavelength=wavelength).get_transformation_matrix_backward(output_grid, wavelength, *args, **kwargs)
 
-		return AgnotisticOpticalElement
+		return AgnosticOpticalElement
 	return decorator
 
 def make_polychromatic(evaluated_arguments=None, num_in_cache=50):

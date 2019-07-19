@@ -1,7 +1,8 @@
 import numpy as np
-from .optical_element import OpticalElement, make_polychromatic
+from .optical_element import OpticalElement, make_agnostic_optical_element
 
-class ApodizerMonochromatic(object):
+@make_agnostic_optical_element([], ['apodization'])
+class Apodizer(object):
 	'''A monochromatic thin apodizer.
 	
 	This apodizer can apodize both in phase and amplitude. It assumes a 
@@ -28,8 +29,7 @@ class ApodizerMonochromatic(object):
 		wf.electric_field /= self.apodization
 		return wf
 
-Apodizer = make_polychromatic(["apodization"])(ApodizerMonochromatic)
-
+@make_agnostic_optical_element([], ['phase'])
 class PhaseApodizerMonochromatic(object):
 	def __init__(self, phase, wavelength=1):
 		self.phase = phase
@@ -45,8 +45,6 @@ class PhaseApodizerMonochromatic(object):
 		wf.electric_field *= np.exp(-1j * self.phase)
 		return wf
 
-PhaseApodizer = make_polychromatic(["phase"])(PhaseApodizerMonochromatic)
-
 class ThinLens(OpticalElement):
 	def __init__(self, focal_length):
 		self.focal_length = focal_length
@@ -57,6 +55,7 @@ class ThinLens(OpticalElement):
 	def backward(self, wavefront):
 		pass
 
+@make_agnostic_optical_element([], ['surface', 'refractive_index'])
 class SurfaceApodizerMonochromatic(OpticalElement):
 	def __init__(self, surface, refractive_index, wavelength):
 		self.surface = surface
@@ -77,8 +76,6 @@ class SurfaceApodizerMonochromatic(OpticalElement):
 		wf.electric_field *= np.exp(-1j * opd * wf.wavenumber)
 
 		return wf
-
-SurfaceApodizer = make_polychromatic(["surface", "refractive_index"])(SurfaceApodizerMonochromatic)
 
 class ComplexSurfaceApodizer(OpticalElement):
 	def __init__(self, amplitude, surface, refractive_index):

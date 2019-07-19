@@ -1,9 +1,10 @@
 import numpy as np
 from .propagator import MonochromaticPropagator
-from ..optics import Wavefront, make_polychromatic
+from ..optics import Wavefront, make_agnostic_optical_element
 from ..field import Field
 
-class FraunhoferPropagatorMonochromatic(MonochromaticPropagator):
+@make_agnostic_optical_element()
+class FraunhoferPropagator(MonochromaticPropagator):
 	'''A monochromatic perfect lens propagator.
 
 		This implements the propagation of a wavefront through a perfect lens. The wavefront
@@ -103,5 +104,3 @@ class FraunhoferPropagatorMonochromatic(MonochromaticPropagator):
 		'''
 		# Ignore input wavelength and just use the internal one.
 		return self.fourier_transform.get_transformation_matrix_backward() / self.norm_factor
-	
-FraunhoferPropagator = make_polychromatic()(FraunhoferPropagatorMonochromatic)

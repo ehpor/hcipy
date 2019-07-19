@@ -1,11 +1,12 @@
 import numpy as np
 from .propagator import MonochromaticPropagator
-from ..optics import Wavefront, make_polychromatic
+from ..optics import Wavefront, make_agnostic_optical_element
 from ..field import Field
 from ..fourier import FastFourierTransform
 from ..field import evaluate_supersampled, make_pupil_grid, subsample_field
 
-class AngularSpectrumPropagatorMonochromatic(object):
+@make_agnostic_optical_element()
+class AngularSpectrumPropagator(object):
 	'''The monochromatic angular spectrum propagator for scalar fields.
 
 	The scalar Angular Spectrum propagator is implemented as described by
@@ -40,6 +41,7 @@ class AngularSpectrumPropagatorMonochromatic(object):
 			raise ValueError('The input grid must be a regular, Cartesian grid.')
 		
 		self.fft = FastFourierTransform(input_grid, q=2)
+		self.output_grid = input_grid
 
 		k = 2 * np.pi / wavelength * refractive_index
 		L_max = np.max(input_grid.dims * input_grid.delta)
@@ -99,5 +101,3 @@ class AngularSpectrumPropagatorMonochromatic(object):
 		ft = self.fft.forward(wavefront.electric_field)
 		ft *= np.conj(self.transfer_function)
 		return Wavefront(self.fft.backward(ft), wavefront.wavelength)
-
-AngularSpectrumPropagator = make_polychromatic(["refractive_index"])(AngularSpectrumPropagatorMonochromatic)

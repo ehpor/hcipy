@@ -30,7 +30,7 @@ class Apodizer(object):
 		return wf
 
 @make_agnostic_optical_element([], ['phase'])
-class PhaseApodizerMonochromatic(object):
+class PhaseApodizer(object):
 	def __init__(self, phase, wavelength=1):
 		self.phase = phase
 		self.wavelength = wavelength
@@ -56,7 +56,7 @@ class ThinLens(OpticalElement):
 		pass
 
 @make_agnostic_optical_element([], ['surface', 'refractive_index'])
-class SurfaceApodizerMonochromatic(OpticalElement):
+class SurfaceApodizer(OpticalElement):
 	def __init__(self, surface, refractive_index, wavelength):
 		self.surface = surface
 		self.refractive_index = refractive_index

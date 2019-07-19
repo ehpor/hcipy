@@ -33,15 +33,15 @@ class LinearRetarder(PhaseRetarder):
 	def __init__(self, phase_retardation, fast_axis_orientation, wavelength=1):
 		PhaseRetarder.__init__(self, phase_retardation, fast_axis_orientation, 0, wavelength)
 
-class CircularRetarderMonochromatic(PhaseRetarder):
+class CircularRetarder(PhaseRetarder):
 	def __init__(self, phase_retardation, wavelength=1):
 		PhaseRetarder.__init__(self, phase_retardation, np.pi / 4, np.pi / 2, wavelength)
 
-class QuarterWavePlateMonochromatic(LinearRetarder):
+class QuarterWavePlate(LinearRetarder):
 	def __init__(self, fast_axis_orientation, wavelength=1):
 		LinearRetarder.__init__(self, np.pi / 2, fast_axis_orientation, wavelength)
 
-class HalfWavePlateMonochromatic(LinearRetarder):
+class HalfWavePlate(LinearRetarder):
 	def __init__(self, fast_axis_orientation, wavelength=1):
 		LinearRetarder.__init__(self, np.pi, fast_axis_orientation, wavelength)
 

@@ -123,7 +123,7 @@ class OpticalElement(object):
 		'''
 		raise NotImplementedError()
 	
-	def get_instance(self, input_grid, wavelength):
+	def get_instance(self, input_grid=None, output_grid=None, wavelength=None):
 		'''Return an OpticalElement that can handle wavefronts with input_grid and wavelength.
 
 		While any OpticalElement should in theory be able to handle all grids and wavelengths,
@@ -131,10 +131,15 @@ class OpticalElement(object):
 		to always access properties of an OpticalElement, evaluated for a specific input_grid
 		and wavelength.
 
+		The user needs to supply at least an input grid or an output grid, and a wavelength. If
+		this is not done, a ValueError will be raised.
+
 		Parameters
 		----------
 		input_grid : Grid
-			The grid on which the wavefront is defined.
+			The grid on which the input wavefront is defined.
+		output_grid : Grid or None
+			The grid on which the output wavefront is defined.
 		wavelength : scalar
 			The wavelength on which the wavefront is defined.
 		
@@ -277,17 +282,31 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 				self._parameters = dict(zip(self.gnostic_param_names, args))
 				self._parameters.update(kwargs)
 			
-			def get_instance(self, input_grid, wavelength):
+			def get_instance(self, input_grid=None, output_grid=None, wavelength=None):
+				if (input_grid is None) == (output_grid is None):
+					raise ValueError('You need to supply either an input or output grid.')
+				if wavelength is None:
+					raise ValueError('You need to supply a wavelength.')
+
 				# Use approximate wavelength as a key (match if within 1e-9 relatively).
 				wavelength_key = int(np.round(np.log(wavelength) / np.log(1 + 1e-9)))
-				cache_key = (input_grid, wavelength_key)
+				if input_grid is not None:
+					cache_key = ('input', input_grid, wavelength_key)
+				else:
+					cache_key = ('output', output_grid, wavelength_key)
 
 				# Is there an element in the cache.
 				if cache_key in self._cache:
 					return self._cache[cache_key]
 				
+				if output_grid is not None:
+					# If we supplied an output grid, it needs to be listed into the cache, as we
+					# cannot initialize/create an optical element from an output grid.
+					raise RuntimeError('Output grid is not known. Perform a forward propagation first before backwards propagation on the same grid.')
+				
 				# If the cache is full, remove the oldest element to make room for a new one.
-				if len(self._cache) == num_in_cache:
+				if len(self._cache) == 2 * num_in_cache:
+					self._cache.popitem(False)
 					self._cache.popitem(False)
 
 				# Create a new element.
@@ -370,21 +389,24 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 				elem = optical_element_class(**element_parameters)
 
 				# Add element to cache.
+				cache_key_output = ('output', elem.output_grid, wavelength_key)
+
 				self._cache[cache_key] = elem
+				self._cache[cache_key_output] = elem
 
 				return elem
 				
 			def forward(self, wavefront, *args, **kwargs):
-				return self.get_instance(wavefront.electric_field.grid, wavefront.wavelength).forward(wavefront, *args, **kwargs)
+				return self.get_instance(input_grid=wavefront.electric_field.grid, wavelength=wavefront.wavelength).forward(wavefront, *args, **kwargs)
 			
 			def backward(self, wavefront, *args, **kwargs):
-				return self.get_instance(wavefront.electric_field.grid, wavefront.wavelength).backward(wavefront, *args, **kwargs)
+				return self.get_instance(output_grid=wavefront.electric_field.grid, wavelength=wavefront.wavelength).backward(wavefront, *args, **kwargs)
 			
 			def get_transformation_matrix_forward(self, input_grid, wavelength, *args, **kwargs):
-				return self.get_instance(input_grid, wavelength).get_transformation_matrix_forward(input_grid, wavelength, *args, **kwargs)
+				return self.get_instance(input_grid=input_grid, wavelength=wavelength).get_transformation_matrix_forward(input_grid, wavelength, *args, **kwargs)
 			
-			def get_transformation_matrix_backward(self, input_grid, wavelength, *args, **kwargs):
-				return self.get_instance(input_grid, wavelength).get_transformation_matrix_backward(input_grid, wavelength, *args, **kwargs)
+			def get_transformation_matrix_backward(self, output_grid, wavelength, *args, **kwargs):
+				return self.get_instance(output_grid=output_grid, wavelength=wavelength).get_transformation_matrix_backward(input_grid, wavelength, *args, **kwargs)
 
 		return AgnotisticOpticalElement
 	return decorator

@@ -1,5 +1,6 @@
 from hcipy import *
 import numpy as np
+import copy
 
 def test_field_dot():
 	grid = make_pupil_grid(2)
@@ -112,10 +113,10 @@ def test_field_svd():
 def test_grid_hashing():
 	grid1 = make_pupil_grid(128)
 
-	grid2 = CartesianGrid(SeparatedCoords(grid1.separated_coords.copy()))
+	grid2 = CartesianGrid(SeparatedCoords(copy.deepcopy(grid1.separated_coords)))
 	assert hash(grid1) != hash(grid2)
 
-	grid3 = CartesianGrid(UnstructuredCoords(grid1.coords.copy()))
+	grid3 = CartesianGrid(UnstructuredCoords(copy.deepcopy(grid1.coords)))
 	assert hash(grid1) != hash(grid3)
 
 	grid4 = make_pupil_grid(128)
@@ -124,7 +125,7 @@ def test_grid_hashing():
 	grid5 = PolarGrid(grid1.coords)
 	assert hash(grid1) != hash(grid5)
 
-	grid6 = CartesianGrid(grid1.coords.copy())
+	grid6 = CartesianGrid(copy.deepcopy(grid1.coords))
 	assert hash(grid1) == hash(grid6)
 
 	grid7 = grid1.scaled(2)

@@ -1,8 +1,9 @@
 import numpy as np
-from .optical_element import OpticalElement, make_polychromatic
+from .optical_element import OpticalElement, make_agnostic_optical_element
 from ..field import Field, field_inv, field_dot
 
-class PhaseRetarderMonochromatic(object):
+@make_agnostic_optical_element([], ['phase_retardation', 'fast_axis_orientation', 'circularity'])
+class PhaseRetarder(OpticalElement):
 	'''A general phase retarder.
 
 	Parameters
@@ -63,9 +64,7 @@ class PhaseRetarderMonochromatic(object):
 		wf.electric_field = field_dot(wf.electric_field, self.jones_matrix_inv)
 		return wf
 
-PhaseRetarder = make_polychromatic(["phase_retardation", "fast_axis_orientation", "circularity"])(PhaseRetarderMonochromatic)
-
-class LinearRetarderMonochromatic(PhaseRetarderMonochromatic):
+class LinearRetarder(PhaseRetarder):
 	'''A general linear retarder.
 
 	Parameters
@@ -76,11 +75,9 @@ class LinearRetarderMonochromatic(PhaseRetarderMonochromatic):
 		The angle of the fast axis with respect to the x-axis in radians.
 	'''
 	def __init__(self, phase_retardation, fast_axis_orientation, wavelength=1):
-		PhaseRetarderMonochromatic.__init__(self, phase_retardation, fast_axis_orientation, 0, wavelength)
+		PhaseRetarder.__init__(self, phase_retardation, fast_axis_orientation, 0, wavelength)
 
-LinearRetarder = make_polychromatic(["phase_retardation", "fast_axis_orientation"])(LinearRetarderMonochromatic)
-
-class CircularRetarderMonochromatic(PhaseRetarderMonochromatic):
+class CircularRetarder(PhaseRetarder):
 	'''A general circular retarder.
 	
 	Parameters
@@ -91,11 +88,9 @@ class CircularRetarderMonochromatic(PhaseRetarderMonochromatic):
 		The angle of the fast axis with respect to the x-axis in radians.
 	'''
 	def __init__(self, phase_retardation, wavelength=1):
-		PhaseRetarderMonochromatic.__init__(self, phase_retardation, np.pi / 4, np.pi / 2, wavelength)
+		PhaseRetarder.__init__(self, phase_retardation, np.pi / 4, np.pi / 2, wavelength)
 
-CircularRetarder = make_polychromatic(["phase_retardation"])(CircularRetarderMonochromatic)
-
-class QuarterWavePlateMonochromatic(LinearRetarderMonochromatic):
+class QuarterWavePlate(LinearRetarder):
 	'''A quarter-wave plate.
 	
 	Parameters
@@ -104,11 +99,9 @@ class QuarterWavePlateMonochromatic(LinearRetarderMonochromatic):
 		The angle of the fast axis with respect to the x-axis in radians.
 	'''
 	def __init__(self, fast_axis_orientation, wavelength=1):
-		LinearRetarderMonochromatic.__init__(self, np.pi / 2, fast_axis_orientation, wavelength)
+		LinearRetarder.__init__(self, np.pi / 2, fast_axis_orientation, wavelength)
 
-QuarterWavePlate = make_polychromatic(["fast_axis_orientation"])(QuarterWavePlateMonochromatic)
-
-class HalfWavePlateMonochromatic(LinearRetarderMonochromatic):
+class HalfWavePlate(LinearRetarder):
 	'''A half-wave plate.
 	
 	Parameters
@@ -117,9 +110,7 @@ class HalfWavePlateMonochromatic(LinearRetarderMonochromatic):
 		The angle of the fast axis with respect to the x-axis in radians.
 	'''
 	def __init__(self, fast_axis_orientation, wavelength=1):
-		LinearRetarderMonochromatic.__init__(self, np.pi, fast_axis_orientation, wavelength)
-
-HalfWavePlate = make_polychromatic(["fast_axis_orientation"])(HalfWavePlateMonochromatic)
+		LinearRetarder.__init__(self, np.pi, fast_axis_orientation, wavelength)
 
 class LinearPolarizer(OpticalElement):
 	'''A linear polarizer.

@@ -1,8 +1,7 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
-from ..plotting import imshow_field
 from ..aperture import circular_aperture
-from ..optics import SurfaceApodizer, PhaseApodizer, Apodizer, TipTiltMirror
+from ..optics import SurfaceApodizer, Apodizer, TipTiltMirror
 from ..field import make_pupil_grid, make_focal_grid, Field
 
 import numpy as np

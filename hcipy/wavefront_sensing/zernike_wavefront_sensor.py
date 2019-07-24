@@ -1,80 +1,50 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
-from ..plotting import imshow_field
-from ..optics import SurfaceApodizer, PhaseApodizer
+from ..optics import PhaseApodizer, Apodizer
+from ..aperture import circular_aperture
 from ..field import make_pupil_grid, make_focal_grid, Field
 import numpy as np
-from matplotlib import pyplot as plt
-
-def phase_step_mask(diameter=1, phase_step=np.pi/2):
-	'''Creates a function which can create the phase dot on a grid.
-
-	Parameters
-	----------
-	diameter : scalar
-		The diameter of the phase dot in physical units.
-	phase_step : scalar
-		The height of the phase dot.
-	
-	Returns
-	----------
-	func : function
-		The returned function acts on a grid to create the phase mask for that grid.
-
-	'''
-	def func(grid):
-		radius = grid.as_('polar').r
-		phase_mask = Field(phase_step * (radius <= diameter/2), grid)
-		return PhaseApodizer(phase_mask)
-	return func
 
 class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 	'''The optical elements for a pyramid wavefront sensor.
 
 	Parameters
 	----------
-	pupil_grid : Grid
-		The input pupil grid.
-	pupil_diameter : scalar
-		The input pupil diameter. If this parameter is not set it will take the input grid size as the pupil diameter.
-	num_pupil_pixels : int
-		The number of pixels that are used to sample the output pupil.
+	input_grid : Grid
+		The grid on which the input wavefront is defined.
 	q : scalar
 		The focal plane oversampling coefficient.
 	wavelength_0 : scalar
-		The reference wavelength which determines the physical scales.
+		The reference wavelength that determines the physical scales.
 	diameter : scalar
 		The diameter of the phase dot in terms of lambda/D.
-	num_airy : int
-		The size of the intermediate focal plane grid that is used in terms of lambda/D at the reference wavelength.
-
-	Attributes
-	----------
-	output_grid : Grid
-		The output grid of the wavefront sensor.
-	focal_grid : Grid
-		The intermediate focal plane grid where the focal plane is sampled.
-	pupil_to_focal : FraunhoferPropagator
-		A propagator for the input pupil plane to the intermediate focal plane.
-	focal_to_pupil : FraunhoferPropagator
-		A propagator for the intermediate focal plane to the output pupil plane.
-	phase_step : PhaseApodizer
-		The filter that is applied in the focal plane.
+	num_airy : scalar
+		The radius of the focal plane spatial filter in units of lambda/D at the reference wavelength.
 	'''
-	def __init__(self, pupil_grid, pupil_diameter=None, num_pupil_pixels=32, q=2, wavelength_0=1, diameter=1.06, num_airy=None):
+	def __init__(self, input_grid, q=2, wavelength_0=1, diameter=1.06, num_airy=None):
 
-		output_grid_size = pupil_grid.x.ptp()
-		if pupil_diameter is None:
-			pupil_diameter = output_grid_size
+		if not input_grid.is_regular:
+			raise ValueError('The input grid must be a regular grid.')
 
-		# Create the intermediate and final grids
-		self.output_grid = make_pupil_grid(num_pupil_pixels, output_grid_size)
-		self.focal_grid = make_focal_grid(pupil_grid, q=q, num_airy=num_airy, wavelength=wavelength_0)
+		self.input_grid = input_grid
+		D = np.max(input_grid.delta * (input_grid.shape - 1))
+		
+		if num_airy is None:
+			self.num_airy = np.max((input_grid.shape-1)) / 2
+		else:
+			self.num_airy = num_airy
+		
+		self.focal_grid = make_focal_grid(q, self.num_airy, reference_wavelength=wavelength_0, pupil_diameter=D, focal_length=1)
+		self.wfs_grid = input_grid
 
 		# Make all the optical elements
-		self.pupil_to_focal = FraunhoferPropagator(pupil_grid, self.focal_grid, wavelength_0=wavelength_0)
-		self.phase_step = phase_step_mask(diameter * wavelength_0/pupil_diameter, np.pi/2)(self.focal_grid)
-		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.output_grid, wavelength_0=wavelength_0)
+		self.spatial_filter = Apodizer(circular_aperture(2 * self.num_airy * wavelength_0 / D)(self.focal_grid))
+		phase_mask = Field(np.pi/2 * ( self.focal_grid.as_('polar').r <= diameter * wavelength_0 / D), self.focal_grid)
+		self.phase_step = PhaseApodizer(phase_mask)
+
+		# Make the propagators
+		self.pupil_to_focal = FraunhoferPropagator(input_grid, self.focal_grid)
+		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.wfs_grid)
 
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the wavefront sensor.
@@ -89,11 +59,30 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		wf : Wavefront
 			The output wavefront.
 		'''
-		wf = wavefront.copy()
 
-		wf = self.pupil_to_focal.forward(wf)
+		wf = self.pupil_to_focal.forward(wavefront)
 		wf = self.phase_step.forward(wf)
 		wf = self.focal_to_pupil(wf)
+
+		return wf
+
+	def backward(self, wavefront):
+		'''Propagates a wavefront backwards through the wavefront sensor.
+
+		Parameters
+		----------		
+		wavefront : Wavefront
+			The input wavefront that will propagate through the system.
+
+		Returns
+		-------
+		wf : Wavefront
+			The output wavefront.
+		'''
+
+		wf = self.focal_to_pupil.backward(wavefront)
+		wf = self.phase_step.backward(wf)
+		wf = self.focal_to_pupil.backward(wf)
 
 		return wf
 

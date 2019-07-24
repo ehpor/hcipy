@@ -12,6 +12,8 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 	----------
 	input_grid : Grid
 		The grid on which the input wavefront is defined.
+	phase_step_size : scalar
+		The phase step of the zernike wavefront sensor. The default is pi/2.
 	q : scalar
 		The focal plane oversampling coefficient.
 	wavelength_0 : scalar
@@ -21,7 +23,7 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 	num_airy : scalar
 		The radius of the focal plane spatial filter in units of lambda/D at the reference wavelength.
 	'''
-	def __init__(self, input_grid, q=2, wavelength_0=1, diameter=1.06, num_airy=None):
+	def __init__(self, input_grid, phase_step_size=np.pi/2, q=2, wavelength_0=1, diameter=1.06, num_airy=None):
 
 		if not input_grid.is_regular:
 			raise ValueError('The input grid must be a regular grid.')
@@ -39,7 +41,7 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 
 		# Make all the optical elements
 		self.spatial_filter = Apodizer(circular_aperture(2 * self.num_airy * wavelength_0 / D)(self.focal_grid))
-		phase_mask = Field(np.pi/2 * ( self.focal_grid.as_('polar').r <= diameter * wavelength_0 / D), self.focal_grid)
+		phase_mask = Field(phase_step_size * ( self.focal_grid.as_('polar').r <= diameter * wavelength_0 / D), self.focal_grid)
 		self.phase_step = PhaseApodizer(phase_mask)
 
 		# Make the propagators

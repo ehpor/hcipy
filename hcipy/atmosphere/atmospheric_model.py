@@ -313,16 +313,21 @@ class MultiLayerAtmosphere(OpticalElement):
 			wf = el.backward(wf)
 		return wf
 
-def von_karman_psd(grid, r0, L0=0.1):
-	'''This function implements the von Karman power spectral density.
-	'''
-	u = grid.as_('polar').r + 1e-20
-	res = 0.0299 * ((u**2 + u_o**2) / (2 * np.pi)**2)**(-11 / 6.)
-
-	res[u < 1e-19] = 0
-	return Field(res, grid)
-
 def phase_covariance_von_karman(r0, L0):
+	'''Return a Field generator for the phase covariance function for Von Karman turbulence.
+
+	Parameters
+	----------
+	r0 : scalar
+		The Fried parameter.
+	L0 : scalar
+		The outer scale.
+	
+	Returns
+	-------
+	Field generator
+		The phase covariance Field generator.
+	'''
 	def func(grid):
 		r = grid.as_('polar').r + 1e-10
 		
@@ -336,6 +341,20 @@ def phase_covariance_von_karman(r0, L0):
 	return func
 
 def phase_structure_function_von_karman(r0, L0):
+	'''Return a Field generator for the phase structure function for Von Karman turbulence.
+
+	Parameters
+	----------
+	r0 : scalar
+		The Fried parameter.
+	L0 : scalar
+		The outer scale.
+	
+	Returns
+	-------
+	Field generator
+		The phase structure Field generator.
+	'''
 	def func(grid):
 		r = grid.as_('polar').r + 1e-10
 		
@@ -350,6 +369,20 @@ def phase_structure_function_von_karman(r0, L0):
 	return func
 
 def power_spectral_density_von_karman(r0, L0):
+	'''Return a Field generator for the power spectral density function for Von Karman turbulence.
+
+	Parameters
+	----------
+	r0 : scalar
+		The Fried parameter.
+	L0 : scalar
+		The outer scale.
+	
+	Returns
+	-------
+	Field generator
+		The power spectral density Field generator.
+	'''
 	def func(grid):
 		u = grid.as_('polar').r + 1e-10
 		u0 = 2 * np.pi / L0
@@ -361,15 +394,71 @@ def power_spectral_density_von_karman(r0, L0):
 	return func
 
 def Cn_squared_from_fried_parameter(r0, wavelength):
+	'''Calculate the integrated Cn^2 for a certain Fried parameter.
+
+	Parameters
+	----------
+	r0 : scalar
+		The Fried parameter.
+	wavelength : scalar
+		The wavelength at which the Fried parameter is measured.
+	
+	Returns
+	-------
+	scalar
+		The integrated Cn^2 value for the atmosphere.
+	'''
 	k = 2 * np.pi / wavelength
 	return r0**(-5. / 3) / (0.423 * k**2)
 
 def fried_parameter_from_Cn_squared(Cn_squared, wavelength):
+	'''Calculate the Fried parameter from the integrated Cn^2.
+
+	Parameters
+	----------
+	r0 : scalar
+		The integrated Cn^2 value for the atmosphere.
+	wavelength : scalar
+		The wavelength at which to calculate the Fried parameter.
+	
+	Returns
+	-------
+	scalar
+		The Fried parameter.
+	'''
 	k = 2 * np.pi / wavelength
 	return (0.423 * Cn_squared * k**2)**(-3. / 5)
 
 def seeing_to_fried_parameter(seeing, wavelength):
+	'''Calculate the Fried parameter from the seeing FWHM.
+
+	Parameters
+	----------
+	seeing : scalar
+		The FWHM of the seeing.
+	wavelength : scalar
+		The wavelength at which the seeing is measured.
+	
+	Returns
+	-------
+	scalar
+		The Fried parameter at wavelength `wavelength`.
+	'''
 	return 0.98 * wavelength / seeing
 
 def fried_parameter_to_seeing(r0, wavelength):
+	'''Calculate the FWHM of the seeing from the Fried parameter.
+
+	Parameters
+	----------
+	scalar
+		The Fried parameter.
+	wavelength : scalar
+		The wavelength at which the Fried parameter is measured.
+	
+	Returns
+	-------
+	scalar
+		The FWHM of the seeing.
+	'''
 	return 0.98 * wavelength / r0

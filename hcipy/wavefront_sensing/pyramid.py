@@ -171,9 +171,8 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 	num_measurements : int
 		The number of pixels in the output vector.
 	'''
-	def __init__(self, aperture, output_grid):
-		self.measurement_grid = make_pupil_grid(output_grid.shape[0] / 2, output_grid.x.ptp() / 2)
-		self.pupil_mask = aperture(self.measurement_grid)
+	def __init__(self, aperture):
+		self.pupil_mask = aperture
 		self.num_measurements = 2 * int(np.sum(self.pupil_mask > 0))
 
 	def estimate(self, images):

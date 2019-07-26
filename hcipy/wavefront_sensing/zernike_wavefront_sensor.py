@@ -1,52 +1,46 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
-from ..optics import PhaseApodizer, Apodizer
+from ..optics import PhaseApodizer
 from ..aperture import circular_aperture
-from ..field import make_pupil_grid, make_focal_grid, Field
+from ..field import make_uniform_grid, Field
+
 import numpy as np
 
 class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
-	'''The optical elements for a pyramid wavefront sensor.
+	'''The optical elements for a Zernike wavefront sensor.
+
+	This class uses a propagation scheme similar to that of Lyot coronagraphs
+	with a small blocking mask, see [1]_.
+
+	.. [1] Soummer et al. 2007, "Fast computation of Lyot-style
+	coronagraph propagation"
 
 	Parameters
 	----------
 	input_grid : Grid
 		The grid on which the input wavefront is defined.
-	phase_step_size : scalar
-		The phase step of the zernike wavefront sensor. The default is pi/2.
-	q : scalar
-		The focal plane oversampling coefficient.
-	wavelength_0 : scalar
-		The reference wavelength that determines the physical scales.
-	diameter : scalar
-		The diameter of the phase dot in terms of lambda/D.
-	num_airy : scalar
-		The radius of the focal plane spatial filter in units of lambda/D at the reference wavelength.
+	phase_step : scalar
+		The phase of the phase dot of the zernike wavefront sensor. The default is pi/2.
+	phase_dot_diameter : scalar
+		The diameter of the phase dot. This has units of lambda_0/D.
+	num_pix : scalar
+		The number of pixels across the phase dot.
+	pupil_diameter : scalar
+		The diameter of the pupil. This is used for calculating the size of the phase dot.
+	reference_wavelength : scalar
+		The reference wavelength. This is used for calcualting the size of the phase dot.
 	'''
-	def __init__(self, input_grid, phase_step_size=np.pi/2, q=2, wavelength_0=1, diameter=1.06, num_airy=None):
-
-		if not input_grid.is_regular:
-			raise ValueError('The input grid must be a regular grid.')
-
+	def __init__(self, input_grid, phase_step=np.pi/2, phase_dot_diameter=1.06, num_pix=128, pupil_diameter=1, reference_wavelength=1):
 		self.input_grid = input_grid
-		D = np.max(input_grid.delta * (input_grid.shape - 1))
-		
-		if num_airy is None:
-			self.num_airy = np.max((input_grid.shape-1)) / 2
-		else:
-			self.num_airy = num_airy
-		
-		self.focal_grid = make_focal_grid(q, self.num_airy, reference_wavelength=wavelength_0, pupil_diameter=D, focal_length=1)
-		self.wfs_grid = input_grid
+		self.output_grid = input_grid
 
-		# Make all the optical elements
-		self.spatial_filter = Apodizer(circular_aperture(2 * self.num_airy * wavelength_0 / D)(self.focal_grid))
-		phase_mask = Field(phase_step_size * ( self.focal_grid.as_('polar').r <= diameter * wavelength_0 / D), self.focal_grid)
-		self.phase_step = PhaseApodizer(phase_mask)
+		# Make the phase dot
+		phase_dot_diameter *= pupil_diameter / reference_wavelength
+		focal_grid = make_uniform_grid([num_pix, num_pix], phase_dot_diameter)
+		self.phase_dot = PhaseApodizer(circular_aperture(phase_dot_diameter)(focal_grid))
 
-		# Make the propagators
-		self.pupil_to_focal = FraunhoferPropagator(input_grid, self.focal_grid)
-		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.wfs_grid)
+		# Make the propagator
+		self.prop = FraunhoferPropagator(input_grid, focal_grid)
 
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the wavefront sensor.
@@ -61,12 +55,13 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		wf : Wavefront
 			The output wavefront.
 		'''
+		wf_foc = self.prop.forward(wavefront)
+		wf_foc.electric_field -= self.phase_dot.forward(wf_foc).electric_field
 
-		wf = self.pupil_to_focal.forward(wavefront)
-		wf = self.phase_step.forward(wf)
-		wf = self.focal_to_pupil(wf)
+		pup = self.prop.backward(wf_foc)
+		pup.electric_field[:] = wavefront.electric_field - pup.electric_field
 
-		return wf
+		return pup
 
 	def backward(self, wavefront):
 		'''Propagates a wavefront backwards through the wavefront sensor.
@@ -81,12 +76,13 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		wf : Wavefront
 			The output wavefront.
 		'''
+		wf_foc = self.prop.forward(wavefront)
+		wf_foc.electric_field -= self.phase_dot.backward(wf_foc).electric_field
 
-		wf = self.focal_to_pupil.backward(wavefront)
-		wf = self.phase_step.backward(wf)
-		wf = self.focal_to_pupil.backward(wf)
+		pup = self.prop.backward(wf_foc)
+		pup.electric_field[:] = wavefront.electric_field - pup.electric_field
 
-		return wf
+		return pup
 
 class ZernikeWavefrontSensorEstimator(WavefrontSensorEstimator):
 	'''Estimates the wavefront slopes from pyramid wavefront sensor images.

@@ -82,7 +82,7 @@ class LyotCoronagraph(OpticalElement):
 		wf_foc.electric_field -= self.focal_plane_mask.backward(wf_foc).electric_field
 
 		pup = self.prop.backward(wf_foc)
-		pup.electric_field[:] = wavefront.electric_field - wf_foc.electric_field
+		pup.electric_field[:] = wf.electric_field - pup.electric_field
 
 		return pup
 

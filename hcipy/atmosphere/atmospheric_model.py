@@ -120,13 +120,16 @@ class AtmosphericLayer(OpticalElement):
 	@velocity.setter
 	def velocity(self, velocity):
 		if np.isscalar(velocity):
-			if self._velocity is None:
-				theta = np.random.rand() * 2 * np.pi
-				self._velocity = velocity * np.array([np.cos(theta), np.sin(theta)])
-			else:
-				self._velocity *= velocity / np.sqrt(np.dot(velocity, velocity))
+			if self._velocity is not None:
+				vel = np.sqrt(np.dot(self._velocity, self._velocity))
+				if vel > 0:
+					self._velocity *= velocity / vel
+					return
+			
+			theta = np.random.rand() * 2 * np.pi
+			self._velocity = velocity * np.array([np.cos(theta), np.sin(theta)])
 		else:
-			self._velocity = velocity
+			self._velocity = np.array(velocity)
 
 	def phase_for(self, wavelength):
 		'''Get the phase screen at a certain wavelength.

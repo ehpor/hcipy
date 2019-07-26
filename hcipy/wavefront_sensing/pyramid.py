@@ -18,15 +18,16 @@ class ModulatedPyramidWavefrontSensor(WavefrontSensorOptics):
 	num_steps : int
 		The number of steps per modulation cycle.
 	'''
-	def __init__(self, pyramid_wavefront_sensor, modulation, num_steps):
+	def __init__(self, pyramid_wavefront_sensor, modulation, num_steps=12):
 		self.modulation = modulation
 		self.pyramid_wavefront_sensor = pyramid_wavefront_sensor
 		self.tip_tilt_mirror = TipTiltMirror(self.pyramid_wavefront_sensor.input_grid)
 
-		theta = np.linspace(0, 2 * np.pi, num_steps)
+		theta = np.linspace(0, 2 * np.pi, num_steps, endpoint=False)
 		x_modulation = modulation / 2 * np.cos(theta)
 		y_modulation = modulation / 2 * np.sin(theta)
-		self.modulation_position = CartesianGrid(UnstructuredCoords(x_modulation, y_modulation))
+
+		self.modulation_positions = CartesianGrid(UnstructuredCoords(x_modulation, y_modulation))
 
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the modulated pyramid wavefront sensor.
@@ -38,10 +39,9 @@ class ModulatedPyramidWavefrontSensor(WavefrontSensorOptics):
 
 		Returns
 		-------
-		wf_modulated : List
+		wf_modulated : list
 			A list of wavefronts for each modulation position.
 		'''
-
 		wf_modulated = []
 
 		for point in self.modulation_positions.points:
@@ -75,7 +75,6 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		The radius of the focal plane spatial filter in units of lambda/D at the reference wavelength.
 	'''
 	def __init__(self, input_grid, separation=None, wavelength_0=1, q=None, num_airy=None, refractive_index=lambda x: 1.5):
-
 		if not input_grid.is_regular:
 			raise ValueError('The input grid must be a regular grid.')
 
@@ -90,15 +89,15 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		if q is None:
 			q = qmin 
 		elif q < qmin:
-			raise ValueError('The requested focal plane sampling is to low to sufficiently sample the wavefront sensor output.')
+			raise ValueError('The requested focal plane sampling is too low to sufficiently sample the wavefront sensor output.')
 
 		if num_airy is None:
-			self.num_airy = np.max((input_grid.shape-1)) / 2
+			self.num_airy = np.max(input_grid.shape - 1) / 2
 		else:
 			self.num_airy = num_airy
 		
 		self.focal_grid = make_focal_grid(q, self.num_airy, reference_wavelength=wavelength_0, pupil_diameter=D, focal_length=1)
-		self.wfs_grid = make_pupil_grid(qmin * input_grid.dims, qmin * D)
+		self.output_grid = make_pupil_grid(qmin * input_grid.dims, qmin * D)
 		
 		# Make all the optical elements
 		self.spatial_filter = Apodizer(circular_aperture(2 * self.num_airy * wavelength_0 / D)(self.focal_grid))
@@ -107,7 +106,7 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 
 		# Make the propagators
 		self.pupil_to_focal = FraunhoferPropagator(input_grid, self.focal_grid)
-		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.wfs_grid)
+		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.output_grid)
 
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the pyramid wavefront sensor.
@@ -122,10 +121,8 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		wf_wfs : Wavefront
 			The output wavefront.
 		'''
-
 		wf_focus = self.pupil_to_focal.forward(wavefront)
-		wf_filtered = self.spatial_filter.forward(wf_focus)
-		wf_pyramid = self.pyramid.forward(wf_filtered)
+		wf_pyramid = self.pyramid.forward(self.spatial_filter.forward(wf_focus))
 		wf_wfs = self.focal_to_pupil.forward(wf_pyramid)
 
 		return wf_wfs
@@ -143,10 +140,8 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		wf_pupil : Wavefront
 			The output wavefront.
 		'''
-
 		wf_focus = self.focal_to_pupil.backward(wavefront)
-		wf_filtered = self.spatial_filter.forward(wf_focus)
-		wf_pyramid = self.pyramid.backward(wf_filtered)
+		wf_pyramid = self.pyramid.backward(self.spatial_filter.backward(wf_focus))
 		wf_pupil = self.pupil_to_focal.backward(wf_pyramid)
 
 		return wf_pupil
@@ -160,7 +155,7 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 		A function which mask the pupils for the normalized differences.
 	output_grid : Grid
 		The grid on which the output of a pyramid wavefront sensor is sampled.
-			
+	
 	Attributes
 	----------
 	measurement_grid : Grid
@@ -179,7 +174,7 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 
 		Parameters
 		----------
-		images - List
+		images - list
 			A list of scalar intensity fields containing pyramid wavefront sensor images.
 			
 		Returns

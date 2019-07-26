@@ -4,10 +4,9 @@ from .optical_element import OpticalElement, make_agnostic_optical_element
 @make_agnostic_optical_element([], ['apodization'])
 class Apodizer(object):
 	'''A monochromatic thin apodizer.
-	
-	This apodizer can apodize both in phase and amplitude. It assumes a 
-	
-	
+
+	This apodizer can apodize both in phase and amplitude.
+
 	Parameters
 	----------
 	apodization : Field or scalar
@@ -26,7 +25,7 @@ class Apodizer(object):
 	
 	def backward(self, wavefront):
 		wf = wavefront.copy()
-		wf.electric_field /= self.apodization
+		wf.electric_field *= self.apodization.conj()
 		return wf
 
 @make_agnostic_optical_element([], ['phase'])
@@ -95,7 +94,7 @@ class ComplexSurfaceApodizer(OpticalElement):
 		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
 		
 		wf = wavefront.copy()
-		wf.electric_field *= np.exp(-1j * opd * wf.wavenumber) / self.amplitude
+		wf.electric_field *= self.amplitude * np.exp(-1j * opd * wf.wavenumber)
 
 		return wf
 

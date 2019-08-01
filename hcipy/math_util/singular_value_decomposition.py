@@ -1,4 +1,6 @@
 import numpy as np
+import scipy.sparse
+import scipy.sparse.linalg
 
 class SVD(object):
 	'''The Singular Value Decomposition for the provided matrix.
@@ -7,24 +9,33 @@ class SVD(object):
 	easy access to singular modes (as mode bases) and allows for calculation
 	of the SVD for a limited number of modes.
 
+	When a sparse matrix is passed, and no number of modes is given, all but one
+	mode will be calculated. The reason is that the sparse SVD implementation in Scipy
+	doesn't allow calculation of all modes. If all modes are required, the user 
+	must pass a densified version of the matrix (ie. `M.toarray()`).
+
 	Parameters
 	----------
-	M : np.ndarray
+	M : ndarray or any sparse matrix
 		The matrix on which to perform the SVD.
 	num_modes : int or None
 		The number of singular values and modes to calculate. If this is None,
-		all modes will be computed.
+		and `M` is not sparse, all modes will be computed. If this is None and
+		`M` is sparse, all but one mode will be computed.
 	'''
 	def __init__(self, M, num_modes=None):
 		self._M = M
 		self._num_modes = num_modes
 
+		is_sparse = scipy.sparse.issparse(M)
+
+		if is_sparse and self.num_modes is None:
+			self._num_modes = min(M.shape) - 1
+
 		if self.num_modes is None:
-			from numpy.linalg import svd
-			self._svd = svd(M, full_matrices=False)
+			self._svd = np.linalg.svd(M, full_matrices=False)
 		else:
-			from scipy.sparse.linalg import svds
-			self._svd = svds(M, int(self.num_modes))
+			self._svd = scipy.sparse.linalg.svds(M, int(self.num_modes))
 	
 	@property
 	def left_singular_modes(self):

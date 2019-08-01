@@ -239,3 +239,43 @@ class DeformableMirror(OpticalElement):
 		'''Flatten the DM by setting all actuators to zero.
 		'''
 		self._actuators = np.zeros(len(self.influence_functions))
+
+def label_actuator_centroid_positions(influence_functions, label_format='{:d}', **text_kwargs):
+	'''Display centroid positions for a set of influence functions.
+
+	The location of each of the actuators is calculated using a weighted centroid, and 
+	at that location a label is written to the open Matplotlib Figure. The text can be
+	modified with `label_format`, which is formatted with new-style Python formatting:
+	`label_format.format(i)` where `i` is the actuator index.
+
+	Parameters
+	----------
+	influence_functions : ModeBasis
+		The influence function for each actuator.
+	label_format : string
+		The text that will be displayed at the actuator centroid. This must be a new-style
+		formattable string.
+	
+	Raises
+	------
+	ValueError
+		If the influence functions mode basis does not contain a grid.
+	'''
+	import matplotlib.pyplot as plt
+
+	if influence_functions.grid is None:
+		raise ValueError('The influence functions mode basis must contain a grid to calcuate centroids.')
+
+	grid = influence_functions.grid.as_('cartesian')
+	x, y = grid.coords
+
+	# Center the labels unless overridden by the user.
+	kwargs = {'verticalalignment': 'center', 'horizontalalignment': 'center'}
+	kwargs.update(text_kwargs)
+
+	for i, act in enumerate(influence_functions):
+		x_pos = (act * x).sum() / act.sum()
+		y_pos = (act * y).sum() / act.sum()
+		pos = (x_pos, y_pos)
+
+		plt.annotate(s=label_format.format(i), xy=pos, **kwargs)

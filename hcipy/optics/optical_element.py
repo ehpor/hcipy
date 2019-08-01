@@ -614,3 +614,17 @@ class OpticalSystem(OpticalElement):
 	@optical_elements.setter
 	def optical_elements(self, optical_elements):
 		self._optical_elements = list(optical_elements)
+
+	@property
+	def input_grid(self):
+		if self._optical_elements:
+			return self._optical_elements[0].input_grid
+		else:
+			return None
+	
+	@property
+	def output_grid(self):
+		if self._optical_elements:
+			return self._optical_elements[-1].output_grid
+		else:
+			return None

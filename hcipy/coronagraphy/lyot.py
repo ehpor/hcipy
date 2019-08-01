@@ -34,7 +34,8 @@ class LyotCoronagraph(OpticalElement):
 			lyot_stop = Apodizer(lyot_stop)
 		self.lyot_stop = lyot_stop
 		
-		self.prop = FraunhoferPropagator(input_grid, focal_plane_mask.grid)
+		self.prop = FraunhoferPropagator(input_grid, grid)
+		self.output_grid = input_grid
 	
 	def forward(self, wavefront):
 		'''Propagate the wavefront through the Lyot coronagraph.
@@ -113,7 +114,7 @@ class OccultedLyotCoronagraph(OpticalElement):
 			grid = focal_plane_mask.grid
 			self.focal_plane_mask = Apodizer(focal_plane_mask)
 		
-		self.prop = FraunhoferPropagator(input_grid, focal_plane_mask.grid)
+		self.prop = FraunhoferPropagator(input_grid, grid)
 	
 	def forward(self, wavefront):
 		'''Propagate the wavefront through the Lyot coronagraph.

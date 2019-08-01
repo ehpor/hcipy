@@ -116,6 +116,10 @@ class ModeBasis(object):
 		'''The transformation matrix of this mode basis.
 		'''
 		return self._transformation_matrix
+	
+	@transformation_matrix.setter
+	def transformation_matrix(self, transformation_matrix):
+		self._transformation_matrix = transformation_matrix
 
 	def coefficients_for(self, b, dampening_factor=0):
 		r'''Calculate the coefficients on this mode basis in a least squares fashion.

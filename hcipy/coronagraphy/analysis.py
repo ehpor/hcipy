@@ -5,7 +5,7 @@ from ..propagation import FraunhoferPropagator
 from ..optics import Wavefront
 from ..metrics import radial_profile
 
-def CoronagraphAnalysis(object):
+class CoronagraphAnalysis(object):
 	'''A class for performing analysis on a coronagraph.
 	
 	Parameters
@@ -22,8 +22,9 @@ def CoronagraphAnalysis(object):
 		The wavelengths to use for propagating the images. If a scalar is given, a monochromatic
 		propagation will be used.
 	'''
-	def __init__(self, coronagraph, pupil, pupil_diameter, wavelengths):
+	def __init__(self, coronagraph, non_coronagraph, pupil, pupil_diameter, wavelengths):
 		self.coronagraph = coronagraph
+		self.non_coronagraph = non_coronagraph
 		self.pupil = pupil
 		self.pupil_diameter = pupil_diameter
 		self.wavelengths = wavelengths
@@ -77,19 +78,15 @@ def CoronagraphAnalysis(object):
 			The number of lambda_0 / D radius to look for throughput.
 		'''
 		# Get region where PSF is larger than half its maximum.
-		focal_grid = make_focal_grid(q, fov, pupil_diameter=self.pupil_diameter, wavelength=self.center_wavelength)
+		focal_grid = make_focal_grid(q, fov, pupil_diameter=self.pupil_diameter, reference_wavelength=self.center_wavelength, focal_length=1)
 		prop = FraunhoferPropagator(self.coronagraph.output_grid, focal_grid)
 
 		normalized_focal_grid = make_focal_grid(q, fov)
 
-		img = 0
-		for wavelength in self.wavelengths:
-			wf = Wavefront(self.pupil, wavelength)
-			wf.total_power = 1.0 / num_wavelengths
-			img += prop(wf).power
-		
-		reference_region = img > (0.5 * img.max())
-		reference_core_throughput = (img * reference_region).sum()
+		ref_img = self.make_image_with_pointings(prop, coronagraphic=False)
+
+		reference_region = ref_img > (0.5 * ref_img.max())
+		reference_core_throughput = (ref_img * reference_region).sum()
 
 		core_throughputs = []
 		centroid_positions = []
@@ -97,29 +94,25 @@ def CoronagraphAnalysis(object):
 
 		# Get core throughput for each angular separation
 		for angular_separation in angular_separations:
-			img = 0
 			if np.isscalar(angular_separation):
-				prop = FraunhoferPropagator(self.coronagraph.output_grid, focal_grid.shifted([-angular_separation, 0]))
+				prop = FraunhoferPropagator(self.coronagraph.output_grid, focal_grid.shifted([angular_separation, 0]))
+				pointing = CartesianGrid(UnstructuredCoords([np.array([angular_separation]), np.array([0])]))
 			else:
-				prop = FraunhoferPropagator(self.coronagraph.output_grid, focal_grid.shifted([-angular_separation[0], -angular_separation[1]]))
-			
-			for wavelength in self.wavelengths:
-				wf = Wavefront(self.pupil, wavelength)
-				wf.total_power = 1.0 / self.num_wavelengths
+				prop = FraunhoferPropagator(self.coronagraph.output_grid, focal_grid.shifted([angular_separation[0], angular_separation[1]]))
+				pointing = CartesianGrid(UnstructuredCoords([np.array([angular_separation[0]]), np.array([angular_separation[1]])]))
 
-				if np.isscalar(angular_separation):
-					wf.electric_field *= np.exp(2j * np.pi * self.center_wavelength / (wavelength * self.pupil_diameter) * self.pupil.grid.x * angular_separation)
-				else:
-					wf.electric_field *= np.exp(2j * np.pi * self.center_wavelength / wavelength / self.pupil_diameter * np.dot(self.pupil.grid.coords, angular_separation))
-				
-				img += prop(self.coronagraph(wf)).power
-			
+			img = self.make_image_with_pointings(prop, pointing)
 			img = Field(img, normalized_focal_grid)
 
 			core_throughputs.append((img * reference_region).sum())
-			centroid_positions.append() # FIXME
-			images.append(Field(img, focal_grid))
-		
+
+			centroid_x = ((img * reference_region) * img.grid.x).sum() / (img * reference_region).sum()
+			centroid_y = ((img * reference_region) * img.grid.y).sum() / (img * reference_region).sum()
+			centroid_positions.append(np.array([centroid_x, centroid_y]))
+
+			images.append(Field(img / ref_img.max(), focal_grid))
+			print(img.sum())
+
 		output = {
 			'angular_separations': angular_separations,
 			'core_throughputs': core_throughputs,
@@ -130,7 +123,7 @@ def CoronagraphAnalysis(object):
 
 		return output
 
-	def make_image_with_pointings(self, prop, pointings):
+	def make_image_with_pointings(self, prop, pointings=None, coronagraphic=True):
 		'''Make an image with a number of pointing positions.
 
 		Parameters
@@ -143,14 +136,20 @@ def CoronagraphAnalysis(object):
 		'''
 		img = 0
 
+		if pointings is None:
+			pointings = CartesianGrid(UnstructuredCoords([np.array([0]), np.array([0])]))
+
 		for wavelength in self.wavelengths:
 			for p in pointings.as_('cartesian').points:
 				wf = Wavefront(self.pupil, wavelength)
 				wf.total_power = 1.0 / (self.num_wavelengths * len(pointings))
 
-				wf.electric_field *= np.exp(2j * np.pi * self.center_wavelength / wavelength / self.pupil_diameter * np.dot(self.pupil.grid.as_('cartesian').coords, p))
+				wf.electric_field *= np.exp(2j * np.pi * self.center_wavelength / wavelength / self.pupil_diameter * np.dot(p, self.pupil.grid.as_('cartesian').coords))
 
-				img += prop(self.coronagraph(wf)).power
+				if coronagraphic:
+					img += prop(self.coronagraph(wf)).power
+				else:
+					img += prop(self.non_coronagraph(wf)).power
 		
 		return img
 
@@ -181,8 +180,10 @@ def CoronagraphAnalysis(object):
 		profiles_std = []
 		profiles_num = []
 
-		focal_grid = make_focal_grid(q, fov, pupil_diameter=self.pupil_diameter, wavelength=self.center_wavelength)
+		focal_grid = make_focal_grid(q, fov, pupil_diameter=self.pupil_diameter, reference_wavelength=self.center_wavelength, focal_length=1)
 		prop = FraunhoferPropagator(self.coronagraph.output_grid, focal_grid)
+
+		ref_img = self.make_image_with_pointings(prop, coronagraphic=False)
 
 		normalized_focal_grid = make_focal_grid(q, fov)
 
@@ -191,10 +192,13 @@ def CoronagraphAnalysis(object):
 		samples = PolarGrid(UnstructuredCoords((r, theta)))
 
 		for stellar_diameter in stellar_diameters:
+			print(stellar_diameter)
 			img = self.make_image_with_pointings(prop, samples.scaled(stellar_diameter))
+
 			img.grid = normalized_focal_grid
+			img /= ref_img.max()
 		
-			r, y, y_std, y_num = radial_profile(img, 1.0 / q)
+			r, y, y_std, y_num = radial_profile(img, 2.0 / q)
 
 			images.append(img)
 			angular_separations = r
@@ -236,10 +240,12 @@ def CoronagraphAnalysis(object):
 		profiles_std = []
 		profiles_num = []
 
-		focal_grid = make_focal_grid(q, fov, pupil_diameter=self.pupil_diameter, wavelength=self.center_wavelength)
+		focal_grid = make_focal_grid(q, fov, pupil_diameter=self.pupil_diameter, reference_wavelength=self.center_wavelength, focal_length=1)
 		prop = FraunhoferPropagator(self.coronagraph.output_grid, focal_grid)
 
 		normalized_focal_grid = make_focal_grid(q, fov)
+
+		ref_img = self.make_image_with_pointings(prop, coronagraphic=False)
 
 		x = np.random.randn(num_samples) / np.sqrt(2)
 		y = np.random.randn(num_samples) / np.sqrt(2)
@@ -248,9 +254,11 @@ def CoronagraphAnalysis(object):
 
 		for pointing_jitter in pointing_jitters:
 			img = self.make_image_with_pointings(prop, samples.scaled(pointing_jitter))
-			img.grid = normalized_focal_grid
 
-			r, y, y_std, y_num = radial_profile(img, 1.0 / q)
+			img.grid = normalized_focal_grid
+			img /= ref_img.max()
+
+			r, y, y_std, y_num = radial_profile(img, 2.0 / q)
 
 			images.append(img)
 			angular_separations = r
@@ -268,24 +276,43 @@ def CoronagraphAnalysis(object):
 
 		return output
 
-	def make_image_with_aberration(self, prop, aberration=0, coeffs=0):
-		img = 0
-
+	def make_images_with_aberration(self, prop, aberration=0, coeffs=0):
 		if np.isscalar(coeffs):
 			coeffs = [coeffs]
 
-		for wavelength in self.wavelengths:
-			for c in coeffs:
+		images = []
+		for c in coeffs:
+			img = 0
+			for wavelength in self.wavelengths:
 				wf = Wavefront(self.pupil, wavelength)
 				wf.total_power = 1.0 / (self.num_wavelengths * len(coeffs))
 
-				wf.electric_field *= np.exp(1j * c * aberration * coeffs * self.center_wavelength / wavelength)
+				wf.electric_field *= np.exp(1j * c * aberration * self.center_wavelength / wavelength)
 
 				img += prop(self.coronagraph(wf)).power
+			images.append(img)
 		
-		return img
+		return images
+	
+	def make_electric_fields_with_aberration(self, prop, aberration=0, coeffs=0):
+		if np.isscalar(coeffs):
+			coeffs = [coeffs]
 
-	def get_low_order_sensitivity_drift(self, modes, rms_drift, num_samples=100, q=4, fov=32):
+		electric_fields = []
+		for c in coeffs:
+			electric_field = []
+			for wavelength in self.wavelengths:
+				wf = Wavefront(self.pupil, wavelength)
+				wf.total_power = 1.0 / (self.num_wavelengths * len(coeffs))
+
+				wf.electric_field *= np.exp(1j * c * aberration * self.center_wavelength / wavelength)
+
+				img += prop(self.coronagraph(wf)).electric_field
+			electric_fields.append(electric_field)
+		
+		return electric_fields
+
+	def get_low_order_sensitivity_drift(self, modes, rms_drift, q=4, fov=32):
 		'''Get the image and profile for drifting aberrations on several modes.
 
 		Parameters
@@ -312,16 +339,25 @@ def CoronagraphAnalysis(object):
 		profiles_std = []
 		profiles_num = []
 
-		focal_grid = make_focal_grid(q, fov, pupil_diameter=self.pupil_diameter, wavelength=self.center_wavelength)
+		focal_grid = make_focal_grid(q, fov, pupil_diameter=self.pupil_diameter, reference_wavelength=self.center_wavelength, focal_length=1)
 		prop = FraunhoferPropagator(self.coronagraph.output_grid, focal_grid)
-		reference_image = self.make_image_with_aberration(prop)
 
-		coeffs = np.random.randn(num_samples)
+		normalized_focal_grid = make_focal_grid(q, fov)
+
+		ref_img = self.make_image_with_pointings(prop, coronagraphic=False)
+
+		reference_image = self.make_images_with_aberration(prop)[0]
+		reference_image /= ref_img.max()
 
 		for mode in modes:
-			img = make_image_with_aberration(prop, mode, coeffs * rms_drift * 2 * np.pi / self.center_wavelength)
+			print(mode)
+			img = self.make_images_with_aberration(prop, mode, rms_drift * 2 * np.pi / self.center_wavelength)[0]
+			img = Field(img, normalized_focal_grid)
+			img /= ref_img.max()
 
-			r, y, y_std, y_num = radial_profile(img, 1.0 / q)
+			img -= reference_image
+
+			r, y, y_std, y_num = radial_profile(img, 2.0 / q)
 
 			images.append(img)
 			angular_separations = r
@@ -366,18 +402,28 @@ def CoronagraphAnalysis(object):
 		profiles_std = []
 		profiles_num = []
 
-		focal_grid = make_focal_grid(q, fov, pupil_diameter=self.pupil_diameter, wavelength=self.center_wavelength)
+		focal_grid = make_focal_grid(q, fov, pupil_diameter=self.pupil_diameter, reference_wavelength=self.center_wavelength, focal_length=1)
 		prop = FraunhoferPropagator(self.coronagraph.output_grid, focal_grid)
 
 		normalized_focal_grid = make_focal_grid(q, fov)
 
+		ref_img = self.make_image_with_pointings(prop, coronagraphic=False)
+		ref_noncoronagraphic = self.make_electric_fields_with_aberration(prop, coronagraphic=False)
+		ref_noncoronagraphic_norm = np.array(ref_noncoronagraphic)
+		ref_coronagraphic = self.make_electric_fields_with_aberration(prop, coronagraphic=False)
+		ref_coronagraphic = np.array(ref_coronagraphic)
+
 		coeffs = np.random.randn(num_samples)
 
 		for mode in modes:
-			img = make_image_with_aberration(prop, mode, coeffs * rms_jitter * 2 * np.pi / self.center_wavelength)
-			img.grid = normalized_focal_grid
+			print(mode)
+			imgs = self.make_images_with_aberration(prop, mode, coeffs * rms_jitter * 2 * np.pi / self.center_wavelength)
+			img = np.std(imgs, axis=0)
 
-			r, y, y_std, y_num = radial_profile(img, 1.0 / q)
+			img = Field(img, normalized_focal_grid)
+			img /= ref_img.max()
+
+			r, y, y_std, y_num = radial_profile(img, 2.0 / q)
 
 			images.append(img)
 			angular_separations = r

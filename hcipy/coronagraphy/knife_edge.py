@@ -30,7 +30,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		this is a Field, it will be converted to an apodizer.
 		If this is None, no Lyot stop will be used.
 	'''
-	def __init__(self, input_grid, q=8, apodizer=None, lyot_mask=None):
+	def __init__(self, input_grid, q=8, apodizer=None, lyot_stop=None):
 		fft = FastFourierTransform(input_grid, q, 1)
 		self.cutout_input = (Ellipsis, fft.cutout_input[1])
 		self.internal_shape = input_grid.shape[0], fft.internal_shape[1]
@@ -51,7 +51,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 
 		if lyot_stop is not None and not hasattr(lyot_stop, 'input_grid'):
 			lyot_stop = Apodizer(lyot_stop)
-		self.lyot_mask = lyot_mask
+		self.lyot_stop = lyot_stop
 	
 	def forward(self, wavefront):
 		'''Propagate a wavefront forward through the knife-edge coronagraph.
@@ -78,8 +78,8 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 
 		wavefront = Wavefront(post_coro, wavefront.wavelength)
 
-		if self.lyot_mask is not None:
-			wavefront = self.lyot_mask.forward(wavefront)
+		if self.lyot_stop is not None:
+			wavefront = self.lyot_stop.forward(wavefront)
 		
 		return wavefront
 	
@@ -96,8 +96,8 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		Wavefront
 			The propagated wavefront.
 		'''
-		if self.lyot_mask is not None:
-			wavefront = self.lyot_mask.forward(wavefront)
+		if self.lyot_stop is not None:
+			wavefront = self.lyot_stop.backward(wavefront)
 
 		ap = np.zeros(self.internal_shape, dtype='complex')
 		ap[tuple(self.cutout_input)] = wavefront.electric_field.shaped
@@ -109,6 +109,6 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		wavefront = Wavefront(post_coro, wavefront.wavelength)
 
 		if self.apodizer is not None:
-			wavefront = self.apodizer.forward(wavefront)
+			wavefront = self.apodizer.backward(wavefront)
 
 		return wavefront

@@ -68,20 +68,20 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 	This aperture changes frequently. This one is based on LUVOIR Apertures dimensions 
 	from Matt Bolcar, LUVOIR lead engineer (as of 10 April 2019)
 	Spiders and segment gaps can be included or excluded, and the transmission for each 
-	of the segments can also be changed.
+	of the segments can also be changed. Segements can be returned as well.
 
 	Parameters
 	----------
 	normalized : boolean
-		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		If this is True, the pupil diameter will be scaled to 1. Otherwise, the
 		diameter of the pupil will be 15.0 meters.
 	with_spiders : boolean
 		Include the secondary mirror support structure in the aperture.
 	with_segment_gaps : boolean
 		Include the gaps between individual segments in the aperture.
 	gap_padding : scalar
-		arbitratry padding of gap size to represent gaps on smaller arrays - effectively 
-		makes the gaps larger and the segments smaller to preserve the same segment pitch 
+		Arbitrary padding of gap size to represent gaps on smaller arrays - this effectively 
+		makes the gaps larger and the segments smaller to preserve the same segment pitch.
 	segment_transmissions : scalar or array_like
 		The transmission for each of the segments. If this is a scalar, this transmission 
 		will be used for all segments.
@@ -98,11 +98,9 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 	aperture_header : dict
 		A dictionary containing all quantities used when making this aperture. Only returned if
 		`return_header` is True.
-	segments : ModeBasis
-		A ModeBasis containing all segments of the aperture. Only returned if `return_segments`
-		is True.
+	segments : list of Field generators
+		The segments. Only returned when `return_segments` is True.
 	'''
-	
 	pupil_diameter = 15.0 #m actual circumscribed diameter, used for lam/D calculations other measurements normalized by this diameter
 	pupil_inscribed = 13.5 #m actual inscribed diameter
 	actual_segment_flat_diameter = 1.2225 #m actual segment flat-to-flat diameter
@@ -186,17 +184,27 @@ def make_luvoir_a_lyot_stop(normalized=False, with_spiders=False, spider_oversiz
 	Parameters
 	----------
 	normalized : boolean
+		If this is True, the pupil diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 15.0 meters.
 	with_spiders : boolean
+		Include the secondary mirror support structure in the aperture.
 	inner_diameter_fraction : scalar
+		The fractional size of the circular central obstruction as fraction of the pupil diameter.
 	outer_diameter_fraction : scalar
-	lyot_stop_reference_diameter : scalar
+		The fractional size of the circular outer edge as fraction of the pupil diameter.
 	spider_oversize : scalar
+		The factor by which to oversize the spiders compared to the LUVOIR-A aperture spiders.
 	return_header : boolean
+		If this is True, a header will be returned giving all important values for the 
+		created aperture for reference.
 
 	Returns
 	-------
-	aperture : Field generator
-	aperture_header : dict
+	lyot_stop : Field generator
+		A field generator for the Lyot stop.
+	header : dict
+		A dictionary containing all important values for the created aperture. Only returned
+		if `return_header` is True.
 	'''
 	pupil_diameter = 15.0 #m actual circumscribed diameter, used for lam/D calculations other measurements normalized by this diameter
 	spider_width = 0.150 #m actual strut size
@@ -260,13 +268,16 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 		If this is True, a header will be returned giving all important values for the 
 		created aperture for reference.
 	return_segments : boolean
-		If this is True, the segments will also be returned as a ModeBasis.
+		If this is True, the segments will also be returned as a list of Field generators.
 	
 	Returns
 	-------
 	aperture : Field generator
 		The HiCAT aperture.
-	segments : ModeBasis
+	header : dict
+		A dictionary containing all important values for the created aperture. Only returned
+		if `return_header` is True.
+	segments : list of Field generators
 		The segments. Only returned when `return_segments` is True.
 	'''
 	gamma_21 = 0.423
@@ -373,7 +384,7 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 	else:
 		return func
 
-def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter=0.2, outer_diameter=0.9, return_header=False):
+def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter_fraction=0.2, outer_diameter_fraction=0.9, return_header=False):
 	'''Make the HiCAT Lyot stop.
 
 	Parameters
@@ -383,11 +394,21 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter=0.2
 		diameter of the pupil will be 15.0 meters.
 	with_spiders : boolean
 		Include the secondary mirror support structure in the aperture.
+	inner_diameter_fraction : scalar
+		The fractional size of the circular central obstruction as fraction of the pupil diameter.
+	outer_diameter_fraction : scalar
+		The fractional size of the circular outer edge as fraction of the pupil diameter.
+	return_header : boolean
+		If this is True, a header will be returned giving all important values for the 
+		created aperture for reference.
 
 	Returns
 	-------
-	Field generator
-		The HiCAT Lyot stop.
+	lyot_stop : Field generator
+		A field generator for the Lyot stop.
+	header : dict
+		A dictionary containing all important values for the created aperture. Only returned
+		if `return_header` is True.
 	'''
 	gamma_21 = 0.423
 	gamma_31 = 1.008
@@ -403,7 +424,7 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter=0.2
 	p3_apodizer_size = 19.725e-3 # m
 	p5_apodizer_size = p3_apodizer_size * gamma_51 / gamma_31
 	
-	p5_lyot_stop_size = outer_diameter * p5_apodizer_size # m
+	p5_lyot_stop_size = outer_diameter_fraction * p5_apodizer_size # m
 	p5_irisao_inscribed_circle_size = p2_irisao_inscribed_circle_size * gamma_51 / gamma_21
 	lyot_stop_mask_undersize_contour_wrt_inscribed_circle = p5_lyot_stop_size / p5_irisao_inscribed_circle_size
 
@@ -411,7 +432,7 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter=0.2
 	p5_irisao_circumscribed_circle_size = p2_irisao_circumscribed_circle_size * gamma_51 / gamma_21
 
 	# Central segment
-	p5_lyot_stop_mask_central_segment_size = inner_diameter * p5_apodizer_size # m
+	p5_lyot_stop_mask_central_segment_size = inner_diameter_fraction * p5_apodizer_size # m
 	p5_apodizer_mask_central_segment_size = p3_apodizer_mask_central_segment_size * gamma_51 / gamma_31
 
 	p5_irisao_segment_size = p2_irisao_segment_size * gamma_51 / gamma_21

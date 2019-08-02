@@ -6,3 +6,4 @@ pyyaml
 mpmath
 astropy
 imageio
+xxhash

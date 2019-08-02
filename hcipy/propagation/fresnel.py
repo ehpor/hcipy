@@ -1,11 +1,12 @@
 import numpy as np
-from .propagator import MonochromaticPropagator
-from ..optics import Wavefront, make_polychromatic
+from .propagator import Propagator
+from ..optics import Wavefront, make_agnostic_optical_element
 from ..field import Field
 from ..fourier import FastFourierTransform
 from ..field import evaluate_supersampled, make_pupil_grid, subsample_field
 
-class FresnelPropagatorMonochromatic(object):
+@make_agnostic_optical_element()
+class FresnelPropagator(Propagator):
 	'''The monochromatic Fresnel propagator for scalar fields.
 
 	The Fresnel propagator is implemented as described in [1]_.
@@ -36,11 +37,12 @@ class FresnelPropagatorMonochromatic(object):
 			raise ValueError('The input grid must be a regular, Cartesian grid.')
 		
 		self.fft = FastFourierTransform(input_grid, q=2)
+		self.output_grid = input_grid
 		
 		k = 2 * np.pi / wavelength * refractive_index
 		L_max = np.max(input_grid.dims * input_grid.delta)
 		
-		if np.any(input_grid.delta < wavelength * distance / L_max):			
+		if np.any(input_grid.delta < wavelength * distance / L_max):
 			enlarged_input_grid = make_pupil_grid(2 * input_grid.dims, 2 * input_grid.delta * (input_grid.dims-1) )
 			self.fft_up_scale = FastFourierTransform(enlarged_input_grid)
 
@@ -92,5 +94,3 @@ class FresnelPropagatorMonochromatic(object):
 		ft = self.fft.forward(wavefront.electric_field)
 		ft *= np.conj(self.transfer_function)
 		return Wavefront(self.fft.backward(ft), wavefront.wavelength)
-
-FresnelPropagator = make_polychromatic(["refractive_index"])(FresnelPropagatorMonochromatic)

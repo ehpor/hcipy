@@ -8,3 +8,4 @@ tags
 /.idea/
 /build/
 /.pytest_cache/
+/.eggs/

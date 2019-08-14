@@ -1,13 +1,24 @@
 import copy
 import numpy as np
 
-from ..field import Field
+from ..field import Field, field_dot
 
 # TODO Should add a pilot Gaussian beam with each Wavefront
 
 class Wavefront(object):
-	def __init__(self, electric_field, wavelength=1):
-		self.electric_field = electric_field
+	def __init__(self, electric_field, wavelength=1, stokes_vector=None):
+		if stokes_vector is not None:
+			if self.electric_field.tensor_order not in [0, 2]:
+				raise ValueError('When supplying a Stokes vector, the electric field must be either a scalar or 2-tensor field.')
+			
+			if self.electric_field.is_scalar:
+				self.electric_field = electric_field[np.newaxis, np.newaxis, :] * np.eye(2)[..., np.newaxis]
+			else:
+				self.electric_field = electric_field
+			
+			self._input_stokes_vector = stokes_vector
+		else:
+			self.electric_field = electric_field
 		self.wavelength = wavelength
 	
 	def copy(self):
@@ -26,19 +37,87 @@ class Wavefront(object):
 				self._electric_field = Field(U[0].astype('complex'), U[1])
 			else:
 				raise ValueError("Electric field requires an accompanying grid.")
-	
+
 	@property
 	def wavenumber(self):
-		return 2*np.pi / self.wavelength
+		return 2 * np.pi / self.wavelength
 	
 	@wavenumber.setter
 	def wavenumber(self, wavenumber):
-		self.wavelength = 2*np.pi / wavenumber
+		self.wavelength = 2 * np.pi / wavenumber
 	
 	@property
 	def grid(self):
 		return self.electric_field.grid
+
+	@property
+	def I(self):
+		x = self.electric_field[0, 0, :]
+		y = self.electric_field[0, 1, :]
+		z = self.electric_field[1, 0, :]
+		w = self.electric_field[1, 1, :]
+
+		M11 = x * x.conj() + y * y.conj() + z * z.conj() + w * w.conj()
+		M12 = x * x.conj() - y * y.conj() + z * z.conj() - w * w.conj()
+		M13 = x * y.conj() + y * x.conj() + z * w.conj() + w * z.conj()
+		M14 = 1j * (x * y.conj() - y * x.conj() + z * w.conj() - w * z.conj())
+
+		row = Field(np.array([M11, M12, M13, M14]), self.electric_field.grid)
+		
+		return 0.5 * field_dot(row, self._input_stokes_vector)
+
+	@property
+	def Q(self):
+		x = self.electric_field[0, 0, :]
+		y = self.electric_field[0, 1, :]
+		z = self.electric_field[1, 0, :]
+		w = self.electric_field[1, 1, :]
+
+		M21 = x * x.conj() + y * y.conj() - z * z.conj() - w * w.conj()
+		M22 = x * x.conj() - y * y.conj() - z * z.conj() + w * w.conj()
+		M23 = x * y.conj() + y * x.conj() - z * w.conj() - w * z.conj()
+		M24 = 1j * (x * y.conj() - y * x.conj() - z * w.conj() + w * z.conj())
+
+		row = Field(np.array([M21, M22, M23, M24]), self.electric_field.grid)
+		
+		return 0.5 * field_dot(row, self._input_stokes_vector)
 	
+	@property
+	def U(self):
+		x = self.electric_field[0, 0, :]
+		y = self.electric_field[0, 1, :]
+		z = self.electric_field[1, 0, :]
+		w = self.electric_field[1, 1, :]
+
+		M31 = x * z.conj() + y * w.conj() + z * x.conj() + w * y.conj()
+		M32 = x * z.conj() - y * w.conj() + z * x.conj() - w * y.conj()
+		M33 = x * w.conj() + y * z.conj() + z * y.conj() + w * x.conj()
+		M34 = 1j * (x * w.conj() - y * z.conj() + z * y.conj() - w * x.conj())
+		
+		row = Field(np.array([M31, M32, M33, M34]), self.electric_field.grid)
+		
+		return 0.5 * field_dot(row, self._input_stokes_vector)
+
+	@property
+	def V(self):
+		x = self.electric_field[0, 0, :]
+		y = self.electric_field[0, 1, :]
+		z = self.electric_field[1, 0, :]
+		w = self.electric_field[1, 1, :]
+
+		M41 = 1j * (-x * z.conj() - y * w.conj() + z * x.conj() + w * y.conj())
+		M42 = 1j * (-x * z.conj() + y * w.conj() + z * x.conj() - w * y.conj())
+		M43 = 1j * (-x * w.conj() - y * z.conj() + z * y.conj() + w * x.conj())
+		M44 = x * w.conj() - y * z.conj() - z * y.conj() + w * x.conj()
+		
+		row = Field(np.array([M41, M42, M43, M44]), self.electric_field.grid)
+		
+		return 0.5 * field_dot(row, self._input_stokes_vector)
+	
+	@property
+	def degree_of_polarization(self):
+		return np.sqrt(self.Q**2 + self.U**2 + self.V**2) / self.I
+
 	@property
 	def intensity(self):
 		return np.abs(self.electric_field)**2

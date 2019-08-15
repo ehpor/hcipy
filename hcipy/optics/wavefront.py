@@ -12,13 +12,15 @@ class Wavefront(object):
 				raise ValueError('When supplying a Stokes vector, the electric field must be either a scalar or 2-tensor field.')
 			
 			if electric_field.is_scalar_field:
-				self._electric_field = electric_field[np.newaxis, np.newaxis, :] * np.eye(2)[..., np.newaxis]
+				self._electric_field = electric_field[np.newaxis, np.newaxis, :].astype('complex') * np.eye(2)[..., np.newaxis]
 			else:
-				self._electric_field = electric_field
+				self._electric_field = electric_field.astype('complex')
 			
 			self._input_stokes_vector = np.array(stokes_vector)
 		else:
-			self._electric_field = electric_field
+			self._electric_field = electric_field.astype('complex')
+			self._input_stokes_vector = None
+
 		self.wavelength = wavelength
 	
 	def copy(self):

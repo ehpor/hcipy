@@ -49,7 +49,7 @@ class FraunhoferPropagator(Propagator):
 			The wavefront after the propagation.
 		'''
 		U_new = self.fourier_transform.forward(wavefront.electric_field) * self.norm_factor
-		return Wavefront(Field(U_new, self.output_grid), wavefront.wavelength)
+		return Wavefront(Field(U_new, self.output_grid), wavefront.wavelength, wavefront.input_stokes_vector)
 	
 	def backward(self, wavefront):
 		'''Propagate a wavefront backward through the lens.
@@ -65,7 +65,7 @@ class FraunhoferPropagator(Propagator):
 			The wavefront after the propagation.
 		'''
 		U_new = self.fourier_transform.backward(wavefront.electric_field) / self.norm_factor
-		return Wavefront(Field(U_new, self.input_grid), wavefront.wavelength)
+		return Wavefront(Field(U_new, self.input_grid), wavefront.wavelength, wavefront.input_stokes_vector)
 	
 	def get_transformation_matrix_forward(self, input_grid, wavelength=1):
 		'''Create the forward linear transformation between the internal input grid and output grid.

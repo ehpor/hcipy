@@ -83,7 +83,7 @@ class AngularSpectrumPropagator(Propagator):
 		'''
 		ft = self.fft.forward(wavefront.electric_field)
 		ft *= self.transfer_function
-		return Wavefront(self.fft.backward(ft), wavefront.wavelength)
+		return Wavefront(self.fft.backward(ft), wavefront.wavelength, wavefront.input_stokes_vector)
 	
 	def backward(self, wavefront):
 		'''Propagate a wavefront backward by a certain distance.
@@ -100,4 +100,4 @@ class AngularSpectrumPropagator(Propagator):
 		'''
 		ft = self.fft.forward(wavefront.electric_field)
 		ft *= np.conj(self.transfer_function)
-		return Wavefront(self.fft.backward(ft), wavefront.wavelength)
+		return Wavefront(self.fft.backward(ft), wavefront.wavelength, wavefront.input_stokes_vector)

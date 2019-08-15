@@ -1,6 +1,6 @@
 import numpy as np
 from .optical_element import OpticalElement, make_agnostic_optical_element
-from ..field import Field, field_inv, field_dot
+from ..field import Field, field_inv, field_dot, field_transpose, field_conjugate_transpose
 
 def tensor_product(M1, M2):
     '''
@@ -72,7 +72,7 @@ class JonesMatrixOpticalElement(OpticalElement):
 			The propagated wavefront.
 		'''
 		wf = wavefront.copy()
-		wf.electric_field = field_dot(wf.electric_field, self.jones_matrix)
+		wf.electric_field = field_dot(self.jones_matrix, wf.electric_field)
 		return wf
 	
 	def backward(self, wavefront):
@@ -89,7 +89,7 @@ class JonesMatrixOpticalElement(OpticalElement):
 			The propagated wavefront.
 		'''
 		wf = wavefront.copy()
-		wf.electric_field = field_dot(wf.electric_field, field_conjugate_transpose(self.jones_matrix))
+		wf.electric_field = field_dot(field_conjugate_transpose(self.jones_matrix), wf.electric_field)
 		return wf
 
 	def mueller_matrix(self):
@@ -110,7 +110,7 @@ class JonesMatrixOpticalElement(OpticalElement):
 		else: 
 			return JonesMatrixOpticalElement(field_dot(self.jones_matrix, m))
 
-#@make_agnostic_optical_element([], ['phase_retardation', 'fast_axis_orientation', 'circularity'])
+@make_agnostic_optical_element([], ['phase_retardation', 'fast_axis_orientation', 'circularity'])
 class PhaseRetarder(JonesMatrixOpticalElement):
 	'''A general phase retarder.
 

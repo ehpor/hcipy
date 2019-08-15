@@ -8,17 +8,17 @@ from ..field import Field, field_dot
 class Wavefront(object):
 	def __init__(self, electric_field, wavelength=1, stokes_vector=None):
 		if stokes_vector is not None:
-			if self.electric_field.tensor_order not in [0, 2]:
+			if electric_field.tensor_order not in [0, 2]:
 				raise ValueError('When supplying a Stokes vector, the electric field must be either a scalar or 2-tensor field.')
 			
-			if self.electric_field.is_scalar:
-				self.electric_field = electric_field[np.newaxis, np.newaxis, :] * np.eye(2)[..., np.newaxis]
+			if electric_field.is_scalar_field:
+				self._electric_field = electric_field[np.newaxis, np.newaxis, :] * np.eye(2)[..., np.newaxis]
 			else:
-				self.electric_field = electric_field
+				self._electric_field = electric_field
 			
-			self._input_stokes_vector = stokes_vector
+			self._input_stokes_vector = np.array(stokes_vector)
 		else:
-			self.electric_field = electric_field
+			self._electric_field = electric_field
 		self.wavelength = wavelength
 	
 	def copy(self):
@@ -37,6 +37,10 @@ class Wavefront(object):
 				self._electric_field = Field(U[0].astype('complex'), U[1])
 			else:
 				raise ValueError("Electric field requires an accompanying grid.")
+	
+	@property
+	def input_stokes_vector(self):
+		return self._input_stokes_vector
 
 	@property
 	def wavenumber(self):
@@ -64,7 +68,7 @@ class Wavefront(object):
 
 		row = Field(np.array([M11, M12, M13, M14]), self.electric_field.grid)
 		
-		return 0.5 * field_dot(row, self._input_stokes_vector)
+		return 0.5 * field_dot(row, self._input_stokes_vector).real
 
 	@property
 	def Q(self):
@@ -80,7 +84,7 @@ class Wavefront(object):
 
 		row = Field(np.array([M21, M22, M23, M24]), self.electric_field.grid)
 		
-		return 0.5 * field_dot(row, self._input_stokes_vector)
+		return 0.5 * field_dot(row, self._input_stokes_vector).real
 	
 	@property
 	def U(self):
@@ -96,7 +100,7 @@ class Wavefront(object):
 		
 		row = Field(np.array([M31, M32, M33, M34]), self.electric_field.grid)
 		
-		return 0.5 * field_dot(row, self._input_stokes_vector)
+		return 0.5 * field_dot(row, self._input_stokes_vector).real
 
 	@property
 	def V(self):
@@ -112,7 +116,7 @@ class Wavefront(object):
 		
 		row = Field(np.array([M41, M42, M43, M44]), self.electric_field.grid)
 		
-		return 0.5 * field_dot(row, self._input_stokes_vector)
+		return 0.5 * field_dot(row, self._input_stokes_vector).real
 	
 	@property
 	def degree_of_polarization(self):

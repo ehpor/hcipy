@@ -1,7 +1,13 @@
+from __future__ import division
+
+import warnings
+
 import numpy as np
 from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
 from .field import Field
 from .cartesian_grid import CartesianGrid
+
+import itertools
 
 def make_uniform_grid(dims, extent, center=0, has_center=False):
 	'''Create a uniformly-spaced :class:`Grid` of a certain shape and size.
@@ -60,14 +66,43 @@ def make_pupil_grid(dims, diameter=1):
 		A :class:`CartesianGrid` with :class:`RegularCoords`.
 	'''
 	diameter = (np.ones(2) * diameter).astype('float')
-	dims = (np.ones(2) * dims).astype('int')
+	return make_uniform_grid(dims, diameter)
 
-	delta = diameter / (dims - 1)
-	zero = -diameter / 2
+def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1):
+	'''Make a grid for a focal plane from a pupil grid.
 
-	return CartesianGrid(RegularCoords(delta, dims, zero))
+	Calculate the focal grid corresponding to the pupil grid, using an FFT grid as a guide. The 
+	resulting grid focal will always contain the origin (0, 0) point. The extent of the pupil 
+	grid will be used as the diameter of the pupil. If the pupil is undersized on the pupil
+	grid, the resulting focal grid needs to be rescaled manually.
+	
+	.. note::
+		In almost all cases, it is preferable to use :func:`make_focal_grid_replacement`. This
+		function allows you to directly set the diameter, and doesn't require the user to pass
+		the pupil grid as an argument. `make_focal_grid_from_pupil_grid()` retains old functionality 
+		and serves as a backwards compatibility function, due to its ubiquitous usage in HCIPy code. 
+		`make_focal_grid_from_pupil_grid()` will be deprecated in future versions, and new code 
+		should aim to use its replacement.
 
-def make_focal_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1):
+	Parameters
+	----------
+	pupil_grid : Grid
+		The pupil grid for which the focal grid needs to be calculated. The extent of this Grid
+		is used as the diameter of the pupil.
+	q : scalar or array_like
+		The number of pixels per resolution element (= lambda f / D).
+	num_airy : scalar or array_like
+		The spatial extent of the grid in radius in resolution elements (= lambda f / D).
+	focal_length : scalar
+		The focal length used for calculating the spatial resolution at the focal plane.
+	wavelength : scalar
+		The reference wavelength used for calculating the spatial resolution at the focal plane.
+	
+	Returns
+	-------
+	Grid
+		A Grid describing the sampling for a focal plane.
+	'''
 	from ..fourier import make_fft_grid
 
 	f_lambda = focal_length * wavelength
@@ -84,6 +119,87 @@ def make_focal_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1
 	focal_grid = uv.scaled(f_lambda / (2*np.pi))
 	
 	return focal_grid
+
+def make_focal_grid_replacement(q, num_airy, spatial_resolution=None, pupil_diameter=None, focal_length=None, reference_wavelength=None):
+	'''Make a grid for a focal plane.
+
+	This grid will be a CartesianGrid with RegularCoords, and supports different resolutions, samplings,
+	or extent in x and y. If `spatial_resolution` is 1, then the grid will be returned in normalized
+	(ie. homogenized) coordinates. Otherwise, it will be in physical units. The spatial resolution is
+	defined by:
+
+	.. math:: \Delta x = \lambda f / D = \lambda F
+
+	where :math:`\lambda` is the wavelength, :math:`f` is the effective focal length before the focal plane,
+	:math:`D` is the diameter of the pupil, and :math:`F` is the F-number of the incoming light beam.
+	You can supply either the spatial resolution or a set of focal length, reference wavelength and pupil diameter.
+	If none are supplied, a spatial resolution of 1 will be assumed, meaning normalized units.
+
+	The grid will always contain the origin (0, 0) point.
+
+	This function will be renamed to make_focal_grid after the next update.
+
+	Parameters
+	----------
+	q : scalar or array_like
+		The number of pixels per resolution element (= lambda f / D).
+	num_airy : scalar or array_like
+		The spatial extent of the grid in radius in resolution elements (= lambda f / D).
+	spatial_resolution : scalar	or array_like
+		The physical size of a resolution element (= lambda f / D). It this is not given, 
+		the spatial resolution will be calculated from the given `focal_length`, 
+		`reference_wavelength` and `pupil_diameter`.
+	pupil_diameter : scalar or array_like
+		The diameter of the pupil. If it is an array, this indicates the diameter in x and y.
+	focal_length : scalar
+		The focal length used for calculating the spatial resolution at the focal plane.
+	reference_wavelength : scalar
+		The reference wavelength used for calculating the spatial resolution at the focal plane.
+	
+	Returns
+	-------
+	Grid
+		A Grid describing the sampling for a focal plane.
+	
+	Raises
+	------
+	ValueError
+		If both no spatial resolution and no complete set of (focal length, reference wavelength and pupil diameter) was supplied.
+	'''
+	if spatial_resolution is None:
+		if pupil_diameter is None or focal_length is None or reference_wavelength is None:
+			if not (pupil_diameter is None and focal_length is None and reference_wavelength is None):
+				# Only a few arguments in this set were supplied.
+				raise ValueError('Supply either a (pupil_diameter, focal_length, reference wavelength) or a spatial_resolution.')
+			
+			spatial_resolution = 1
+		else:
+			pupil_diameter = np.ones(2) * pupil_diameter
+			spatial_resolution = reference_wavelength * focal_length / pupil_diameter
+
+	delta = spatial_resolution / q * np.ones(2)
+	dims = (2 * num_airy * q * np.ones(2)).astype('int')
+	zero = delta * (-dims / 2 + np.mod(dims, 2) * 0.5)
+
+	return CartesianGrid(RegularCoords(delta, dims, zero))
+
+def make_focal_grid(*args, **kwargs):
+	# Figure out which function signature was used.
+	if len(args) == 0:
+		if 'pupil_grid' in kwargs:
+			func = make_focal_grid_from_pupil_grid
+		else:
+			func = make_focal_grid_replacement
+	else:
+		if hasattr(args[0], 'coords'):
+			func = make_focal_grid_from_pupil_grid
+		else:
+			func = make_focal_grid_replacement
+	
+	if func is make_focal_grid_from_pupil_grid:
+		warnings.warn('This functions signature is deprecated and will be removed with the next major update. Use the updated function signature or call make_focal_grid_from_pupil_grid() directly instead.', DeprecationWarning, stacklevel=2)
+	
+	return func(*args, **kwargs)
 
 def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None):
 	'''Make a regular hexagonal grid.
@@ -231,7 +347,7 @@ def make_subsampled_grid(grid, undersampling):
 	
 	raise ValueError("Cannot create a subsampled grid from a non-separated grid.")
 
-def subsample_field(field, subsampling, new_grid=None):
+def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 	'''Average the field over subsampling pixels in each dimension.
 
 	.. note ::
@@ -250,6 +366,15 @@ def subsample_field(field, subsampling, new_grid=None):
 		If this grid is given, no new grid will be calculated and this grid will
 		be used instead. This saves on calculation time if your new grid is already
 		known beforehand.
+	statistic : string or callable
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		  * 'mean' : compute the mean of values for points within each superpixel.
+		  * 'median' : compute the median of values for points within each superpixel.
+		  * 'sum' : compute the sum of values for points within each  superpixel. 
+		    This is identical to a weighted histogram.
+		  * 'min' : compute the minimum of values for points within each superpixel.
+		  * 'max' : compute the maximum of values for point within each superpixel.
 
 	Returns
 	-------
@@ -274,39 +399,127 @@ def subsample_field(field, subsampling, new_grid=None):
 	else:
 		new_shape = [-1]
 
+	available_statistics = {
+		'mean': np.mean,
+		'median': np.median,
+		'max': np.max,
+		'min': np.min,
+		'sum': np.sum
+	}
+
+	if statistic not in available_statistics:
+		raise ValueError('This statistic is not recognized.')
+	
 	if field.grid.is_regular:
-		# All weights will be the same, so a simple "mean" will do.
-		return Field(field.reshape(tuple(reshape)).mean(axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
+		# All weights will be the same, so the array can be combined without taking the weights into account.
+		return Field(available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
 	else:
 		# Some weights will be different so calculate weighted mean instead.
-		weights = field.grid.weights
-		w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
-		f = (field*weights).reshape(tuple(reshape)).sum(axis=tuple(axes))
-		return Field((f / w).reshape(tuple(new_shape)), new_grid)
+		if statistic in ['min', 'max', 'sum']:
+			f = available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes))
+			return Field(f.reshape(tuple(new_shape)), new_grid)
+		elif statistic in ['mean']:
+			weights = field.grid.weights
+			w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
+			f = np.sum((field * weights).reshape(tuple(reshape)), axis=tuple(axes))
+			return Field((f / w).reshape(tuple(new_shape)), new_grid)
+		else:
+			raise NotImplementedError('The median statistic is not implemented for non-regular grids.')
 
-def evaluate_supersampled(field_generator, grid, oversampling):
+def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean', make_sparse=True):
 	'''Evaluate a Field generator on `grid`, with an oversampling.
 
 	Parameters
 	----------
-	field_generator : Field generator
-		The field generator to evaluate.
+	field_generator : Field generator or list of Field generators
+		The field generator to evaluate. If this is a list of Field generators,
+		each Field generator will be evaluated and stored in a ModeBasis.
 	grid : Grid
 		The grid on which to evaluate `field_generator`.
 	oversampling : integer or scalar or ndarray
 		The factor by which to oversample. If this is a scalar, it will be rounded to
 		the nearest integer. If this is an array, a different oversampling factor will
 		be used for each dimension.
+	statistic : string or callable
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		  * 'mean' : compute the mean of values for points within each superpixel.
+		  * 'median' : compute the median of values for points within each superpixel.
+		  * 'sum' : compute the sum of values for points within each  superpixel. 
+		    This is identical to a weighted histogram.
+		  * 'min' : compute the minimum of values for points within each superpixel.
+		  * 'max' : compute the maximum of values for point within each superpixel.
+	make_sparse : boolean
+		If the resulting ModeBasis needs to be sparsified. This is ignored if
+		only a single Field generator is provided.
 
 	Returns
 	-------
-	Field
-		The evaluated field.
+	Field or ModeBasis
+		The evaluated field or mode basis.
 	'''
-	new_grid = make_supersampled_grid(grid, oversampling)
-	field = field_generator(new_grid)
+	import scipy.sparse
+	from ..mode_basis import ModeBasis
 
-	return subsample_field(field, oversampling, grid)
+	if isinstance(field_generator, (list, tuple)):
+		modes = []
+
+		for fg in field_generator:
+			field = evaluate_supersampled(fg, grid, oversampling, statistic)
+
+			if make_sparse:
+				field = scipy.sparse.csr_matrix(field)
+				field.eliminate_zeros()
+			
+			modes.append(field)
+		
+		return ModeBasis(modes, grid)
+	
+	new_grid = make_supersampled_grid(grid, oversampling)
+	
+	if grid.is_separated:
+		# Use sub grids to evaluate field generator. This avoids a huge memory usage 
+		# for large oversamplings. New grid is guaranteed to be able to be split up into
+		# oversampling^ndim parts. Each of these evaluations uses the same amount of
+		# memory as the final grid.
+		field = None
+
+		for part in itertools.product(range(oversampling), repeat=grid.ndim):
+			sub_new_coords = []
+			sub_coords = []
+			mask = np.ones(grid.shape, dtype='bool')
+
+			# Create a sub grid and a mask on the original array where the subarray is located.
+			for i, (p, s) in enumerate(zip(part, grid.dims)):
+				sub_new_coords.append(new_grid.separated_coords[i][p * s:(p + 1) * s])
+				sub_coords.append(grid.separated_coords[i][p * s // oversampling:(p + 1) * s // oversampling])
+
+				# Mask out the parts outside of the current subgrid
+				slices = [slice(None)] * grid.ndim
+				slices[grid.ndim - i - 1] = slice(0, p * s // oversampling)
+				mask[tuple(slices)] = False
+				slices[grid.ndim - i - 1] = slice((p + 1) * s // oversampling, None)
+				mask[tuple(slices)] = False
+
+			# Create sub grids.
+			sub_new_grid = new_grid.__class__(SeparatedCoords(sub_new_coords))
+			sub_grid = grid.__class__(SeparatedCoords(sub_coords))
+
+			# Evaluate sub field
+			sub_new_field = field_generator(sub_new_grid)
+			sub_field = subsample_field(sub_new_field, oversampling, sub_grid, statistic)
+
+			# Insert sub field into final field at the correct pixels.
+			if field is None:
+				field = grid.empty(dtype=sub_field.dtype)
+			field[mask.ravel()] = sub_field
+
+		return field
+	else:
+		# Cannot use sub grids, so fall back to evaluation of generator on the full 
+		# supersampled grid.
+		field = field_generator(new_grid)
+		return subsample_field(field, oversampling, grid, statistic)
 
 def make_uniform_vector_field(field, jones_vector):
 	'''Make an uniform vector field from a scalar field and a jones vector.

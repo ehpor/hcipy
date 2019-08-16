@@ -1,9 +1,10 @@
 import numpy as np
-from .optical_element import OpticalElement, make_polychromatic
+from .optical_element import OpticalElement, make_agnostic_optical_element
 from .wavefront import Wavefront
 from ..field import Field
 
-class MonochromaticMagnifier(OpticalElement):
+@make_agnostic_optical_element([], ['magnification'])
+class Magnifier(OpticalElement):
 	'''A monochromatic magnifier for electric fields.
 	
 	This magnifies the wavefront with a certain magnification factor.
@@ -37,5 +38,3 @@ class MonochromaticMagnifier(OpticalElement):
 		wf.total_power = wavefront.total_power
 
 		return wf
-
-Magnifier = make_polychromatic(["magnification"])(MonochromaticMagnifier)

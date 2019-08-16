@@ -89,7 +89,7 @@ class FFMpegWriter(object):
 			if not cmap is None:
 				arr = matplotlib.cm.get_cmap(cmap)(arr, bytes=True)
 			
-			imsave(self.p.stdin, arr, format='png')
+			imageio.imwrite(self.p.stdin, arr, format='png')
 
 	def close(self):
 		if not self.closed:

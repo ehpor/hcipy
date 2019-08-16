@@ -82,6 +82,12 @@ class CoordsBase(object):
 		'''True if the coordinates are regularly-spaced, False otherwise.
 		'''
 		return hasattr(self, 'regular_coords')
+	
+	@property
+	def is_unstructured(self):
+		'''True if the coordinates are not structured, False otherwise.
+		'''
+		return not self.is_separated
 
 	def reverse(self):
 		'''Reverse the ordering of points in-place.

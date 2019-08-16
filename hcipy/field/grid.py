@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import warnings
+import xxhash
 
 class Grid(object):
 	'''A set of points on some coordinate system.
@@ -68,6 +69,11 @@ class Grid(object):
 		'''
 		return self.coords.size
 	
+	def __len__(self):
+		'''The number of points in this grid.
+		'''
+		return self.size
+
 	@property
 	def dims(self):
 		'''The number of elements in each dimension for a separated grid.
@@ -190,6 +196,12 @@ class Grid(object):
 		'''True if the grid is regularly-spaced, False otherwise.
 		'''
 		return self.coords.is_regular
+	
+	@property
+	def is_unstructured(self):
+		'''True if the grid is unstructured, False otherwise.
+		'''
+		return self.coords.is_unstructured
 	
 	def is_(self, system):
 		'''Check if the coordinate system is `system`.
@@ -374,6 +386,23 @@ class Grid(object):
 	
 	def __str__(self):
 		return str(self.__class__.__name__) + '(' + str(self.coords.__class__.__name__) + ')'
+	
+	def __hash__(self):
+		h = xxhash.xxh64()
+		h.update(self._coordinate_system)
+
+		if self.is_regular:
+			h.update(self.delta)
+			h.update(self.dims)
+			h.update(self.zero)
+		elif self.is_separated:
+			for s in self.separated_coords:
+				h.update(s)
+		else:
+			for s in self.coords:
+				h.update(s)
+		
+		return h.intdigest()
 
 	def closest_to(self, p):
 		'''Get the index of the point closest to point `p`.
@@ -392,3 +421,78 @@ class Grid(object):
 		'''
 		rel_points = self.points - np.array(p) * np.ones(self.ndim)
 		return np.argmin(np.sum(rel_points**2, axis=-1))
+	
+	def zeros(self, tensor_shape=None, dtype=None):
+		'''Create a field of zeros from this `Grid`.
+
+		Parameters
+		----------
+		tensor_shape : array_like or None
+			The shape of the tensors in the to be created field. If this is None, 
+			a scalar field will be created.
+		dtype : data-type
+			The numpy data-type with which to create the field.
+		
+		Returns
+		-------
+		Field
+			A zeros field.
+		'''
+		from .field import Field
+
+		if tensor_shape is None:
+			shape = [self.size]
+		else:
+			shape = np.concatenate((self.size, tensor_shape))
+
+		return Field(np.zeros(shape, dtype), self)
+	
+	def ones(self, tensor_shape=None, dtype=None):
+		'''Create a field of ones from this `Grid`.
+
+		Parameters
+		----------
+		tensor_shape : array_like or None
+			The shape of the tensors in the to be created field. If this is None, 
+			a scalar field will be created.
+		dtype : data-type
+			The numpy data-type with which to create the field.
+		
+		Returns
+		-------
+		Field
+			A ones field.
+		'''
+		from .field import Field
+
+		if tensor_shape is None:
+			shape = [self.size]
+		else:
+			shape = np.concatenate((self.size, tensor_shape))
+
+		return Field(np.ones(shape, dtype=dtype), self)
+
+	def empty(self, tensor_shape=None, dtype=None):
+		'''Create an empty Field from this `Grid`.
+
+		Parameters
+		----------
+		tensor_shape : array_like or None
+			The shape of the tensors in the to be created field. If this is None, 
+			a scalar field will be created.
+		dtype : data-type
+			The numpy data-type with which to create the field.
+		
+		Returns
+		-------
+		Field
+			A empty field.
+		'''
+		from .field import Field
+
+		if tensor_shape is None:
+			shape = [self.size]
+		else:
+			shape = np.concatenate((self.size, tensor_shape))
+
+		return Field(np.empty(shape, dtype=dtype), self)

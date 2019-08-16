@@ -112,8 +112,8 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 	'''
 	import gurobipy as gp
 
-	M = propagator.get_transformation_matrix_forward(wavefront.wavelength)
-	M_max = propagator_max.get_transformation_matrix_forward(wavefront.wavelength)
+	M = propagator.get_transformation_matrix_forward(wavefront.electric_field.grid, wavefront.wavelength)
+	M_max = propagator_max.get_transformation_matrix_forward(wavefront.electric_field.grid, wavefront.wavelength)
 
 	wf_0 = propagator.forward(wavefront).electric_field
 	M /= wf_0[:,np.newaxis]

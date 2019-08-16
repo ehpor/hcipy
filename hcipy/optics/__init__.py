@@ -1,15 +1,16 @@
 __all__ = ['make_power_law_error', 'SurfaceAberration', 'SurfaceAberrationAtDistance']
 __all__ += ['Apodizer', 'PhaseApodizer', 'ThinLens', 'SurfaceApodizer', 'ComplexSurfaceApodizer', 'MultiplexedComplexSurfaceApodizer']
 __all__ += ['DynamicOpticalSystem']
-__all__ += ['make_xinetics_influence_functions', 'DeformableMirror']
+__all__ += ['make_gaussian_influence_functions', 'make_xinetics_influence_functions', 'DeformableMirror', 'label_actuator_centroid_positions']
 __all__ += ['Detector', 'NoiselessDetector', 'NoisyDetector']
 __all__ += ['SingleModeFiber', 'fiber_mode_gaussian', 'SingleModeFiberArray']
 __all__ += ['GaussianBeam']
 __all__ += ['Magnifier']
 __all__ += ['MicroLensArray', 'closest_points']
-__all__ += ['AtmosphericModel', 'kolmogorov_psd', 'von_karman_psd', 'modified_von_karman_psd', 'make_standard_multilayer_atmosphere', 'scale_Cn_squared_to_fried_parameter', 'get_fried_parameter']
-__all__ += ['OpticalElement', 'OpticalSystem']
+__all__ += ['OpticalElement', 'make_agnostic_optical_element', 'OpticalSystem', 'make_polychromatic']
 __all__ += ['PhaseRetarder', 'LinearRetarder', 'CircularRetarder', 'QuarterWavePlate', 'HalfWavePlate', 'LinearPolarizer']
+__all__ += ['SegmentedDeformableMirror']
+__all__ += ['TipTiltMirror']
 __all__ += ['SimpleVibration']
 __all__ += ['Wavefront']
 
@@ -25,6 +26,7 @@ from .fiber import *
 from .gaussian_beam import *
 from .magnifier import *
 from .micro_lens_array import *
-from .multi_layer_atmosphere import *
 from .polarization import *
+from .segmented_mirror import *
+from .tip_tilt_mirror import *
 from .vibration import *

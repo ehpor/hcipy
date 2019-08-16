@@ -1,4 +1,4 @@
-__all__ = ['MonochromaticPropagator', 'make_propagator']
+__all__ = ['Propagator']
 __all__ += ['FresnelPropagator']
 __all__ += ['FraunhoferPropagator']
 __all__ += ['AngularSpectrumPropagator']

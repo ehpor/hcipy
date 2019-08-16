@@ -5,7 +5,9 @@ class LyotCoronagraph(OpticalElement):
 	'''A Lyot coronagraph with a small focal-plane mask.
 
 	The area outside of this focal-plane mask is assumed to be fully transmisive. The 
-	method for propagation is based on Soummer et al. (2007), "Fast computation of Lyot-style
+	method for propagation is based on [1]_.
+	
+	.. [1] Soummer et al. 2007, "Fast computation of Lyot-style
 	coronagraph propagation".
 
 	Parameters
@@ -82,7 +84,7 @@ class LyotCoronagraph(OpticalElement):
 		wf_foc.electric_field -= self.focal_plane_mask.backward(wf_foc).electric_field
 
 		pup = self.prop.backward(wf_foc)
-		pup.electric_field[:] = wavefront.electric_field - wf_foc.electric_field
+		pup.electric_field[:] = wf.electric_field - pup.electric_field
 
 		return pup
 

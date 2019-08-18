@@ -443,7 +443,7 @@ class Grid(object):
 		if tensor_shape is None:
 			shape = [self.size]
 		else:
-			shape = np.concatenate((self.size, tensor_shape))
+			shape = np.concatenate((tensor_shape, [self.size]))
 
 		return Field(np.zeros(shape, dtype), self)
 	
@@ -468,7 +468,7 @@ class Grid(object):
 		if tensor_shape is None:
 			shape = [self.size]
 		else:
-			shape = np.concatenate((self.size, tensor_shape))
+			shape = np.concatenate((tensor_shape, [self.size]))
 
 		return Field(np.ones(shape, dtype=dtype), self)
 
@@ -493,6 +493,6 @@ class Grid(object):
 		if tensor_shape is None:
 			shape = [self.size]
 		else:
-			shape = np.concatenate((self.size, tensor_shape))
+			shape = np.concatenate((tensor_shape, [self.size]))
 
 		return Field(np.empty(shape, dtype=dtype), self)

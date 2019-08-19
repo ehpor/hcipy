@@ -159,7 +159,9 @@ def field_einsum(subscripts, *operands, **kwargs):
 		return np.einsum(subscripts, *operands, **kwargs)
 	
 	field_sizes = [o.grid.size for i, o in enumerate(operands) if is_field[i]]
-	if not np.allclose(field_sizes, field_sizes[0]):
+	element_sizes = [o.shape[-1] for i, o in enumerate(operands) if is_field[i]]
+	
+	if not np.allclose(field_sizes, field_sizes[0]) or not np.allclose(element_sizes, element_sizes[0]):
 		raise ValueError('All fields must be the same size for a field_einsum().')
 
 	# Decompose the subscript into input and output

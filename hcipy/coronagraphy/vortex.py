@@ -1,13 +1,10 @@
 import numpy as np
+
 from ..optics import OpticalElement, Wavefront
 from ..propagation import FraunhoferPropagator
 from ..field import make_focal_grid, Field, make_pupil_grid
-from ..aperture import circular_aperture, rectangular_aperture
+from ..aperture import circular_aperture
 from ..fourier import FastFourierTransform, MatrixFourierTransform
-from scipy.special import jv
-
-import matplotlib.pyplot as plt
-from ..plotting import imshow_field, complex_field_to_rgb
 
 class VortexCoronagraph(OpticalElement):
 	'''An optical vortex coronagraph.
@@ -32,7 +29,8 @@ class VortexCoronagraph(OpticalElement):
 		self.input_grid = input_grid
 		
 		q_outer = 2
-		num_airy_outer = input_grid.shape[0]/2
+		num_airy_outer = input_grid.shape[0] / 2
+		pupil_diameter = input_grid.shape * input_grid.delta
 
 		focal_grids = []
 		self.focal_masks = []
@@ -45,7 +43,7 @@ class VortexCoronagraph(OpticalElement):
 			else:
 				num_airy = 32.0 / (q_outer * scaling_factor**(i-1))
 
-			focal_grid = make_focal_grid(input_grid, q, num_airy)
+			focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
 			focal_mask = Field(np.exp(1j * charge * focal_grid.as_('polar').theta), focal_grid)
 
 			focal_mask *= 1 - circular_aperture(1e-9)(focal_grid)

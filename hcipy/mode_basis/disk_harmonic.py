@@ -26,6 +26,11 @@ def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
 	-------
 	Field
 		The disk harmonic function evaluated on `grid`.
+	
+	Raises
+	------
+	ValueError
+		If the boundary condition is not recognized.
 	'''
 	polar_grid = grid.as_('polar')
 	r = 2 * polar_grid.r / D
@@ -41,7 +46,7 @@ def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
 		lambda_mn = jnp_zeros(m, n)[-1]
 		norm = 1
 	else:
-		raise RuntimeError('Boundary condition not recongnized.')
+		raise ValueError('Boundary condition not recognized.')
 	
 	if m_negative:
 		z = norm * jv(m, lambda_mn * r) * np.sin(m * theta)
@@ -50,7 +55,7 @@ def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
 
 	# Do manual normalization for now...
 	mask = circular_aperture(D)(grid) > 0.5
-	norm = np.sqrt(np.sum(z[mask]**2 * grid.weights[mask]))
+	norm = np.sqrt(np.sum(z[mask]**2))
 
 	return Field(z * mask / norm, grid)
 
@@ -73,6 +78,11 @@ def disk_harmonic_energy(n, m, bc='dirichlet'):
 	-------
 	scalar
 		The energy corresponding to the mode.
+	
+	Raises
+	------
+	ValueError
+		If the boundary condition is not recognized.
 	'''
 	m = abs(m)
 
@@ -81,7 +91,7 @@ def disk_harmonic_energy(n, m, bc='dirichlet'):
 	elif bc == 'neumann':
 		lambda_mn = jnp_zeros(m, n)[-1]
 	else:
-		raise RuntimeError('Boundary condition not recognized.')
+		raise ValueError('Boundary condition not recognized.')
 	
 	return lambda_mn**2
 

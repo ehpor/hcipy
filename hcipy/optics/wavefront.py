@@ -94,76 +94,109 @@ class Wavefront(object):
 		'''The I-component of the Stokes vector as function of 2D position
 		in the plane.
 		'''
-		x = self.electric_field[0, 0, :]
-		y = self.electric_field[0, 1, :]
-		z = self.electric_field[1, 0, :]
-		w = self.electric_field[1, 1, :]
 
-		M11 = x * x.conj() + y * y.conj() + z * z.conj() + w * w.conj()
-		M12 = x * x.conj() - y * y.conj() + z * z.conj() - w * w.conj()
-		M13 = x * y.conj() + y * x.conj() + z * w.conj() + w * z.conj()
-		M14 = 1j * (x * y.conj() - y * x.conj() + z * w.conj() - w * z.conj())
+		if self.is_scalar:
+			# This is a scaler field. 
+			return np.abs(self.electric_field)**2
+		elif self.is_partially_polarized:
+			# This is a tensor field. 
+			x = self.electric_field[0, 0, :]
+			y = self.electric_field[0, 1, :]
+			z = self.electric_field[1, 0, :]
+			w = self.electric_field[1, 1, :]
 
-		row = Field(np.array([M11, M12, M13, M14]), self.electric_field.grid)
-		
-		return 0.5 * field_dot(row, self._input_stokes_vector).real
+			M11 = x * x.conj() + y * y.conj() + z * z.conj() + w * w.conj()
+			M12 = x * x.conj() - y * y.conj() + z * z.conj() - w * w.conj()
+			M13 = x * y.conj() + y * x.conj() + z * w.conj() + w * z.conj()
+			M14 = 1j * (x * y.conj() - y * x.conj() + z * w.conj() - w * z.conj())
+
+			row = Field(np.array([M11, M12, M13, M14]), self.electric_field.grid)
+			
+			return 0.5 * field_dot(row, self._input_stokes_vector).real
+		else:
+			# This is a vector field. 
+			return np.sum(np.abs(self.electric_field)**2, axis=0)
 
 	@property
 	def Q(self):
 		'''The Q-component of the Stokes vector as function of 2D position
 		in the plane.
 		'''
-		x = self.electric_field[0, 0, :]
-		y = self.electric_field[0, 1, :]
-		z = self.electric_field[1, 0, :]
-		w = self.electric_field[1, 1, :]
+		if self.is_scalar:
+			# This is a scaler field. 
+			return self.grid.zeros()
+		elif self.is_partially_polarized:
+			# This is a tensor field. 
+			x = self.electric_field[0, 0, :]
+			y = self.electric_field[0, 1, :]
+			z = self.electric_field[1, 0, :]
+			w = self.electric_field[1, 1, :]
 
-		M21 = x * x.conj() + y * y.conj() - z * z.conj() - w * w.conj()
-		M22 = x * x.conj() - y * y.conj() - z * z.conj() + w * w.conj()
-		M23 = x * y.conj() + y * x.conj() - z * w.conj() - w * z.conj()
-		M24 = 1j * (x * y.conj() - y * x.conj() - z * w.conj() + w * z.conj())
+			M21 = x * x.conj() + y * y.conj() - z * z.conj() - w * w.conj()
+			M22 = x * x.conj() - y * y.conj() - z * z.conj() + w * w.conj()
+			M23 = x * y.conj() + y * x.conj() - z * w.conj() - w * z.conj()
+			M24 = 1j * (x * y.conj() - y * x.conj() - z * w.conj() + w * z.conj())
 
-		row = Field(np.array([M21, M22, M23, M24]), self.electric_field.grid)
-		
-		return 0.5 * field_dot(row, self._input_stokes_vector).real
+			row = Field(np.array([M21, M22, M23, M24]), self.electric_field.grid)
+			
+			return 0.5 * field_dot(row, self._input_stokes_vector).real
+		else:
+			# This is a vector field. 
+			return np.abs(self.electric_field[0,:])**2 - np.abs(self.electric_field[1,:])**2
 	
 	@property
 	def U(self):
 		'''The U-component of the Stokes vector as function of 2D position
 		in the plane.
 		'''
-		x = self.electric_field[0, 0, :]
-		y = self.electric_field[0, 1, :]
-		z = self.electric_field[1, 0, :]
-		w = self.electric_field[1, 1, :]
+		if self.is_scalar:
+			# This is a scaler field.
+			return self.grid.zeros()
+		elif self.is_partially_polarized:
+			# This is a tensor field. 
+			x = self.electric_field[0, 0, :]
+			y = self.electric_field[0, 1, :]
+			z = self.electric_field[1, 0, :]
+			w = self.electric_field[1, 1, :]
 
-		M31 = x * z.conj() + y * w.conj() + z * x.conj() + w * y.conj()
-		M32 = x * z.conj() - y * w.conj() + z * x.conj() - w * y.conj()
-		M33 = x * w.conj() + y * z.conj() + z * y.conj() + w * x.conj()
-		M34 = 1j * (x * w.conj() - y * z.conj() + z * y.conj() - w * x.conj())
-		
-		row = Field(np.array([M31, M32, M33, M34]), self.electric_field.grid)
-		
-		return 0.5 * field_dot(row, self._input_stokes_vector).real
+			M31 = x * z.conj() + y * w.conj() + z * x.conj() + w * y.conj()
+			M32 = x * z.conj() - y * w.conj() + z * x.conj() - w * y.conj()
+			M33 = x * w.conj() + y * z.conj() + z * y.conj() + w * x.conj()
+			M34 = 1j * (x * w.conj() - y * z.conj() + z * y.conj() - w * x.conj())
+			
+			row = Field(np.array([M31, M32, M33, M34]), self.electric_field.grid)
+			
+			return 0.5 * field_dot(row, self._input_stokes_vector).real
+		else:
+			# This is a vector field. 
+			return 2 * np.real(self.electric_field[0,:] * self.electric_field[1,:].conj())
 
 	@property
 	def V(self):
 		'''The V-component of the Stokes vector as function of 2D position
 		in the plane.
 		'''
-		x = self.electric_field[0, 0, :]
-		y = self.electric_field[0, 1, :]
-		z = self.electric_field[1, 0, :]
-		w = self.electric_field[1, 1, :]
+		if self.is_scalar:
+			# This is a scaler field.
+			return self.grid.zeros()
+		elif self.is_partially_polarized:
+			# This is a tensor field. 
+			x = self.electric_field[0, 0, :]
+			y = self.electric_field[0, 1, :]
+			z = self.electric_field[1, 0, :]
+			w = self.electric_field[1, 1, :]
 
-		M41 = 1j * (-x * z.conj() - y * w.conj() + z * x.conj() + w * y.conj())
-		M42 = 1j * (-x * z.conj() + y * w.conj() + z * x.conj() - w * y.conj())
-		M43 = 1j * (-x * w.conj() - y * z.conj() + z * y.conj() + w * x.conj())
-		M44 = x * w.conj() - y * z.conj() - z * y.conj() + w * x.conj()
-		
-		row = Field(np.array([M41, M42, M43, M44]), self.electric_field.grid)
-		
-		return 0.5 * field_dot(row, self._input_stokes_vector).real
+			M41 = 1j * (-x * z.conj() - y * w.conj() + z * x.conj() + w * y.conj())
+			M42 = 1j * (-x * z.conj() + y * w.conj() + z * x.conj() - w * y.conj())
+			M43 = 1j * (-x * w.conj() - y * z.conj() + z * y.conj() + w * x.conj())
+			M44 = x * w.conj() - y * z.conj() - z * y.conj() + w * x.conj()
+			
+			row = Field(np.array([M41, M42, M43, M44]), self.electric_field.grid)
+			
+			return 0.5 * field_dot(row, self._input_stokes_vector).real
+		else:
+			# This is a vector field. 
+			return -2 * np.imag(self.electric_field[0,:] * self.electric_field[1,:].conj())
 	
 	@property
 	def degree_of_polarization(self):
@@ -212,7 +245,7 @@ class Wavefront(object):
 	def intensity(self):
 		'''The total intensity of the wavefront as function of 2D position on the plane.
 		'''
-		return np.abs(self.electric_field)**2
+		return self.I
 
 	@property
 	def amplitude(self):

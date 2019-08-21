@@ -81,9 +81,6 @@ Coronagraphy
 	:undoc-members:
 	:show-inheritance:
 
-Data reduction
---------------
-
 Miscellaneous
 -------------
 
@@ -115,6 +112,22 @@ Plotting
 ~~~~~~~~
 
 .. automodule:: hcipy.plotting
+	:members:
+	:undoc-members:
+	:show-inheritance:
+
+Configuration
+~~~~~~~~~~~~~
+
+.. automodule:: hcipy.config
+	:members:
+	:undoc-members:
+	:show-inheritance:
+
+Input-Output
+~~~~~~~~~~~~
+
+.. automodule:: hcipy.io
 	:members:
 	:undoc-members:
 	:show-inheritance:

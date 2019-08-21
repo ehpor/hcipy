@@ -83,7 +83,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 
 		# enforce unity transmission within aperture support
 		app.electric_field[aperture] *= (
-			app.amplitude[aperture] / app.amplitude[aperture])
+			wavefront.amplitude[aperture] / app.amplitude[aperture])
 
 	return app
 

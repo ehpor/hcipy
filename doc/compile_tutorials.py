@@ -119,6 +119,7 @@ def compile_all_tutorials():
 
 	tutorials = {}
 	tutorial_names = sorted(os.listdir('tutorial_notebooks/'))
+	tutorial_names = [name for name in tutorial_names if 'checkpoint' not in name]
 
 	for name in tutorial_names:
 		tutorials[name] = compile_tutorial(name)

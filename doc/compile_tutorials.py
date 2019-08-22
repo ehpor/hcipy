@@ -33,6 +33,13 @@ def compile_tutorial(tutorial_name):
 		thumbnail_figure_index = notebook.metadata['thumbnail_figure_index']
 	else:
 		thumbnail_figure_index = -1
+	
+	if 'level' in notebook.metadata:
+		level = notebook.metadata['level'].capitalize()
+	elif 'difficulty' in notebook.metadata:
+		level = notebook.metadata['difficulty'].capitalize()
+	else:
+		level = 'Unknown'
 
 	# Execute notebook if not already executed
 	already_executed = any(c.get('outputs') or c.get('execution_count') for c in notebook.cells if c.cell_type == 'code')
@@ -78,7 +85,7 @@ def compile_tutorial(tutorial_name):
 	except:
 		shutil.copyfile('_static/no_thumb.png', thumb_dest)
 
-	return title, description, thumb_dest.split('/', 1)[-1]
+	return title, level, description, thumb_dest.split('/', 1)[-1]
 
 index_preamble = '''
 Tutorials
@@ -102,7 +109,9 @@ entry_template = '''
 
 			.. container:: tutorial_description
 
-				{description}
+				**Level:** {level}
+				
+				**Description:** {description}
 '''
 
 def compile_all_tutorials():
@@ -113,6 +122,10 @@ def compile_all_tutorials():
 
 	for name in tutorial_names:
 		tutorials[name] = compile_tutorial(name)
+
+	# Sort by level
+	levels = ['Beginner', 'Intermediate', 'Advanced', 'Expert']
+	tutorial_names = sorted(tutorial_names, key=lambda name: levels.index(tutorials[name][1]))
 
 	f = open('tutorials/index.rst', 'w')
 	f.write(index_preamble)
@@ -125,8 +138,7 @@ def compile_all_tutorials():
 	
 	# Write list
 	for name in tutorial_names:
-		title, desc, thumb = tutorials[name]
-
-		f.write(entry_template.format(thumbnail_file=thumb, title=title, description=desc, name=name))
+		title, level, desc, thumb = tutorials[name]
+		f.write(entry_template.format(thumbnail_file=thumb, title=title, level=level, description=desc, name=name))
 	
 	f.close()

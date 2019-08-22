@@ -258,7 +258,7 @@ Note: this rotates the polarization state, not the Field!
 
 '''
 
-#class Reflectioin(JonesMatrixOpticalElement):
-''' A jones matrix that handles the flips in polarization for a reflection. 
+#class Reflection(JonesMatrixOpticalElement):
+''' A jones matrix that handles the flips in polarization for a reflection. + field flip around x- or y-axis 
 '''
 

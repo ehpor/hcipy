@@ -16,15 +16,32 @@ div.tutorial-item a {
 	font-size: 125%;
 	font-weight: 700;
 	color: black;
+	padding-left: 10px;
+	padding-top: 10px;
+}
+
+div.tutorial-item p {
+	margin-bottom: 15px;
+}
+
+div.tutorial-row {
+	display: flex;
+	flex-wrap: wrap;
 }
 
 div.tutorial-thumbnail {
-	width: 220px;
 	padding: 0px 3px 0px 0px;
-	float: left;
+	display: block;
+	max-width: 25%;
+	min-width: 100px;
+}
+
+div.tutorial-thumbnail img {
+	vertical-align: middle;
 }
 
 div.tutorial-description {
-	margin-left: 240px;
-	min-height: 150px;
+	display: block;
+	max-width: 75%;
+	padding-left: 20px;
 }

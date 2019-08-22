@@ -53,7 +53,6 @@ def compile_tutorial(tutorial_name):
 	writer = FilesWriter(build_directory=os.path.dirname(export_path))
 	writer.write(output, resources, notebook_name=os.path.basename(export_path))
 
-	# 400, 280
 	pictures = sorted(resources['outputs'], key=output.find)
 	thumb_dest = os.path.dirname(export_path) + '/thumb.png'
 
@@ -71,8 +70,8 @@ def compile_tutorial(tutorial_name):
 		if bbox:
 			img = img.crop(bbox)
 
-		# Resize image
-		img.thumbnail([200, 150])
+		# Resize image to have a width of 400px
+		img.thumbnail([400, 1000])
 
 		# Save thumbnail
 		img.save(thumb_dest)
@@ -91,17 +90,19 @@ These tutorials demonstrate the features of HCIPy in the context of a standard w
 entry_template = '''
 .. only:: html
 
-    .. container:: tutorial_item
+	.. container:: tutorial_item
 
-        :doc:`{title} <{name}/{name}>`
+		:doc:`{title} <{name}/{name}>`
 
-        .. container:: tutorial_thumbnail
+		.. container:: tutorial_row
 
-            .. figure:: {thumbnail_file}
+			.. container:: tutorial_thumbnail
 
-        .. container:: tutorial_description
-			
-            {description}
+				.. figure:: {thumbnail_file}
+
+			.. container:: tutorial_description
+
+				{description}
 '''
 
 def compile_all_tutorials():

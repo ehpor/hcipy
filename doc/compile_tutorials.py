@@ -125,7 +125,7 @@ def compile_all_tutorials():
 		tutorials[name] = compile_tutorial(name)
 
 	# Sort by level
-	levels = ['Beginner', 'Intermediate', 'Advanced', 'Expert']
+	levels = ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Unknown']
 	tutorial_names = sorted(tutorial_names, key=lambda name: levels.index(tutorials[name][1]))
 
 	f = open('tutorials/index.rst', 'w')

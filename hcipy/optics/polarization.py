@@ -246,3 +246,19 @@ class LinearPolarizer(JonesMatrixOpticalElement):
 			The propagated wavefront.
 		'''
 		return self.forward(wavefront)
+ 
+#class PolarizingBeamSplitter(JonesMatrixOpticalElement):
+''' A polarizing beam splitter that accepts one wavefront and returns two polarized wavefronts.
+'''
+
+#class RotatedJonesMatrixOpticalElement(JonesMatrixOpticalElement):
+''' A rotated jones matrix.
+
+Note: this rotates the polarization state, not the Field!
+
+'''
+
+#class Reflection(JonesMatrixOpticalElement):
+''' A jones matrix that handles the flips in polarization for a reflection. + field flip around x- or y-axis 
+'''
+

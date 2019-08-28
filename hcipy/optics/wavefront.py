@@ -209,6 +209,12 @@ class Wavefront(object):
 		'''The degree of linear polarization.
 		'''
 		return np.sqrt(self.Q**2 + self.U**2) / self.I
+
+	@property
+	def angle_of_linear_polarization(self):
+		'''The angle of linear polarization.
+		'''
+		return 0.5 * np.arctan(self.U / self.Q)
 	
 	@property
 	def degree_of_circular_polarization(self):

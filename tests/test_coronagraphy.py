@@ -89,7 +89,7 @@ def test_app_keller():
 	app = generate_app_keller(wavefront, propagator, contrast, num_iterations=150, beta=0.98)
 	img = propagator.forward(app)
 
-	assert np.abs(img.intensity.max() / img_ref.intensity.max() - 0.90) < 0.01 # Strehl
+	assert np.abs(img.intensity.max() / img_ref.intensity.max() - 0.947) < 0.01 # Strehl
 	assert np.mean(img.intensity * mask) / np.mean(mask) < 1.6e-8 # contrast
 
 def test_perfect_coronagraph():

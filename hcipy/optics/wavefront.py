@@ -108,7 +108,7 @@ class Wavefront(object):
 			M11 = x * x.conj() + y * y.conj() + z * z.conj() + w * w.conj()
 			M12 = x * x.conj() - y * y.conj() + z * z.conj() - w * w.conj()
 			M13 = x * y.conj() + y * x.conj() + z * w.conj() + w * z.conj()
-			M14 = 1j * (x * y.conj() - y * x.conj() + z * w.conj() - w * z.conj())
+			M14 = 1j * (-x * y.conj() + y * x.conj() - z * w.conj() + w * z.conj())
 
 			row = Field(np.array([M11, M12, M13, M14]), self.electric_field.grid)
 			
@@ -135,7 +135,7 @@ class Wavefront(object):
 			M21 = x * x.conj() + y * y.conj() - z * z.conj() - w * w.conj()
 			M22 = x * x.conj() - y * y.conj() - z * z.conj() + w * w.conj()
 			M23 = x * y.conj() + y * x.conj() - z * w.conj() - w * z.conj()
-			M24 = 1j * (x * y.conj() - y * x.conj() - z * w.conj() + w * z.conj())
+			M24 = 1j * (-x * y.conj() + y * x.conj() + z * w.conj() - w * z.conj())
 
 			row = Field(np.array([M21, M22, M23, M24]), self.electric_field.grid)
 			
@@ -162,7 +162,7 @@ class Wavefront(object):
 			M31 = x * z.conj() + y * w.conj() + z * x.conj() + w * y.conj()
 			M32 = x * z.conj() - y * w.conj() + z * x.conj() - w * y.conj()
 			M33 = x * w.conj() + y * z.conj() + z * y.conj() + w * x.conj()
-			M34 = 1j * (x * w.conj() - y * z.conj() + z * y.conj() - w * x.conj())
+			M34 = 1j * (-x * w.conj() + y * z.conj() - z * y.conj() + w * x.conj())
 			
 			row = Field(np.array([M31, M32, M33, M34]), self.electric_field.grid)
 			
@@ -186,9 +186,9 @@ class Wavefront(object):
 			z = self.electric_field[1, 0, :]
 			w = self.electric_field[1, 1, :]
 
-			M41 = 1j * (-x * z.conj() - y * w.conj() + z * x.conj() + w * y.conj())
-			M42 = 1j * (-x * z.conj() + y * w.conj() + z * x.conj() - w * y.conj())
-			M43 = 1j * (-x * w.conj() - y * z.conj() + z * y.conj() + w * x.conj())
+			M41 = 1j * (x * z.conj() + y * w.conj() - z * x.conj() - w * y.conj())
+			M42 = 1j * (x * z.conj() - y * w.conj() - z * x.conj() + w * y.conj())
+			M43 = 1j * (x * w.conj() + y * z.conj() - z * y.conj() - w * x.conj())
 			M44 = x * w.conj() - y * z.conj() - z * y.conj() + w * x.conj()
 			
 			row = Field(np.array([M41, M42, M43, M44]), self.electric_field.grid)

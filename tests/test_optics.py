@@ -5,7 +5,7 @@ def test_statistics_noisy_detector():
 	N = 256
 	grid = make_pupil_grid(N)
 
-	test_wavefront = Field(np.ones(N**2), grid)
+	field = Field(np.ones(N**2), grid)
 	
 	#First we test photon noise, dark current noise and read noise.
 	flat_field = 0
@@ -16,23 +16,23 @@ def test_statistics_noisy_detector():
 	for dc in dark_currents:
 		for rn in read_noises: 
 			#The test detector.
-			test_detector = NoisyDetector(input_grid=grid, include_photon_noise=photon_noise, flat_field=flat_field, dark_current_rate=dc, read_noise=rn)
+			detector = NoisyDetector(input_grid=grid, include_photon_noise=photon_noise, flat_field=flat_field, dark_current_rate=dc, read_noise=rn)
 
 			#The integration times we will test.
 			integration_time = np.logspace(1,6,6)
 
 			for t in integration_time:
 				# integration
-				test_detector.integrate(test_wavefront, t)
+				detector.integrate(field, t)
 
 				# read out
-				measurement = test_detector.read_out()
+				measurement = detector.read_out()
 
 				# The std of the data by the detector.
 				std_measurement = np.std(measurement)
 
 				# The std that we expect given the input.
-				expected_std = np.sqrt(test_wavefront[0] * t + rn**2 + dc * t)
+				expected_std = np.sqrt(field[0] * t + rn**2 + dc * t)
 
 				assert np.isclose(expected_std, std_measurement, rtol=2e-02, atol=1e-05)
 
@@ -44,23 +44,23 @@ def test_statistics_noisy_detector():
 
 	for ff in flat_fields:
 		#The test detector.
-		test_detector = NoisyDetector(input_grid=grid, include_photon_noise=photon_noise, flat_field=ff, dark_current_rate=dark_current, read_noise=read_noise)
+		detector = NoisyDetector(input_grid=grid, include_photon_noise=photon_noise, flat_field=ff, dark_current_rate=dark_current, read_noise=read_noise)
 
 		#The integration times we will test.
 		integration_time = np.logspace(1, 6, 6)
 
 		for t in integration_time:
 			# integration
-			test_detector.integrate(test_wavefront, t)
+			detector.integrate(field, t)
 
 			# read out 
-			measurement = test_detector.read_out()
+			measurement = detector.read_out()
 
 			# The std of the data by the detector.
 			std_measurement = np.std(measurement)
 
 			# The std that we expect given the input.
-			expected_std = ff * test_wavefront[0] * t 
+			expected_std = ff * field[0] * t 
 
 			assert np.isclose(expected_std, std_measurement, rtol=2e-02, atol=1e-05)
 
@@ -112,3 +112,33 @@ def test_segmented_deformable_mirror():
 
 			# Return segment to zero position
 			segmented_mirror.set_segment_actuators(i, 0, 0, 0)
+
+def test_wavefront_stokes():
+	N = 4
+	grid = make_pupil_grid(N)
+
+	stokes = np.random.uniform(-1,1,4)
+	stokes[0] = np.abs(stokes[0])+np.linalg.norm(stokes[1:])
+
+	amplitude = np.random.uniform(0, 1, (2,2,N**2))
+	phase = np.random.uniform(0, 2 * np.pi, (2,2,N**2))
+
+	jones_field = Field(amplitude * np.exp(1j * phase), grid)
+
+	determinants = field_determinant(jones_field)
+	jones_field[:, :, determinants > 1] *= np.random.uniform(0, 1, np.sum(determinants > 1)) / determinants[determinants > 1]
+
+	jones_element = JonesMatrixOpticalElement(jones_field)
+
+	mueller_field = jones_to_mueller(jones_field)
+
+	field = Field(np.ones(N**2), grid)
+	stokes_wavefront = Wavefront(field, stokes_vector=stokes)
+
+	jones_element_forward = jones_element.forward(stokes_wavefront)
+	mueller_forward = field_dot(mueller_field, stokes)
+
+	assert np.allclose(jones_element_forward.I, mueller_forward[0])
+	assert np.allclose(jones_element_forward.Q, mueller_forward[1])
+	assert np.allclose(jones_element_forward.U, mueller_forward[2])
+	assert np.allclose(jones_element_forward.V, mueller_forward[3])

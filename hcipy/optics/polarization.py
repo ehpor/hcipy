@@ -3,47 +3,47 @@ from .optical_element import OpticalElement, make_agnostic_optical_element
 from ..field import Field, field_inv, field_dot, field_transpose, field_conjugate_transpose
 
 def tensor_product(M1, M2):
-    '''
-    This function calculates the tensor product as defined in:
-    https://en.wikipedia.org/wiki/Tensor_product,
-    to make from 2 2x2 tensor fields 1 4x4 tensor field.
-    M1 x M2= result
-    Assuming the M1 and M2 are 2x2 tensor fields.
-    '''
-    result = Field(np.zeros((4, 4, M1.shape[-1]), dtype = np.complex128), M1.grid)
+	'''
+	This function calculates the tensor product as defined in:
+	https://en.wikipedia.org/wiki/Tensor_product,
+	to make from 2 2x2 tensor fields 1 4x4 tensor field.
+	M1 x M2= result
+	Assuming the M1 and M2 are 2x2 tensor fields.
+	'''
+	result = Field(np.zeros((4, 4, M1.shape[-1]), dtype = np.complex128), M1.grid)
 
-    #Performing the tensor product.
-    result[0:2,0:2,:] += np.copy(M1[0,0,:] * M2)
-    result[0:2,2:4,:] += np.copy(M1[0,1,:] * M2)
-    result[2:4,0:2,:] += np.copy(M1[1,0,:] * M2)
-    result[2:4,2:4,:] += np.copy(M1[1,1,:] * M2)
+	#Performing the tensor product.
+	result[0:2,0:2,:] += np.copy(M1[0,0,:] * M2)
+	result[0:2,2:4,:] += np.copy(M1[0,1,:] * M2)
+	result[2:4,0:2,:] += np.copy(M1[1,0,:] * M2)
+	result[2:4,2:4,:] += np.copy(M1[1,1,:] * M2)
 
-    return result
+	return result
 
 def jones_to_mueller(jones_matrix):
 
-    #The Jones/Mueller transformation matrix.
-    U = jones_matrix.grid.zeros((4,4), 'complex')
+	#The Jones/Mueller transformation matrix.
+	U = jones_matrix.grid.zeros((4,4), 'complex')
 
-    U[0,0,:] += 1
-    U[0,3,:] += 1
-    U[1,0,:] += 1
-    U[1,3,:] += -1
-    U[2,1,:] += 1
-    U[2,2,:] += 1
-    U[3,1,:] += 1j
-    U[3,2,:] += -1j
-    U *= 1/np.sqrt(2)
+	U[0,0,:] += 1
+	U[0,3,:] += 1
+	U[1,0,:] += 1
+	U[1,3,:] += -1
+	U[2,1,:] += 1
+	U[2,2,:] += 1
+	U[3,1,:] += 1j
+	U[3,2,:] += -1j
+	U *= 1/np.sqrt(2)
 
-    #Now we also calculate the Hermitian adjoint of U to get the inverse.
-    U_inverse = field_transpose(U)
+	#Now we also calculate the Hermitian adjoint of U to get the inverse.
+	U_inverse = field_conjugate_transpose(U)
 
-    #Defining the conjugate of the Jones matrix.
-    jones_matrix_conj = Field(np.zeros_like(jones_matrix), jones_matrix.grid)
-    jones_matrix_conj += np.copy(jones_matrix).conj()
+	#Defining the conjugate of the Jones matrix.
+	jones_matrix_conj = Field(np.zeros_like(jones_matrix), jones_matrix.grid)
+	jones_matrix_conj += np.copy(jones_matrix).conj()
 
-    #Taking the real part of the result, as that should be completely real. 
-    return np.real(field_dot(U, field_dot(tensor_product(jones_matrix, jones_matrix_conj), U_inverse)))
+	#Taking the real part of the result, as that should be completely real. 
+	return np.real(field_dot(U, field_dot(tensor_product(jones_matrix, jones_matrix_conj), U_inverse)))
 
 @make_agnostic_optical_element([], ['jones_matrix'])
 class JonesMatrixOpticalElement(OpticalElement):

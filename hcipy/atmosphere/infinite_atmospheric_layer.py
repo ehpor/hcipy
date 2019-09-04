@@ -211,7 +211,8 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			sub_delta = self.center - new_center * self.input_grid.delta
 			with warnings.catch_warnings():
 				warnings.filterwarnings('ignore', message='The behaviour of affine_transform with a one-dimensional array supplied for the matrix parameter has changed in scipy 0.18.0.')
-				self._shifted_achromatic_screen = affine_transform(ps, np.array([1,1]), (sub_delta / self.input_grid.delta)[::-1], mode='nearest', order=5).ravel()
+				screen = affine_transform(ps, np.array([1,1]), (sub_delta / self.input_grid.delta)[::-1], mode='nearest', order=5)
+				self._shifted_achromatic_screen = Field(screen.ravel(), self._achromatic_screen.grid)
 		else:
 			self._shifted_achromatic_screen = self._achromatic_screen
 

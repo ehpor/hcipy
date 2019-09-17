@@ -17,7 +17,13 @@ class GifWriter(object):
 		if not os.path.exists(self.path_to_frames):
 			os.mkdir(self.path_to_frames)
 		self.n_frames = 0
-	
+
+	def __del__(self):
+		try:
+			self.close()
+		except Exception:
+			pass
+
 	def add_frame(self, fig=None, arr=None, cmap=None):
 		if self.closed:
 			raise RuntimeError('Attempted to add a frame to a closed GifWriter.')

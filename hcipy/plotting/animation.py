@@ -36,13 +36,14 @@ class GifWriter(object):
 
 		self.n_frames += 1
 
-	def convert2gif(self):
-		search_pattern = os.path.join(self.path_to_frames, "*.png")
+	@staticmethod
+	def convert2gif(dest_filename, src_file_path, framerate,  src_file_suffix="png", n_files2convert=None):
+		search_pattern = os.path.join(src_file_path, "*."+src_file_suffix)
 		files = glob.glob(search_pattern)
 		files.sort()
 
-		if len(files) != self.n_frames:
-			raise OSError("Expected {} files but found {}".format(self.n_frames, len(files)))
+		if n_files2convert is not None and len(files) != n_files2convert:
+			raise OSError("Expected {} files but found {}".format(n_files2convert, len(files)))
 
 		# Open all frames to convert
 		frames = []
@@ -52,18 +53,21 @@ class GifWriter(object):
 		# Convert to GIF
 		# https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html?highlight=duration#saving
 		# duration := display duration of each frame in ms
-		duration = int(1000 / self.framerate)
-		frames[0].save(self.filename,
+		duration = int(1000 / framerate)
+		frames[0].save(dest_filename,
 						format="GIF",
 						append_images=frames[1:],
 						save_all=True,
 						duration=duration,
 						loop=0)
 
+	def convert(self):
+		self.convert2gif(self.filename, self.path_to_frames, self.framerate, n_files2convert=self.n_frames)
+
 	def close(self):
 		try:
 			if not self.closed:
-				self.convert2gif()
+				self.convert()
 		finally:
 			self.n_frames = 0
 			self.closed = True

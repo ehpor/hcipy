@@ -29,7 +29,7 @@ class GifWriter(object):
 				fig = matplotlib.pyplot.plt.gcf()
 			fig.savefig(dest, format='png', transparent=False)
 		else:
-			if not cmap is None:
+			if cmap is not None:
 				arr = matplotlib.cm.get_cmap(cmap)(arr, bytes=True)
 			
 			imageio.imwrite(dest, arr, format='png')

@@ -1,8 +1,11 @@
-import matplotlib.pyplot as plt
-import matplotlib
-from subprocess import Popen, PIPE, call
-import imageio
+import glob
 import os
+from subprocess import Popen, PIPE
+
+import matplotlib
+import imageio
+from PIL import Image
+
 
 class GifWriter(object):
 	def __init__(self, filename, framerate=15):
@@ -10,34 +13,61 @@ class GifWriter(object):
 		self.filename = filename
 		self.framerate = framerate
 
-		if not os.path.exists(filename + '_frames/'):
-			os.mkdir(filename + '_frames/')
-		self.frame_number = 0
+		self.path_to_frames = self.filename + "_frames"
+		if not os.path.exists(self.path_to_frames):
+			os.mkdir(self.path_to_frames)
+		self.n_frames = 0
 	
 	def add_frame(self, fig=None, arr=None, cmap=None):
 		if self.closed:
 			raise RuntimeError('Attempted to add a frame to a closed GifWriter.')
-		
-		dest = self.filename + '_frames/%05d.png' % self.frame_number
-		self.frame_number += 1
+
+		dest = os.path.join(self.path_to_frames, '%05d.png' % self.n_frames)
 
 		if arr is None:
 			if fig is None:
-				fig = plt.gcf()
+				fig = matplotlib.pyplot.plt.gcf()
 			fig.savefig(dest, format='png', transparent=False)
 		else:
 			if not cmap is None:
 				arr = matplotlib.cm.get_cmap(cmap)(arr, bytes=True)
 			
 			imageio.imwrite(dest, arr, format='png')
-	
+
+		self.n_frames += 1
+
+	def convert2gif(self):
+		search_pattern = os.path.join(self.path_to_frames, "*.png")
+		files = glob.glob(search_pattern)
+		files.sort()
+
+		if len(files) != self.n_frames:
+			raise OSError("Expected {} files but found {}".format(self.n_frames, len(files)))
+
+		# Open all frames to convert
+		frames = []
+		for file in files:
+			frames.append(Image.open(file))
+
+		# Convert to GIF
+		# https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html?highlight=duration#saving
+		# duration := display duration of each frame in ms
+		duration = int(1000 / self.framerate)
+		frames[0].save(self.filename,
+						format="GIF",
+						append_images=frames[1:],
+						save_all=True,
+						duration=duration,
+						loop=0)
+
 	def close(self):
-		if not self.closed:
-			command = ['convert', '-delay', str(int(100/self.framerate)), 
-						'-loop', '0', self.filename + '_frames/*.png', self.filename]
-			call(command)	
-			call(['rm', '-rf', self.filename + '_frames'])
-		self.closed = True
+		try:
+			if not self.closed:
+				self.convert2gif()
+		finally:
+			self.n_frames = 0
+			self.closed = True
+
 
 class FFMpegWriter(object):
 	def __init__(self, filename, codec=None, framerate=24, quality=None, preset=None):

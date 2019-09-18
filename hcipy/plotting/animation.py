@@ -1,43 +1,87 @@
-import matplotlib.pyplot as plt
-import matplotlib
-from subprocess import Popen, PIPE, call
-import imageio
+import glob
 import os
+import shutil
+from subprocess import Popen, PIPE
+
+import matplotlib
+import imageio
+from PIL import Image
+
 
 class GifWriter(object):
-	def __init__(self, filename, framerate=15):
+	def __init__(self, filename, framerate=15, cleanup=True):
 		self.closed = False
 		self.filename = filename
 		self.framerate = framerate
+		self.cleanup = cleanup
 
-		if not os.path.exists(filename + '_frames/'):
-			os.mkdir(filename + '_frames/')
-		self.frame_number = 0
-	
+		self.path_to_frames = self.filename + "_frames"
+		if not os.path.exists(self.path_to_frames):
+			os.mkdir(self.path_to_frames)
+		self.num_frames = 0
+
+	def __del__(self):
+		try:
+			self.close()
+		except Exception:
+			pass
+
 	def add_frame(self, fig=None, arr=None, cmap=None):
 		if self.closed:
 			raise RuntimeError('Attempted to add a frame to a closed GifWriter.')
-		
-		dest = self.filename + '_frames/%05d.png' % self.frame_number
-		self.frame_number += 1
+
+		dest = os.path.join(self.path_to_frames, '%05d.png' % self.num_frames)
 
 		if arr is None:
 			if fig is None:
-				fig = plt.gcf()
+				fig = matplotlib.pyplot.gcf()
 			fig.savefig(dest, format='png', transparent=False)
 		else:
-			if not cmap is None:
+			if cmap is not None:
 				arr = matplotlib.cm.get_cmap(cmap)(arr, bytes=True)
 			
 			imageio.imwrite(dest, arr, format='png')
-	
+
+		self.num_frames += 1
+
+	@staticmethod
+	def convert_to_gif(dest_filename, src_file_path, framerate, src_file_suffix="png", num_files_to_convert=None):
+		search_pattern = os.path.join(src_file_path, "*."+src_file_suffix)
+		files = glob.glob(search_pattern)
+		files.sort()
+
+		if num_files_to_convert is not None and len(files) != num_files_to_convert:
+			raise OSError("Expected {} files but found {}".format(num_files_to_convert, len(files)))
+
+		# Open all frames to convert
+		frames = []
+		for image_file in files:
+			frames.append(Image.open(image_file))
+
+		# Convert to GIF
+		# https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html?highlight=duration#saving
+		# duration := display duration of each frame in ms
+		duration = int(1000 / framerate)
+		frames[0].save(dest_filename,
+						format="GIF",
+						append_images=frames[1:],
+						save_all=True,
+						duration=duration,
+						loop=0)
+
+	def convert(self):
+		return self.convert_to_gif(self.filename, self.path_to_frames, self.framerate, num_files_to_convert=self.num_frames)
+
 	def close(self):
-		if not self.closed:
-			command = ['convert', '-delay', str(int(100/self.framerate)), 
-						'-loop', '0', self.filename + '_frames/*.png', self.filename]
-			call(command)	
-			call(['rm', '-rf', self.filename + '_frames'])
-		self.closed = True
+		try:
+			if not self.closed:
+				self.convert()
+				if self.cleanup:
+					shutil.rmtree(self.path_to_frames, ignore_errors=True)
+		finally:
+			self.num_frames = 0
+			self.closed = True
+
 
 class FFMpegWriter(object):
 	def __init__(self, filename, codec=None, framerate=24, quality=None, preset=None):
@@ -77,13 +121,19 @@ class FFMpegWriter(object):
 		self.p = Popen(command, stdin=PIPE)
 		self.closed = False
 
+	def __del__(self):
+		try:
+			self.close()
+		except Exception:
+			pass
+
 	def add_frame(self, fig=None, arr=None, cmap=None):
 		if self.closed:
 			raise RuntimeError('Attempted to add a frame to a closed FFMpegWriter.')
 
 		if arr is None:
 			if fig is None:
-				fig = plt.gcf()
+				fig = matplotlib.pyplot.gcf()
 			fig.savefig(self.p.stdin, format='png', transparent=False)
 		else:
 			if not cmap is None:

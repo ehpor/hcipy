@@ -120,6 +120,7 @@ class JonesMatrixOpticalElement(OpticalElement):
 		wf.electric_field = field_dot(field_conjugate_transpose(self.jones_matrix), wf.electric_field)
 		return wf
 
+	@property
 	def mueller_matrix(self):
 		'''Returns the Mueller matrix of the Jones matrix. 
 		'''
@@ -226,8 +227,10 @@ class LinearPolarizer(JonesMatrixOpticalElement):
 	polarization_angle : scalar or Field
 		The polarization angle of the polarizer. Light with this angle is transmitted.
 	'''
-	def __init__(self, polarization_angle):
+	def __init__(self, polarization_angle, wavelength=1):
 		self.polarization_angle = polarization_angle
+
+		JonesMatrixOpticalElement.__init__(self, self.jones_matrix, wavelength)
 	
 	@property
 	def polarization_angle(self):
@@ -241,40 +244,8 @@ class LinearPolarizer(JonesMatrixOpticalElement):
 
 		c = np.cos(polarization_angle)
 		s = np.sin(polarization_angle)
-		self.jones_matrix = np.array([[c**2, -c * s],[-c * s, s**2]])
-	
-	def forward(self, wavefront):
-		'''Propagate a wavefront forwards through the linear polarizer.
-
-		Parameters
-		----------
-		wavefront : Wavefront
-			The wavefront to propagate.
-		
-		Returns
-		-------
-		Wavefront
-			The propagated wavefront.
-		'''
-		wf = wavefront.copy()
-		wf.electric_field = field_dot(self.jones_matrix, wavefront.electric_field)
-		return wf
-	
-	def backward(self, wavefront):
-		'''Propagate a wavefront backwards through the linear polarizer.
-
-		Parameters
-		----------
-		wavefront : Wavefront
-			The wavefront to propagate.
-		
-		Returns
-		-------
-		Wavefront
-			The propagated wavefront.
-		'''
-		return self.forward(wavefront)
- 
+		self.jones_matrix = np.array([[c**2, c * s],[c * s, s**2]])
+	 
 #class PolarizingBeamSplitter(JonesMatrixOpticalElement):
 ''' A polarizing beam splitter that accepts one wavefront and returns two polarized wavefronts.
 '''

@@ -2,48 +2,76 @@ import numpy as np
 from .optical_element import OpticalElement, make_agnostic_optical_element
 from ..field import Field, field_inv, field_dot, field_transpose, field_conjugate_transpose
 
-def tensor_product(M1, M2):
-	'''
-	This function calculates the tensor product as defined in:
-	https://en.wikipedia.org/wiki/Tensor_product,
-	to make from 2 2x2 tensor fields 1 4x4 tensor field.
-	M1 x M2= result
-	Assuming the M1 and M2 are 2x2 tensor fields.
-	'''
-	result = Field(np.zeros((4, 4, M1.shape[-1]), dtype = np.complex128), M1.grid)
+def field_kron(a, b):
+	'''Calculate the Kronecker product of two fields.
 
-	#Performing the tensor product.
-	result[0:2,0:2,:] += np.copy(M1[0,0,:] * M2)
-	result[0:2,2:4,:] += np.copy(M1[0,1,:] * M2)
-	result[2:4,0:2,:] += np.copy(M1[1,0,:] * M2)
-	result[2:4,2:4,:] += np.copy(M1[1,1,:] * M2)
+	Parameters
+	----------
+	a : tensor Field
+		The first Field
+	b : tensor Field
+		The second Field
 
-	return result
+	Returns
+	-------
+	Field
+		The resulting tensor field.
+	'''
+	is_a_field = hasattr(a, 'grid')
+	is_b_field = hasattr(b, 'grid')
+
+	is_output_field = is_a_field or is_b_field
+
+	if not is_output_field:
+		return np.kron(a, b)
+	
+	if is_a_field and is_b_field:
+		if a.grid.size != b.grid.size:
+			raise ValueError('Field sizes for a (%d) and b (%d) are not compatible.' % (a.grid.size, b.grid.size))
+		grid = a.grid
+	else:
+		if is_a_field:
+			grid = a.grid
+		else:
+			grid = b.grid
+
+	if is_a_field:
+		aa = a
+	else:
+		aa = a[..., np.newaxis]
+	
+	if is_b_field:
+		bb = b
+	else:
+		bb = b[..., np.newaxis]
+	
+	output_tensor_shape = np.array(aa.shape[:-1]) * np.array(bb.shape[:-1])
+	output_shape = np.concatenate((output_tensor_shape, [grid.size]))
+	
+	res = (aa[:, np.newaxis, :, np.newaxis, :] * bb[np.newaxis, :, np.newaxis, :, :]).reshape(output_shape)
+
+	return Field(res, grid)
 
 def jones_to_mueller(jones_matrix):
+	'''Convert a Jones matrix to a Mueller matrix.
 
-	#The Jones/Mueller transformation matrix.
-	U = jones_matrix.grid.zeros((4,4), 'complex')
+	Parameters
+	----------
+	jones_matrix : ndarray or tensor field
+		The Jones matrix/matrices to convert to Mueller matrix/matrices.
 
-	U[0,0,:] += 1
-	U[0,3,:] += 1
-	U[1,0,:] += 1
-	U[1,3,:] += -1
-	U[2,1,:] += 1
-	U[2,2,:] += 1
-	U[3,1,:] += 1j
-	U[3,2,:] += -1j
-	U *= 1/np.sqrt(2)
-
-	#Now we also calculate the Hermitian adjoint of U to get the inverse.
-	U_inverse = field_conjugate_transpose(U)
-
-	#Defining the conjugate of the Jones matrix.
-	jones_matrix_conj = Field(np.zeros_like(jones_matrix), jones_matrix.grid)
-	jones_matrix_conj += np.copy(jones_matrix).conj()
-
-	#Taking the real part of the result, as that should be completely real. 
-	return np.real(field_dot(U, field_dot(tensor_product(jones_matrix, jones_matrix_conj), U_inverse)))
+	Returns
+	-------
+	ndarray or tensor Field
+		The Mueller matrix/matrices.
+	'''
+	U = 1 / np.sqrt(2) * np.array([
+		[1,  0,   0,  1],
+		[1,  0,   0, -1],
+		[0,  1,   1,  0],
+		[0, 1j, -1j,  0]])
+	
+	return np.real(field_dot(U, field_dot(field_kron(jones_matrix, jones_matrix.conj()), U.conj().T)))
 
 @make_agnostic_optical_element([], ['jones_matrix'])
 class JonesMatrixOpticalElement(OpticalElement):

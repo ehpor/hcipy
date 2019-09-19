@@ -62,9 +62,10 @@ class GifWriter(object):
 		# https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html?highlight=duration#saving
 		# duration := display duration of each frame in ms
 		duration = int(1000 / framerate)
+		frames_to_append = frames[1:] if len(frames) > 1 else []
 		frames[0].save(dest_filename,
 						format="GIF",
-						append_images=frames[1:],
+						append_images=frames_to_append,
 						save_all=True,
 						duration=duration,
 						loop=0)

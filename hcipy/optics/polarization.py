@@ -73,6 +73,21 @@ def jones_to_mueller(jones_matrix):
 	
 	return np.real(field_dot(U, field_dot(field_kron(jones_matrix, jones_matrix.conj()), U.conj().T)))
 
+def rotation_matrix(angle):
+	'''Two dimensional rotation matrix. 
+
+	Parameters
+	----------
+	angle : scaler
+		rotation angle in radians 
+
+	Returns
+	-------
+	ndarray 
+		The rotation matrix.
+	'''
+	return np.array([[np.cos(angle),  np.sin(angle)],[-np.sin(angle), np.cos(angle)]])
+
 @make_agnostic_optical_element([], ['jones_matrix'])
 class JonesMatrixOpticalElement(OpticalElement):
 	'''A general Jones Matrix.
@@ -245,17 +260,32 @@ class LinearPolarizer(JonesMatrixOpticalElement):
 		c = np.cos(polarization_angle)
 		s = np.sin(polarization_angle)
 		self.jones_matrix = np.array([[c**2, c * s],[c * s, s**2]])
-	 
-#class PolarizingBeamSplitter(JonesMatrixOpticalElement):
-''' A polarizing beam splitter that accepts one wavefront and returns two polarized wavefronts.
-'''
 
-#class RotatedJonesMatrixOpticalElement(JonesMatrixOpticalElement):
-''' A rotated jones matrix.
+class RotatedJonesMatrixOpticalElement(JonesMatrixOpticalElement):
+	'''An axial rotated Jones matrix.
 
-Note: this rotates the polarization state, not the Field!
+	Note: this rotates the polarization state, not the Field!
 
-'''
+	Parameters
+	----------
+	jones_matrix : tensor field
+		The Jones matrix that will be rotated.
+	angle : scalar 
+		The rotation angle in radians. 
+	'''
+	def __init__(self, jones_matrix, angle, wavelength=1):
+		
+		# calculating the rotated Jones matrix.
+		rotated_jones_matrix = field_dot(rotation_matrix(-angle), field_dot(jones_matrix, rotation_matrix(angle)))
+
+		JonesMatrixOpticalElement.__init__(self, rotated_jones_matrix, wavelength)
+
+"""
+class PolarizingBeamSplitter(OpticalElement):
+	''' A polarizing beam splitter that accepts one wavefront and returns two polarized wavefronts.
+	'''
+	print('temp')
+"""
 
 #class Reflection(JonesMatrixOpticalElement):
 ''' A jones matrix that handles the flips in polarization for a reflection. + field flip around x- or y-axis 

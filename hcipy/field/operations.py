@@ -72,41 +72,61 @@ def field_svd(f, full_matrices=True, compute_uv=True):
 		return S
 
 def field_conjugate_transpose(a):
-	'''Performs the conjugate transpose of a rank 2 tensor field.
+	'''Performs the conjugate transpose of a rank 2 tensor field or two dimensional array.
 
 	Parameters
 	----------
-	a : Field
-		The field to conjugate transpose
+	a : Field or array 
+		The element to conjugate transpose
 
 	Returns
 	-------
-	Field
-		The conjugate transposed field
+	Field or array
+		The conjugate transposed element
 	'''
 	
-	if a.tensor_order != 2:
-		raise ValueError('Need a tensor field of rank 2.')
+	# first we test if it's a field 
+	if hasattr(a, 'tensor_order'):
 
-	return Field(np.swapaxes(a.conj(),0,1), a.grid)
+	    # if its a field, it must have a rank of 2
+		if a.tensor_order != 2:
+			raise ValueError('Need a tensor field of rank 2.')
 
+		return Field(np.swapaxes(a.conj(),0,1), a.grid)
+	else:
+		# if its an array, it must be two dimensional 
+		if len(a.shape) != 2:
+			raise ValueError('Need a two dimensional array.')
+
+		return np.swapaxes(a.conj(),0,1)
+	
 def field_transpose(a):
-	'''Performs the transpose of a rank 2 tensor field.
+	'''Performs the transpose of a rank 2 tensor field or two dimensional array.
 
 	Parameters
 	----------
-	a : Field
-		The field to transpose
+	a : Field or array
+		The element to transpose
 
 	Returns
 	-------
-	Field
-		The transposed field
+	Field or array
+		The transposed field or array 
 	'''
-	if a.tensor_order != 2:
-		raise ValueError('Need a tensor field of rank 2.')
+	# first we test if it's a field 
+	if hasattr(a, 'tensor_order'):
 
-	return Field(np.swapaxes(a,0,1), a.grid)
+		# if its a field, it must have a rank of 2
+		if a.tensor_order != 2:
+			raise ValueError('Need a tensor field of rank 2.')
+
+		return Field(np.swapaxes(a,0,1), a.grid)
+	else:
+		# if its an array, it must be two dimensional 
+		if len(a.shape) != 2:
+			raise ValueError('Need a two dimensional array.')
+
+		return np.swapaxes(a,0,1)
 
 def field_determinant(a):
 	'''Calculates the determinant of a tensor field.

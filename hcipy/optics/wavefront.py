@@ -2,6 +2,7 @@ import copy
 import numpy as np
 
 from ..field import Field, field_dot
+from .polarization import jones_to_mueller
 
 # TODO Should add a pilot Gaussian beam with each Wavefront
 
@@ -198,6 +199,35 @@ class Wavefront(object):
 			# This is a vector field. 
 			return -2 * np.imag(self.electric_field[0,:] * self.electric_field[1,:].conj())
 	
+	@property
+	def stokes_vector(self):
+		'''The Stokes vector.
+		'''
+
+		if self.is_scalar:
+			# This is a scaler field and thus we return an unpolarized Stokes vector.
+
+			stokes_vector = Field(np.zeros((4,self.grid.size)), self.grid)
+
+			stokes_vector[0,:] = np.abs(self.electric_field)**2
+
+			return stokes_vector
+		elif self.is_partially_polarized:
+			# This is a tensor field. 
+			mueller_matrix = jones_to_mueller(self.electric_field)
+			
+			return field_dot(mueller_matrix, self._input_stokes_vector)
+		else:
+			# This is a vector field and thus we return a fully polarized Stokes vector. 
+			stokes_vector = Field(np.zeros((4,self.grid.size)), self.grid)
+
+			stokes_vector[0,:] = self.I
+			stokes_vector[1,:] = self.Q
+			stokes_vector[2,:] = self.U
+			stokes_vector[3,:] = self.V
+			
+			return stokes_vector
+
 	@property
 	def degree_of_polarization(self):
 		'''The degree of polarization.

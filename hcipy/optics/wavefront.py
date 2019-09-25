@@ -1,8 +1,7 @@
 import copy
 import numpy as np
 
-from ..field import Field, field_dot
-from .polarization import jones_to_mueller
+from ..field import Field, field_dot, field_kron
 
 # TODO Should add a pilot Gaussian beam with each Wavefront
 
@@ -323,3 +322,24 @@ class Wavefront(object):
 	@total_power.setter
 	def total_power(self, p):
 		self.electric_field *= np.sqrt(p / self.total_power)
+
+def jones_to_mueller(jones_matrix):
+	'''Convert a Jones matrix to a Mueller matrix.
+
+	Parameters
+	----------
+	jones_matrix : ndarray or tensor field
+		The Jones matrix/matrices to convert to Mueller matrix/matrices.
+
+	Returns
+	-------
+	ndarray or tensor Field
+		The Mueller matrix/matrices.
+	'''
+	U = 1 / np.sqrt(2) * np.array([
+		[1,  0,   0,  1],
+		[1,  0,   0, -1],
+		[0,  1,   1,  0],
+		[0, 1j, -1j,  0]])
+	
+	return np.real(field_dot(U, field_dot(field_kron(jones_matrix, jones_matrix.conj()), U.conj().T)))

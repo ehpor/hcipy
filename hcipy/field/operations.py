@@ -202,6 +202,56 @@ def field_cross(a, b):
 
 	return Field(np.cross(a, b, axis = 0), a.grid)
 
+def field_kron(a, b):
+	'''Calculate the Kronecker product of two fields.
+
+	Parameters
+	----------
+	a : tensor Field
+		The first Field
+	b : tensor Field
+		The second Field
+
+	Returns
+	-------
+	Field
+		The resulting tensor field.
+	'''
+	is_a_field = hasattr(a, 'grid')
+	is_b_field = hasattr(b, 'grid')
+
+	is_output_field = is_a_field or is_b_field
+
+	if not is_output_field:
+		return np.kron(a, b)
+	
+	if is_a_field and is_b_field:
+		if a.grid.size != b.grid.size:
+			raise ValueError('Field sizes for a (%d) and b (%d) are not compatible.' % (a.grid.size, b.grid.size))
+		grid = a.grid
+	else:
+		if is_a_field:
+			grid = a.grid
+		else:
+			grid = b.grid
+
+	if is_a_field:
+		aa = a
+	else:
+		aa = a[..., np.newaxis]
+	
+	if is_b_field:
+		bb = b
+	else:
+		bb = b[..., np.newaxis]
+	
+	output_tensor_shape = np.array(aa.shape[:-1]) * np.array(bb.shape[:-1])
+	output_shape = np.concatenate((output_tensor_shape, [grid.size]))
+	
+	res = (aa[:, np.newaxis, :, np.newaxis, :] * bb[np.newaxis, :, np.newaxis, :, :]).reshape(output_shape)
+
+	return Field(res, grid)
+
 def make_field_operation(op):
 	pass
 '''

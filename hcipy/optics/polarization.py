@@ -1,77 +1,7 @@
 import numpy as np
+from .wavefront import Wavefront, jones_to_mueller
 from .optical_element import OpticalElement, make_agnostic_optical_element
 from ..field import Field, field_inv, field_dot, field_transpose, field_conjugate_transpose
-
-def field_kron(a, b):
-	'''Calculate the Kronecker product of two fields.
-
-	Parameters
-	----------
-	a : tensor Field
-		The first Field
-	b : tensor Field
-		The second Field
-
-	Returns
-	-------
-	Field
-		The resulting tensor field.
-	'''
-	is_a_field = hasattr(a, 'grid')
-	is_b_field = hasattr(b, 'grid')
-
-	is_output_field = is_a_field or is_b_field
-
-	if not is_output_field:
-		return np.kron(a, b)
-	
-	if is_a_field and is_b_field:
-		if a.grid.size != b.grid.size:
-			raise ValueError('Field sizes for a (%d) and b (%d) are not compatible.' % (a.grid.size, b.grid.size))
-		grid = a.grid
-	else:
-		if is_a_field:
-			grid = a.grid
-		else:
-			grid = b.grid
-
-	if is_a_field:
-		aa = a
-	else:
-		aa = a[..., np.newaxis]
-	
-	if is_b_field:
-		bb = b
-	else:
-		bb = b[..., np.newaxis]
-	
-	output_tensor_shape = np.array(aa.shape[:-1]) * np.array(bb.shape[:-1])
-	output_shape = np.concatenate((output_tensor_shape, [grid.size]))
-	
-	res = (aa[:, np.newaxis, :, np.newaxis, :] * bb[np.newaxis, :, np.newaxis, :, :]).reshape(output_shape)
-
-	return Field(res, grid)
-
-def jones_to_mueller(jones_matrix):
-	'''Convert a Jones matrix to a Mueller matrix.
-
-	Parameters
-	----------
-	jones_matrix : ndarray or tensor field
-		The Jones matrix/matrices to convert to Mueller matrix/matrices.
-
-	Returns
-	-------
-	ndarray or tensor Field
-		The Mueller matrix/matrices.
-	'''
-	U = 1 / np.sqrt(2) * np.array([
-		[1,  0,   0,  1],
-		[1,  0,   0, -1],
-		[0,  1,   1,  0],
-		[0, 1j, -1j,  0]])
-	
-	return np.real(field_dot(U, field_dot(field_kron(jones_matrix, jones_matrix.conj()), U.conj().T)))
 
 def rotation_matrix(angle):
 	'''Two dimensional rotation matrix. 
@@ -87,6 +17,25 @@ def rotation_matrix(angle):
 		The rotation matrix.
 	'''
 	return np.array([[np.cos(angle),  np.sin(angle)],[-np.sin(angle), np.cos(angle)]])
+
+def jones_matrix_linear_polarizer(polarization_angle):
+	'''Jones matrix of linear polarizer. 
+
+	Parameters
+	----------
+	angle : scaler or Field 
+		rotation angle in radians 
+
+	Returns
+	-------
+	ndarray 
+		The Jones matrix of the polarizer.
+	'''
+	# calculating individual elements Jones matrix.
+	c = np.cos(polarization_angle)
+	s = np.sin(polarization_angle)
+
+	return np.array([[c**2, c * s],[c * s, s**2]])
 
 @make_agnostic_optical_element([], ['jones_matrix'])
 class JonesMatrixOpticalElement(OpticalElement):
@@ -114,8 +63,14 @@ class JonesMatrixOpticalElement(OpticalElement):
 		Wavefront
 			The propagated wavefront.
 		'''
-		wf = wavefront.copy()
+		if wavefront.is_scalar:
+			# we generate an unpolarized wavefront
+			wf = Wavefront(wavefront.electric_field.copy(), stokes_vector=[1,0,0,0])			
+		else:
+			wf = wavefront.copy()
+		
 		wf.electric_field = field_dot(self.jones_matrix, wf.electric_field)
+
 		return wf
 	
 	def backward(self, wavefront):
@@ -131,8 +86,14 @@ class JonesMatrixOpticalElement(OpticalElement):
 		Wavefront
 			The propagated wavefront.
 		'''
-		wf = wavefront.copy()
+		if wavefront.is_scalar:
+			# we generate an unpolarized wavefront
+			wf = Wavefront(wavefront.electric_field.copy(), stokes_vector=[1,0,0,0])			
+		else:
+			wf = wavefront.copy()
+
 		wf.electric_field = field_dot(field_conjugate_transpose(self.jones_matrix), wf.electric_field)
+
 		return wf
 
 	@property
@@ -257,9 +218,7 @@ class LinearPolarizer(JonesMatrixOpticalElement):
 	def polarization_angle(self, polarization_angle):
 		self._polarization_angle = polarization_angle
 
-		c = np.cos(polarization_angle)
-		s = np.sin(polarization_angle)
-		self.jones_matrix = np.array([[c**2, c * s],[c * s, s**2]])
+		self.jones_matrix = jones_matrix_linear_polarizer(polarization_angle)
 
 class RotatedJonesMatrixOpticalElement(JonesMatrixOpticalElement):
 	'''An axial rotated Jones matrix.
@@ -280,14 +239,76 @@ class RotatedJonesMatrixOpticalElement(JonesMatrixOpticalElement):
 
 		JonesMatrixOpticalElement.__init__(self, rotated_jones_matrix, wavelength)
 
-"""
 class PolarizingBeamSplitter(OpticalElement):
 	''' A polarizing beam splitter that accepts one wavefront and returns two polarized wavefronts.
+
+	The first of the returned wavefront will have the polarization state set by the polarization angle. The second wavefront
+	 will be perpendicular to the first.
+
+	Parameters
+	----------
+	polarization_angle : scalar or Field
+		The polarization angle of the polarizer. 
 	'''
-	print('temp')
-"""
+	def __init__(self, polarization_angle, wavelength=1):
+		self.polarization_angle = polarization_angle
+		
+	@property
+	def polarization_angle(self):
+		'''The angle of polarization of the linear polarizer.
+		'''
+		return self._polarization_angle
+	
+	@polarization_angle.setter
+	def polarization_angle(self, polarization_angle):
+		self._polarization_angle = polarization_angle
+
+		# calculating two Jones matrices for the two ports.		
+		self.jones_matrix_1 = jones_matrix_linear_polarizer(polarization_angle)
+		self.jones_matrix_2 = jones_matrix_linear_polarizer(polarization_angle + np.pi / 2)
+
+	def forward(self, wavefront):
+		'''Propgate the wavefront through the PBS.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The wavefront to propagate.
+		
+		Returns
+		-------
+		wf_1 : Wavefront 
+			The wavefront propagated through a polarizer under the polarization angle.
+
+		wf_2 : Wavefront 
+			The propagated wavefront through a polarizer perpendicular to the first one.
+		'''
+		if wavefront.is_scalar:
+			# we generate two unpolarized wavefronts, one for each exit port. 
+			wf_1 = Wavefront(wavefront.electric_field.copy(), stokes_vector=[1,0,0,0])
+			wf_2 = Wavefront(wavefront.electric_field.copy(), stokes_vector=[1,0,0,0])						
+		else:
+			wf_1 = wavefront.copy()
+			wf_2 = wavefront.copy()
+		
+		wf_1.electric_field = field_dot(self.jones_matrix_1, wf_1.electric_field)
+		wf_2.electric_field = field_dot(self.jones_matrix_2, wf_2.electric_field)
+
+		return wf_1, wf_2
+
+	def backward(self, wavefront):
+		'''Propagate the wavefront backwards through the PBS.
+
+		Not possible, will raise error.
+		'''
+		raise RuntimeError('Backward propagation through PolarizingBeamSplitter not possible.')
+
+	@property
+	def mueller_matrix(self):
+		'''Returns the Mueller matrices of the two Jones matrices.
+		'''
+		return jones_to_mueller(self.jones_matrix_1), jones_to_mueller(self.jones_matrix_2)
 
 #class Reflection(JonesMatrixOpticalElement):
 ''' A jones matrix that handles the flips in polarization for a reflection. + field flip around x- or y-axis 
 '''
-

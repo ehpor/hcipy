@@ -1,4 +1,4 @@
-__all__ = ['generate_app_keller', 'generate_app_por']
+__all__ = ['generate_app_keller', 'generate_app_por', 'VectorApodizingPhasePlate']
 __all__ += ['KnifeEdgeLyotCoronagraph']
 __all__ += ['LyotCoronagraph', 'OccultedLyotCoronagraph']
 __all__ += ['PerfectCoronagraph']

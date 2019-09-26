@@ -2,7 +2,7 @@ import numpy as np
 from ..propagation import FraunhoferPropagator
 from ..field import Field   
 
-from ..optics import LinearRetarder
+from ..optics import GeometricPhaseElement
 
 def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0):
 	"""
@@ -158,7 +158,7 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 def generate_app_doelman(wavefront, propagator, propagator_max, contrast, num_iterations):
 	raise NotImplementedError()
 
-class VectorApodizingPhasePlate(LinearRetarder):
+class VectorApodizingPhasePlate(GeometricPhaseElement):
 	'''The vector-Apodizing Phase Plate (vAPP).
 
 	Parameters
@@ -172,12 +172,4 @@ class VectorApodizingPhasePlate(LinearRetarder):
 	'''
 	def __init__(self, phase_pattern, leakage=None, retardance_offset=0, wavelength=1):
 
-		if leakage is not None:
-			# Testing if the leakage is valid.
-			if leakage < 0 or leakage > 1:
-				raise ValueError('Leakage must be between 0 and 1.')
-
-			# calculating the required retardance offset to get the leakage. 
-			retardance_offset = 2 * np.arcsin(np.sqrt(leakage))
-
-		LinearRetarder.__init__(self, np.pi-retardance_offset, phase_pattern/2, wavelength)
+		GeometricPhaseElement.__init__(self, phase_pattern, leakage, retardance_offset, wavelength)

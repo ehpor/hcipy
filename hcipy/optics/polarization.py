@@ -176,6 +176,30 @@ class HalfWavePlate(LinearRetarder):
 	def __init__(self, fast_axis_orientation, wavelength=1):
 		LinearRetarder.__init__(self, np.pi, fast_axis_orientation, wavelength)
 
+class GeometricPhaseElement(LinearRetarder):
+	'''A general geometric phase element. 
+
+	Parameters
+	----------
+	phase_pattern : Field or array_like 
+		The phase pattern in radians. 
+	leakage : scalar 
+		The relative leakage strength (0 = no leakage, 1 = maximum leakage)
+	retardance_offset : scalar 
+		The retardance offset from half wave in radians. This will result in leakage.
+	'''
+	def __init__(self, phase_pattern, leakage=None, retardance_offset=0, wavelength=1):
+
+		if leakage is not None:
+			# Testing if the leakage is valid.
+			if leakage < 0 or leakage > 1:
+				raise ValueError('Leakage must be between 0 and 1.')
+
+			# calculating the required retardance offset to get the leakage. 
+			retardance_offset = 2 * np.arcsin(np.sqrt(leakage))
+
+		LinearRetarder.__init__(self, np.pi-retardance_offset, phase_pattern/2, wavelength)
+
 class LinearPolarizer(JonesMatrixOpticalElement):
 	'''A linear polarizer.
 

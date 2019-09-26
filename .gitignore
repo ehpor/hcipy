@@ -5,6 +5,7 @@
 tags
 /doc/_build/
 /doc/_autosummary/
+/doc/tutorials/
 /.idea/
 /build/
 /.pytest_cache/

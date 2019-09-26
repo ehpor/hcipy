@@ -6,7 +6,7 @@ import pytest
 def test_fraunhofer_propagation_circular():
 	for num_pix in [512, 1024]:
 		pupil_grid = make_pupil_grid(num_pix)
-		focal_grid = make_focal_grid(pupil_grid, 16, 8)
+		focal_grid = make_focal_grid(16, 8)
 
 		for diameter in [1, 0.7]:
 			aperture = evaluate_supersampled(circular_aperture(diameter), pupil_grid, 8)
@@ -33,7 +33,7 @@ def test_fraunhofer_propagation_circular():
 def test_fraunhofer_propagation_rectangular():
 	for num_pix in [512, 1024]:
 		pupil_grid = make_pupil_grid(num_pix)
-		focal_grid = make_focal_grid(pupil_grid, 16, 8)
+		focal_grid = make_focal_grid(16, 8)
 
 		for size in [[1,1], [0.75,1], [0.75,0.75]]:
 			aperture = evaluate_supersampled(rectangular_aperture(size), pupil_grid, 8)

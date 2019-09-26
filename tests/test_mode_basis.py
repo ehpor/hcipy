@@ -36,7 +36,5 @@ def test_disk_harmonic_modes():
 		
 		for i, m1 in enumerate(modes):
 			for j, m2 in enumerate(modes):
-				product = np.sum((m1 * m2)[aperture_mask] * grid.weights[aperture_mask])
-				print(product)
-
+				product = np.sum((m1 * m2)[aperture_mask])
 				assert np.abs(product - np.eye(num_modes)[i,j]) < 1e-2

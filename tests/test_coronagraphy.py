@@ -3,7 +3,7 @@ import numpy as np
 
 def test_vortex_coronagraph():
 	pupil_grid = make_pupil_grid(256)
-	focal_grid = make_focal_grid(pupil_grid, 4, 32)
+	focal_grid = make_focal_grid(4, 32)
 	prop = FraunhoferPropagator(pupil_grid, focal_grid)
 
 	aperture = circular_aperture(1)
@@ -29,7 +29,7 @@ def test_vortex_coronagraph():
 
 def test_ravc():
 	pupil_grid = make_pupil_grid(256)
-	focal_grid = make_focal_grid(pupil_grid, 4, 32)
+	focal_grid = make_focal_grid(4, 32)
 	prop = FraunhoferPropagator(pupil_grid, focal_grid)
 
 	for co in [0.1, 0.2, 0.3]:
@@ -71,7 +71,7 @@ def test_ravc():
 
 def test_app_keller():
 	pupil_grid = make_pupil_grid(256)
-	focal_grid = make_focal_grid(pupil_grid, 4, 32)
+	focal_grid = make_focal_grid(4, 32)
 	propagator = FraunhoferPropagator(pupil_grid, focal_grid)
 
 	aperture = evaluate_supersampled(circular_aperture(1), pupil_grid, 8)

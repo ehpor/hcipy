@@ -46,7 +46,7 @@ class JonesMatrixOpticalElement(OpticalElement):
 		'''
 		if wavefront.is_scalar:
 			# we generate an unpolarized wavefront
-			wf = Wavefront(wavefront.electric_field.copy(), stokes_vector=[1,0,0,0])			
+			wf = Wavefront(wavefront.electric_field.copy(), wavelength=wavefront.wavelength, stokes_vector=[1,0,0,0])			
 		else:
 			wf = wavefront.copy()
 		
@@ -69,7 +69,7 @@ class JonesMatrixOpticalElement(OpticalElement):
 		'''
 		if wavefront.is_scalar:
 			# we generate an unpolarized wavefront
-			wf = Wavefront(wavefront.electric_field.copy(), stokes_vector=[1,0,0,0])			
+			wf = Wavefront(wavefront.electric_field.copy(), wavelength=wavefront.wavelength, stokes_vector=[1,0,0,0])			
 		else:
 			wf = wavefront.copy()
 

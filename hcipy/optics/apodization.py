@@ -60,6 +60,20 @@ class SurfaceApodizer(OpticalElement):
 		self.surface = surface
 		self.refractive_index = refractive_index
 	
+	def phase_for(self, wavelength):
+		'''Get the phase screen at a certain wavelength.
+
+		Parameters
+		----------
+		wavelength : scalar
+			The wavelength at which to calculate the phase screen.
+		'''
+		wavenumber = 2 * np.pi / wavelength
+
+		opd = (self.refractive_index - 1) * self.surface
+
+		return opd * wavenumber
+
 	def forward(self, wavefront):
 		opd = (self.refractive_index - 1) * self.surface
 		
@@ -82,6 +96,20 @@ class ComplexSurfaceApodizer(OpticalElement):
 		self.surface = surface
 		self.refractive_index = refractive_index
 	
+	def phase_for(self, wavelength):
+		'''Get the phase screen at a certain wavelength.
+
+		Parameters
+		----------
+		wavelength : scalar
+			The wavelength at which to calculate the phase screen.
+		'''
+		wavenumber = 2 * np.pi / wavelength
+
+		opd = (self.refractive_index - 1) * self.surface
+
+		return opd * wavenumber
+
 	def forward(self, wavefront):
 		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
 		

@@ -44,6 +44,9 @@ class Wavefront(object):
 			self._electric_field = electric_field.astype('complex')
 			self._input_stokes_vector = None
 
+			if electric_field.tensor_order == 2:
+				raise ValueError('When supplying a 2-tensor field as electric field, an input Stokes vector is required.')
+
 		self.wavelength = wavelength
 	
 	def copy(self):

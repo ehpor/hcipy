@@ -336,16 +336,16 @@ def test_polarization_elements():
 			assert np.allclose(wf_backward_polarizer.stokes_vector[:, 0], reference_stokes_post_polarizer)
 
 			# Create polarizing beam splitter
-			PBS_hcipy = PolarizingBeamSplitter(np.radians(angle))
+			LPBS_hcipy = LinearPolarizingBeamSplitter(np.radians(angle))
 
 			# Test if Mueller matrices are the same as reference.
 			polarizer_1_ref = mueller_matrix_for_general_linear_polarizer(np.radians(angle))
 			polarizer_2_ref = mueller_matrix_for_general_linear_polarizer(np.radians(angle + 90))
-			assert np.allclose(PBS_hcipy.mueller_matrix[0], polarizer_1_ref)     
-			assert np.allclose(PBS_hcipy.mueller_matrix[1], polarizer_2_ref)
+			assert np.allclose(LPBS_hcipy.mueller_matrix[0], polarizer_1_ref)     
+			assert np.allclose(LPBS_hcipy.mueller_matrix[1], polarizer_2_ref)
 
 			# Propagate wavefront through optical element.
-			wf_forward_polarizer_1, wf_forward_polarizer_2 = PBS_hcipy.forward(test_wf)
+			wf_forward_polarizer_1, wf_forward_polarizer_2 = LPBS_hcipy.forward(test_wf)
 
 			# Test if result is the same as reference.
 			reference_stokes_post_polarizer_1 = field_dot(polarizer_1_ref, stokes_vector)

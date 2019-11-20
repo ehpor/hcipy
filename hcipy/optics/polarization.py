@@ -247,8 +247,8 @@ class RotatedJonesMatrixOpticalElement(JonesMatrixOpticalElement):
 
 		JonesMatrixOpticalElement.__init__(self, rotated_jones_matrix, wavelength)
 
-class PolarizingBeamSplitter(OpticalElement):
-	''' A polarizing beam splitter that accepts one wavefront and returns two polarized wavefronts.
+class LinearPolarizingBeamSplitter(OpticalElement):
+	''' A linear polarizing beam splitter that accepts one wavefront and returns two linearly polarized wavefronts.
 
 	The first of the returned wavefront will have the polarization state set by the polarization angle. The second wavefront
 	 will be perpendicular to the first.
@@ -309,6 +309,60 @@ class PolarizingBeamSplitter(OpticalElement):
 		'''Returns the Mueller matrices of the two Jones matrices.
 		'''
 		return jones_to_mueller(self.polarizer_port_1.jones_matrix), jones_to_mueller(self.polarizer_port_2.jones_matrix)
+
+
+class CircularPolarizingBeamSplitter(OpticalElement):
+	''' A circular polarizing beam splitter that accepts one wavefront and returns two circularly polarized wavefronts.
+
+	The first of the returned wavefront will have the left circular polarization state set by the polarization angle. The second wavefront
+	 will be perpendicular to the first.
+
+	Parameters
+	----------
+	polarization_angle : scalar or Field
+		The polarization angle of the polarizer. 
+	'''
+	def __init__(self, wavelength=1):
+		self.polarization_angle = 0
+		self.quarter_wave_angle = np.pi/4
+		self.quarter_wave_plate = QuarterWavePlate(self.quarter_wave_angle)
+		self.linear_polarizing_beam_splitter = LinearPolarizingBeamSplitter(self.polarization_angle)
+		
+	def forward(self, wavefront):
+		'''Propgate the wavefront through the PBS.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The wavefront to propagate.
+		
+		Returns
+		-------
+		wf_1 : Wavefront 
+			The wavefront propagated through a polarizer under the polarization angle.
+
+		wf_2 : Wavefront 
+			The propagated wavefront through a polarizer perpendicular to the first one.
+		'''
+		wf_1, wf_2 = self.linear_polarizing_beam_splitter.forward(self.quarter_wave_plate.forward(wavefront))
+		return wf_1, wf_2
+
+	def backward(self, wavefront):
+		'''Propagate the wavefront backwards through the PBS.
+
+		Not possible, will raise error.
+		'''
+		raise RuntimeError('Backward propagation through PolarizingBeamSplitter not possible.')
+
+	@property
+	def mueller_matrix(self):
+		'''Returns the Mueller matrices of the two Jones matrices.
+		'''
+		qwp_mueller = self.quarter_wave_plate.mueller_matrix
+		lin_pol_bs_mueller1 , lin_pol_bs_mueller2 = self.linear_polarizing_beam_splitter.mueller_matrix
+		return np.dot(lin_pol_bs_mueller1, qwp_mueller), np.dot(lin_pol_bs_mueller2, qwp_mueller)
+
+
 
 #class Reflection(JonesMatrixOpticalElement):
 ''' A jones matrix that handles the flips in polarization for a reflection. + field flip around x- or y-axis 

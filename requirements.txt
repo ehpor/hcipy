@@ -7,3 +7,4 @@ mpmath
 astropy
 imageio
 xxhash
+numexpr

@@ -1,7 +1,14 @@
 import copy
 import numpy as np
+import numexpr as ne
 
 from ..field import Field, field_dot, field_kron
+
+_U_matrix = 1 / np.sqrt(2) * np.array([
+	[1,  0,   0,  1],
+	[1,  0,   0, -1],
+	[0,  1,   1,  0],
+	[0, 1j, -1j,  0]])
 
 # TODO Should add a pilot Gaussian beam with each Wavefront
 
@@ -104,25 +111,27 @@ class Wavefront(object):
 		'''The I-component of the Stokes vector as function of 2D position
 		in the plane.
 		'''
-
 		if self.is_scalar:
 			# This is a scaler field. 
 			return np.abs(self.electric_field)**2
 		elif self.is_partially_polarized:
 			# This is a tensor field. 
-			x = self.electric_field[0, 0, :]
-			y = self.electric_field[0, 1, :]
-			z = self.electric_field[1, 0, :]
-			w = self.electric_field[1, 1, :]
-
-			M11 = x * x.conj() + y * y.conj() + z * z.conj() + w * w.conj()
-			M12 = x * x.conj() - y * y.conj() + z * z.conj() - w * w.conj()
-			M13 = x * y.conj() + y * x.conj() + z * w.conj() + w * z.conj()
-			M14 = 1j * (-x * y.conj() + y * x.conj() - z * w.conj() + w * z.conj())
-
-			row = Field(np.array([M11, M12, M13, M14]), self.electric_field.grid)
+			x = self._electric_field[0, 0, :]
+			y = self._electric_field[0, 1, :]
+			z = self._electric_field[1, 0, :]
+			w = self._electric_field[1, 1, :]
 			
-			return 0.5 * field_dot(row, self._input_stokes_vector).real
+			a, b, c, d = self._input_stokes_vector
+			
+			# NumExpr is not smart enough to have abs(x) be real, so we have to take the real
+			# part manually. This may change in later releases of NumExpr.
+			M11 = 'real(abs(x))**2 + real(abs(y))**2 + real(abs(z))**2 + real(abs(w))**2'
+			M12 = 'real(abs(x))**2 - real(abs(y))**2 + real(abs(z))**2 - real(abs(w))**2'
+			M13 = '2 * (real(x) * real(y) + imag(x) * imag(y) + real(z) * real(w) + imag(z) * imag(w))'
+			M14 = '2 * (-real(x) * imag(y) + imag(x) * real(y) - real(z) * imag(w) + imag(z) * real(w))'
+
+			res = '0.5 * ((' + M11 + ') * a + (' + M12 + ') * b + (' + M13 + ') * c +  (' + M14 + ') * d)'
+			return ne.evaluate(res)
 		else:
 			# This is a vector field. 
 			return np.sum(np.abs(self.electric_field)**2, axis=0)
@@ -137,23 +146,24 @@ class Wavefront(object):
 			return self.grid.zeros()
 		elif self.is_partially_polarized:
 			# This is a tensor field. 
-			x = self.electric_field[0, 0, :]
-			y = self.electric_field[0, 1, :]
-			z = self.electric_field[1, 0, :]
-			w = self.electric_field[1, 1, :]
-
-			M21 = x * x.conj() + y * y.conj() - z * z.conj() - w * w.conj()
-			M22 = x * x.conj() - y * y.conj() - z * z.conj() + w * w.conj()
-			M23 = x * y.conj() + y * x.conj() - z * w.conj() - w * z.conj()
-			M24 = 1j * (-x * y.conj() + y * x.conj() + z * w.conj() - w * z.conj())
-
-			row = Field(np.array([M21, M22, M23, M24]), self.electric_field.grid)
+			x = self._electric_field[0, 0, :]
+			y = self._electric_field[0, 1, :]
+			z = self._electric_field[1, 0, :]
+			w = self._electric_field[1, 1, :]
 			
-			return 0.5 * field_dot(row, self._input_stokes_vector).real
+			a, b, c, d = self._input_stokes_vector
+			
+			M21 = 'real(abs(x))**2 + real(abs(y))**2 - real(abs(z))**2 - real(abs(w))**2'
+			M22 = 'real(abs(x))**2 - real(abs(y))**2 - real(abs(z))**2 + real(abs(w))**2'
+			M23 = '2 * (real(x) * real(y) + imag(x) * imag(y) - real(z) * real(w) - imag(z) * imag(w))'
+			M24 = '2 * (-real(x) * imag(y) + imag(x) * real(y) + real(z) * imag(w) - imag(z) * real(w))'
+			
+			res = '0.5 * ((' + M21 + ') * a + (' + M22 + ') * b + (' + M23 + ') * c +  (' + M24 + ') * d)'
+			return ne.evaluate(res)
 		else:
 			# This is a vector field. 
 			return np.abs(self.electric_field[0,:])**2 - np.abs(self.electric_field[1,:])**2
-	
+
 	@property
 	def U(self):
 		'''The U-component of the Stokes vector as function of 2D position
@@ -164,19 +174,20 @@ class Wavefront(object):
 			return self.grid.zeros()
 		elif self.is_partially_polarized:
 			# This is a tensor field. 
-			x = self.electric_field[0, 0, :]
-			y = self.electric_field[0, 1, :]
-			z = self.electric_field[1, 0, :]
-			w = self.electric_field[1, 1, :]
+			x = self._electric_field[0, 0, :]
+			y = self._electric_field[0, 1, :]
+			z = self._electric_field[1, 0, :]
+			w = self._electric_field[1, 1, :]
+			
+			a, b, c, d = self._input_stokes_vector
+			
+			M31 = '2 * (real(x) * real(z) + imag(x) * imag(z) + real(y) * real(w) + imag(y) * imag(w))'
+			M32 = '2 * (real(x) * real(z) + imag(x) * imag(z) - real(y) * real(w) - imag(y) * imag(w))'
+			M33 = '2 * (real(x) * real(w) + imag(x) * imag(w) + real(y) * real(z) + imag(y) * imag(z))'
+			M34 = '2 * (imag(x) * real(w) - real(x) * imag(w) + real(y) * imag(z) - imag(y) * real(z))'
 
-			M31 = x * z.conj() + y * w.conj() + z * x.conj() + w * y.conj()
-			M32 = x * z.conj() - y * w.conj() + z * x.conj() - w * y.conj()
-			M33 = x * w.conj() + y * z.conj() + z * y.conj() + w * x.conj()
-			M34 = 1j * (-x * w.conj() + y * z.conj() - z * y.conj() + w * x.conj())
-			
-			row = Field(np.array([M31, M32, M33, M34]), self.electric_field.grid)
-			
-			return 0.5 * field_dot(row, self._input_stokes_vector).real
+			res = '0.5 * ((' + M31 + ') * a + (' + M32 + ') * b + (' + M33 + ') * c +  (' + M34 + ') * d)'
+			return ne.evaluate(res)
 		else:
 			# This is a vector field. 
 			return 2 * np.real(self.electric_field[0,:] * self.electric_field[1,:].conj())
@@ -190,20 +201,21 @@ class Wavefront(object):
 			# This is a scaler field.
 			return self.grid.zeros()
 		elif self.is_partially_polarized:
-			# This is a tensor field. 
-			x = self.electric_field[0, 0, :]
-			y = self.electric_field[0, 1, :]
-			z = self.electric_field[1, 0, :]
-			w = self.electric_field[1, 1, :]
+			# This is a tensor field.
+			x = self._electric_field[0, 0, :]
+			y = self._electric_field[0, 1, :]
+			z = self._electric_field[1, 0, :]
+			w = self._electric_field[1, 1, :]
+			
+			a, b, c, d = self._input_stokes_vector
 
-			M41 = 1j * (x * z.conj() + y * w.conj() - z * x.conj() - w * y.conj())
-			M42 = 1j * (x * z.conj() - y * w.conj() - z * x.conj() + w * y.conj())
-			M43 = 1j * (x * w.conj() + y * z.conj() - z * y.conj() - w * x.conj())
-			M44 = x * w.conj() - y * z.conj() - z * y.conj() + w * x.conj()
-			
-			row = Field(np.array([M41, M42, M43, M44]), self.electric_field.grid)
-			
-			return 0.5 * field_dot(row, self._input_stokes_vector).real
+			M41 = '2 * (real(x) * imag(z) - imag(x) * real(z) + real(y) * imag(w) - imag(y) * real(w))'
+			M42 = '2 * (real(x) * imag(z) - imag(x) * real(z) - real(y) * imag(w) + imag(y) * real(w))'
+			M43 = '2 * (real(x) * imag(w) - imag(x) * real(w) + real(y) * imag(z) - imag(y) * real(z))'
+			M44 = '2 * (real(x) * real(w) + imag(x) * imag(w) - real(y) * real(z) - imag(y) * imag(z))'
+
+			res = '0.5 * ((' + M41 + ') * a + (' + M42 + ') * b + (' + M43 + ') * c +  (' + M44 + ') * d)'
+			return ne.evaluate(res)
 		else:
 			# This is a vector field. 
 			return -2 * np.imag(self.electric_field[0,:] * self.electric_field[1,:].conj())
@@ -346,10 +358,4 @@ def jones_to_mueller(jones_matrix):
 	ndarray or tensor Field
 		The Mueller matrix/matrices.
 	'''
-	U = 1 / np.sqrt(2) * np.array([
-		[1,  0,   0,  1],
-		[1,  0,   0, -1],
-		[0,  1,   1,  0],
-		[0, 1j, -1j,  0]])
-	
-	return np.real(field_dot(U, field_dot(field_kron(jones_matrix, jones_matrix.conj()), U.conj().T)))
+	return np.real(field_dot(_U_matrix, field_dot(field_kron(jones_matrix, jones_matrix.conj()), _U_matrix.conj().T)))

@@ -21,16 +21,23 @@ class Wavefront(object):
 		The electric field, either scalar, vectorial or 2-tensorial.
 	wavelength : scalar
 		The wavelength of the wavefront.
-	stokes_vector : ndarray or None
+	input_stokes_vector : ndarray or None
 		If a Stokes vector (I, Q, U, V) is given, a partially-polarized
 		wavefront is initialized. If `electric_field` is scalar, it will
 		be transformed into a tensor field with the correct Jones states.
-		If a tensor-field is given as the `electric_field`, the Stokes
-		vector will be interpreted as corresponding to the Jones vectors
-		(1,0) and (0,1).
+		If a tensor-field is given as the `electric_field`, the electric
+		field will be interpreted as the Jones matrix modifying the input
+		Stokes vector.
+	
+	Raises
+	------
+	ValueError
+		When a Stokes vector is supplied but a vector field is given as 
+		electric field, or when an input Stokes vector is not supplied,
+		but a 2-tensor field is given as electric field.
 	'''
-	def __init__(self, electric_field, wavelength=1, stokes_vector=None):
-		if stokes_vector is not None:
+	def __init__(self, electric_field, wavelength=1, input_stokes_vector=None):
+		if input_stokes_vector is not None:
 			if electric_field.tensor_order not in [0, 2]:
 				raise ValueError('When supplying a Stokes vector, the electric field must be either a scalar or 2-tensor field.')
 			
@@ -39,7 +46,7 @@ class Wavefront(object):
 			else:
 				self._electric_field = electric_field.astype('complex')
 			
-			self._input_stokes_vector = np.array(stokes_vector)
+			self._input_stokes_vector = np.array(input_stokes_vector)
 		else:
 			self._electric_field = electric_field.astype('complex')
 			self._input_stokes_vector = None

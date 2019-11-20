@@ -133,7 +133,7 @@ def test_wavefront_stokes():
 	mueller_field = jones_to_mueller(jones_field)
 
 	field = Field(np.ones(N**2), grid)
-	stokes_wavefront = Wavefront(field, stokes_vector=stokes)
+	stokes_wavefront = Wavefront(field, input_stokes_vector=stokes)
 
 	jones_element_forward = jones_element.forward(stokes_wavefront)
 	mueller_forward = field_dot(mueller_field, stokes)
@@ -146,51 +146,51 @@ def test_wavefront_stokes():
 def test_degree_and_angle_of_polarization():
 	grid = make_pupil_grid(16)
 
-	wf = Wavefront(grid.ones(), stokes_vector=[1, 0, 0, 0])
+	wf = Wavefront(grid.ones(), input_stokes_vector=[1, 0, 0, 0])
 	assert np.allclose(wf.degree_of_polarization, 0)
 	assert np.allclose(wf.degree_of_linear_polarization, 0)
 	assert np.allclose(wf.degree_of_circular_polarization, 0)
 
-	wf = Wavefront(grid.ones(), stokes_vector=[1, 1, 0, 0])
+	wf = Wavefront(grid.ones(), input_stokes_vector=[1, 1, 0, 0])
 	assert np.allclose(wf.degree_of_polarization, 1)
 	assert np.allclose(wf.degree_of_linear_polarization, 1)
 	assert np.allclose(wf.angle_of_linear_polarization, 0)
 	assert np.allclose(wf.degree_of_circular_polarization, 0)
 
-	wf = Wavefront(grid.ones(), stokes_vector=[1, 0.5, 0, 0])
+	wf = Wavefront(grid.ones(), input_stokes_vector=[1, 0.5, 0, 0])
 	assert np.allclose(wf.degree_of_polarization, 0.5)
 	assert np.allclose(wf.degree_of_linear_polarization, 0.5)
 	assert np.allclose(wf.angle_of_linear_polarization, 0)
 	assert np.allclose(wf.degree_of_circular_polarization, 0)
 
-	wf = Wavefront(grid.ones(), stokes_vector=[1, -1, 0, 0])
+	wf = Wavefront(grid.ones(), input_stokes_vector=[1, -1, 0, 0])
 	assert np.allclose(wf.degree_of_polarization, 1)
 	assert np.allclose(wf.degree_of_linear_polarization, 1)
 	assert np.allclose(wf.angle_of_linear_polarization, np.pi / 2)
 	assert np.allclose(wf.degree_of_circular_polarization, 0)
 
-	wf = Wavefront(grid.ones(), stokes_vector=[1, 0, 1, 0])
+	wf = Wavefront(grid.ones(), input_stokes_vector=[1, 0, 1, 0])
 	assert np.allclose(wf.degree_of_polarization, 1)
 	assert np.allclose(wf.degree_of_linear_polarization, 1)
 	assert np.allclose(wf.angle_of_linear_polarization, np.pi / 4)
 	assert np.allclose(wf.degree_of_circular_polarization, 0)
 
-	wf = Wavefront(grid.ones(), stokes_vector=[1, 0, 0, 1])
+	wf = Wavefront(grid.ones(), input_stokes_vector=[1, 0, 0, 1])
 	assert np.allclose(wf.degree_of_polarization, 1)
 	assert np.allclose(wf.degree_of_linear_polarization, 0)
 	assert np.allclose(wf.degree_of_circular_polarization, 1)
 
-	wf = Wavefront(grid.ones(), stokes_vector=[1, 0, 0, 0.5])
+	wf = Wavefront(grid.ones(), input_stokes_vector=[1, 0, 0, 0.5])
 	assert np.allclose(wf.degree_of_polarization, 0.5)
 	assert np.allclose(wf.degree_of_linear_polarization, 0)
 	assert np.allclose(wf.degree_of_circular_polarization, 0.5)
 
-	wf = Wavefront(grid.ones(), stokes_vector=[1, 0, 0, -1])
+	wf = Wavefront(grid.ones(), input_stokes_vector=[1, 0, 0, -1])
 	assert np.allclose(wf.degree_of_polarization, 1)
 	assert np.allclose(wf.degree_of_linear_polarization, 0)
 	assert np.allclose(wf.degree_of_circular_polarization, -1)
 
-	wf = Wavefront(grid.ones(), stokes_vector=[2, np.sqrt(2), 0, np.sqrt(2)])
+	wf = Wavefront(grid.ones(), input_stokes_vector=[2, np.sqrt(2), 0, np.sqrt(2)])
 	assert np.allclose(wf.degree_of_polarization, 1)
 	assert np.allclose(wf.degree_of_linear_polarization, 1 / np.sqrt(2))
 	assert np.allclose(wf.degree_of_circular_polarization, 1 / np.sqrt(2))
@@ -268,7 +268,7 @@ def test_polarization_elements():
 
 	# Test QWPs, HWPs, polarizers and PBSs
 	for stokes_vector in stokes_vectors:
-		test_wf = Wavefront(test_field, stokes_vector=stokes_vector)
+		test_wf = Wavefront(test_field, input_stokes_vector=stokes_vector)
 
 		if stokes_vector is None:
 			# Set Stokes vector for futher calculation to unpolarized light.

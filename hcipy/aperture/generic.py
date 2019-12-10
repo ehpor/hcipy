@@ -64,7 +64,7 @@ def rectangular_aperture(size, center=None):
 	
 	return func
 
-def regular_polygon_aperture(num_sides, circum_diameter, angle=0):
+def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	'''Makes a Field generator for a regular-polygon-shaped aperture.
 
 	Parameters
@@ -75,6 +75,8 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0):
 		The circumdiameter of the polygon.
 	angle : scalar
 		The angle by which to turn the polygon.
+	center : array_like
+		The center of the aperture
 	
 	Returns
 	-------
@@ -88,6 +90,11 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0):
 	
 	apothem = np.cos(np.pi / num_sides) * circum_diameter / 2
 	apothem += apothem * epsilon
+
+	if center is None:
+		shift = np.zeros(2)
+	else:
+		shift = center * np.ones(2)
 
 	# Make use of symmetry
 	if num_sides % 2 == 0:
@@ -103,8 +110,8 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0):
 		m = mask(g) != 0
 
 		x, y = g.coords
-		x = x[m]
-		y = y[m]
+		x = x[m] - shift[0]
+		y = y[m] - shift[1]
 
 		f[~m] = 0
 
@@ -122,7 +129,7 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0):
 	return func
 
 # Convenience function
-def hexagonal_aperture(circum_diameter, angle=0):
+def hexagonal_aperture(circum_diameter, angle=0, center=None):
 	'''Makes a Field generator for a hexagon aperture.
 
 	Parameters
@@ -131,13 +138,15 @@ def hexagonal_aperture(circum_diameter, angle=0):
 		The circumdiameter of the polygon.
 	angle : scalar
 		The angle by which to turn the hexagon.
+	center : array_like
+		The center of the aperture
 	
 	Returns
 	-------
 	Field generator
 		This function can be evaluated on a grid to get a Field.
 	'''
-	return regular_polygon_aperture(6, circum_diameter, angle)
+	return regular_polygon_aperture(6, circum_diameter, angle, center)
 
 def make_spider(p1, p2, spider_width):
 	'''Make a rectangular obstruction from `p1` to `p2`.

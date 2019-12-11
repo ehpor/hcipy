@@ -6,10 +6,40 @@ from scipy.optimize import fsolve
 from ..mode_basis import ModeBasis
 
 def eigenvalue_equation(u, m, V):
+	'''Evaluates the eigenvalue equation for a circular step-index fiber.
+
+	Parameters
+	----------
+	u : scalar
+		The normalized propagation constant.
+	m : int
+		The azimuthal order
+	V : scalar
+		The normalized frequency parameter of the fiber.
+	
+	Returns
+	-------
+	scalar
+		The eigenvalue equation value
+	'''
 	w = np.sqrt(V**2 - u**2)
-	return jv(m, u)/(u * jv(m+1,u)) - kn(m,w)/(w*kn(m+1,w))
+	return jv(m, u)/(u * jv(m+1, u)) - kn(m, w)/(w * kn(m+1, w))
 
 def find_branch_cuts(m, V):
+	'''Find all the solutions for the eigenvalue function.
+
+	Parameters
+	----------
+	m : int
+		The azimuthal order
+	V : scalar
+		The normalized frequency parameter of the fiber.
+	
+	Returns
+	-------
+	Tuple
+		A tuple containing the solutions of the eigenvalue function. If no solutions were found returns None.
+	'''
 	# Make an initial rough grid
 	num_steps = 501
 	theta = np.linspace(np.pi * 9999/20000, 0.001 * np.pi, num_steps)
@@ -17,12 +47,12 @@ def find_branch_cuts(m, V):
 
 	# Find the position where it goes through zero
 	diff = eigenvalue_equation(u, m, V)
-	fu = np.diff( np.sign(diff) ) < 0
-	ind = np.where( abs(fu-1) <= 0.01 )[0]
+	fu = np.diff(np.sign(diff)) < 0
+	ind = np.where(abs(fu - 1) <= 0.01)[0]
 
 	if len(ind) > 0:
 		# Refine the zero with a rootfinding algorithm
-		u0 = fsolve(eigenvalue_equation, u[ind], args=(m,V))
+		u0 = fsolve(eigenvalue_equation, u[ind], args=(m, V))
 		w0 = np.sqrt(V**2 - u0**2)
 		return u0, w0
 	else:
@@ -30,20 +60,24 @@ def find_branch_cuts(m, V):
 	
 
 def LP_radial(m, u, w, r):
-	"""Calculate the field of a bessel mode LP mode.
+	'''Evaluates the radial profile of the LP modes.
 
-	Arguments:
-		- m azimuthal number of periods (m=0,1,2,3...)
-		- u, w  radial phase constant and radial decay constant
-		- x, y transverse coordinates
-		- phioff: offset angle, allows to rotate the mode in
-					the x-y plane
-
-	Returns:
-		- mode: calculated bessel mode
-
-	"""
-
+	Parameters
+	----------
+	m : int
+		The azimuthal order
+	u : scalar
+		The normalized inner propagation constant.
+	w : scalar
+		The normalized outer propagation constant.
+	r : array_like
+		The radial coordinates on which to evaluate the bessel modes.
+	
+	Returns
+	-------
+	array_like
+		An array that contains the radial profile.
+	'''
 	# The scaling factor for the continuity condition
 	scaling_factor = jv(m,u)/kn(m, w)
 
@@ -58,16 +92,46 @@ def LP_radial(m, u, w, r):
 	return mode_field
 
 def LP_azimuthal(m, theta):
+	'''Evaluates the azimuthal profile of the LP modes.
+
+	Parameters
+	----------
+	m : int
+		The azimuthal order
+	theta : array_like
+		The azimuthal coordinates on which to evaluate the cosine and sine modes.
+	
+	Returns
+	-------
+	array_like
+		An array that contains the azimuthal profile.
+	'''
 	if m >= 0:
 		return np.cos(m * theta)
 	else:
 		return np.sin(m * theta)
 
 def make_LP_modes(grid, V_number, core_radius, mode_cutoff=None):
+	'''Make a ModeBasis out of the guided modes that are supported by the fiber parameters.
+
+	Parameters
+	----------
+	grid : Grid
+		The grid on which to calculate the mode basis.
+	V_number : scalar
+		The normalized frequency parameter of the fiber.
+	core_radius : scalar
+		The core radius of a step-index fiber.
+	mode_cutoff : int
+		The number of modes to find.
+	Returns
+	-------
+	ModeBasis
+		An ModeBasis containing all supported LP modes.
+	'''
 	finding_new_modes = True
 	m = 0
 	num_modes = 0
-
 
 	# scaled grid
 	R, Theta = grid.scaled(1/core_radius).as_('polar').coords
@@ -96,15 +160,3 @@ def make_LP_modes(grid, V_number, core_radius, mode_cutoff=None):
 			finding_new_modes = False
 	
 	return ModeBasis(modes, grid)
-
-if __name__ == '__main__':
-	um = 1
-	
-	NA = 0.13
-	a = 2.2 * um
-	wavelength = 0.656 * um
-
-	# set the V-number
-	V = 2 * np.pi / wavelength * a * NA
-	grid = make_pupil_grid(128, 10 * a)
-	modes = make_LP_modes(grid, V, a)

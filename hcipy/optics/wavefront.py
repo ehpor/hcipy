@@ -5,10 +5,10 @@ import numexpr as ne
 from ..field import Field, field_dot, field_kron
 
 _U_matrix = 1 / np.sqrt(2) * np.array([
-	[1,  0,   0,  1],
-	[1,  0,   0, -1],
-	[0,  1,   1,  0],
-	[0, 1j, -1j,  0]])
+	[1, 0, 0, 1],
+	[1, 0, 0, -1],
+	[0, 1, 1, 0],
+	[0, 1j, -1j, 0]])
 
 # TODO Should add a pilot Gaussian beam with each Wavefront
 
@@ -131,7 +131,7 @@ class Wavefront(object):
 			M14 = '2 * (-real(x) * imag(y) + imag(x) * real(y) - real(z) * imag(w) + imag(z) * real(w))'
 
 			res = '0.5 * ((' + M11 + ') * a + (' + M12 + ') * b + (' + M13 + ') * c +  (' + M14 + ') * d)'
-			return ne.evaluate(res)
+			return Field(ne.evaluate(res), self.electric_field.grid)
 		else:
 			# This is a vector field. 
 			return np.sum(np.abs(self.electric_field)**2, axis=0)
@@ -159,7 +159,7 @@ class Wavefront(object):
 			M24 = '2 * (-real(x) * imag(y) + imag(x) * real(y) + real(z) * imag(w) - imag(z) * real(w))'
 			
 			res = '0.5 * ((' + M21 + ') * a + (' + M22 + ') * b + (' + M23 + ') * c +  (' + M24 + ') * d)'
-			return ne.evaluate(res)
+			return Field(ne.evaluate(res), self.electric_field.grid)
 		else:
 			# This is a vector field. 
 			return np.abs(self.electric_field[0,:])**2 - np.abs(self.electric_field[1,:])**2
@@ -187,7 +187,7 @@ class Wavefront(object):
 			M34 = '2 * (imag(x) * real(w) - real(x) * imag(w) + real(y) * imag(z) - imag(y) * real(z))'
 
 			res = '0.5 * ((' + M31 + ') * a + (' + M32 + ') * b + (' + M33 + ') * c +  (' + M34 + ') * d)'
-			return ne.evaluate(res)
+			return Field(ne.evaluate(res), self.electric_field.grid)
 		else:
 			# This is a vector field. 
 			return 2 * np.real(self.electric_field[0,:] * self.electric_field[1,:].conj())
@@ -215,7 +215,7 @@ class Wavefront(object):
 			M44 = '2 * (real(x) * real(w) + imag(x) * imag(w) - real(y) * real(z) - imag(y) * imag(z))'
 
 			res = '0.5 * ((' + M41 + ') * a + (' + M42 + ') * b + (' + M43 + ') * c +  (' + M44 + ') * d)'
-			return ne.evaluate(res)
+			return Field(ne.evaluate(res), self.electric_field.grid)
 		else:
 			# This is a vector field. 
 			return -2 * np.imag(self.electric_field[0,:] * self.electric_field[1,:].conj())
@@ -224,13 +224,10 @@ class Wavefront(object):
 	def stokes_vector(self):
 		'''The Stokes vector.
 		'''
-
 		if self.is_scalar:
-			# This is a scaler field and thus we return an unpolarized Stokes vector.
-
+			# This is a scalar field and thus we return an unpolarized Stokes vector.
 			stokes_vector = Field(np.zeros((4,self.grid.size)), self.grid)
-
-			stokes_vector[0,:] = np.abs(self.electric_field)**2
+			stokes_vector[0, :] = np.abs(self.electric_field)**2
 
 			return stokes_vector
 		elif self.is_partially_polarized:
@@ -242,10 +239,10 @@ class Wavefront(object):
 			# This is a vector field and thus we return a fully polarized Stokes vector. 
 			stokes_vector = Field(np.zeros((4,self.grid.size)), self.grid)
 
-			stokes_vector[0,:] = self.I
-			stokes_vector[1,:] = self.Q
-			stokes_vector[2,:] = self.U
-			stokes_vector[3,:] = self.V
+			stokes_vector[0, :] = self.I
+			stokes_vector[1, :] = self.Q
+			stokes_vector[2, :] = self.U
+			stokes_vector[3, :] = self.V
 			
 			return stokes_vector
 

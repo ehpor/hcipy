@@ -2,6 +2,7 @@ import numpy as np
 import inspect
 import copy
 import collections
+import itertools
 
 class OpticalElement(object):
 	'''Base class for all optical elements.

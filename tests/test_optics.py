@@ -254,14 +254,15 @@ def test_polarization_elements():
 	test_field = grid.ones()
 
 	# Stokes vectors used for testing. 
-	stokes_vectors = [None,
-					np.array([1, 0, 0, 0]), #unpolarized 
-					np.array([1, 1, 0, 0]), # +Q polarized  
-					np.array([1, -1, 0, 0]), # -Q polarized  
-					np.array([1, 0, 1, 0]), # +U polarized  
-					np.array([1, 0, -1, 0]), # -U polarized  
-					np.array([1, 0, 0, 1]), # +V polarized  
-					np.array([1, 0, 0, -1])] # -V polarized  
+	stokes_vectors = [
+		None,
+		np.array([1, 0, 0, 0]), # unpolarized
+		np.array([1, 1, 0, 0]), # +Q polarized
+		np.array([1, -1, 0, 0]), # -Q polarized
+		np.array([1, 0, 1, 0]), # +U polarized
+		np.array([1, 0, -1, 0]), # -U polarized
+		np.array([1, 0, 0, 1]), # +V polarized
+		np.array([1, 0, 0, -1])] # -V polarized
 
 	# Angles of the optics that will be tested.
 	angles = [-45, -22.5, 0, 22.5, 45, 90] # degrees
@@ -280,7 +281,7 @@ def test_polarization_elements():
 
 			# Test if Mueller matrix is the same as reference.
 			QWP_ref = mueller_matrix_for_general_linear_retarder(np.radians(angle), -np.pi / 2)
-			assert np.allclose(QWP_hcipy.get_instance(grid, None, 1).get_instance(grid, None, 1).mueller_matrix, QWP_ref)
+			assert np.allclose(QWP_hcipy.mueller_matrix, QWP_ref)
 
 			# Propagate wavefront through optical element.
 			wf_forward_QWP = QWP_hcipy.forward(test_wf)
@@ -301,7 +302,7 @@ def test_polarization_elements():
 
 			# Test if Mueller matrix is the same as reference.
 			HWP_ref = mueller_matrix_for_general_linear_retarder(np.radians(angle), -np.pi)
-			assert np.allclose(HWP_hcipy.get_instance(grid, None, 1).get_instance(grid, None, 1).mueller_matrix, HWP_ref)
+			assert np.allclose(HWP_hcipy.mueller_matrix, HWP_ref)
 
 			# Propagate wavefront through optical element.
 			wf_forward_HWP = HWP_hcipy.forward(test_wf)
@@ -322,7 +323,7 @@ def test_polarization_elements():
 
 			# Test if Mueller matrix is the same as reference.
 			polarizer_ref = mueller_matrix_for_general_linear_polarizer(np.radians(angle))
-			assert np.allclose(polarizer_hcipy.get_instance(grid, None, 1).get_instance(grid, None, 1).mueller_matrix, polarizer_ref)     
+			assert np.allclose(polarizer_hcipy.mueller_matrix, polarizer_ref)     
 
 			# Propagate wavefront through optical element.
 			wf_forward_polarizer = polarizer_hcipy.forward(test_wf)
@@ -341,8 +342,8 @@ def test_polarization_elements():
 			# Test if Mueller matrices are the same as reference.
 			polarizer_1_ref = mueller_matrix_for_general_linear_polarizer(np.radians(angle))
 			polarizer_2_ref = mueller_matrix_for_general_linear_polarizer(np.radians(angle + 90))
-			assert np.allclose(LPBS_hcipy.mueller_matrix[0], polarizer_1_ref)     
-			assert np.allclose(LPBS_hcipy.mueller_matrix[1], polarizer_2_ref)
+			assert np.allclose(LPBS_hcipy.mueller_matrices[0], polarizer_1_ref)     
+			assert np.allclose(LPBS_hcipy.mueller_matrices[1], polarizer_2_ref)
 
 			# Propagate wavefront through optical element.
 			wf_forward_polarizer_1, wf_forward_polarizer_2 = LPBS_hcipy.forward(test_wf)
@@ -355,25 +356,3 @@ def test_polarization_elements():
 
 			# Test power conservation.
 			assert np.allclose(test_wf.I, wf_forward_polarizer_1.I + wf_forward_polarizer_2.I)
-
-			# Create a rotated halfwave plate.
-			HWP = HalfWavePlate(np.radians(0))
-			rotated_HWP = RotatedJonesMatrixOpticalElement(HWP.get_instance(grid, None, 1).get_instance(grid, None, 1).jones_matrix, np.radians(angle))
-
-			# Test if Mueller matrix is the same as reference.
-			rotated_HWP_ref = mueller_matrix_for_general_linear_retarder(np.radians(angle), -np.pi)
-			assert np.allclose(rotated_HWP.get_instance(grid, None, 1).get_instance(grid, None, 1).get_instance(grid, None, 1).mueller_matrix, rotated_HWP_ref)
-
-			# Test power conservation.
-			wf_forward_rotated_HWP = rotated_HWP.forward(test_wf)
-
-			# Test if result is the same as reference.
-			reference_stokes_post_rotated_HWP = field_dot(rotated_HWP_ref, stokes_vector)
-			assert np.allclose(wf_forward_rotated_HWP.stokes_vector[:, 0], reference_stokes_post_rotated_HWP)
-
-			# Test backward propagation.
-			wf_forward_backward_rotated_HWP = rotated_HWP.backward(wf_forward_rotated_HWP)
-			assert np.allclose(wf_forward_backward_rotated_HWP.stokes_vector[:,0], stokes_vector)
-
-			# Test power conservation.
-			assert np.allclose(test_wf.I, wf_forward_rotated_HWP.I)

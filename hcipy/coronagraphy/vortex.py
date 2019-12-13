@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..optics import OpticalElement, Wavefront
+from ..optics import OpticalElement, Wavefront, LinearRetarder, JonesMatrixOpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..propagation import FraunhoferPropagator
 from ..field import make_focal_grid, Field, make_pupil_grid
 from ..aperture import circular_aperture
@@ -117,6 +117,190 @@ class VortexCoronagraph(OpticalElement):
 
 		pup.wavelength = wavelength
 		return pup
+
+class VectorVortexCoronagraph(AgnosticOpticalElement):
+	'''An vector vortex coronagraph.
+
+	This :class:`OpticalElement` simulations the propagation of light through
+	a vector vortex in the focal plane. To resolve the singularity of this vortex
+	phase plate, a multi-scale approach is made. Discretisation errors made at
+	a certain level are corrected by the next level with finer sampling.
+
+	Parameters
+	----------
+	charge : integer
+		The charge of the vortex.
+	phase_retardation : scalar or function
+		The phase retardation of the vector vortex plate, potentially as a
+		function of wavelength. Changes of the phase retardation as a function
+		of spatial position is not yet supported.
+	levels : integer
+		The number of levels in the multi-scale sampling.
+	scaling_factor : scalar
+		The fractional increase in spatial frequency sampling per level.
+	'''
+	def __init__(self, charge=2, phase_retardation=np.pi, levels=4, scaling_factor=4):
+		self.charge = charge
+		self.phase_retardation = phase_retardation
+		self.levels = levels
+		self.scaling_factor = scaling_factor
+
+		AgnosticOpticalElement.__init__(self)
+
+	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
+		q_outer = 2
+		num_airy_outer = input_grid.shape[0] / 2
+		pupil_diameter = input_grid.shape * input_grid.delta
+
+		focal_grids = []
+		jones_matrices = []
+		instance_data.props = []
+		instance_data.focal_masks = []
+
+		for i in range(self.levels):
+			q = q_outer * self.scaling_factor**i
+
+			if i == 0:
+				num_airy = num_airy_outer
+			else:
+				num_airy = 32.0 / (q_outer * self.scaling_factor**(i - 1))
+
+			focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
+
+			fast_axis_orientation = Field(self.charge / 2 * focal_grid.as_('polar').theta, focal_grid)
+			retardance = self.evaluate_parameter(self.phase_retardation, input_grid, output_grid, wavelength)
+
+			focal_mask_raw = LinearRetarder(retardance, fast_axis_orientation)
+			jones_matrix = focal_mask_raw.jones_matrix
+			jones_matrix *= 1 - circular_aperture(1e-9)(focal_grid)
+
+			def eval_jones(jones_matrix, jones_matrices, focal_grids):
+				mat = jones_matrix.copy()
+
+				for j in range(i):
+					fft = FastFourierTransform(focal_grids[j])
+					mft = MatrixFourierTransform(focal_grid, fft.output_grid)
+
+					mat -= mft.backward(fft.forward(jones_matrices[j]))
+
+				return mat
+
+			jones_matrices.append(focal_mask_raw.construct_function(eval_jones, jones_matrix, jones_matrices, focal_grids))
+			focal_mask = JonesMatrixOpticalElement(jones_matrices[-1])
+
+			prop = FraunhoferPropagator(input_grid, focal_grid)
+
+			focal_grids.append(focal_grid)
+			instance_data.focal_masks.append(focal_mask)
+			instance_data.props.append(prop)
+
+	def get_input_grid(self, output_grid, wavelength):
+		'''Get the input grid for a specified output grid and wavelength.
+		
+		This optical element only supports propagation to the same plane as
+		its input.
+
+		Parameters
+		----------
+		output_grid : Grid
+			The output grid of the optical element.
+		wavelength : scalar or None
+			The wavelength of the outgoing light.
+		
+		Returns
+		-------
+		Grid
+			The input grid corresponding to the output grid and wavelength combination.
+		'''
+		return output_grid
+	
+	def get_output_grid(self, input_grid, wavelength):
+		'''Get the output grid for a specified input grid and wavelength.
+		
+		This optical element only supports propagation to the same plane as
+		its input.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The input grid of the optical element.
+		wavelength : scalar or None
+			The wavelength of the incoming light.
+		
+		Returns
+		-------
+		Grid
+			The output grid corresponding to the input grid and wavelength combination.
+		'''
+		return input_grid
+
+	@make_agnostic_forward
+	def forward(self, instance_data, wavefront):
+		'''Propagate a wavefront through the vortex coronagraph.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The wavefront to propagate. This wavefront is expected to be
+			in the pupil plane.
+		
+		Returns
+		-------
+		Wavefront
+			The Lyot plane wavefront.
+		'''
+		wavelength = wavefront.wavelength
+		wavefront.wavelength = 1
+
+		for i, (mask, prop) in enumerate(zip(instance_data.focal_masks, instance_data.props)):
+			focal = prop(wavefront)
+
+			focal.wavelength = wavelength
+			focal = mask.forward(focal)
+			focal.wavelength = 1
+
+			if i == 0:
+				lyot = prop.backward(focal)
+			else:
+				lyot.electric_field += prop.backward(focal).electric_field
+
+		lyot.wavelength = wavelength
+		return lyot
+
+	@make_agnostic_backward
+	def backward(self, instance_data, wavefront):
+		'''Propagate backwards through the vortex coronagraph.
+
+		This essentially is a forward propagation through a the same vortex
+		coronagraph, but with the sign of the its charge flipped.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The Lyot plane wavefront.
+
+		Returns
+		-------
+		Wavefront
+			The pupil-plane wavefront.
+		'''
+		wavelength = wavefront.wavelength
+		wavefront.wavelength = 1
+
+		for i, (mask, prop) in enumerate(zip(instance_data.focal_masks, instance_data.props)):
+			focal = prop(wavefront)
+
+			focal.wavelength = wavelength
+			focal = mask.backward(focal)
+			focal.wavelength = 1
+
+			if i == 0:
+				pup = prop.backward(focal)
+			else:
+				pup.electric_field += prop.backward(focal).electric_field
+
+			pup.wavelength = wavelength
+			return pup
 
 def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_undersize=0):
 	'''Make field generators for the pupil and Lyot-stop masks for a

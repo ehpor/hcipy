@@ -52,11 +52,7 @@ before_install: |
   fi
 
 install:
-  - pip install -r requirements.txt
-  - pip install "coverage<5.0"
-  - pip install python-coveralls
-  - pip install pytest
-  - python setup.py install
+  - pip install ".[dev]"
 
 script: |
   if [[ $TRAVIS_OS_NAME == "osx" ]]; then

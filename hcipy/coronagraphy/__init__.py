@@ -3,7 +3,7 @@ __all__ += ['KnifeEdgeLyotCoronagraph']
 __all__ += ['LyotCoronagraph', 'OccultedLyotCoronagraph']
 __all__ += ['PerfectCoronagraph']
 __all__ += []
-__all__ += ['VortexCoronagraph', 'make_ravc_masks', 'get_ravc_planet_transmission']
+__all__ += ['VortexCoronagraph', 'VectorVortexCoronagraph', 'make_ravc_masks', 'get_ravc_planet_transmission']
 
 from .apodizing_phase_plate import *
 from .knife_edge import *

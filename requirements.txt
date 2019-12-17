@@ -3,7 +3,6 @@ scipy
 matplotlib>=2.0.0
 Pillow
 pyyaml
-mpmath
 astropy
 imageio
 xxhash

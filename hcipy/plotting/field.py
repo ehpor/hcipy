@@ -1,8 +1,9 @@
 from copy import copy
 import numpy as np
+
 from ..field import Field
 
-def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None, non_linear_axes=False, cmap=None, mask=None, mask_color='k', *args, **kwargs):
+def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None, non_linear_axes=False, cmap=None, mask=None, mask_color='k', grid_units=1, *args, **kwargs):
 	'''Display a two-dimensional image on a matplotlib figure.
 
 	This function serves as an easy replacement for the matplotlib.pyplot.imshow() function.
@@ -39,7 +40,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		If axes are scaled in a non-linear way, for example on a log plot, then imshow_field
 		needs to use a more expensive implementation. This parameter is to indicate that this
 		algorithm needs to be used.
-	cmap : Colormap
+	cmap : Colormap or None
 		The colormap with which to plot the image. It is ignored if a complex
 		field or a vector field is supplied.
 	mask : field or ndarray
@@ -49,6 +50,9 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		be automatically scaled between (0, 1). Zero means invisible, one means visible.
 	mask_color : Color
 		The color of the mask, if it is used.
+	grid_units : scalar or array_like
+		The size of a unit square. The grid will be scaled by the inverse of this number before
+		plotting. If this is a scalar, an isotropic scaling will be applied.
 	
 	Returns
 	-------
@@ -64,10 +68,18 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	
 	ax.set_aspect(aspect)
 
+	# Set/Find the correct grid and scale according to received grid units.
 	if grid is None:
-		grid = field.grid
+		if np.allclose(grid_units, 1):
+			grid = field.grid
+		else:
+			grid = field.grid.scaled(1.0 / grid_units)
 	else:
-		field = Field(field, grid)
+		if np.allclose(grid_units, 1):
+			field = Field(field, grid)
+		else:
+			grid = grid.scaled(1.0 / grid_units)
+			field = Field(field, grid)
 
 	# If field is complex, draw complex
 	if np.iscomplexobj(field):
@@ -99,7 +111,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	else:
 		# We can't draw this directly. 
 		raise NotImplementedError()
-	
+
 	if non_linear_axes:
 		# Use pcolormesh to display
 		x_mid = (x[1:] + x[:-1]) / 2
@@ -121,7 +133,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		im.set_clip_path(patch)
 
 		ax.images.append(im)
-	
+
 	ax.set_xlim(min_x, max_x)
 	ax.set_ylim(min_y, max_y)
 
@@ -152,7 +164,41 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 
 	return im
 
-def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, mask=None, mask_color='w', cmap=None):
+def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, mask=None, mask_color='k', cmap=None):
+	'''Save a two-dimensional field as an image.
+
+	Parameters
+	----------
+	filename : str
+		The path to the file in which to save the field.
+	field : Field or ndarray
+		The field that we want to display. If this is an ndarray,
+		then the parameter `grid` needs to be supplied. If the field
+		is complex, then it will be automatically fed into :func:`complex_field_to_rgb`.
+		If the field is a vector field with length 3 or 4, these will be 
+		interpreted as an RGB or RGBA field.
+	grid : Grid or None
+		If a grid is supplied, it will be used instead of the grid of `field`.
+	vmin : scalar
+		The minimum value on the colorbar. If it is not given, then the minimum value 
+		of the field will be used.
+	vmax : scalar
+		The maximum value on the colorbar. If it is not given, then the maximum value 
+		of the field will be used.
+	norm : Normalize
+		A Normalize instance is used to scale the input to the (0, 1) range for
+		input to the `cmap`. If it is not given, a linear scale will be used.
+	mask : field or ndarray
+		If part of the image needs to be masked, this mask is overlayed on top of the image.
+		This is for example useful when plotting a phase pattern on a certain aperture, which
+		has no meaning outside of the aperture. Masks can be partially translucent, and will
+		be automatically scaled between (0, 1). Zero means invisible, one means visible.
+	mask_color : Color
+		The color of the mask, if it is used.
+	cmap : Colormap or None
+		The colormap with which to plot the image. It is ignored if a complex
+		field or a vector field is supplied.
+	'''
 	import matplotlib as mpl
 	import matplotlib.pyplot as plt
 
@@ -160,7 +206,7 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
 		grid = field.grid
 	else:
 		field = Field(field, grid)
-	
+
 	# If field is complex, draw complex
 	if np.iscomplexobj(field):
 		f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
@@ -175,7 +221,7 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
 				vmax = np.nanmax(field)
 			norm = mpl.colors.Normalize(vmin, vmax)
 		f = field
-	
+
 	if mask is not None:
 		f[~mask.astype('bool')] = np.nan
 
@@ -185,6 +231,26 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
 	plt.imsave(filename, f.shaped, cmap=cmap, vmin=vmin, vmax=vmax)
 
 def contour_field(field, grid=None, ax=None, *args, **kwargs):
+	'''Plot contours of a field.
+
+	Parameters
+	----------
+	field : Field or ndarray
+		The field that we want to display. If this is an ndarray,
+		then the parameter `grid` needs to be supplied. If the field
+		is complex, then it will be automatically fed into :func:`complex_field_to_rgb`.
+		If the field is a vector field with length 3 or 4, these will be 
+		interpreted as an RGB or RGBA field.
+	grid : Grid or None
+		If a grid is supplied, it will be used instead of the grid of `field`.
+	ax : matplotlib axes
+		The axes which to draw on. If it is not given, the current axes will be used.
+	
+	Returns
+	-------
+	QuadContourSet
+		The plotted contour set.
+	'''
 	import matplotlib.pyplot as plt
 	if ax is None:
 		ax = plt.gca()
@@ -193,7 +259,7 @@ def contour_field(field, grid=None, ax=None, *args, **kwargs):
 		grid = field.grid
 	else:
 		field = Field(field, grid)
-	
+
 	c_grid = grid.as_('cartesian')
 	min_x, min_y, max_x, max_y = c_grid.x.min(), c_grid.y.min(), c_grid.x.max(), c_grid.y.max()
 
@@ -201,9 +267,9 @@ def contour_field(field, grid=None, ax=None, *args, **kwargs):
 		# We can contour directly
 		x, y = grid.coords.separated_coords
 		z = field.shaped
-		
+
 		X, Y = np.meshgrid(x, y)
-		
+
 		cs = ax.contour(X, Y, z, *args, **kwargs)
 	else:
 		raise NotImplementedError()
@@ -211,6 +277,26 @@ def contour_field(field, grid=None, ax=None, *args, **kwargs):
 	return cs
 
 def contourf_field(field, grid=None, ax=None, *args, **kwargs):
+	'''Plot filled contours of a field.
+
+	Parameters
+	----------
+	field : Field or ndarray
+		The field that we want to display. If this is an ndarray,
+		then the parameter `grid` needs to be supplied. If the field
+		is complex, then it will be automatically fed into :func:`complex_field_to_rgb`.
+		If the field is a vector field with length 3 or 4, these will be 
+		interpreted as an RGB or RGBA field.
+	grid : Grid or None
+		If a grid is supplied, it will be used instead of the grid of `field`.
+	ax : matplotlib axes
+		The axes which to draw on. If it is not given, the current axes will be used.
+	
+	Returns
+	-------
+	QuadContourSet
+		The plotted contour set.
+	'''
 	import matplotlib.pyplot as plt
 	if ax is None:
 		ax = plt.gca()
@@ -219,7 +305,7 @@ def contourf_field(field, grid=None, ax=None, *args, **kwargs):
 		grid = field.grid
 	else:
 		field = Field(field, grid)
-	
+
 	c_grid = grid.as_('cartesian')
 	min_x, min_y, max_x, max_y = c_grid.x.min(), c_grid.y.min(), c_grid.x.max(), c_grid.y.max()
 
@@ -237,11 +323,41 @@ def contourf_field(field, grid=None, ax=None, *args, **kwargs):
 	return cs
 
 def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
-	"""
-	Takes an array of complex number and converts it to an array of [r, g, b],
-	where phase gives hue and saturaton/value are given by the absolute value.
-	Especially for use with imshow for complex plots.
-	"""
+	'''Convert a complex field to an RGB field.
+
+	This function takes a scalar Field with complex numbers and converts it to
+	a vector Field containing the red, green and blue values corresponding to the
+	phase and amplitude of the complex input Field. The phase is decoded as hue, and
+	amplitude as saturation/value. This function is especially useful for plotting complex
+	fields.
+
+	Parameters
+	----------
+	field : scalar Field or ndarray
+		The field that we want to convert.
+	theme : ['dark', 'light']
+		Whether to modulate saturation or value as a function of amplitude of the
+		input field. Dark mode modulates value, light mode modulates saturation.
+	rmin : scalar
+		The minimum value on the colorbar. If this is not given, then the minimum
+		of the absolute value of the Field will be used.
+	rmax : scalar
+		The maximum value on the colorbar. If this is not given, then the maximum
+		of the absolute value of the Field will be used.
+	norm : Normalize
+		A Normalize instance is used to scale the absolute value to the (0, 1) range
+		used for the value or saturation for the returned color. If it is not given,
+		a linear scale will be used.
+	
+	Returns
+	-------
+	Field
+		A vector field containing the red, green and blue components.
+	Raises
+	------
+	ValueError
+		If the supplied field is not a scalar field.
+	'''
 	import matplotlib as mpl
 
 	if not field.is_scalar_field:
@@ -253,7 +369,7 @@ def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
 		if rmax is None:
 			rmax = np.nanmax(np.abs(field))
 		norm = mpl.colors.Normalize(rmin, rmax, True)
-	
+
 	hsv = np.zeros((field.size, 3), dtype='float')
 	hsv[..., 0] = np.angle(field) / (2 * np.pi) % 1
 

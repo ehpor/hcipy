@@ -8,11 +8,12 @@ import nbformat
 
 from PIL import Image, ImageChops
 
-def compile_tutorial(tutorial_name):
-	print('Compiling tutorial ' + tutorial_name + '...')
+def compile_tutorial(tutorial_name, force_recompile=False):
+	print('- Compiling tutorial ' + tutorial_name + '...')
 
 	notebook_path = 'tutorial_notebooks/' + tutorial_name + '/' + tutorial_name + '.ipynb'
 	export_path = 'tutorials/' + tutorial_name + '/' + tutorial_name
+	thumb_dest = os.path.dirname(export_path) + '/thumb.png'
 
 	if not os.path.exists(os.path.dirname(export_path)):
 		os.makedirs(os.path.dirname(export_path))
@@ -40,6 +41,15 @@ def compile_tutorial(tutorial_name):
 		level = notebook.metadata['difficulty'].capitalize()
 	else:
 		level = 'Unknown'
+	
+	# Check if the tutorial was already compiled.
+	if os.path.exists(export_path + '.rst'):
+		if os.path.getmtime(export_path + '.rst') > os.path.getmtime(notebook_path):
+			if force_recompile:
+				print('  Already compiled. Recompiling anyway...')
+			else:
+				print('  Already compiled. Skipping...')
+				return title, level, description, thumb_dest.split('/', 1)[-1]
 
 	# Execute notebook if not already executed
 	already_executed = any(c.get('outputs') or c.get('execution_count') for c in notebook.cells if c.cell_type == 'code')
@@ -61,7 +71,6 @@ def compile_tutorial(tutorial_name):
 	writer.write(output, resources, notebook_name=os.path.basename(export_path))
 
 	pictures = sorted(resources['outputs'], key=output.find)
-	thumb_dest = os.path.dirname(export_path) + '/thumb.png'
 
 	try:
 		thumbnail_source = pictures[thumbnail_figure_index]
@@ -84,6 +93,8 @@ def compile_tutorial(tutorial_name):
 		img.save(thumb_dest)
 	except:
 		shutil.copyfile('_static/no_thumb.png', thumb_dest)
+	
+	print('  Done!')
 
 	return title, level, description, thumb_dest.split('/', 1)[-1]
 

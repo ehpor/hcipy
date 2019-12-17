@@ -52,6 +52,7 @@ before_install: |
   fi
 
 install:
+  - pip install --upgrade numpy
   - pip install ".[dev]"
 
 script: |

@@ -1,40 +1,52 @@
 import numpy as np
-from .optical_element import OpticalElement, make_agnostic_optical_element
+
+from .optical_element import AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from .wavefront import Wavefront
 from ..field import Field
 
-@make_agnostic_optical_element([], ['magnification'])
-class Magnifier(OpticalElement):
-	'''A monochromatic magnifier for electric fields.
-	
-	This magnifies the wavefront with a certain magnification factor.
-	It does not take into acount propagation effects.
-	
-	Parameters
-	----------
-	magnification : scalar
-		The magnification we want to apply to the grid of the wavefront.
-	wavelength : scalar
-		The wavelength at which the magnification is defined.
-	'''
-	def __init__(self, magnification, wavelength=1):
+class Magnifier(AgnosticOpticalElement):
+	def __init__(self, magnification):
 		self.magnification = magnification
-		self.wavelength = wavelength
+
+		AgnosticOpticalElement.__init__(self, False, True)
 	
-	def forward(self, wavefront):
+	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
+		instance_data.magnification = self.evaluate_parameter(self.magnification, input_grid, output_grid, wavelength)
+	
+	@property
+	def magnification(self):
+		return self._magnification
+	
+	@magnification.setter
+	def magnification(self, magnification):
+		self._magnification = magnification
 
-		new_grid = wavefront.electric_field.grid.scaled(self.magnification)
+		self.clear_cache()
+	
+	def get_input_grid(self, output_grid, wavelength):
+		magnification = self.evaluate_parameter(self.magnification, None, None, wavelength)
 
-		wf = Wavefront(Field(wavefront.electric_field.copy(), new_grid), wavefront.wavelength)
-		wf.total_power = wavefront.total_power
+		return output_grid.scaled(1.0 / magnification)
+	
+	def get_output_grid(self, input_grid, wavelength):
+		magnification = self.evaluate_parameter(self.magnification, input_grid, None, wavelength)
+
+		return input_grid.scaled(magnification)
+	
+	@make_agnostic_forward
+	def forward(self, instance_data, wavefront):
+		wf = wavefront.copy()
+
+		wf.electric_field.grid = wf.electric_field.grid.scaled(instance_data.magnification)
+		wf.electric_field /= instance_data.magnification**2
 
 		return wf
 	
-	def backward(self, wavefront):
+	@make_agnostic_backward
+	def backward(self, instance_data, wavefront):
+		wf = wavefront.copy()
 
-		new_grid = wavefront.electric_field.grid.scaled(1/self.magnification)
-
-		wf = Wavefront(Field(wavefront.electric_field.copy(), new_grid), wavefront.wavelength)
-		wf.total_power = wavefront.total_power
+		wf.electric_field.grid = wf.electric_field.grid.scaled(1.0 / instance_data.magnification)
+		wf.electric_field *= instance_data.magnification**2
 
 		return wf

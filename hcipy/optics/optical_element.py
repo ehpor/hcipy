@@ -517,60 +517,79 @@ class AgnosticOpticalElement(OpticalElement):
 		
 		for kwarg in kwargs.values():
 			signature |= self._get_parameter_signature(kwarg)
+		
+		# Check original function for direct parameter dependencies
+		function_params = _get_function_parameters(function)
 
+		if 'input_grid' in function_params:
+			kwargs['input_grid'] = lambda input_grid: input_grid
+			signature |= INPUT_GRID_DEPENDENT
+
+		if 'output_grid' in function_params:
+			kwargs['output_grid'] = lambda output_grid: output_grid
+			signature |= OUTPUT_GRID_DEPENDENT
+
+		if 'wavelength' in function_params:
+			kwargs['wavelength'] = lambda wavelength: wavelength
+			signature |= WAVELENGTH_DEPENDENT
+
+		# If parameters are not a function of anything, evaluate the function now and return the result
 		if signature == 0:
 			return function(*args, **kwargs)
+		
+		# Put all args in kwargs, but ignore input_grid, output_grid and wavelength
+		index = 0
+		for param_name in function_params:
+			if param_name in ['input_grid', 'output_grid', 'wavelength']:
+				continue
 
+			kwargs[param_name] = args[index]
+			index += 1
+			
+			if len(args) == index:
+				break
+
+		# Create the returned function
 		if signature == (INPUT_GRID_DEPENDENT & OUTPUT_GRID_DEPENDENT & WAVELENGTH_DEPENDENT):
 			def func(input_grid, output_grid, wavelength):
-				evaluated_args = tuple((self.evaluate_parameter(p, input_grid, output_grid, wavelength) for p in args))
-				
 				evaluated_kwargs = {}
 				for key, val in kwargs.items():
 					evaluated_kwargs[key] = self.evaluate_parameter(val, input_grid, output_grid, wavelength)
 
-				return function(*evaluated_args, **evaluated_kwargs)
+				return function(**evaluated_kwargs)
 		elif signature == (INPUT_GRID_DEPENDENT & OUTPUT_GRID_DEPENDENT):
 			def func(input_grid, output_grid):
-				evaluated_args = tuple((self.evaluate_parameter(p, input_grid, output_grid, None) for p in args))
-				
 				evaluated_kwargs = {}
 				for key, val in kwargs.items():
 					evaluated_kwargs[key] = self.evaluate_parameter(val, input_grid, output_grid, None)
 
-				return function(*evaluated_args, **evaluated_kwargs)
+				return function(**evaluated_kwargs)
 		elif signature == (INPUT_GRID_DEPENDENT & WAVELENGTH_DEPENDENT):
 			def func(input_grid, wavelength):
-				evaluated_args = tuple((self.evaluate_parameter(p, input_grid, None, wavelength) for p in args))
-				
 				evaluated_kwargs = {}
 				for key, val in kwargs.items():
 					evaluated_kwargs[key] = self.evaluate_parameter(val, input_grid, None, wavelength)
 
-				return function(*evaluated_args, **evaluated_kwargs)
+				return function(**evaluated_kwargs)
 		elif signature == INPUT_GRID_DEPENDENT:
 			def func(input_grid):
-				evaluated_args = tuple((self.evaluate_parameter(p, input_grid, None, None) for p in args))
-				
 				evaluated_kwargs = {}
 				for key, val in kwargs.items():
 					evaluated_kwargs[key] = self.evaluate_parameter(val, input_grid, None, None)
 
-				return function(*evaluated_args, **evaluated_kwargs)
+				return function(**evaluated_kwargs)
 		elif signature == WAVELENGTH_DEPENDENT:
 			def func(wavelength):
-				evaluated_args = tuple((self.evaluate_parameter(p, None, None, wavelength) for p in args))
-				
 				evaluated_kwargs = {}
 				for key, val in kwargs.items():
 					evaluated_kwargs[key] = self.evaluate_parameter(val, None, None, wavelength)
 
-				return function(*evaluated_args, **evaluated_kwargs)
+				return function(**evaluated_kwargs)
 		else:
 			raise RuntimeError('Signature was not recognized.')
 
 		return func
-	
+
 	def get_instance_data(self, input_grid, output_grid, wavelength):
 		'''Get the InstanceData object corresponding to the given grids and wavelength.
 

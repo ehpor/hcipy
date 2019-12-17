@@ -1,5 +1,5 @@
 __all__ = ['make_power_law_error', 'SurfaceAberration', 'SurfaceAberrationAtDistance']
-__all__ += ['Apodizer', 'PhaseApodizer', 'ThinLens', 'SurfaceApodizer', 'ComplexSurfaceApodizer', 'MultiplexedComplexSurfaceApodizer']
+__all__ += ['Apodizer', 'PhaseApodizer', 'SurfaceApodizer', 'ComplexSurfaceApodizer', 'MultiplexedComplexSurfaceApodizer']
 __all__ += ['DynamicOpticalSystem']
 __all__ += ['make_gaussian_influence_functions', 'make_xinetics_influence_functions', 'DeformableMirror', 'label_actuator_centroid_positions']
 __all__ += ['Detector', 'NoiselessDetector', 'NoisyDetector']

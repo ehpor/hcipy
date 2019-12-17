@@ -17,7 +17,7 @@ def check_against_reference(field_generator, diameter, baseline_name):
 
 		assert np.allclose(field, reference)
 	else:
-		warnings.warn('Baseline aperture not available. Writing reference now...')
+		warnings.warn('Baseline aperture %s not available. Writing reference now...' % fname)
 
 		if not os.path.exists(os.path.dirname(fname)):
 			os.makedirs(os.path.dirname(fname))
@@ -35,10 +35,13 @@ def check_segmentation(aperture_function):
 	assert np.allclose(aperture, aperture_from_segments)
 
 def check_aperture_against_reference(aperture_function, basename, diameter, options):
-	for option in itertools.product(*options.values()):
+	keys = sorted(options.keys())
+	vals = [value for key, value in sorted(options.items())]
+
+	for option in itertools.product(*vals):
 		fname = basename + '/pupil' + ''.join([o[1] for o in option])
 
-		kwargs = dict(zip(options.keys(), [o[0] for o in option]))
+		kwargs = dict(zip(keys, [o[0] for o in option]))
 		aperture = aperture_function(**kwargs)
 
 		check_against_reference(aperture, 1 if kwargs.get('normalized', False) else diameter, fname)

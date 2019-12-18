@@ -358,12 +358,11 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 	statistic : string or callable
 		The statistic to compute (default is 'mean').
 		The following statistics are available:
-		  * 'mean' : compute the mean of values for points within each superpixel.
-		  * 'median' : compute the median of values for points within each superpixel.
-		  * 'sum' : compute the sum of values for points within each  superpixel. 
-		    This is identical to a weighted histogram.
-		  * 'min' : compute the minimum of values for points within each superpixel.
-		  * 'max' : compute the maximum of values for point within each superpixel.
+		* 'mean': compute the mean of values for points within each superpixel.
+		* 'median': compute the median of values for points within each superpixel.
+		* 'sum': compute the sum of values for points within each superpixel. This is identical to a weighted histogram.
+		* 'min': compute the minimum of values for points within each superpixel.
+		* 'max': compute the maximum of values for point within each superpixel.
 
 	Returns
 	-------
@@ -432,12 +431,11 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 	statistic : string or callable
 		The statistic to compute (default is 'mean').
 		The following statistics are available:
-		  * 'mean' : compute the mean of values for points within each superpixel.
-		  * 'median' : compute the median of values for points within each superpixel.
-		  * 'sum' : compute the sum of values for points within each  superpixel. 
-		    This is identical to a weighted histogram.
-		  * 'min' : compute the minimum of values for points within each superpixel.
-		  * 'max' : compute the maximum of values for point within each superpixel.
+		* 'mean': compute the mean of values for points within each superpixel.
+		* 'median': compute the median of values for points within each superpixel.
+		* 'sum': compute the sum of values for points within each superpixel. This is identical to a weighted histogram.
+		* 'min': compute the minimum of values for points within each superpixel.
+		* 'max': compute the maximum of values for point within each superpixel.
 	make_sparse : boolean
 		If the resulting ModeBasis needs to be sparsified. This is ignored if
 		only a single Field generator is provided.

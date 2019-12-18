@@ -13,11 +13,11 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 	with a small blocking mask, see [2]_.
 
 	.. [1] N'Diaye et al. 2013, "Calibration of quasi-static 
-	aberrations in exoplanet direct-imaging instruments with a 
-	Zernike phase-mask sensor"
+		aberrations in exoplanet direct-imaging instruments with a 
+		Zernike phase-mask sensor"
 
 	.. [2] Soummer et al. 2007, "Fast computation of Lyot-style
-	coronagraph propagation"
+		coronagraph propagation"
 
 	Parameters
 	----------
@@ -154,14 +154,14 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 	retarder. 
 	
 	.. [1] Doelman et al. 2019, "Simultaneous phase and amplitude aberration sensing 
-	with a liquid-crystal vector-Zernike phase mask"
+		with a liquid-crystal vector-Zernike phase mask"
 
 	.. [2] N'Diaye et al. 2013, "Calibration of quasi-static 
-	aberrations in exoplanet direct-imaging instruments with a 
-	Zernike phase-mask sensor"
+		aberrations in exoplanet direct-imaging instruments with a 
+		Zernike phase-mask sensor"
 
 	.. [3] Soummer et al. 2007, "Fast computation of Lyot-style
-	coronagraph propagation"
+		coronagraph propagation"
 
 	Parameters
 	----------

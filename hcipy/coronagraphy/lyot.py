@@ -8,7 +8,7 @@ class LyotCoronagraph(OpticalElement):
 	method for propagation is based on [1]_.
 	
 	.. [1] Soummer et al. 2007, "Fast computation of Lyot-style
-	coronagraph propagation".
+		coronagraph propagation".
 
 	Parameters
 	----------

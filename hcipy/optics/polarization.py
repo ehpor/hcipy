@@ -319,10 +319,10 @@ class LinearPolarizer(JonesMatrixOpticalElement):
 		self.clear_cache()
 
 class LinearPolarizingBeamSplitter(OpticalElement):
-	''' A linear polarizing beam splitter that accepts one wavefront and returns two linearly polarized wavefronts.
+	''' A linear polarizing beam splitter that accepts one wavefront and returns two orthogonally linearly polarized wavefronts.
 
 	The first of the returned wavefront will have the polarization state set by the polarization angle. The second wavefront
-	 will be perpendicular to the first.
+	will be perpendicular to the first.
 
 	Parameters
 	----------
@@ -382,10 +382,13 @@ class LinearPolarizingBeamSplitter(OpticalElement):
 		return jones_to_mueller(self.polarizer_port_1.jones_matrix), jones_to_mueller(self.polarizer_port_2.jones_matrix)
 
 class CircularPolarizingBeamSplitter(OpticalElement):
-	''' A circular polarizing beam splitter that accepts one wavefront and returns two circularly polarized wavefronts.
+	''' A circular polarizing beam splitter that accepts one wavefront and returns two linearly polarized wavefronts.
 
-	The first of the returned wavefront will have the left circular polarization state set by the polarization angle. The second wavefront
-	 will be perpendicular to the first.
+	The circular polarizing beam splitter is a combination of a quarter-wave plate and a polarizing beam splitter. The
+	quarter-wave plate rotation angle is 45 degrees and the polarizing beam-splitter rotation angle is zero degrees.
+	Therefore, the first of the returned wavefronts will have a linear polarization state with an electric field equal 
+	to the amount of left-circular polarization in the incoming wavefront. The second wavefront will be perpendicular 
+	to the first and with electric field equal to the amount of right-circular polarization in the incoming wavefront. 
 
 	Parameters
 	----------
@@ -399,7 +402,7 @@ class CircularPolarizingBeamSplitter(OpticalElement):
 		self.linear_polarizing_beam_splitter = LinearPolarizingBeamSplitter(self.polarization_angle)
 		
 	def forward(self, wavefront):
-		'''Propgate the wavefront through the PBS.
+		'''Propgate the wavefront through the CBS.
 
 		Parameters
 		----------
@@ -409,16 +412,16 @@ class CircularPolarizingBeamSplitter(OpticalElement):
 		Returns
 		-------
 		wf_1 : Wavefront 
-			The wavefront propagated through a polarizer under the polarization angle.
+			The wavefront propagated through a quarter-wave plate at 45 degrees and a polarizer 0 degrees.
 
 		wf_2 : Wavefront 
-			The propagated wavefront through a polarizer perpendicular to the first one.
+			The wavefront propagated through a quarter-wave plate at 45 degrees and a polarizer 90 degrees.
 		'''
 		wf_1, wf_2 = self.linear_polarizing_beam_splitter.forward(self.quarter_wave_plate.forward(wavefront))
 		return wf_1, wf_2
 
 	def backward(self, wavefront):
-		'''Propagate the wavefront backwards through the PBS.
+		'''Propagate the wavefront backwards through the CBS.
 
 		Not possible, will raise error.
 		'''

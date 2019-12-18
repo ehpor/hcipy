@@ -356,3 +356,28 @@ def test_polarization_elements():
 
 			# Test power conservation.
 			assert np.allclose(test_wf.I, wf_forward_polarizer_1.I + wf_forward_polarizer_2.I)
+
+		# Create polarizing beam splitter
+		CPBS_hcipy = CircularPolarizingBeamSplitter()
+
+		# Test if Mueller matrices are the same as reference.
+		circ_polarizer_1_ref = mueller_matrix_for_general_linear_polarizer(0)
+		circ_polarizer_2_ref = mueller_matrix_for_general_linear_polarizer(np.radians(90))
+		QWP_1_ref = mueller_matrix_for_general_linear_retarder(np.pi/4, -np.pi / 2)
+		CP_1_ref = np.dot(circ_polarizer_1_ref,QWP_1_ref)
+		CP_2_ref = np.dot(circ_polarizer_2_ref,QWP_1_ref)
+		
+		assert np.allclose(CPBS_hcipy.mueller_matrices[0], CP_1_ref)     
+		assert np.allclose(CPBS_hcipy.mueller_matrices[1], CP_2_ref)
+
+		# Propagate wavefront through optical element.
+		wf_forward_circ_polarizer_1, wf_forward_circ_polarizer_2 = CPBS_hcipy.forward(test_wf)
+
+		# Test if result is the same as reference.
+		reference_stokes_post_circ_polarizer_1 = field_dot(CP_1_ref, stokes_vector)
+		reference_stokes_post_circ_polarizer_2 = field_dot(CP_2_ref, stokes_vector)
+		assert np.allclose(wf_forward_circ_polarizer_1.stokes_vector[:, 0], reference_stokes_post_circ_polarizer_1)
+		assert np.allclose(wf_forward_circ_polarizer_2.stokes_vector[:, 0], reference_stokes_post_circ_polarizer_2)
+
+		# Test power conservation.
+		assert np.allclose(test_wf.I, wf_forward_circ_polarizer_1.I + wf_forward_circ_polarizer_2.I)

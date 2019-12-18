@@ -24,7 +24,7 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 		focal_length : scalar
 			The focal length of the lens system.
 	'''
-	def __init__(self, input_grid, output_grid, focal_length):
+	def __init__(self, input_grid, output_grid, focal_length=1):
 		self._input_grid = input_grid
 		self._output_grid = output_grid
 		self._focal_length = focal_length

@@ -357,6 +357,27 @@ def test_polarization_elements():
 			# Test power conservation.
 			assert np.allclose(test_wf.I, wf_forward_polarizer_1.I + wf_forward_polarizer_2.I)
 
+			# Test multiplication of polarization optics 
+			# 1) JonesMatrixOpticalElement * JonesMatrixOpticalElement 
+			multiplication_test_1 = polarizer_hcipy * QWP_hcipy
+			# 2) JonesMatrixOpticalElement * numpy array 
+			multiplication_test_2 = polarizer_hcipy * QWP_hcipy.jones_matrix
+
+			multiplication_test_ref = np.dot(polarizer_ref, QWP_ref)
+
+			# testing if the Mueller matrices are the same
+			assert np.allclose(multiplication_test_1.mueller_matrix, multiplication_test_ref)
+			assert np.allclose(multiplication_test_2.mueller_matrix, multiplication_test_ref)
+
+			# propagating the wavefront through the optics
+			wf_forward_multiplication_1 = multiplication_test_1.forward(test_wf)
+			wf_forward_multiplication_2 = multiplication_test_2.forward(test_wf)
+
+			reference_stokes_post_multiplication = field_dot(multiplication_test_ref, stokes_vector)
+
+			assert np.allclose(wf_forward_multiplication_1.stokes_vector[:, 0], reference_stokes_post_multiplication)
+			assert np.allclose(wf_forward_multiplication_2.stokes_vector[:, 0], reference_stokes_post_multiplication)
+
 		# Create polarizing beam splitter
 		CPBS_hcipy = CircularPolarizingBeamSplitter()
 
@@ -366,7 +387,7 @@ def test_polarization_elements():
 		QWP_1_ref = mueller_matrix_for_general_linear_retarder(np.pi/4, -np.pi / 2)
 		CP_1_ref = np.dot(circ_polarizer_1_ref,QWP_1_ref)
 		CP_2_ref = np.dot(circ_polarizer_2_ref,QWP_1_ref)
-		
+
 		assert np.allclose(CPBS_hcipy.mueller_matrices[0], CP_1_ref)     
 		assert np.allclose(CPBS_hcipy.mueller_matrices[1], CP_2_ref)
 

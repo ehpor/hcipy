@@ -410,7 +410,7 @@ class AgnosticOpticalElement(OpticalElement):
 					return INPUT_GRID_DEPENDENT
 				elif 'lam' in param_parameters[0] or 'wave' in param_parameters[0] or 'wvl' in param_parameters[0]:
 					return WAVELENGTH_DEPENDENT
-				return INPUT_GRID_DEPENDENT
+				return WAVELENGTH_DEPENDENT
 			elif self._grid_dependent:
 				# Only grid dependent
 				return INPUT_GRID_DEPENDENT
@@ -550,21 +550,22 @@ class AgnosticOpticalElement(OpticalElement):
 				break
 
 		# Create the returned function
-		if signature == (INPUT_GRID_DEPENDENT & OUTPUT_GRID_DEPENDENT & WAVELENGTH_DEPENDENT):
+		if signature == (INPUT_GRID_DEPENDENT | OUTPUT_GRID_DEPENDENT | WAVELENGTH_DEPENDENT):
 			def func(input_grid, output_grid, wavelength):
 				evaluated_kwargs = {}
 				for key, val in kwargs.items():
 					evaluated_kwargs[key] = self.evaluate_parameter(val, input_grid, output_grid, wavelength)
 
 				return function(**evaluated_kwargs)
-		elif signature == (INPUT_GRID_DEPENDENT & OUTPUT_GRID_DEPENDENT):
+		elif signature == (INPUT_GRID_DEPENDENT | OUTPUT_GRID_DEPENDENT):
 			def func(input_grid, output_grid):
 				evaluated_kwargs = {}
 				for key, val in kwargs.items():
 					evaluated_kwargs[key] = self.evaluate_parameter(val, input_grid, output_grid, None)
 
 				return function(**evaluated_kwargs)
-		elif signature == (INPUT_GRID_DEPENDENT & WAVELENGTH_DEPENDENT):
+		elif signature == (INPUT_GRID_DEPENDENT | WAVELENGTH_DEPENDENT):
+			print(kwargs.keys())
 			def func(input_grid, wavelength):
 				evaluated_kwargs = {}
 				for key, val in kwargs.items():
@@ -586,7 +587,7 @@ class AgnosticOpticalElement(OpticalElement):
 
 				return function(**evaluated_kwargs)
 		else:
-			raise RuntimeError('Signature was not recognized.')
+			raise RuntimeError('Signature %d was not recognized.' % signature)
 
 		return func
 

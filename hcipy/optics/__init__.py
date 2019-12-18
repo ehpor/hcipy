@@ -5,9 +5,11 @@ __all__ += ['make_gaussian_influence_functions', 'make_xinetics_influence_functi
 __all__ += ['Detector', 'NoiselessDetector', 'NoisyDetector']
 __all__ += ['SingleModeFiber', 'fiber_mode_gaussian', 'SingleModeFiberArray']
 __all__ += ['GaussianBeam']
+__all__ += ['make_sellmeier_glass', 'make_cauchy_glass', 'glass_catalogue']
 __all__ += ['Magnifier']
-__all__ += ['MicroLensArray', 'closest_points']
+__all__ += ['EvenAsphereMicroLensArray', 'MicroLensArray', 'closest_points']
 __all__ += ['OpticalElement', 'make_agnostic_optical_element', 'OpticalSystem', 'make_polychromatic']
+__all__ += ['PeriodicOpticalElement']
 __all__ += ['PhaseRetarder', 'LinearRetarder', 'CircularRetarder', 'QuarterWavePlate', 'HalfWavePlate', 'LinearPolarizer']
 __all__ += ['SegmentedDeformableMirror']
 __all__ += ['TipTiltMirror']
@@ -24,8 +26,10 @@ from .deformable_mirror import *
 from .detector import *
 from .fiber import *
 from .gaussian_beam import *
+from .glass import *
 from .magnifier import *
 from .micro_lens_array import *
+from .periodic_optical_element import *
 from .polarization import *
 from .segmented_mirror import *
 from .tip_tilt_mirror import *

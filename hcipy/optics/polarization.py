@@ -117,21 +117,6 @@ class JonesMatrixOpticalElement(AgnosticOpticalElement):
 			jones_matrix = self.construct_function(field_dot, self.jones_matrix, b)
 
 		return JonesMatrixOpticalElement(jones_matrix)
-	
-	def __rmul__(self, b):
-		'''Multiply the Jones matrix on the left side with the Jones matrix m. 
-
-		Parameters
-		----------
-		m : JonesMatrixOpticalElement, Field or matrix
-			The Jones matrix with which to multiply. 
-		'''
-		if hasattr(b, 'jones_matrix'):
-			jones_matrix = self.construct_function(field_dot, b.jones_matrix, self.jones_matrix)
-		else:
-			jones_matrix = self.construct_function(field_dot, b, self.jones_matrix)
-
-		return JonesMatrixOpticalElement(jones_matrix)
 
 class PhaseRetarder(JonesMatrixOpticalElement):
 	'''A general phase retarder.

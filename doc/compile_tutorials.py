@@ -59,7 +59,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	if not already_executed:
 		ep = ExecutePreprocessor(timeout=120, kernel_name='python3')
 		try:
-			notebook, resources = ep.preprocess(notebook)
+			notebook, resources = ep.preprocess(notebook, resources={'metadata': {'path': os.path.dirname(notebook_path)}})
 		except CellExecutionError as err:
 			print('Error while processing notebook.')
 			print(err)

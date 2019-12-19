@@ -288,7 +288,7 @@ class AgnosticOpticalElement(OpticalElement):
 		The maximum size of the internal cache for optical elements. Reduce this if the cache is using
 		too much memory, increase if there are a lot of cache misses.
 	'''
-	def __init__(self, grid_dependent=True, wavelength_dependent=True, max_in_cache=50):
+	def __init__(self, grid_dependent=True, wavelength_dependent=True, max_in_cache=11):
 		self._grid_dependent = grid_dependent
 		self._wavelength_dependent = wavelength_dependent
 		self._max_in_cache = max_in_cache

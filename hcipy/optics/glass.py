@@ -53,14 +53,8 @@ def make_cauchy_glass(coefficients):
 
 	Parameters
 	----------
-	A : scalar
-		The Sellmeier coefficient
-		
-	K : array_like
-		The Sellmeier coefficients
-
-	L : array_like
-		The Sellmeier coefficients
+	coefficients : scalar or array_like
+		The Cauchy coefficients
 
 	Returns
 	-------

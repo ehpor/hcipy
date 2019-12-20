@@ -1,11 +1,23 @@
 import numpy as np
 
-def parse_schott_glass_catalogue(path):
-	data = np.loadtxt(path, dtype=np.string, delimiter=',')
+def parse_schott_glass_catalogue(filename):
+	''' This function parses the Schott Catalogue.
+	
+	Parameters
+	----------
+	filename : string
+		filename of the Schott catalogue csv file.
+	
+	Returns
+	-------
+	dict 
+		A dictionary containing all Schott Glasses from the catalogue.
+	'''
+	data = np.loadtxt(filename, dtype=np.str, delimiter=',', skiprows=1)
 
 	database = {}
 	for di in data:
-		database[di[0]] = make_sellmeier_glass([1, di[1:4].astype(np.float), di[4::].astype(np.float)])
+		database[di[0].replace(" ", "")] = make_sellmeier_glass(1, di[1:4].astype(np.float), di[4::].astype(np.float))
 
 	return database
 
@@ -68,3 +80,4 @@ glass_catalogue = {
 }
 
 glass_catalogue['SCHOTT'] = parse_schott_glass_catalogue('../../data/schott_glass_catalogue_2018_09.csv')
+glass_catalogue['OHARA'] = parse_schott_glass_catalogue('../../data/ohara_glass_catalogue_2019_08.csv')

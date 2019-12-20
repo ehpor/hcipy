@@ -12,6 +12,7 @@ __all__ += ['OpticalElement', 'AgnosticOpticalElement', 'make_agnostic_forward',
 __all__ += ['PeriodicOpticalElement']
 __all__ += ['jones_to_mueller', 'JonesMatrixOpticalElement', 'PhaseRetarder', 'LinearRetarder', 'CircularRetarder', 'QuarterWavePlate', 'HalfWavePlate', 'GeometricPhaseElement', 'LinearPolarizer', 'LinearPolarizingBeamSplitter', 'CircularPolarizingBeamSplitter']
 __all__ += ['SegmentedDeformableMirror']
+__all__ += ['spherical_surface_sag', 'parabolic_surface_sag', 'conical_surface_sag', 'even_aspheric_surface_sag']
 __all__ += ['TipTiltMirror']
 __all__ += ['SimpleVibration']
 __all__ += ['Wavefront']
@@ -32,5 +33,6 @@ from .micro_lens_array import *
 from .periodic_optical_element import *
 from .polarization import *
 from .segmented_mirror import *
+from .surface_profiles import *
 from .tip_tilt_mirror import *
 from .vibration import *

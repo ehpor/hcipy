@@ -44,25 +44,6 @@ class MicroLensArray(OpticalElement):
 		wf.electric_field /= np.exp(1j * self.mla_opd * 2*np.pi / wf.wavelength)
 		return wf
 
-def aspheric_surface(radius_of_curvature, refractive_index, conic_constant=0, aspheric_coefficients=[]):
-
-	def func(grid):
-		x = grid.x
-		y = grid.y
-		r = np.hypot(x, y)
-
-		# Start with a conic surface
-		curvature = 1/radius_of_curvature
-		alpha = (1+conic_constant) * curvature**2 * r**2
-		opd = -r**2/(radius_of_curvature * (1 + np.sqrt(1-alpha)))
-
-		# Add aspheric coefficients
-		# Only use the even modes and start at 4, because 0 is piston and 2 is the conic surface
-		for ai, coef in enumerate(aspheric_coefficients):
-			power_index = 4 + ai * 2
-			opd += -coef * (r/radius_of_curvature)**power_index
-		return SurfaceApodizer(opd, refractive_index)
-	return func
 
 class EvenAsphereMicroLensArray(OpticalElement):
 	def __init__(self, input_grid, lenslet_grid, radius_of_curvature, wavelength=1, refractive_index=1.5, conic_constant=0, aspheric_coefficients=[], lenslet_shape=None):

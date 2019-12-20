@@ -45,7 +45,7 @@ def find_branch_cuts(m, V):
 	theta = np.linspace(np.pi * 9999/20000, 0.001 * np.pi, num_steps)
 	u = V * np.cos(theta)
 
-	# Find the position where it goes through zero
+	# Find the position where the eigenvalue equation goes through zero
 	diff = eigenvalue_equation(u, m, V)
 	fu = np.diff(np.sign(diff)) < 0
 	ind = np.where(abs(fu - 1) <= 0.01)[0]
@@ -112,7 +112,7 @@ def LP_azimuthal(m, theta):
 		return np.sin(m * theta)
 
 def make_LP_modes(grid, V_number, core_radius, mode_cutoff=None):
-	'''Make a ModeBasis out of the guided modes that are supported by the fiber parameters.
+	'''Make a ModeBasis out of the guided modes that are supported by a step-index fiber.
 
 	Parameters
 	----------

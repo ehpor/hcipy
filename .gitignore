@@ -10,3 +10,4 @@ tags
 /build/
 /.pytest_cache/
 /.eggs/
+.ipynb_checkpoints/

@@ -353,6 +353,7 @@ def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
 	-------
 	Field
 		A vector field containing the red, green and blue components.
+	
 	Raises
 	------
 	ValueError

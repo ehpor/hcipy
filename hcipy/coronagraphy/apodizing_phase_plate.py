@@ -1,12 +1,14 @@
 import numpy as np
 from ..propagation import FraunhoferPropagator
-from ..field import Field
+from ..field import Field   
+
+from ..optics import GeometricPhaseElement
 
 def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0):
 	"""
 	Accelerated Gerchberg-Saxton-like algorithm for APP design by
 	Christoph Keller [1]_ and based on Douglas-Rachford operator splitting.
-	The acceleration was inspired by the paper by Jim Fienup [2_]. The 
+	The acceleration was inspired by the paper by Jim Fienup [2]_. The 
 	acceleration can provide speed-ups of up to two orders of magnitude and 
 	produce better APPs.
 
@@ -14,6 +16,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 		characterizing directly imaged exoplanets", Proc. SPIE 9908,
 		Ground-based and Airborne Instrumentation for Astronomy VI, 99089V
 		doi: 10.1117/12.2232633; https://doi.org/10.1117/12.2232633
+
 	.. [2] J. R. Fienup, 1976, "Reconstruction of an object from the modulus 
 		of its Fourier transform," Opt. Lett. 3, 27-29
 
@@ -83,7 +86,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 
 		# enforce unity transmission within aperture support
 		app.electric_field[aperture] *= (
-			app.amplitude[aperture] / app.amplitude[aperture])
+			wavefront.amplitude[aperture] / app.amplitude[aperture])
 
 	return app
 
@@ -155,3 +158,19 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 
 def generate_app_doelman(wavefront, propagator, propagator_max, contrast, num_iterations):
 	raise NotImplementedError()
+
+class VectorApodizingPhasePlate(GeometricPhaseElement):
+	'''The vector-Apodizing Phase Plate (vAPP).
+
+	Parameters
+	----------
+	phase_pattern : field or array_like 
+		The phase pattern generating the vAPP PSFs (radians).		
+	leakage : scalar 
+		The relative leakage strength (0 = no leakage, 1 = maximum leakage)
+	retardance_offset : scalar 
+		The retardance offset from half wave in radians. This will result in leakage.
+	'''
+	def __init__(self, phase_pattern, leakage=None, retardance_offset=0, wavelength=1):
+
+		GeometricPhaseElement.__init__(self, phase_pattern, leakage, retardance_offset, wavelength)

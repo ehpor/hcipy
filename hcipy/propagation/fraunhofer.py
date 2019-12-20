@@ -1,10 +1,10 @@
 import numpy as np
-from .propagator import Propagator
-from ..optics import Wavefront, make_agnostic_optical_element
-from ..field import Field
 
-@make_agnostic_optical_element()
-class FraunhoferPropagator(Propagator):
+from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
+from ..field import Field
+from ..fourier import make_fourier_transform
+
+class FraunhoferPropagator(AgnosticOpticalElement):
 	'''A monochromatic perfect lens propagator.
 
 		This implements the propagation of a wavefront through a perfect lens. The wavefront
@@ -24,18 +24,39 @@ class FraunhoferPropagator(Propagator):
 		focal_length : scalar
 			The focal length of the lens system.
 	'''
-	def __init__(self, input_grid, output_grid, focal_length=1, wavelength=1):
-		from ..fourier import make_fourier_transform
+	def __init__(self, input_grid, output_grid, focal_length=1):
+		self._input_grid = input_grid
+		self._output_grid = output_grid
+		self._focal_length = focal_length
 
-		self.uv_grid = output_grid.scaled(2*np.pi / (focal_length * wavelength))
-		self.fourier_transform = make_fourier_transform(input_grid, self.uv_grid)
-		self.output_grid = output_grid
+		AgnosticOpticalElement.__init__(self, grid_dependent=True, wavelength_dependent=True)
+	
+	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
+		focal_length = self.evaluate_parameter(self.focal_length, input_grid, output_grid, wavelength)
 
-		# Intrinsic to Fraunhofer propagation
-		self.norm_factor = 1 / (1j * (focal_length * wavelength))
-		self.input_grid = input_grid
+		instance_data.uv_grid = output_grid.scaled(2 * np.pi / (focal_length * wavelength))
+		instance_data.fourier_transform = make_fourier_transform(input_grid, instance_data.uv_grid)
 
-	def forward(self, wavefront):
+		instance_data.norm_factor = 1 / (1j * focal_length * wavelength)
+	
+	@property
+	def focal_length(self):
+		return self._focal_length
+	
+	@focal_length.setter
+	def focal_length(self, focal_length):
+		self._focal_length = focal_length
+
+		self.clear_cache()
+	
+	def get_input_grid(self, output_grid, wavelength):
+		return self.input_grid
+	
+	def get_output_grid(self, input_grid, wavelength):
+		return self._output_grid
+
+	@make_agnostic_forward
+	def forward(self, instance_data, wavefront):
 		'''Propagate a wavefront forward through the lens.
 	
 		Parameters
@@ -48,10 +69,11 @@ class FraunhoferPropagator(Propagator):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		U_new = self.fourier_transform.forward(wavefront.electric_field) * self.norm_factor
-		return Wavefront(Field(U_new, self.output_grid), wavefront.wavelength)
+		U_new = instance_data.fourier_transform.forward(wavefront.electric_field) * instance_data.norm_factor
+		return Wavefront(Field(U_new, instance_data.output_grid), wavefront.wavelength, wavefront.input_stokes_vector)
 	
-	def backward(self, wavefront):
+	@make_agnostic_backward
+	def backward(self, instance_data, wavefront):
 		'''Propagate a wavefront backward through the lens.
 	
 		Parameters
@@ -64,43 +86,5 @@ class FraunhoferPropagator(Propagator):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		U_new = self.fourier_transform.backward(wavefront.electric_field) / self.norm_factor
-		return Wavefront(Field(U_new, self.input_grid), wavefront.wavelength)
-	
-	def get_transformation_matrix_forward(self, input_grid, wavelength=1):
-		'''Create the forward linear transformation between the internal input grid and output grid.
-	
-		Parameters
-		----------
-		input_grid : Grid
-			The input grid on which the wavefront is defined.
-			Currently this parameter is ignored and an internal grid is used.
-		wavelength : scalar
-			The wavelength of the wavefront.
-		
-		Returns
-		-------
-		ndarray
-			The transformation matrix that describes the propagation.
-		'''
-		# Ignore input wavelength and just use the internal one.
-		return self.fourier_transform.get_transformation_matrix_forward() * self.norm_factor
-	
-	def get_transformation_matrix_backward(self, input_grid, wavelength=1):
-		'''Create the backward linear transformation between the internal input grid and output grid.
-	
-		Parameters
-		----------
-		input_grid : Grid
-			The input grid on which the wavefront is defined.
-			Currently this parameter is ignored and an internal grid is used.
-		wavelength : scalar
-			The wavelength of the wavefront. 
-
-		Returns
-		-------
-		ndarray
-			The transformation matrix that describes the propagation.
-		'''
-		# Ignore input wavelength and just use the internal one.
-		return self.fourier_transform.get_transformation_matrix_backward() / self.norm_factor
+		U_new = instance_data.fourier_transform.backward(wavefront.electric_field) / instance_data.norm_factor
+		return Wavefront(Field(U_new, instance_data.input_grid), wavefront.wavelength, wavefront.input_stokes_vector)

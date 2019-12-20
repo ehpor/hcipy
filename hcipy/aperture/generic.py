@@ -35,6 +35,34 @@ def circular_aperture(diameter, center=None):
 	
 	return func
 
+def elliptical_aperture(diameters, center=None):
+	'''Makes a Field generator for an elliptical aperture.
+
+	Parameters
+	----------
+	diameters : array_like
+		The diameters of the aperture in the two directions.
+	center : array_like or None
+		The center of the aperture.
+	
+	Returns
+	-------
+	Field generator
+		This function can be evaluated on a grid to get a Field.
+	'''
+	if center is None:
+		shift = np.zeros(2)
+	else:
+		shift = center * np.ones(2)
+	
+	def func(grid):
+		x, y = grid.as_('cartesian').coords
+		f = (((x - shift[0]) / (diameters[0] / 2))**2 + ((y - shift[1]) / (diameters[1] / 2))**2) <= 1
+
+		return Field(f.astype('float'), grid)
+	
+	return func
+
 def rectangular_aperture(size, center=None):
 	'''Makes a Field generator for a rectangular aperture.
 

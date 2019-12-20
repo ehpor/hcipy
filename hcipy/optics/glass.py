@@ -1,17 +1,17 @@
 import numpy as np
 
-def parse_schott_glass_catalogue(filename):
-	''' This function parses the Schott Catalogue.
+def parse_sellmeier_glass_catalogue(filename):
+	''' This function parses a csv containing Sellmeier coefficients.
 	
 	Parameters
 	----------
 	filename : string
-		filename of the Schott catalogue csv file.
+		filename of the catalogue csv file.
 	
 	Returns
 	-------
 	dict 
-		A dictionary containing all Schott Glasses from the catalogue.
+		A dictionary containing all glasses from the catalogue.
 	'''
 	data = np.loadtxt(filename, dtype=np.str, delimiter=',', skiprows=1)
 
@@ -79,5 +79,5 @@ glass_catalogue = {
 	'IP_DIP' : make_cauchy_glass([1.5273, 6.5456E-3, 2.5345E-4]),
 }
 
-glass_catalogue['SCHOTT'] = parse_schott_glass_catalogue('../../data/schott_glass_catalogue_2018_09.csv')
-glass_catalogue['OHARA'] = parse_schott_glass_catalogue('../../data/ohara_glass_catalogue_2019_08.csv')
+glass_catalogue['SCHOTT'] = parse_sellmeier_glass_catalogue('../../data/schott_glass_catalogue_2018_09.csv')
+glass_catalogue['OHARA'] = parse_sellmeier_glass_catalogue('../../data/ohara_glass_catalogue_2019_08.csv')

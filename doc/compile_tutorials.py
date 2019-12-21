@@ -102,7 +102,7 @@ index_preamble = '''
 Tutorials
 =========
 
-These tutorials demonstrate the features of HCIPy in the context of a standard workflow.
+These tutorials demonstrate the features of HCIPy in the context of a standard workflow. Tutorials are separated in three categories, depending on the required level of familiarity with HCIPy.
 '''
 
 entry_template = '''
@@ -125,6 +125,42 @@ entry_template = '''
 				**Description:** {description}
 '''
 
+beginner_preamble = '''
+Beginner
+--------
+
+These tutorials provide an introduction to the basic parts of HCIPy. New users should read these tutorials to get started with HCIPy.
+'''
+
+intermediate_preamble = '''
+Intermediate
+------------
+
+These tutorials show the main functionality using the built-in classes of HCIPy. These tutorials focus on one aspect of high-contrast imaging.
+'''
+
+advanced_preamble = '''
+Advanced
+--------
+These tutorials show how to use HCIPy for your own research. This includes extending HCIPy with your own optical elements and advanced use cases.
+'''
+
+expert_preamble = '''
+Expert
+------
+
+These tutorials provide examples from actual published research that made heavy use of HCIPy for their optical propagations.
+'''
+
+unknown_preamble = '''
+Unknown
+-------
+
+These tutorials do not have their level of difficulty rated.
+'''
+
+level_preambles = [beginner_preamble, intermediate_preamble, advanced_preamble, expert_preamble, unknown_preamble]
+
 def compile_all_tutorials():
 	print('Compling all tutorials...')
 
@@ -137,20 +173,30 @@ def compile_all_tutorials():
 
 	# Sort by level
 	levels = ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Unknown']
-	tutorial_names = sorted(tutorial_names, key=lambda name: levels.index(tutorials[name][1]))
+
+	tutorial_names_by_level = [[] for i in range(len(levels))]
+	for name in tutorial_names:
+		tutorial_names_by_level[levels.index(tutorials[name][1])].append(name)
 
 	f = open('tutorials/index.rst', 'w')
 	f.write(index_preamble)
 
-	# Write toctree
-	f.write('\n.. toctree::\n    :maxdepth: 1\n    :hidden:\n\n')
-	for name in tutorial_names:
-		f.write('    ' + name + '/' + name + '\n')
-	f.write('\n\n')
-	
-	# Write list
-	for name in tutorial_names:
-		title, level, desc, thumb = tutorials[name]
-		f.write(entry_template.format(thumbnail_file=thumb, title=title, level=level, description=desc, name=name))
+	for preamble, names in zip(level_preambles, tutorial_names_by_level):
+		# Don't write this level if there are no tutorials in it.
+		if len(names) == 0:
+			continue
+
+		f.write(preamble)
+		
+		# Write toctree
+		f.write('\n.. toctree::\n    :maxdepth: 1\n    :hidden:\n\n')
+		for name in names:
+			f.write('    ' + name + '/' + name + '\n')
+		f.write('\n\n')
+		
+		# Write list
+		for name in names:
+			title, level, desc, thumb = tutorials[name]
+			f.write(entry_template.format(thumbnail_file=thumb, title=title, level=level, description=desc, name=name))
 	
 	f.close()

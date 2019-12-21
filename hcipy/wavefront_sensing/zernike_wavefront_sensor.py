@@ -62,13 +62,6 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		wf_foc = self.prop.forward(wavefront)
 		wf_foc.electric_field -= self.phase_dot.forward(wf_foc).electric_field
 
-		from matplotlib import pyplot as plt
-		from ..plotting import imshow_field
-		imshow_field(wf_foc.phase)
-		plt.figure()
-		imshow_field(self.phase_dot.forward(wf_foc).phase)
-		plt.show()		
-
 		pup = self.prop.backward(wf_foc)
 		pup.electric_field[:] = wavefront.electric_field - pup.electric_field
 
@@ -180,19 +173,20 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 	reference_wavelength : scalar
 		The reference wavelength. This is used for calcualting the size of the phase dot.
 	'''
-	def __init__(self, input_grid, phase_retardation = np.pi, phase_step=np.pi / 2, phase_dot_diameter=1.06, num_pix=128, pupil_diameter=1, reference_wavelength=1):
+	def __init__(self, input_grid, phase_retardation=np.pi, phase_step=np.pi / 2, phase_dot_diameter=1.06, num_pix=128, pupil_diameter=1, reference_wavelength=1):
 		self.input_grid = input_grid
 		self.output_grid = input_grid
+		self._phase_retardation = phase_retardation
 
 		# Make the vector-Zernike wavefront sensor mask
 		phase_dot_diameter *= pupil_diameter / reference_wavelength
 		focal_grid = make_uniform_grid([num_pix, num_pix], phase_dot_diameter)
 		phase_dot = circular_aperture(phase_dot_diameter)(focal_grid) * phase_step
-		self._phase_retardation = phase_retardation
+		
 		self.vZWFS_mask = LinearRetarder(phase_retardation, phase_dot / 2)
 
 		# Make half-wave plate for reference offset
-		self.HWP = LinearRetarder(np.pi,0)
+		self.HWP = LinearRetarder(phase_retardation, 0)
 
 		# Make the propagator
 		self.prop = FraunhoferPropagator(input_grid, focal_grid)
@@ -202,13 +196,14 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		'''The phase retardation of the linear retarder
 		'''
 		return self._phase_retardation
-	
+
 	@phase_retardation.setter
 	def phase_retardation(self, phase_retardation):
 		self._phase_retardation = phase_retardation
+
 		self.vZWFS_mask.phase_retardation = phase_retardation
 		self.HWP.phase_retardation = phase_retardation
-		
+
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the wavefront sensor.
 
@@ -223,10 +218,8 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 			The output wavefront.
 		'''
 		wf_foc = self.prop.forward(wavefront)
-		if wf_foc.is_scalar:
-			wf_foc = Wavefront(wf_foc.electric_field, wavelength=wf_foc.wavelength, input_stokes_vector=(1, 0, 0, 0))
 
-		wf_foc.electric_field -= self.vZWFS_mask.forward(wf_foc).electric_field
+		wf_foc.electric_field = self.HWP.forward(wf_foc).electric_field - self.vZWFS_mask.forward(wf_foc).electric_field
 
 		pup = self.prop.backward(wf_foc)
 		pup.electric_field[:] = self.HWP.forward(wavefront).electric_field - pup.electric_field
@@ -247,10 +240,8 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 			The output wavefront.
 		'''
 		wf_foc = self.prop.forward(wavefront)
-		if wf_foc.is_scalar:
-			wf_foc = Wavefront(wf_foc.electric_field, wavelength=wf_foc.wavelength, input_stokes_vector=(1, 0, 0, 0))
 
-		wf_foc.electric_field -= self.vZWFS_mask.backward(wf_foc).electric_field
+		wf_foc.electric_field = self.HWP.backward(wf_foc).electric_field - self.vZWFS_mask.backward(wf_foc).electric_field
 
 		pup = self.prop.backward(wf_foc)
 		pup.electric_field[:] = self.HWP.backward(wavefront).electric_field - pup.electric_field

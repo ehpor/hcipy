@@ -38,7 +38,7 @@ class Magnifier(AgnosticOpticalElement):
 		wf = wavefront.copy()
 
 		wf.electric_field.grid = wf.electric_field.grid.scaled(instance_data.magnification)
-		wf.electric_field /= instance_data.magnification**2
+		wf.electric_field /= instance_data.magnification
 
 		return wf
 	
@@ -47,6 +47,6 @@ class Magnifier(AgnosticOpticalElement):
 		wf = wavefront.copy()
 
 		wf.electric_field.grid = wf.electric_field.grid.scaled(1.0 / instance_data.magnification)
-		wf.electric_field *= instance_data.magnification**2
+		wf.electric_field *= instance_data.magnification
 
 		return wf

@@ -41,7 +41,7 @@ def find_branch_cuts(m, V):
 		A tuple containing the solutions of the eigenvalue function. If no solutions were found returns None.
 	'''
 	# Make an initial rough grid
-	num_steps = 501
+	num_steps = 501 #max(501, 2 * np.int(np.ceil(V**2/2)))
 	theta = np.linspace(np.pi * 9999/20000, 0.001 * np.pi, num_steps)
 	u = V * np.cos(theta)
 
@@ -136,6 +136,7 @@ def make_LP_modes(grid, V_number, core_radius, mode_cutoff=None):
 	# scaled grid
 	R, Theta = grid.scaled(1/core_radius).as_('polar').coords
 	modes = []
+	betas = []
 	while finding_new_modes:
 		
 		solutions = find_branch_cuts(m, V_number)
@@ -143,6 +144,7 @@ def make_LP_modes(grid, V_number, core_radius, mode_cutoff=None):
 			for ui, wi in zip(solutions[0], solutions[1]):
 				
 				radial_prodile = LP_radial(m, ui, wi, R)
+				beta = np.sqrt((V_number**2 + wi**2 - ui**2)/(2*core_radius**2))
 
 				ms = [m,-m] if m > 0 else [m,]
 				for mi in ms:
@@ -153,10 +155,11 @@ def make_LP_modes(grid, V_number, core_radius, mode_cutoff=None):
 					norm = np.sqrt( np.sum(mode_profile * mode_profile.conj() * grid.weights) )
 					mode_profile /= norm
 					modes.append(mode_profile)
+					betas.append(beta)
 					num_modes += 1
 
 			m += 1
 		else:
 			finding_new_modes = False
 	
-	return ModeBasis(modes, grid)
+	return ModeBasis(modes, grid), np.array(betas)

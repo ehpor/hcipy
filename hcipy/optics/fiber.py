@@ -1,13 +1,103 @@
 import numpy as np
 from .detector import Detector
-from .optical_element import OpticalElement
+from .optical_element import OpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from .wavefront import Wavefront
-from ..mode_basis import ModeBasis
+from ..mode_basis import ModeBasis, make_LP_modes
 from ..field import Field
 
 def fiber_mode_gaussian(grid, mode_field_diameter):
 	r2 = grid.x**2 + grid.y**2
 	return np.exp(-r2/((0.5 * mode_field_diameter)**2))
+
+class StepIndexFiber(AgnosticOpticalElement):
+	''' A step-index fiber.
+
+	The modal behaviour of the step-index fiber depends on the input parameters.
+
+	Parameters
+	----------
+	core_radius : scalar
+		The radius of the high-index core.
+	NA : scalar
+		The numerical aperture of the fiber.
+	fiber_length : scalar
+		The length of the optical fiber.
+	'''
+	def __init__(self, core_radius, NA, fiber_length):
+		self._core_radius = core_radius
+		self._NA = NA
+		self.fiber_length = fiber_length
+		
+		AgnosticOpticalElement.__init__(self, False, True)
+	
+	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
+		monochromatic_V = self.V(wavelength)
+		instance_data.fiber_modes, instance_data.beta = make_LP_modes(input_grid, monochromatic_V, self.core_radius, mode_cutoff=None)
+		instance_data.Minv = np.linalg.pinv( instance_data.fiber_modes.transformation_matrix )
+
+	def num_modes(self, wavelength):
+		V = self.V(wavelength)
+		return V**2 / 2
+
+	def V(self, wavelength):
+		return 2 * np.pi / wavelength * self.core_radius * self.NA
+
+	def mode_field_radius(self, wavelength):
+		V = self.V(wavelength)
+		w = self.core_radius * (0.65 + 1.619/V**(3/2) + 2.879/V**6)
+		return w
+
+	@property
+	def core_radius(self):
+		return self._core_radius
+	
+	@core_radius.setter
+	def core_radius(self, core_radius):
+		self._core_radius = core_radius
+		self.clear_cache()
+	
+	@property
+	def NA(self):
+		return self._NA
+
+	@NA.setter
+	def NA(self, NA):
+		self._NA = NA
+		self.clear_cache()
+
+	def get_input_grid(self, output_grid, wavelength):
+		return output_grid
+
+	def get_output_grid(self, input_grid, wavelength):
+		return input_grid
+
+	@make_agnostic_forward
+	def modal_decomposition(self, instance_data, wavefront):
+		wf = wavefront.copy()
+		
+		M = instance_data.fiber_modes.transformation_matrix
+		mode_coefficients = instance_data.Minv.dot(wf.electric_field)#np.sum( M.T.conj().dot(wf.electric_field * wf.grid.weights), axis=-1)
+		return mode_coefficients
+
+	@make_agnostic_forward
+	def forward(self, instance_data, wavefront):
+		wf = wavefront.copy()
+		
+		M = instance_data.fiber_modes.transformation_matrix
+		mode_coefficients = instance_data.Minv.dot(wf.electric_field)#np.sum( M.T.conj().dot(wf.electric_field * wf.grid.weights), axis=-1)
+		output_electric_field = Field(M.dot(mode_coefficients * np.exp(1j*instance_data.beta*self.fiber_length)), wf.grid)
+
+		return Wavefront(output_electric_field, wf.wavelength)
+
+	@make_agnostic_backward
+	def backward(self, instance_data, wavefront):
+		wf = wavefront.copy()
+		
+		
+		mode_coefficients = np.sum(wf.electric_field * M.T.conj() * wf.grid.weights, axis=-1)
+		output_electric_field = Field(M.dot(mode_coefficients * np.exp(-1j*instance_data.beta*self.fiber_length)), wf.grid)
+
+		return Wavefront(output_electric_field, wf.wavelength)
 
 class SingleModeFiber(Detector):
 	def __init__(self, input_grid, mode_field_diameter, mode=None):

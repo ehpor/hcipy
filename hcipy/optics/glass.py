@@ -1,4 +1,5 @@
 import numpy as np
+import pkg_resources
 
 def parse_sellmeier_glass_catalogue(filename):
 	''' This function parses a csv containing Sellmeier coefficients.
@@ -73,5 +74,5 @@ glass_catalogue = {
 	'IP_DIP' : make_cauchy_glass([1.5273, 6.5456E-3, 2.5345E-4]),
 }
 
-glass_catalogue['SCHOTT'] = parse_sellmeier_glass_catalogue('../../data/schott_glass_catalogue_2018_09.csv')
-glass_catalogue['OHARA'] = parse_sellmeier_glass_catalogue('../../data/ohara_glass_catalogue_2019_08.csv')
+glass_catalogue['SCHOTT'] = parse_sellmeier_glass_catalogue(pkg_resources.resource_stream('hcipy', 'optics/schott_glass_catalogue_2018_09.csv'))
+glass_catalogue['OHARA'] = parse_sellmeier_glass_catalogue(pkg_resources.resource_stream('hcipy', 'optics/ohara_glass_catalogue_2019_08.csv'))

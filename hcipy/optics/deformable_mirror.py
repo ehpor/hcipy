@@ -138,6 +138,10 @@ class DeformableMirror(OpticalElement):
 		self._surface = self.input_grid.zeros()
 	
 	@property
+	def num_actuators(self):
+		return self._actuators.size
+
+	@property
 	def actuators(self):
 		return self._actuators
 	

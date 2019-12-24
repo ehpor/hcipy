@@ -33,22 +33,30 @@ class StepIndexFiber(AgnosticOpticalElement):
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		monochromatic_V = self.V(wavelength)
 		instance_data.fiber_modes, instance_data.beta = make_LP_modes(input_grid, monochromatic_V, self.core_radius, mode_cutoff=None)
-		instance_data.Minv = np.linalg.pinv( instance_data.fiber_modes.transformation_matrix )
+		instance_data.Minv = np.linalg.pinv(instance_data.fiber_modes.transformation_matrix)
 
 	def num_modes(self, wavelength):
+		'''The approximate amount of modes of the fiber.
+		'''
 		V = self.V(wavelength)
 		return V**2 / 2
 
 	def V(self, wavelength):
+		'''The normalized frequency parameter for step-index fibers.
+		'''
 		return 2 * np.pi / wavelength * self.core_radius * self.NA
 
 	def mode_field_radius(self, wavelength):
+		'''The mode field radius of the fiber.
+		'''
 		V = self.V(wavelength)
-		w = self.core_radius * (0.65 + 1.619/V**(3/2) + 2.879/V**6)
+		w = self.core_radius * (0.65 + 1.619 / V**(3 / 2) + 2.879 / V**6)
 		return w
 
 	@property
 	def core_radius(self):
+		'''The core radius of this fiber.
+		'''
 		return self._core_radius
 	
 	@core_radius.setter
@@ -58,6 +66,8 @@ class StepIndexFiber(AgnosticOpticalElement):
 	
 	@property
 	def NA(self):
+		'''The numerical aperture of this fiber.
+		'''
 		return self._NA
 
 	@NA.setter
@@ -73,32 +83,64 @@ class StepIndexFiber(AgnosticOpticalElement):
 
 	@make_agnostic_forward
 	def modal_decomposition(self, instance_data, wavefront):
+		'''Decompose the input wavefront into the modal distribution of the fiber.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The incoming wavefront.
+		
+		Returns
+		-------
+		array_like
+			The modal coefficients.
+		'''
 		wf = wavefront.copy()
 		
 		M = instance_data.fiber_modes.transformation_matrix
-		#mode_coefficients = instance_data.Minv.dot(wf.electric_field)
-		#mode_coefficients = np.sum( M.T.conj().dot(wf.electric_field * wf.grid.weights), axis=-1)
 		mode_coefficients = M.dot(wf.electric_field * wf.grid.weights)
 		return mode_coefficients
 
 	@make_agnostic_forward
 	def forward(self, instance_data, wavefront):
+		'''Forward propagate the light through the fiber.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The incoming wavefront.
+		
+		Returns
+		-------
+		Wavefront
+			The wavefront that exits the fiber.
+		'''
 		wf = wavefront.copy()
 		
 		M = instance_data.fiber_modes.transformation_matrix
-		#mode_coefficients = instance_data.Minv.dot(wf.electric_field)#
-		#mode_coefficients = np.sum( M.T.conj().dot(wf.electric_field * wf.grid.weights), axis=-1)
 		mode_coefficients = M.dot(wf.electric_field.conj() * wf.grid.weights)
-		output_electric_field = Field(M.T.dot(mode_coefficients * np.exp(1j*instance_data.beta*self.fiber_length)), wf.grid)
+		output_electric_field = Field(M.T.dot(mode_coefficients * np.exp(1j * instance_data.beta * self.fiber_length)), wf.grid)
 
 		return Wavefront(output_electric_field, wf.wavelength)
 
 	@make_agnostic_backward
 	def backward(self, instance_data, wavefront):
+		'''Backward propagate the light through the fiber.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The incoming wavefront.
+		
+		Returns
+		-------
+		Wavefront
+			The wavefront that exits the fiber.
+		'''
 		wf = wavefront.copy()
 		
 		mode_coefficients = M.dot(wf.electric_field.conj() * wf.grid.weights)
-		output_electric_field = Field(M.T.dot(mode_coefficients * np.exp(-1j*instance_data.beta*self.fiber_length)), wf.grid)
+		output_electric_field = Field(M.T.dot(mode_coefficients * np.exp(-1j * instance_data.beta * self.fiber_length)), wf.grid)
 
 		return Wavefront(output_electric_field, wf.wavelength)
 

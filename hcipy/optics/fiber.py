@@ -5,10 +5,6 @@ from .wavefront import Wavefront
 from ..mode_basis import ModeBasis, make_LP_modes
 from ..field import Field
 
-def fiber_mode_gaussian(grid, mode_field_diameter):
-	r2 = grid.x**2 + grid.y**2
-	return np.exp(-r2/((0.5 * mode_field_diameter)**2))
-
 class StepIndexFiber(AgnosticOpticalElement):
 	''' A step-index fiber.
 

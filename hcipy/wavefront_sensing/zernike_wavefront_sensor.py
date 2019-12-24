@@ -62,13 +62,6 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		wf_foc = self.prop.forward(wavefront)
 		wf_foc.electric_field -= self.phase_dot.forward(wf_foc).electric_field
 
-		from matplotlib import pyplot as plt
-		from ..plotting import imshow_field
-		imshow_field(wf_foc.phase)
-		plt.figure()
-		imshow_field(self.phase_dot.forward(wf_foc).phase)
-		plt.show()		
-
 		pup = self.prop.backward(wf_foc)
 		pup.electric_field[:] = wavefront.electric_field - pup.electric_field
 
@@ -192,7 +185,7 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		self.vZWFS_mask = LinearRetarder(phase_retardation, phase_dot / 2)
 
 		# Make half-wave plate for reference offset
-		self.HWP = LinearRetarder(np.pi,0)
+		self.HWP = LinearRetarder(phase_retardation, 0)
 
 		# Make the propagator
 		self.prop = FraunhoferPropagator(input_grid, focal_grid)
@@ -226,8 +219,8 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		if wf_foc.is_scalar:
 			wf_foc = Wavefront(wf_foc.electric_field, wavelength=wf_foc.wavelength, input_stokes_vector=(1, 0, 0, 0))
 
-		wf_foc.electric_field -= self.vZWFS_mask.forward(wf_foc).electric_field
-
+		wf_foc.electric_field = self.HWP.forward(wf_foc).electric_field - self.vZWFS_mask.forward(wf_foc).electric_field
+        
 		pup = self.prop.backward(wf_foc)
 		pup.electric_field[:] = self.HWP.forward(wavefront).electric_field - pup.electric_field
 
@@ -250,7 +243,7 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		if wf_foc.is_scalar:
 			wf_foc = Wavefront(wf_foc.electric_field, wavelength=wf_foc.wavelength, input_stokes_vector=(1, 0, 0, 0))
 
-		wf_foc.electric_field -= self.vZWFS_mask.backward(wf_foc).electric_field
+		wf_foc.electric_field = self.HWP.backward(wf_foc).electric_field - self.vZWFS_mask.backward(wf_foc).electric_field
 
 		pup = self.prop.backward(wf_foc)
 		pup.electric_field[:] = self.HWP.backward(wavefront).electric_field - pup.electric_field

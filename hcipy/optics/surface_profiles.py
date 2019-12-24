@@ -51,9 +51,9 @@ def conical_surface_sag(radius_of_curvature, conic_constant=0):
 		y = grid.y
 		r = np.hypot(x, y)
 
-		curvature = 1/radius_of_curvature
-		alpha = (1+conic_constant) * curvature**2 * r**2
-		sag = r**2/(radius_of_curvature * (1 + np.sqrt(1-alpha)))
+		curvature = 1 / radius_of_curvature
+		alpha = (1 + conic_constant) * curvature**2 * r**2
+		sag = r**2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
 
 		return Field(sag, grid)
 
@@ -82,15 +82,15 @@ def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_co
 		r = np.hypot(x, y)
 
 		# Start with a conic surface
-		curvature = 1/radius_of_curvature
-		alpha = (1+conic_constant) * curvature**2 * r**2
-		sag = r**2/(radius_of_curvature * (1 + np.sqrt(1-alpha)))
+		curvature = 1 / radius_of_curvature
+		alpha = (1 + conic_constant) * curvature**2 * r**2
+		sag = r**2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
 
 		# Add aspheric coefficients
 		# Only use the even modes and start at 4, because 0 is piston and 2 is the conic surface
 		for ai, coef in enumerate(aspheric_coefficients):
 			power_index = 4 + ai * 2
-			sag += coef * (r/radius_of_curvature)**power_index
+			sag += coef * r**power_index
 		return Field(sag, grid)
 
 	return func

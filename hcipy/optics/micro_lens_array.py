@@ -36,7 +36,7 @@ class MicroLensArray(OpticalElement):
 			indices, distances = closest_points(lenslet_grid, input_grid)
 
 			self.mla_index = indices
-			self.mla_opd = (-1 / (2*focal_length)) * distances**2
+			self.mla_opd = (-1 / (2 * focal_length)) * distances**2
 		else:
 			self.mla_index = Field(-np.ones(self.input_grid.size), self.input_grid)
 			self.mla_opd = Field(np.zeros(self.input_grid.size), self.input_grid)
@@ -45,7 +45,7 @@ class MicroLensArray(OpticalElement):
 				shifted_grid = input_grid.shifted((x,y))
 				mask = lenslet_shape(shifted_grid) != 0
 				
-				self.mla_opd[mask] = (-1 / (2*focal_length)) * (shifted_grid.x[mask]**2 + shifted_grid.y[mask]**2)
+				self.mla_opd[mask] = (-1 / (2 * focal_length)) * (shifted_grid.x[mask]**2 + shifted_grid.y[mask]**2)
 				self.mla_index[mask] = i
 		
 		self.mla_surface = SurfaceApodizer(self.mla_opd, 2)

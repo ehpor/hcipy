@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 
 from nbconvert.preprocessors import ExecutePreprocessor, CellExecutionError
 from nbconvert.exporters import RSTExporter
@@ -59,10 +60,15 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	if not already_executed:
 		ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
 		try:
+			start = time.time()
 			notebook, resources = ep.preprocess(notebook, resources={'metadata': {'path': os.path.abspath(os.path.dirname(notebook_path))}})
+			end = time.time()
+			print('  Compilation took %d seconds.' % (end - start))
 		except CellExecutionError as err:
-			print('Error while processing notebook.')
-			print(err)
+			print('  Error while processing notebook:')
+			print('  ', err)
+	else:
+		print('  Notebook was already executed.')
 
 	exporter = RSTExporter()
 	output, resources = exporter.from_notebook_node(notebook, resources)

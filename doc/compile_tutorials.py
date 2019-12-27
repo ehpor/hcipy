@@ -57,7 +57,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	resources = {}
 	
 	if not already_executed:
-		ep = ExecutePreprocessor(timeout=120, kernel_name='python3')
+		ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
 		try:
 			notebook, resources = ep.preprocess(notebook, resources={'metadata': {'path': os.path.abspath(os.path.dirname(notebook_path))}})
 		except CellExecutionError as err:

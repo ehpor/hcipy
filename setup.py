@@ -15,6 +15,7 @@ setup(name='hcipy',
 	author='Emiel Por',
 	author_email='por@strw.leidenuniv.nl',
 	packages=find_packages(),
+	package_data={'hcipy': ['data/*']},
 	setup_requires=[
 		'setuptools_scm'],
 	install_requires=[

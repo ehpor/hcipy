@@ -92,6 +92,8 @@ class FFMpegWriter(object):
 				codec = 'mpeg4'
 			elif extension == '.avi':
 				codec = 'libx264'
+			elif extension == '.webm':
+				codec = 'libvpx-vp9'
 			else:
 				raise ValueError('No codec was given and it could not be guessed based on file extension.')
 
@@ -116,6 +118,10 @@ class FFMpegWriter(object):
 				'-vcodec','png', '-r', str(framerate), '-i', '-']
 			command.extend(['-vcodec', 'mpeg4', '-q:v', str(quality), '-r', 
 				str(framerate), filename])
+		elif codec == 'libvpx-vp9':
+			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe', 
+				'-vcodec','png', '-r', str(framerate), '-i', '-']
+			command.extend(['-vcodec', 'libvpx-vp9', '-lossless', '1', filename])
 		else:
 			raise ValueError('Codec unknown.')
 		
@@ -128,14 +134,14 @@ class FFMpegWriter(object):
 		except Exception:
 			pass
 
-	def add_frame(self, fig=None, arr=None, cmap=None):
+	def add_frame(self, fig=None, arr=None, cmap=None, dpi=None):
 		if self.closed:
 			raise RuntimeError('Attempted to add a frame to a closed FFMpegWriter.')
 
 		if arr is None:
 			if fig is None:
 				fig = matplotlib.pyplot.gcf()
-			fig.savefig(self.p.stdin, format='png', transparent=False)
+			fig.savefig(self.p.stdin, format='png', transparent=False, dpi=dpi)
 		else:
 			if not cmap is None:
 				arr = matplotlib.cm.get_cmap(cmap)(arr, bytes=True)

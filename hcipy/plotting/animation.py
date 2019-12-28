@@ -1,6 +1,7 @@
 import glob
 import os
 import shutil
+import base64
 from subprocess import Popen, PIPE
 
 import matplotlib
@@ -119,9 +120,16 @@ class FFMpegWriter(object):
 			command.extend(['-vcodec', 'mpeg4', '-q:v', str(quality), '-r', 
 				str(framerate), filename])
 		elif codec == 'libvpx-vp9':
+			if quality is None:
+				quality = 30
 			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe', 
 				'-vcodec','png', '-r', str(framerate), '-i', '-']
-			command.extend(['-vcodec', 'libvpx-vp9', '-lossless', '1', filename])
+			if quality < 0:
+				command.extend(['-vcodec', 'libvpx-vp9', '-lossless', '1',
+					'-r', str(framerate), filename])
+			else:
+				command.extend(['-vcodec', 'libvpx-vp9', '-crf', str(quality),
+					'-b:v', '0', '-r', str(framerate), filename])
 		else:
 			raise ValueError('Codec unknown.')
 		
@@ -154,3 +162,22 @@ class FFMpegWriter(object):
 			self.p.wait()
 			self.p = None
 		self.closed = True
+
+	def _repr_html_(self):
+		if not self.closed:
+			raise RuntimeError('Attempted to show the generated movie on an opened FFMpegWriter.')
+
+		video = open(self.filename, 'rb').read()
+		video = base64.b64encode(video).decode('ascii').rstrip()
+
+		if self.codec == 'mpeg4':
+			mimetype = 'video/mp4'
+		elif self.codec == 'libvpx-vp9':
+			mimetype = 'video/webm'
+		else:
+			raise RuntimeError('Mimetype could not be guessed.')
+
+		output = '''<video controls><source src="data:{0};base64,{1}" type="{0}">Your browser does not support the video tag.</video>'''
+		output = output.format(mimetype, video)
+
+		return output

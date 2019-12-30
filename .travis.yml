@@ -82,6 +82,7 @@ install:
   - if [ "$MAKE_DOCS" = true ]; then
       pip install ".[doc]";
       sudo apt-get -y install ffmpeg pandoc;
+      pip install awscli;
     fi
 
   - $PYTHON_CMD --version

@@ -1,70 +1,107 @@
 # A workaround for supporting Python in MacOS:
 # https://pythonhosted.org/CodeChat/.travis.yml.html
 
+env:
+  global:
+    - TEST_COVERAGE=false
+    - MAKE_DOCS=false
+    - RUN_TESTS=true
+
 matrix:
   include:
-  - os: linux
+  - name: "Tests for Python 3.5 on Linux"
+    os: linux
     python: "3.5"
     language: python
-    env: COVERAGE=false
-  - os: linux
+  - name: "Tests for Python 3.6 on Linux"
+    os: linux
     python: "3.6"
     language: python
-    env: COVERAGE=false
-  - os: linux
+  - name: "Tests for Python 3.7 on Linux"
+    os: linux
     python: "3.7"
     language: python
-    env: COVERAGE=true
-  - os: osx
+    env: TEST_COVERAGE=true
+  - name: "Tests for Python 3.5 on MacOS"
+    os: osx
     language: generic
-    env: VERSION=3.5 COVERAGE=false
-  - os: osx
+    env: PYTHON_VERSION=3.5
+  - name: "Tests for Python 3.6 on MacOS"
+    os: osx
     language: generic
-    env: VERSION=3.6 COVERAGE=false
-  - os: osx
+    env: PYTHON_VERSION=3.6
+  - name: "Tests for Python 3.7 on MacOS"
+    os: osx
     language: generic
-    env: VERSION=3.7 COVERAGE=false
+    env: PYTHON_VERSION=3.7
+  - name: "Make documentation"
+    os: linux
+    python: "3.7"
+    language: python
+    env: RUNTESTS=false MAKE_DOCS=true
 
-before_install: |
-  if [ "$TRAVIS_OS_NAME" == "osx" ]; then
-    case "${VERSION:-3}" in
-      2*)
-        Miniconda="Miniconda2"
-        ;;
-      3*)
-        Miniconda="Miniconda3"
-        ;;
-    esac
+before_install:
+  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+      case "${PYTHON_VERSION:-3}" in
+        2*)
+          Miniconda="Miniconda2"
+          ;;
+        3*)
+          Miniconda="Miniconda3"
+          ;;
+      esac
 
-    wget http://repo.continuum.io/miniconda/${Miniconda}-latest-MacOSX-x86_64.sh -O miniconda.sh;
+      wget http://repo.continuum.io/miniconda/${Miniconda}-latest-MacOSX-x86_64.sh -O miniconda.sh;
 
-    bash miniconda.sh -b -p $HOME/miniconda
-    export PATH=$HOME/miniconda/bin:$PATH
-    hash -r
-    conda info -a
-    conda config --set always_yes yes --set changeps1 no
-    conda update -q conda
-    conda create -q -n test-environment python="${VERSION:-3}" $*
-    source activate test-environment
-    conda update -q -y --all
-    conda install python.app
-    pip install --upgrade pip
-  fi
+      bash miniconda.sh -b -p $HOME/miniconda
+      export PATH=$HOME/miniconda/bin:$PATH
+      hash -r
+      conda info -a
+      conda config --set always_yes yes --set changeps1 no
+      conda update -q conda
+      conda create -q -n test-environment python="${PYTHON_VERSION:-3}" $*
+      source activate test-environment
+      conda update -q -y --all
+      conda install python.app
+      
+      export PYTHON_CMD=pythonw
+    else
+      export PYTHON_CMD=python
+    fi
+
+  - pip install --upgrade pip
 
 install:
   - pip install --upgrade numpy
-  - pip install ".[dev]"
+  - pip install .
+  
+  - if [ "$RUN_TESTS" = true ]; then
+      pip install ".[dev]"
+    fi
 
-script: |
-  if [[ $TRAVIS_OS_NAME == "osx" ]]; then
-    if [[ $COVERAGE == "true" ]]; then pythonw -m coverage run -m pytest ./tests || travis_terminate 1; fi
-    if [[ $COVERAGE == "false" ]]; then pythonw -m pytest ./tests || travis_terminate 1; fi
-  else
-    if [[ $COVERAGE == "true" ]]; then python -m coverage run -m pytest ./tests || travis_terminate 1; fi
-    if [[ $COVERAGE == "false" ]]; then python -m pytest ./tests || travis_terminate 1; fi
-  fi
+  - if [ "$MAKE_DOCS" = true ]; then
+      pip install ".[doc]"
+      sudo apt-get install ffmpeg
+    fi
 
-after_success: |
-  if [[ $COVERAGE == "true" ]]; then
-    coveralls || travis_terminate 1
-  fi
+script:
+  - if [ "$TEST_COVERAGE" = true ]; then
+      $PYTHON_CMD -m coverage run -m pytest ./tests || travis_terminate 1
+    else
+      $PYTHON_CMD -m pytest ./tests || travis_terminate 1
+    fi
+  
+  - if [ "$MAKE_DOCS" = true ]; then
+      cd doc
+      make html || travis_terminate 1
+      cd ..
+    fi
+
+after_success:
+  - if [ "$COVERAGE" = true ]; then
+      coveralls || travis_terminate 1
+    fi
+
+  - if [ "$MAKE_DOCS" = true ]; then
+      aws s3 sync --acl public-read --delete ./doc/_build/html s3://docs.hcipy.org/dev || travis_terminate 1
+    fi

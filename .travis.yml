@@ -87,9 +87,10 @@ install:
 script:
   - $PYTHON_CMD --version
 
-  - if [ "$TEST_COVERAGE" = true ]; then
+  - if [ "$RUN_TESTS" = true ] && [ "$TEST_COVERAGE" = true ]; then
       $PYTHON_CMD -m coverage run -m pytest ./tests || travis_terminate 1;
-    else
+  
+  - if [ "$RUN_TESTS" = true ] && [ "$TEST_COVERAGE" = false ]; then
       $PYTHON_CMD -m pytest ./tests || travis_terminate 1;
     fi
   

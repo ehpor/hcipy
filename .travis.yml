@@ -84,11 +84,12 @@ install:
       sudo apt-get -y install ffmpeg pandoc;
     fi
 
-script:
   - $PYTHON_CMD --version
 
+script:
   - if [ "$RUN_TESTS" = true ] && [ "$TEST_COVERAGE" = true ]; then
       $PYTHON_CMD -m coverage run -m pytest ./tests || travis_terminate 1;
+    fi
   
   - if [ "$RUN_TESTS" = true ] && [ "$TEST_COVERAGE" = false ]; then
       $PYTHON_CMD -m pytest ./tests || travis_terminate 1;
@@ -106,6 +107,6 @@ after_success:
     fi
 
   - if [ "$MAKE_DOCS" = true ]; then
-      $PYTHON_CMD setup.py egg_info
+      $PYTHON_CMD setup.py egg_info;
       aws s3 sync --acl public-read --delete ./doc/_build/html s3://docs.hcipy.org/dev || travis_terminate 1;
     fi

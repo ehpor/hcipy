@@ -38,7 +38,7 @@ matrix:
     os: linux
     python: "3.7"
     language: python
-    env: RUNTESTS=false MAKE_DOCS=true
+    env: RUN_TESTS=false MAKE_DOCS=true
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
@@ -85,6 +85,8 @@ install:
     fi
 
 script:
+  - $PYTHON_CMD --version
+
   - if [ "$TEST_COVERAGE" = true ]; then
       $PYTHON_CMD -m coverage run -m pytest ./tests || travis_terminate 1;
     else
@@ -98,8 +100,8 @@ script:
     fi
 
 after_success:
-  - if [ "$COVERAGE" = true ]; then
-      coveralls || travis_terminate 1;
+  - if [ "$TEST_COVERAGE" = true ]; then
+      travis_retry coveralls;
     fi
 
   - if [ "$MAKE_DOCS" = true ]; then

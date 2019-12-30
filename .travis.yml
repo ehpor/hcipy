@@ -64,9 +64,9 @@ before_install:
       conda update -q -y --all
       conda install python.app
       
-      export PYTHON_CMD=pythonw
+      PYTHON_CMD="pythonw"
     else
-      export PYTHON_CMD=python
+      PYTHON_CMD="python"
     fi
 
   - pip install --upgrade pip

@@ -81,7 +81,7 @@ install:
 
   - if [ "$MAKE_DOCS" = true ]; then
       pip install ".[doc]";
-      sudo apt-get install ffmpeg;
+      sudo apt-get -y install ffmpeg pandoc;
     fi
 
 script:
@@ -105,5 +105,6 @@ after_success:
     fi
 
   - if [ "$MAKE_DOCS" = true ]; then
+      $PYTHON_CMD setup.py egg_info
       aws s3 sync --acl public-read --delete ./doc/_build/html s3://docs.hcipy.org/dev || travis_terminate 1;
     fi

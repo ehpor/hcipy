@@ -76,32 +76,32 @@ install:
   - pip install .
   
   - if [ "$RUN_TESTS" = true ]; then
-      pip install ".[dev]"
+      pip install ".[dev]";
     fi
 
   - if [ "$MAKE_DOCS" = true ]; then
-      pip install ".[doc]"
-      sudo apt-get install ffmpeg
+      pip install ".[doc]";
+      sudo apt-get install ffmpeg;
     fi
 
 script:
   - if [ "$TEST_COVERAGE" = true ]; then
-      $PYTHON_CMD -m coverage run -m pytest ./tests || travis_terminate 1
+      $PYTHON_CMD -m coverage run -m pytest ./tests || travis_terminate 1;
     else
-      $PYTHON_CMD -m pytest ./tests || travis_terminate 1
+      $PYTHON_CMD -m pytest ./tests || travis_terminate 1;
     fi
   
   - if [ "$MAKE_DOCS" = true ]; then
-      cd doc
-      make html || travis_terminate 1
-      cd ..
+      cd doc;
+      make html || travis_terminate 1;
+      cd ..;
     fi
 
 after_success:
   - if [ "$COVERAGE" = true ]; then
-      coveralls || travis_terminate 1
+      coveralls || travis_terminate 1;
     fi
 
   - if [ "$MAKE_DOCS" = true ]; then
-      aws s3 sync --acl public-read --delete ./doc/_build/html s3://docs.hcipy.org/dev || travis_terminate 1
+      aws s3 sync --acl public-read --delete ./doc/_build/html s3://docs.hcipy.org/dev || travis_terminate 1;
     fi

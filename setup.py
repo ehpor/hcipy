@@ -32,7 +32,7 @@ setup(name='hcipy',
 		"dev": [
 			"pytest",
 			"coveralls",
-			"coverage<5.0",
+			"coverage",
 			"mpmath"],
 		"doc": [
 			"numpydoc",

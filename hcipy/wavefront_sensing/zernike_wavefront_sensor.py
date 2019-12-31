@@ -218,6 +218,8 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 			The output wavefront.
 		'''
 		wf_foc = self.prop.forward(wavefront)
+		if wf_foc.is_scalar:
+			wf_foc = Wavefront(wf_foc.electric_field, wavelength=wf_foc.wavelength, input_stokes_vector=(1, 0, 0, 0))
 
 		wf_foc.electric_field = self.HWP.forward(wf_foc).electric_field - self.vZWFS_mask.forward(wf_foc).electric_field
 
@@ -240,6 +242,8 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 			The output wavefront.
 		'''
 		wf_foc = self.prop.forward(wavefront)
+		if wf_foc.is_scalar:
+			wf_foc = Wavefront(wf_foc.electric_field, wavelength=wf_foc.wavelength, input_stokes_vector=(1, 0, 0, 0))
 
 		wf_foc.electric_field = self.HWP.backward(wf_foc).electric_field - self.vZWFS_mask.backward(wf_foc).electric_field
 

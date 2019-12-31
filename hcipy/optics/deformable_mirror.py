@@ -6,7 +6,7 @@ from .optical_element import OpticalElement
 from ..field import Field, make_uniform_grid
 from ..mode_basis import ModeBasis, make_gaussian_pokes
 from ..interpolation import make_linear_interpolator_separated
-from ..io import read_fits
+from ..util import read_fits
 
 def make_actuator_positions(num_actuators_across_pupil, actuator_spacing):
 	'''Make actuator positions using the BMC convention.

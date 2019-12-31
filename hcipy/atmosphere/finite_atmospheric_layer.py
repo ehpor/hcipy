@@ -1,6 +1,6 @@
 from .atmospheric_model import AtmosphericLayer, power_spectral_density_von_karman, fried_parameter_from_Cn_squared
 import numpy as np
-from ..statistics import SpectralNoiseFactoryMultiscale
+from ..util import SpectralNoiseFactoryMultiscale
 
 class FiniteAtmosphericLayer(AtmosphericLayer):
 	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, oversampling=2):

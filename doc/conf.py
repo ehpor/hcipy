@@ -33,11 +33,10 @@
 extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
-    'sphinx.ext.autosummary',
+    'sphinx_automodapi.automodapi',
     'numpydoc',
     'nbsphinx']
 
-autosummary_generate = True
 numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.

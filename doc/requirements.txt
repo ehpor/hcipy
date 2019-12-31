@@ -6,3 +6,4 @@ ipykernel
 poppy
 nbformat
 nbconvert
+sphinx-automodapi

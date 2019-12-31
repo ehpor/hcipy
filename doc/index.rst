@@ -1,21 +1,36 @@
-.. HCIPy documentation master file, created by
-   sphinx-quickstart on Thu Apr 13 16:08:06 2017.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+HCIPy
+=====
 
-Welcome to HCIPy's documentation!
-=================================
-
-HCIPy is a framework written in Python for high contrast imaging simulation work. It implements adaptive optics simulation, coronagraphy and optical diffraction calculations.
-
-.. caution::
-    HCIPy is still in active development. Some functions may not work as expected.
+HCIPy is a framework written in Python for high contrast imaging simulation work. It implements adaptive optics simulation, coronagraphy and optical diffraction calculations. This page contains the HCIPy documentation.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   :caption: Getting Started
 
-   introduction
+   overview
+   installation
    getting_started/index
    tutorials/index
-   api
+   changelog
+
+.. toctree::
+   :maxdepth: 1
+   :caption: HCIPy Package
+
+   modules/field
+   modules/aperture
+   modules/fourier
+   modules/optics
+   modules/propagation
+   modules/coronagraphy
+   modules/wavefront_control
+   modules/wavefront_sensing
+   modules/atmosphere
+   modules/mode_basis
+   modules/plotting
+   modules/config
+   modules/interpolation
+   modules/io
+   modules/math_util
+   modules/metrics
+   modules/statistics

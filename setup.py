@@ -31,7 +31,7 @@ setup(name='hcipy',
 		"dev": [
 			"pytest",
 			"coveralls",
-			"coverage<5.0",
+			"coverage",
 			"mpmath"]},
 	zip_safe=False,
 	classifiers=(

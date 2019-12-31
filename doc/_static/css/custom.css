@@ -1,6 +1,13 @@
+:root {
+    --hcipy-primary: #455265;/*#27ae60;*/
+    --hcipy-secondary: #2c3645;
+    --hcipy-tertiary: #1e2530;
+	--hcipy-accent: #2980b9;
+}
+
 div.tutorial-item {
 	border: none;
-	border-left: 10px solid #2980B9;
+	border-left: 10px solid var(--hcipy-accent);
 	border-radius: 10px;
 	box-shadow: 3px 2px 8px 2px rgba(0, 0, 0, 0.3);
 	margin-bottom: 20px;
@@ -44,4 +51,28 @@ div.tutorial-description {
 	display: block;
 	max-width: 75%;
 	padding-left: 20px;
+}
+
+.wy-side-nav-search, .wy-nav-top {
+	background-color: var(--hcipy-secondary);
+}
+
+.wy-nav-side {
+	background-color: var(--hcipy-secondary);
+}
+
+.wy-menu-vertical a:hover {
+	background-color: var(--hcipy-primary);
+}
+
+.wy-menu-vertical p.caption {
+	color: var(--hcipy-accent);
+}
+
+.rst-content a:link, .rst-content a:visited {
+	color: var(--hcipy-accent);
+}
+
+body {
+	color: var(--hcipy-tertiary);
 }

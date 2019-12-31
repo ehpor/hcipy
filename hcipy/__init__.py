@@ -12,7 +12,6 @@ from . import optics
 from . import plotting
 from . import propagation
 from . import statistics
-from . import techniques
 from . import wavefront_control
 from . import wavefront_sensing
 
@@ -32,7 +31,6 @@ from .optics import *
 from .plotting import *
 from .propagation import *
 from .statistics import *
-from .techniques import *
 from .wavefront_control import *
 from .wavefront_sensing import *
 
@@ -53,7 +51,6 @@ __all__.extend(optics.__all__)
 __all__.extend(plotting.__all__)
 __all__.extend(propagation.__all__)
 __all__.extend(statistics.__all__)
-__all__.extend(techniques.__all__)
 __all__.extend(wavefront_control.__all__)
 __all__.extend(wavefront_sensing.__all__)
 

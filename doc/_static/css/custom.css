@@ -76,3 +76,12 @@ div.tutorial-description {
 body {
 	color: var(--hcipy-tertiary);
 }
+
+.wy-nav-content {
+	max-width: 900px;
+	margin: auto;
+}
+
+video {
+	max-width: 100%;
+}

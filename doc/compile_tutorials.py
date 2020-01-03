@@ -61,7 +61,37 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 		ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
 		try:
 			start = time.time()
-			notebook, resources = ep.preprocess(notebook, resources={'metadata': {'path': os.path.abspath(os.path.dirname(notebook_path))}})
+
+			additional_cell_1 = {
+				"cell_type": "code",
+				"execution_count": None,
+				"metadata": {},
+				"outputs": [],
+				"source": r"%matplotlib inline" + '\n' +
+					r"%config InlineBackend.print_figure_kwargs = {'bbox_inches': None, 'figsize': (8, 6)}"
+				}
+			
+			additional_cell_2 = {
+				"cell_type": "code",
+				"execution_count": None,
+				"metadata": {},
+				"outputs": [],
+				"source": "import matplotlib as mpl\nmpl.rcParams['figure.figsize'] = (8, 6)\nmpl.rcParams['figure.dpi'] = 150\nmpl.rcParams['savefig.dpi'] = 150"
+				}
+			
+			notebook.cells.insert(1, nbformat.from_dict(additional_cell_1))
+			notebook.cells.insert(2, nbformat.from_dict(additional_cell_2))
+
+			km, kc = ep.start_new_kernel(cwd=os.path.abspath(os.path.dirname(notebook_path)))
+			kc.allow_stdin = False
+
+			notebook, resources = ep.preprocess(notebook, km=km)
+
+			notebook.cells.pop(2)
+			notebook.cells.pop(1)
+
+			km.shutdown_kernel()
+			
 			end = time.time()
 			print('  Compilation took %d seconds.' % (end - start))
 		except CellExecutionError as err:

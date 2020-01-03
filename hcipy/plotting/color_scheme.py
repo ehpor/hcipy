@@ -58,5 +58,3 @@ def set_color_scheme(dark=False, publication_quality=False, cmap='viridis'):
 
 		mpl.rc('figure', figsize=(10, 7.1))
 		mpl.rc('font', size=14)
-
-set_color_scheme(False, False, 'viridis')

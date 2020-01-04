@@ -73,6 +73,11 @@ before_install:
 
 install:
   - pip install --upgrade numpy
+
+  - if [ "$MAKE_DOCS" = true ]; then
+      git fetch --unshallow;
+    fi
+
   - pip install .
   
   - if [ "$RUN_TESTS" = true ]; then
@@ -89,6 +94,7 @@ install:
   - $PYTHON_CMD -c "import numpy; print('Numpy', numpy.__version__)"
   - $PYTHON_CMD -c "import scipy; print('Scipy', scipy.__version__)"
   - $PYTHON_CMD -c "import matplotlib; print('Matplotlib', matplotlib.__version__)"
+  - $PYTHON_CMD -c "import hcipy; print('HCIPy', hcipy.__version__)"
 
 script:
   - if [ "$RUN_TESTS" = true ] && [ "$TEST_COVERAGE" = true ]; then
@@ -100,9 +106,6 @@ script:
     fi
   
   - if [ "$MAKE_DOCS" = true ]; then
-      git fetch --unshallow;
-      $PYTHON_CMD setup.py egg_info;
-      $PYTHON_CMD -c "import hcipy; print('HCIPy', hcipy.__version__)";
       cd doc;
       make html || travis_terminate 1;
       cd ..;

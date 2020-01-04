@@ -45,7 +45,7 @@ setup(name='hcipy',
 			"nbconvert",
 			"sphinx-automodapi"]},
 	zip_safe=False,
-	classifiers=(
+	classifiers=[
 		"Development Status :: 3 - Alpha",
 		"License :: OSI Approved :: MIT License",
 		"Operating System :: OS Independent",
@@ -53,8 +53,6 @@ setup(name='hcipy',
 		"Programming Language :: Python :: 3.5",
 		"Programming Language :: Python :: 3.6",
 		"Programming Language :: Python :: 3.7",
-		"Topic :: Scientific/Engineering :: Astronomy"
-	),
-	license='MIT',
-	license_file='LICENSE'
+		"Topic :: Scientific/Engineering :: Astronomy"],
+	license_file="LICENSE"
 )

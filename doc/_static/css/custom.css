@@ -82,6 +82,13 @@ body {
 	margin: auto;
 }
 
-video {
+.rst-content video {
 	max-width: 100%;
+}
+
+.rst-content blockquote {
+	border-left: 4px solid var(--hcipy-accent);
+	padding-left: 16px;
+	margin-left: 0;
+	font-style: italic;
 }

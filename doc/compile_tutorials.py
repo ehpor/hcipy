@@ -29,7 +29,14 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	if '#' in title:
 		title = title.replace('#', '').strip()
 	
-	description = first_cell.source.splitlines()[2].strip()
+	description = ''
+	for line in first_cell.source.splitlines()[1:]:
+		if line.strip():
+			description = line.strip()
+			break
+
+	if not description:
+		print('  Description could not be found in the notebook.')
 	
 	if 'thumbnail_figure_index' in notebook.metadata:
 		thumbnail_figure_index = notebook.metadata['thumbnail_figure_index']

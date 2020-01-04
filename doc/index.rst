@@ -11,6 +11,8 @@ HCIPy is a framework written in Python for high contrast imaging simulation work
    installation
    getting_started/index
    tutorials/index
+   citing
+   team
    changelog
 
 .. toctree::
@@ -32,3 +34,11 @@ HCIPy is a framework written in Python for high contrast imaging simulation work
    modules/interpolation
    modules/util
    modules/metrics
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Developer resources
+
+   development/contributing_guide
+   development/project_setup
+   development/new_release

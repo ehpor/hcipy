@@ -1,4 +1,4 @@
-The Team
+The team
 ========
 
 HCIPy was originally developed by a small team of astronomers at Leiden Observatory, but has since received external constributions from scientists and software developers around the world.

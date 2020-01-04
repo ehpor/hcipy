@@ -1,4 +1,4 @@
-Getting Started with HCIPy
+Getting started with HCIPy
 ==========================
 
 .. toctree::

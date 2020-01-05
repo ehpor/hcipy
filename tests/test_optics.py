@@ -1,5 +1,6 @@
 import numpy as np 
 from hcipy import *
+import pytest
 
 def test_statistics_noisy_detector():
 	N = 256
@@ -63,6 +64,18 @@ def test_statistics_noisy_detector():
 			expected_std = ff * field[0] * t 
 
 			assert np.isclose(expected_std, std_measurement, rtol=2e-02, atol=1e-05)
+
+def test_glass_catalogue():
+	bk7 = get_refractive_index('N-BK7')
+	assert np.allclose(bk7(500e-9), 1.5214144761028994)
+
+	with pytest.raises(ValueError) as exception_info:
+		get_refractive_index('N-Bk7')
+	assert 'Did you mean' in str(exception_info.value)
+
+	with pytest.raises(ValueError) as exception_info:
+		get_refractive_index('N-Ba7')
+	assert 'Did you mean' not in str(exception_info.value)
 
 def test_segmented_deformable_mirror():
 	num_pix = 256

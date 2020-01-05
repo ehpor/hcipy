@@ -49,7 +49,7 @@ This page is intended for the maintainer of HCIPy, and contains step-by-step ins
 
     .. code-block:: shell
 
-        aws s3 sync --acl public-read doc/_build/html s3://docs.hcipy.org/0.3
+        aws s3 sync --acl public-read --cache-control max-age=2629800,public doc/_build/html s3://docs.hcipy.org/0.3
     
     where ``0.3`` has been changed to the correct version number.
 
@@ -71,7 +71,9 @@ This page is intended for the maintainer of HCIPy, and contains step-by-step ins
 
     .. code-block:: shell
 
-        aws s3 sync --acl public-read --delete www s3://hcipy.org
-        aws s3 sync --acl public-read docs s3://docs.hcipy.org
+        aws s3 sync --acl public-read --delete --cache-control max-age=604800,public www s3://hcipy.org
+        aws s3 sync --acl public-read --cache-control max-age=604800,public docs s3://docs.hcipy.org
 
-8.  Update this document with any issues, problems or peculiarities that you encountered for later reference.
+8.  Purge the `CloudFlare <https://cloudflare.com>`__ cache for `hcipy.org <https://hcipy.org>`__. This step is not necessary. Without it the website will update in at maximum seven days, due to caching of the old website by CloudFlare.
+
+9.  Update this document with any issues, problems or peculiarities that you encountered for later reference.

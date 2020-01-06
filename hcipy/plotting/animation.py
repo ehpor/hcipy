@@ -89,9 +89,7 @@ class FFMpegWriter(object):
 	def __init__(self, filename, codec=None, framerate=24, quality=None, preset=None):
 		if codec is None:
 			extension = os.path.splitext(filename)[1]
-			if extension == '.mp4':
-				codec = 'mpeg4'
-			elif extension == '.avi':
+			if extension == '.mp4' or extension == '.avi':
 				codec = 'libx264'
 			elif extension == '.webm':
 				codec = 'libvpx-vp9'
@@ -170,10 +168,12 @@ class FFMpegWriter(object):
 		video = open(self.filename, 'rb').read()
 		video = base64.b64encode(video).decode('ascii').rstrip()
 
-		if self.codec == 'mpeg4':
+		if self.filename.endswith('.mp4'):
 			mimetype = 'video/mp4'
-		elif self.codec == 'libvpx-vp9':
+		elif self.filename.endswith('.webm'):
 			mimetype = 'video/webm'
+		elif self.filename.endswith('.avi'):
+			mimetype = 'video/avi'
 		else:
 			raise RuntimeError('Mimetype could not be guessed.')
 

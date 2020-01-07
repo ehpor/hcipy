@@ -474,7 +474,7 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 		separated_coords = grid.separated_coords
 
 		if statistic in ['mean', 'sum']:
-			field = grid.zeros()
+			field = 0
 		else:
 			field = None
 
@@ -495,6 +495,7 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 		if statistic == 'mean':
 			field /= len(dithers)
 
+		field.grid = grid
 		return field
 	else:
 		# Cannot use sub grids, so fall back to evaluation of generator on the full 

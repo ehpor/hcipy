@@ -355,11 +355,10 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 		If this grid is given, no new grid will be calculated and this grid will
 		be used instead. This saves on calculation time if your new grid is already
 		known beforehand.
-	statistic : string or callable
+	statistic : string
 		The statistic to compute (default is 'mean').
 		The following statistics are available:
 		* 'mean': compute the mean of values for points within each superpixel.
-		* 'median': compute the median of values for points within each superpixel.
 		* 'sum': compute the sum of values for points within each superpixel. This is identical to a weighted histogram.
 		* 'min': compute the minimum of values for points within each superpixel.
 		* 'max': compute the maximum of values for point within each superpixel.
@@ -389,7 +388,6 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 
 	available_statistics = {
 		'mean': np.mean,
-		'median': np.median,
 		'max': np.max,
 		'min': np.min,
 		'sum': np.sum
@@ -406,13 +404,12 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 		if statistic in ['min', 'max', 'sum']:
 			f = available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes))
 			return Field(f.reshape(tuple(new_shape)), new_grid)
-		elif statistic in ['mean']:
+		else:
+			# Statistic is mean
 			weights = field.grid.weights
 			w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
 			f = np.sum((field * weights).reshape(tuple(reshape)), axis=tuple(axes))
 			return Field((f / w).reshape(tuple(new_shape)), new_grid)
-		else:
-			raise NotImplementedError('The median statistic is not implemented for non-regular grids.')
 
 def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean', make_sparse=True):
 	'''Evaluate a Field generator on `grid`, with an oversampling.
@@ -428,11 +425,10 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 		The factor by which to oversample. If this is a scalar, it will be rounded to
 		the nearest integer. If this is an array, a different oversampling factor will
 		be used for each dimension.
-	statistic : string or callable
+	statistic : string
 		The statistic to compute (default is 'mean').
 		The following statistics are available:
 		* 'mean': compute the mean of values for points within each superpixel.
-		* 'median': compute the median of values for points within each superpixel.
 		* 'sum': compute the sum of values for points within each superpixel. This is identical to a weighted histogram.
 		* 'min': compute the minimum of values for points within each superpixel.
 		* 'max': compute the maximum of values for point within each superpixel.
@@ -461,51 +457,50 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 			modes.append(field)
 		
 		return ModeBasis(modes, grid)
-	
-	new_grid = make_supersampled_grid(grid, oversampling)
-	
+
+	oversampling = (np.round(oversampling) * np.ones(grid.ndim)).astype('int')
+
 	if grid.is_separated:
-		# Use sub grids to evaluate field generator. This avoids a huge memory usage 
-		# for large oversamplings. New grid is guaranteed to be able to be split up into
-		# oversampling^ndim parts. Each of these evaluations uses the same amount of
-		# memory as the final grid.
-		field = None
+		# Use dithered sub grids to get the final supersampled field.
+		deltas = []
+		for i in range(grid.ndim):
+			x = grid.coords.separated_coords[i]
+			d = (x[2:] - x[:-2]) / 2.
+			d = np.concatenate(([x[1] - x[0]], d, [x[-1] - x[-2]]))
+			deltas.append(d)
 
-		for part in itertools.product(range(oversampling), repeat=grid.ndim):
-			sub_new_coords = []
-			sub_coords = []
-			mask = np.ones(grid.shape, dtype='bool')
+		dithers = make_uniform_grid(oversampling, 1)
 
-			# Create a sub grid and a mask on the original array where the subarray is located.
-			for i, (p, s) in enumerate(zip(part, grid.dims)):
-				sub_new_coords.append(new_grid.separated_coords[i][p * s:(p + 1) * s])
-				sub_coords.append(grid.separated_coords[i][p * s // oversampling:(p + 1) * s // oversampling])
+		separated_coords = grid.separated_coords
 
-				# Mask out the parts outside of the current subgrid
-				slices = [slice(None)] * grid.ndim
-				slices[grid.ndim - i - 1] = slice(0, p * s // oversampling)
-				mask[tuple(slices)] = False
-				slices[grid.ndim - i - 1] = slice((p + 1) * s // oversampling, None)
-				mask[tuple(slices)] = False
+		if statistic in ['mean', 'sum']:
+			field = grid.zeros()
+		else:
+			field = None
 
-			# Create sub grids.
-			sub_new_grid = new_grid.__class__(SeparatedCoords(sub_new_coords))
-			sub_grid = grid.__class__(SeparatedCoords(sub_coords))
+		for dither in dithers.points:
+			dithered_separated_coords = [c + d * delta for c, d, delta in zip(separated_coords, dither, deltas)]
+			dithered_grid = grid.__class__(SeparatedCoords(dithered_separated_coords))
 
-			# Evaluate sub field
-			sub_new_field = field_generator(sub_new_grid)
-			sub_field = subsample_field(sub_new_field, oversampling, sub_grid, statistic)
+			if statistic in ['mean', 'sum']:
+				field += field_generator(dithered_grid)
+			else:
+				if field is None:
+					field = field_generator(dithered_grid)
+				elif statistic == 'min':
+					field = np.minimum(field, field_generator(dithered_grid))
+				else:
+					field = np.maximum(field, field_generator(dithered_grid))
 
-			# Insert sub field into final field at the correct pixels.
-			if field is None:
-				field = grid.empty(dtype=sub_field.dtype)
-			field[mask.ravel()] = sub_field
+		if statistic == 'mean':
+			field /= len(dithers)
 
 		return field
 	else:
 		# Cannot use sub grids, so fall back to evaluation of generator on the full 
 		# supersampled grid.
-		field = field_generator(new_grid)
+		supersampled_grid = make_supersampled_grid(grid, oversampling)
+		field = field_generator(supersampled_grid)
 		return subsample_field(field, oversampling, grid, statistic)
 
 def make_uniform_vector_field(field, jones_vector):

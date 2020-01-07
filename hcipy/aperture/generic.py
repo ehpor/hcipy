@@ -96,7 +96,7 @@ def rectangular_aperture(size, center=None):
 	def func(grid):
 		if grid.is_('cartesian') and grid.is_separated:
 			x, y = grid.separated_coords
-			f = ((np.abs(x - shift[0]) < (dim[0] / 2))[np.newaxis, :] * (np.abs(y - shift[1]) < (dim[0] / 2))[:, np.newaxis]).ravel()
+			f = ((np.abs(x - shift[0]) <= (dim[0] / 2))[np.newaxis, :] * (np.abs(y - shift[1]) <= (dim[1] / 2))[:, np.newaxis]).ravel()
 		else:
 			x, y = grid.as_('cartesian').coords
 			f = (np.abs(x - shift[0]) <= (dim[0] / 2)) * (np.abs(y - shift[1]) <= (dim[1] / 2))

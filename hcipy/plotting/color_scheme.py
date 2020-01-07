@@ -11,6 +11,10 @@ def set_color_scheme(dark=False, publication_quality=False, cmap='viridis'):
 	Apply a color scheme to all matplotlib figures. The setting
 	publication_quality uses LaTeX for all text in the figure. 
 	"""
+	import warnings
+	warnings.warn('set_color_scheme() is deprecated. Copy the color scheme to your own file if you want to continue using it in the future.',
+		warnings.DeprecationWarning, stacklevel=2)
+	
 	import matplotlib as mpl
 
 	mpl.rc('lines', linewidth=1.5, markeredgewidth=0.25)

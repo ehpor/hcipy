@@ -170,7 +170,7 @@ def make_LP_modes(grid, V_number, core_radius, return_betas=False):
 	# Sort the modes according to their propagation constant
 	betas = np.array(betas)
 	index_sorting = np.argsort(betas)[::-1]
-	modes = np.array(modes)[index_sorting]
+	modes = np.array(modes)[index_sorting].T
 	betas = betas[index_sorting]
 	
 	if return_betas:

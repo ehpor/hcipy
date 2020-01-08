@@ -96,8 +96,8 @@ class StepIndexFiber(AgnosticOpticalElement):
 			The modal coefficients.
 		'''
 				
-		M = instance_data.fiber_modes.transformation_matrix
-		mode_coefficients = M.dot(wavefront.electric_field * wavefront.grid.weights)
+		M = instance_data.fiber_modes.transformation_matrix.T
+		mode_coefficients = M.dot(wavefront.electric_field.conj() * wavefront.grid.weights)
 		return mode_coefficients
 
 	@make_agnostic_forward
@@ -115,9 +115,9 @@ class StepIndexFiber(AgnosticOpticalElement):
 			The wavefront that exits the fiber.
 		'''
 				
-		M = instance_data.fiber_modes.transformation_matrix
+		M = instance_data.fiber_modes.transformation_matrix.T
 		mode_coefficients = M.dot(wavefront.electric_field.conj() * wavefront.grid.weights)
-		output_electric_field = Field(M.T.dot(mode_coefficients * np.exp(1j * instance_data.beta * self.fiber_length)), wavefront.grid)
+		output_electric_field = Field(M.dot(mode_coefficients * np.exp(1j * instance_data.beta * self.fiber_length)), wavefront.grid)
 
 		return Wavefront(output_electric_field, wavefront.wavelength)
 
@@ -136,8 +136,8 @@ class StepIndexFiber(AgnosticOpticalElement):
 			The wavefront that exits the fiber.
 		'''
 		
-		mode_coefficients = M.dot(wavefront.electric_field.conj() * wavefront.grid.weights)
-		output_electric_field = Field(M.T.dot(mode_coefficients * np.exp(-1j * instance_data.beta * self.fiber_length)), wavefront.grid)
+		mode_coefficients = M.T.dot(wavefront.electric_field.conj() * wavefront.grid.weights)
+		output_electric_field = Field(M.dot(mode_coefficients * np.exp(-1j * instance_data.beta * self.fiber_length)), wavefront.grid)
 
 		return Wavefront(output_electric_field, wavefront.wavelength)
 

@@ -38,3 +38,18 @@ def test_disk_harmonic_modes():
 			for j, m2 in enumerate(modes):
 				product = np.sum((m1 * m2)[aperture_mask])
 				assert np.abs(product - np.eye(num_modes)[i,j]) < 1e-2
+
+
+def test_LP_modes():
+	grid = make_pupil_grid(128)
+
+	# Test for single-mode
+	modes = make_LP_modes(grid, 2.4, 0.1, return_betas=False)
+	assert len(modes) == 1
+
+	# Test orthogonality
+	modes = make_LP_modes(grid, 25, 0.1, return_betas=False)
+	for i, m1 in enumerate(modes):
+		for j, m2 in enumerate(modes):
+			product = np.real(np.sum(m1 * m2.conj() * grid.weights))
+			assert np.abs(product - 1 if i == j else 0) <= 1e-2

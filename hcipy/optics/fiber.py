@@ -29,7 +29,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		monochromatic_V = self.V(wavelength)
 		instance_data.NA = self.evaluate_parameter(self._NA, input_grid, output_grid, wavelength)
-		instance_data.fiber_modes, instance_data.beta = make_LP_modes(input_grid, monochromatic_V, self.core_radius, mode_cutoff=None)
+		instance_data.fiber_modes, instance_data.beta = make_LP_modes(input_grid, monochromatic_V, self.core_radius, return_betas=True)
 
 	def num_modes(self, wavelength):
 		'''The approximate amount of modes of the fiber.
@@ -115,10 +115,10 @@ class StepIndexFiber(AgnosticOpticalElement):
 			The wavefront that exits the fiber.
 		'''
 				
-		M = instance_data.fiber_modes.transformation_matrix.T
-		mode_coefficients = M.dot(wavefront.electric_field.conj() * wavefront.grid.weights)
-		output_electric_field = Field(M.dot(mode_coefficients * np.exp(1j * instance_data.beta * self.fiber_length)), wavefront.grid)
-
+		M = instance_data.fiber_modes.transformation_matrix
+		mode_coefficients = np.einsum('...i, i, ij->...j', wavefront.electric_field, wavefront.grid.weights, M.conj())
+		output_electric_field = Field(np.einsum('...i, i, ij->...j', mode_coefficients, np.exp(1j * instance_data.beta * self.fiber_length), M.T.conj()), wavefront.grid)
+		
 		return Wavefront(output_electric_field, wavefront.wavelength)
 
 	@make_agnostic_backward
@@ -135,10 +135,10 @@ class StepIndexFiber(AgnosticOpticalElement):
 		Wavefront
 			The wavefront that exits the fiber.
 		'''
+		M = instance_data.fiber_modes.transformation_matrix
+		mode_coefficients = np.einsum('...i, i, ij->...j', wavefront.electric_field, wavefront.grid.weights, M.conj())
+		output_electric_field = Field(np.einsum('...i, i, ij->...j', mode_coefficients, np.exp(-1j * instance_data.beta * self.fiber_length), M.T.conj()), wavefront.grid)
 		
-		mode_coefficients = M.T.dot(wavefront.electric_field.conj() * wavefront.grid.weights)
-		output_electric_field = Field(M.dot(mode_coefficients * np.exp(-1j * instance_data.beta * self.fiber_length)), wavefront.grid)
-
 		return Wavefront(output_electric_field, wavefront.wavelength)
 
 class SingleModeFiber(Detector):

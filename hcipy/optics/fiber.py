@@ -95,9 +95,9 @@ class StepIndexFiber(AgnosticOpticalElement):
 		array_like
 			The modal coefficients.
 		'''
-				
-		M = instance_data.fiber_modes.transformation_matrix.T
-		mode_coefficients = M.dot(wavefront.electric_field.conj() * wavefront.grid.weights)
+		
+		M = instance_data.fiber_modes.transformation_matrix
+		mode_coefficients = np.einsum('...i, i, ij->...j', wavefront.electric_field, wavefront.grid.weights, M.conj())
 		return mode_coefficients
 
 	@make_agnostic_forward

@@ -14,7 +14,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 	----------
 	core_radius : scalar
 		The radius of the high-index core.
-	NA : scalar
+	NA : scalar or function of wavelength
 		The numerical aperture of the fiber.
 	fiber_length : scalar
 		The length of the optical fiber.
@@ -28,6 +28,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 	
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		monochromatic_V = self.V(wavelength)
+		instance_data.NA = self.evaluate_parameter(self._NA, input_grid, output_grid, wavelength)
 		instance_data.fiber_modes, instance_data.beta = make_LP_modes(input_grid, monochromatic_V, self.core_radius, mode_cutoff=None)
 
 	def num_modes(self, wavelength):

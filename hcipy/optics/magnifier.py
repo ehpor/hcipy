@@ -6,12 +6,21 @@ from ..field import Field
 
 class Magnifier(AgnosticOpticalElement):
 	def __init__(self, magnification):
-		self.magnification = magnification
+		''' An ideal magnifier.
+
+		This class magnifies a wavefront in an energy conserving manner.
+
+		Parameters
+		----------
+		magnification : scalar or function of wavelength
+			The magnification of the system.
+		'''
+		self._magnification = magnification
 
 		AgnosticOpticalElement.__init__(self, False, True)
 	
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
-		instance_data.magnification = self.evaluate_parameter(self.magnification, input_grid, output_grid, wavelength)
+		instance_data.magnification = self.evaluate_parameter(self._magnification, input_grid, output_grid, wavelength)
 	
 	@property
 	def magnification(self):
@@ -24,12 +33,12 @@ class Magnifier(AgnosticOpticalElement):
 		self.clear_cache()
 	
 	def get_input_grid(self, output_grid, wavelength):
-		magnification = self.evaluate_parameter(self.magnification, None, None, wavelength)
+		magnification = self.evaluate_parameter(self._magnification, None, None, wavelength)
 
 		return output_grid.scaled(1.0 / magnification)
 	
 	def get_output_grid(self, input_grid, wavelength):
-		magnification = self.evaluate_parameter(self.magnification, input_grid, None, wavelength)
+		magnification = self.evaluate_parameter(self._magnification, input_grid, None, wavelength)
 
 		return input_grid.scaled(magnification)
 	

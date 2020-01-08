@@ -41,8 +41,8 @@ def find_branch_cuts(m, V):
 		A tuple containing the solutions of the eigenvalue function. If no solutions were found returns None.
 	'''
 	# Make an initial rough grid
-	num_steps = 501 #max(501, 2 * np.int(np.ceil(V**2/2)))
-	theta = np.linspace(np.pi * 9999 / 20000, 0.001 * np.pi, num_steps)
+	num_steps = 501
+	theta = np.linspace(np.pi * 0.499, 0, num_steps, endpoint=False)
 	u = V * np.cos(theta)
 
 	# Find the position where the eigenvalue equation goes through zero
@@ -111,8 +111,11 @@ def LP_azimuthal(m, theta):
 	else:
 		return np.sin(m * theta)
 
-def make_LP_modes(grid, V_number, core_radius, mode_cutoff=None):
+def make_LP_modes(grid, V_number, core_radius, return_betas=False):
 	'''Make a ModeBasis out of the guided modes that are supported by a step-index fiber.
+
+	This function solves the eigenvalue equation of for a radial step-index profile fiber.
+	It calculates the mode profiles and can also return the propagation constants.
 
 	Parameters
 	----------
@@ -122,12 +125,14 @@ def make_LP_modes(grid, V_number, core_radius, mode_cutoff=None):
 		The normalized frequency parameter of the fiber.
 	core_radius : scalar
 		The core radius of a step-index fiber.
-	mode_cutoff : int
-		The number of modes to find.
+	return_betas : bool
+		If true this function also returns the propagation constants.
 	Returns
 	-------
 	ModeBasis
 		An ModeBasis containing all supported LP modes.
+	array_like
+		An array containing all propagation constants. This is only returned if return_betas is True.
 	'''
 	finding_new_modes = True
 	m = 0
@@ -167,5 +172,8 @@ def make_LP_modes(grid, V_number, core_radius, mode_cutoff=None):
 	index_sorting = np.argsort(betas)[::-1]
 	modes = np.array(modes)[index_sorting]
 	betas = betas[index_sorting]
-
-	return ModeBasis(modes, grid), np.array(betas)
+	
+	if return_betas:
+		return ModeBasis(modes, grid), np.array(betas)
+	else:
+		return ModeBasis(modes, grid)

@@ -29,7 +29,6 @@ class StepIndexFiber(AgnosticOpticalElement):
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		monochromatic_V = self.V(wavelength)
 		instance_data.fiber_modes, instance_data.beta = make_LP_modes(input_grid, monochromatic_V, self.core_radius, mode_cutoff=None)
-		instance_data.Minv = np.linalg.pinv(instance_data.fiber_modes.transformation_matrix)
 
 	def num_modes(self, wavelength):
 		'''The approximate amount of modes of the fiber.
@@ -44,6 +43,10 @@ class StepIndexFiber(AgnosticOpticalElement):
 
 	def mode_field_radius(self, wavelength):
 		'''The mode field radius of the fiber.
+		
+		The mode field radius is the radius of the gaussian beam best matched to the fundamental mode[1]_.
+		
+		.. [1] D. Marcuse 1977, "Loss analysis of single-mode fiber splices,"  The Bell System Technical Journal 56, 703-718 (2014) 
 		'''
 		V = self.V(wavelength)
 		w = self.core_radius * (0.65 + 1.619 / V**(3 / 2) + 2.879 / V**6)
@@ -91,10 +94,9 @@ class StepIndexFiber(AgnosticOpticalElement):
 		array_like
 			The modal coefficients.
 		'''
-		wf = wavefront.copy()
-		
+				
 		M = instance_data.fiber_modes.transformation_matrix
-		mode_coefficients = M.dot(wf.electric_field * wf.grid.weights)
+		mode_coefficients = M.dot(wavefront.electric_field * wavefront.grid.weights)
 		return mode_coefficients
 
 	@make_agnostic_forward
@@ -111,13 +113,12 @@ class StepIndexFiber(AgnosticOpticalElement):
 		Wavefront
 			The wavefront that exits the fiber.
 		'''
-		wf = wavefront.copy()
-		
+				
 		M = instance_data.fiber_modes.transformation_matrix
-		mode_coefficients = M.dot(wf.electric_field.conj() * wf.grid.weights)
-		output_electric_field = Field(M.T.dot(mode_coefficients * np.exp(1j * instance_data.beta * self.fiber_length)), wf.grid)
+		mode_coefficients = M.dot(wavefront.electric_field.conj() * wavefront.grid.weights)
+		output_electric_field = Field(M.T.dot(mode_coefficients * np.exp(1j * instance_data.beta * self.fiber_length)), wavefront.grid)
 
-		return Wavefront(output_electric_field, wf.wavelength)
+		return Wavefront(output_electric_field, wavefront.wavelength)
 
 	@make_agnostic_backward
 	def backward(self, instance_data, wavefront):
@@ -133,12 +134,11 @@ class StepIndexFiber(AgnosticOpticalElement):
 		Wavefront
 			The wavefront that exits the fiber.
 		'''
-		wf = wavefront.copy()
 		
-		mode_coefficients = M.dot(wf.electric_field.conj() * wf.grid.weights)
-		output_electric_field = Field(M.T.dot(mode_coefficients * np.exp(-1j * instance_data.beta * self.fiber_length)), wf.grid)
+		mode_coefficients = M.dot(wavefront.electric_field.conj() * wavefront.grid.weights)
+		output_electric_field = Field(M.T.dot(mode_coefficients * np.exp(-1j * instance_data.beta * self.fiber_length)), wavefront.grid)
 
-		return Wavefront(output_electric_field, wf.wavelength)
+		return Wavefront(output_electric_field, wavefront.wavelength)
 
 class SingleModeFiber(Detector):
 	def __init__(self, input_grid, mode_field_diameter, mode=None):

@@ -11,7 +11,6 @@ The banner above shows a number of simulations done with HCIPy. From left to rig
    :maxdepth: 1
    :caption: Getting Started
 
-   overview
    installation
    getting_started/index
    tutorials/index

@@ -2,11 +2,11 @@ from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
 from ..aperture import circular_aperture
 from ..optics import SurfaceApodizer, Apodizer, TipTiltMirror
-from ..field import make_pupil_grid, make_focal_grid, Field
+from ..field import make_pupil_grid, make_focal_grid, Field, CartesianGrid, UnstructuredCoords
 
 import numpy as np
 
-class ModulatedPyramidWavefrontSensor(WavefrontSensorOptics):
+class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 	'''The optical elements for a modulated pyramid wavefront sensor.
 
 	Parameters
@@ -27,7 +27,7 @@ class ModulatedPyramidWavefrontSensor(WavefrontSensorOptics):
 		x_modulation = modulation / 2 * np.cos(theta)
 		y_modulation = modulation / 2 * np.sin(theta)
 
-		self.modulation_positions = CartesianGrid(UnstructuredCoords(x_modulation, y_modulation))
+		self.modulation_positions = CartesianGrid(UnstructuredCoords((x_modulation, y_modulation)))
 
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the modulated pyramid wavefront sensor.

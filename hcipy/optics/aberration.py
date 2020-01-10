@@ -1,11 +1,10 @@
 import numpy as np
 
 from ..field import Field
-from ..statistics import SpectralNoiseFactoryFFT
+from ..util import SpectralNoiseFactoryFFT, inverse_tikhonov
 from .apodization import SurfaceApodizer
 from ..propagation import FresnelPropagator
 from ..mode_basis import make_zernike_basis
-from ..math_util import inverse_tikhonov
 from ..aperture import circular_aperture
 from .optical_element import OpticalElement
 

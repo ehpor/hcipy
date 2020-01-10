@@ -1,5 +1,5 @@
 from .atmospheric_model import AtmosphericLayer
-from ..math_util import inverse_tikhonov
+from ..util import inverse_tikhonov
 
 import numpy as np
 

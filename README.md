@@ -2,10 +2,12 @@
 [![Build Status](https://img.shields.io/travis/ehpor/hcipy/master.svg?logo=travis)](https://travis-ci.org/ehpor/hcipy)
 [![Build status](https://img.shields.io/appveyor/ci/ehpor/hcipy/master.svg?logo=appveyor)](https://ci.appveyor.com/project/ehpor/hcipy/branch/master)
 [![Coverage Status](https://img.shields.io/coveralls/github/ehpor/hcipy.svg)](https://coveralls.io/r/ehpor/hcipy)
-[![Documentation Status](https://img.shields.io/readthedocs/hcipy.svg)](https://hcipy.readthedocs.io)
-![License](https://img.shields.io/github/license/ehpor/hcipy.svg)
+[![Documentation Status](https://img.shields.io/badge/docs-latest%20build-brightgreen)](https://docs.hcipy.org/dev)
+[![License](https://img.shields.io/github/license/ehpor/hcipy.svg)](https://opensource.org/licenses/MIT)
 
-# High Contrast Imaging for Python (HCIPy)
+# HCIPy: High Contrast Imaging for Python
+
+![alt text](doc/hcipy_banner.png "HCIPy banner")
 
 HCIPy is an open-source object-oriented framework written in Python for performing end-to-end simulations of high-contrast imaging instruments for astronomy.
 
@@ -13,76 +15,18 @@ The library defines wavefronts and optical elements for defining an optical syst
 
 By including simulation of both adaptive optics and coronagraphy into a single framework, HCIPy allows simulations including feedback from post-coronagraphic focal-plane wavefront sensors to the AO system.
 
-For documentation, see https://hcipy.readthedocs.io.
+For documentation, see https://docs.hcipy.org. The main website is hosted at https://hcipy.org.
 
-# Installation
+# Team
 
-HCIPy can be installed from PyPI as usual:
-```
-pip install hcipy
-```
-To install the latest development version from Github:
-```
-git clone https://github.com/ehpor/hcipy
-cd hcipy
-python setup.py develop
-```
-HCIPy can then be updated by running:
-```
-git pull
-python setup.py egg_info
-```
-inside the hcipy repository.
+HCIPy was originally developed by a small team of astronomers at Leiden Observatory, but has since received external constributions from scientists and software developers around the world. For a current list, please visit our [website](https://hcipy.org/team.html).
 
 # Citing
 
-If you use HCIPy for your own research, please include the following acknowledgement in your publication:
-> This research made use of HCIPy, an open-source object-oriented framework written in Python for performing end-to-end simulations of high-contrast imaging instruments (Por et al. 2018).
+If you use HCIPy for your own research, we ask you to cite the HCIPy proceeding ([Por et al. 2018](https://doi.org/10.1117/12.2314407)). If there is no appropriate place in the body text to cite the proceeding, please include something along the lines of the following in your acknowledgements:
 
-The BibTeX citation can be found below:
-```
-@inproceedings{por2018hcipy,
-   author = {Por, E.~H. and Haffert, S.~Y. and Radhakrishnan, V.~M. and Doelman, D.~S. and Van Kooten, M. and Bos, S.~P.},
-   title = "{High Contrast Imaging for Python (HCIPy): an open-source adaptive optics and coronagraph simulator}",
-   booktitle = {Adaptive Optics Systems VI},
-   year = 2018,
-   series = {Proc. {{SPIE}}},
-   volume = 10703
-}
-```
-
-# Documentation
-
-A complete documentation is currently a work in progress. The current documentation can be found at https://hcipy.readthedocs.io. Alternatively, you can build the documentation yourself by executing:
-
-```
-cd doc
-make clean
-make html
-```
-
-Afterwards, the built documentation should now be visible in ``doc/_build/html`` as a static website.
-
-# Testing
-
-HCIPy includes a unit testing framework to make sure that no bugs creep in for previously written code. You can run the full test suite by calling
-```
-pytest ./tests
-```
-in the root directory of HCIPy. To run all tests, including tests that may take longer, call instead
-```
-pytest ./tests --runslow
-```
+> This research made use of HCIPy, an open-source object-oriented framework written in Python for performing end-to-end simulations of high-contrast imaging instruments ([Por et al. 2018](https://doi.org/10.1117/12.2314407)).
 
 # Contributions
 
-If you have something to add, or want something added to HCIPy, please let us know. We actively support external contributions to HCIPy, whether small or large. To contribute a new feature:
-
-1. Fork it if you are not a collaborator yet.
-2. Create your feature branch (``git checkout -b my_new_feature``)
-3. Commit your changes as normal.
-4. Push to the branch (``git push origin my_new_feature``)
-5. Create a new Pull Request on GitHub.
-6. We will review the feature.
-
-If you encounter any problems during this process, do not hesitate to contact us.
+If you have something to add, or want something added to HCIPy, please let us know using a Github issue. We actively support external contributions to HCIPy, whether small or large. Please look at the [contributing guide](https://docs.hcipy.org/dev/development/contributing_guide.html) for more information.

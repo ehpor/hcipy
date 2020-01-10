@@ -98,6 +98,6 @@ after_success:
       travis_retry coveralls;
     fi
 
-  - if [ "$MAKE_DOCS" = true ]; then
+  - if [ "$MAKE_DOCS" = true ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then
       aws s3 sync --acl public-read --delete --cache-control max-age=86400,public ./doc/_build/html s3://docs.hcipy.org/dev || travis_terminate 1;
     fi

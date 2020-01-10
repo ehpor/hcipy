@@ -26,11 +26,15 @@ def circular_aperture(diameter, center=None):
 
 	def func(grid):
 		if grid.is_('cartesian'):
-			x, y = grid.coords
-			f = ((x-shift[0])**2 + (y-shift[1])**2) <= (diameter / 2)**2
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = ((((x - shift[0])**2)[np.newaxis, :] + ((y - shift[1])**2)[:, np.newaxis]) <= (diameter / 2)**2).ravel()
+			else:
+				x, y = grid.coords
+				f = ((x - shift[0])**2 + (y - shift[1])**2) <= (diameter / 2)**2
 		else:
 			f = grid.r <= (diameter / 2)
-	
+
 		return Field(f.astype('float'), grid)
 	
 	return func
@@ -56,11 +60,15 @@ def elliptical_aperture(diameters, center=None):
 		shift = center * np.ones(2)
 	
 	def func(grid):
-		x, y = grid.as_('cartesian').coords
-		f = (((x - shift[0]) / (diameters[0] / 2))**2 + ((y - shift[1]) / (diameters[1] / 2))**2) <= 1
+		if grid.is_separated:
+			x, y = grid.separated_coords
+			f = (((((x - shift[0]) / (diameters[0] / 2))**2)[np.newaxis, :] + ((y - shift[1]) / (diameters[1] / 2))**2)[:, np.newaxis] <= 1).ravel()
+		else:
+			x, y = grid.as_('cartesian').coords
+			f = (((x - shift[0]) / (diameters[0] / 2))**2 + ((y - shift[1]) / (diameters[1] / 2))**2) <= 1
 
 		return Field(f.astype('float'), grid)
-	
+
 	return func
 
 def rectangular_aperture(size, center=None):
@@ -79,17 +87,22 @@ def rectangular_aperture(size, center=None):
 		This function can be evaluated on a grid to get a Field.
 	'''
 	dim = size * np.ones(2)
-	
+
 	if center is None:
 		shift = np.zeros(2)
 	else:
 		shift = center * np.ones(2)
 
 	def func(grid):
-		x, y = grid.as_('cartesian').coords
-		f = (np.abs(x-shift[0]) <= (dim[0]/2)) * (np.abs(y-shift[1]) <= (dim[1]/2))			
+		if grid.is_('cartesian') and grid.is_separated:
+			x, y = grid.separated_coords
+			f = ((np.abs(x - shift[0]) <= (dim[0] / 2))[np.newaxis, :] * (np.abs(y - shift[1]) <= (dim[1] / 2))[:, np.newaxis]).ravel()
+		else:
+			x, y = grid.as_('cartesian').coords
+			f = (np.abs(x - shift[0]) <= (dim[0] / 2)) * (np.abs(y - shift[1]) <= (dim[1] / 2))
+
 		return Field(f.astype('float'), grid)
-	
+
 	return func
 
 def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
@@ -114,6 +127,11 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	if num_sides < 3:
 		raise ValueError('The number of sides for a regular polygon has to greater or equal to 3.')
 
+	if center is None:
+		shift = np.zeros(2)
+	else:
+		shift = center * np.ones(2)
+
 	epsilon = 1e-6
 	
 	apothem = np.cos(np.pi / num_sides) * circum_diameter / 2
@@ -130,11 +148,47 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	else:
 		thetas = np.arange(int(num_sides / 2) + 1) * (num_sides - 2) * np.pi / (num_sides / 2) + angle
 
-	mask = rectangular_aperture(circum_diameter*4)
+	mask = rectangular_aperture(circum_diameter)
 
 	def func(grid):
-		f = np.ones(grid.size, dtype='float')
 		g = grid.as_('cartesian')
+
+		if g.is_separated:
+			x, y = g.separated_coords
+
+			x = x - shift[0]
+			y = y - shift[1]
+
+			ind_x = np.flatnonzero(x**2 < ((circum_diameter / 2)**2))
+			if not len(ind_x):
+				return grid.zeros()
+
+			ind_y = np.flatnonzero(y**2 < ((circum_diameter / 2)**2))
+			if not len(ind_y):
+				return grid.zeros()
+			
+			m_x = slice(ind_x[0], ind_x[-1] + 1)
+			m_y = slice(ind_y[0], ind_y[-1] + 1)
+
+			x = x[m_x]
+			y = y[m_y]
+
+			f_sub = np.ones((len(ind_y), len(ind_x)))
+
+			if num_sides % 2 == 0:
+				for theta in thetas:
+					f_sub *= ((np.cos(theta) * x)[np.newaxis, :] + (np.sin(theta) * y)[:, np.newaxis])**2 <= apothem**2
+			else:
+				for theta in thetas:
+					f_sub *= (np.abs(np.sin(theta) * x)[np.newaxis, :] - (np.cos(theta) * y)[:, np.newaxis]) <= apothem
+			
+			f = np.zeros(g.shape)
+			f[m_y, m_x] = f_sub
+
+			return Field(f.ravel(), grid)
+
+		# Slow backup method
+		f = np.ones(grid.size, dtype='float')
 		m = mask(g) != 0
 
 		x, y = g.coords
@@ -146,12 +200,11 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 		# Make use of symmetry
 		if num_sides % 2 == 0:
 			for theta in thetas:
-				f[m] *= (np.abs(np.cos(theta) * x + np.sin(theta) * y) <= apothem)
+				f[m] *= (np.cos(theta) * x + np.sin(theta) * y)**2 <= apothem**2
 		else:
 			for theta in thetas:
-				print(theta)
-				f[m] *= ((np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem)
-		
+				f[m] *= (np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem
+	
 		return Field(f, grid)
 	
 	return func

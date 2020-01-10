@@ -1,6 +1,6 @@
 import numpy as np
 from ..field import Field
-from ..statistics import large_poisson
+from ..util import large_poisson
 
 class Detector(object):
 	def integrate(self, wavefront, dt, weight=1):

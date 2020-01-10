@@ -1,7 +1,7 @@
 from __future__ import division
 
 from .atmospheric_model import AtmosphericLayer, phase_covariance_von_karman, fried_parameter_from_Cn_squared
-from ..statistics import SpectralNoiseFactoryMultiscale
+from ..util import SpectralNoiseFactoryMultiscale
 from ..field import Field, RegularCoords, UnstructuredCoords, CartesianGrid
 from .finite_atmospheric_layer import FiniteAtmosphericLayer
 
@@ -13,7 +13,7 @@ import time
 import warnings
 
 class InfiniteAtmosphericLayer(AtmosphericLayer):
-	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=False):
+	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=True):
 		self._initialized = False
 
 		AtmosphericLayer.__init__(self, input_grid, Cn_squared, L0, velocity, height)

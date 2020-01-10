@@ -1,7 +1,7 @@
 import numpy as np
 from ..optics import OpticalElement
 from ..mode_basis import ModeBasis
-from ..math_util import inverse_truncated
+from ..util import inverse_truncated
 
 class PerfectCoronagraph(OpticalElement):
 	'''A perfect coronagraph for a certain aperture and order.

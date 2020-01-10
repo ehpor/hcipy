@@ -4,7 +4,7 @@
 /.vscode
 tags
 /doc/_build/
-/doc/_autosummary/
+/doc/api/
 /doc/tutorials/
 /.idea/
 /build/

@@ -230,7 +230,7 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
 
 	plt.imsave(filename, f.shaped, cmap=cmap, vmin=vmin, vmax=vmax)
 
-def contour_field(field, grid=None, ax=None, *args, **kwargs):
+def contour_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 	'''Plot contours of a field.
 
 	Parameters
@@ -245,6 +245,9 @@ def contour_field(field, grid=None, ax=None, *args, **kwargs):
 		If a grid is supplied, it will be used instead of the grid of `field`.
 	ax : matplotlib axes
 		The axes which to draw on. If it is not given, the current axes will be used.
+	grid_units : scalar or array_like
+		The size of a unit square. The grid will be scaled by the inverse of this number before
+		plotting. If this is a scalar, an isotropic scaling will be applied.
 	
 	Returns
 	-------
@@ -255,10 +258,18 @@ def contour_field(field, grid=None, ax=None, *args, **kwargs):
 	if ax is None:
 		ax = plt.gca()
 
+	# Set/Find the correct grid and scale according to received grid units.
 	if grid is None:
-		grid = field.grid
+		if np.allclose(grid_units, 1):
+			grid = field.grid
+		else:
+			grid = field.grid.scaled(1.0 / grid_units)
 	else:
-		field = Field(field, grid)
+		if np.allclose(grid_units, 1):
+			field = Field(field, grid)
+		else:
+			grid = grid.scaled(1.0 / grid_units)
+			field = Field(field, grid)
 
 	c_grid = grid.as_('cartesian')
 	min_x, min_y, max_x, max_y = c_grid.x.min(), c_grid.y.min(), c_grid.x.max(), c_grid.y.max()
@@ -276,7 +287,7 @@ def contour_field(field, grid=None, ax=None, *args, **kwargs):
 
 	return cs
 
-def contourf_field(field, grid=None, ax=None, *args, **kwargs):
+def contourf_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 	'''Plot filled contours of a field.
 
 	Parameters
@@ -291,6 +302,9 @@ def contourf_field(field, grid=None, ax=None, *args, **kwargs):
 		If a grid is supplied, it will be used instead of the grid of `field`.
 	ax : matplotlib axes
 		The axes which to draw on. If it is not given, the current axes will be used.
+	grid_units : scalar or array_like
+		The size of a unit square. The grid will be scaled by the inverse of this number before
+		plotting. If this is a scalar, an isotropic scaling will be applied.
 	
 	Returns
 	-------
@@ -301,10 +315,18 @@ def contourf_field(field, grid=None, ax=None, *args, **kwargs):
 	if ax is None:
 		ax = plt.gca()
 
+	# Set/Find the correct grid and scale according to received grid units.
 	if grid is None:
-		grid = field.grid
+		if np.allclose(grid_units, 1):
+			grid = field.grid
+		else:
+			grid = field.grid.scaled(1.0 / grid_units)
 	else:
-		field = Field(field, grid)
+		if np.allclose(grid_units, 1):
+			field = Field(field, grid)
+		else:
+			grid = grid.scaled(1.0 / grid_units)
+			field = Field(field, grid)
 
 	c_grid = grid.as_('cartesian')
 	min_x, min_y, max_x, max_y = c_grid.x.min(), c_grid.y.min(), c_grid.x.max(), c_grid.y.max()

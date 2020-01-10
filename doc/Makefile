@@ -15,7 +15,7 @@ help:
 .PHONY: help Makefile
 
 clean:
-	rm -rf _autosummary
+	rm -rf api
 	rm -rf _build
 	rm -rf tutorials
 

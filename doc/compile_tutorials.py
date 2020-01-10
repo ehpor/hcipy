@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 
 from nbconvert.preprocessors import ExecutePreprocessor, CellExecutionError
 from nbconvert.exporters import RSTExporter
@@ -28,7 +29,14 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	if '#' in title:
 		title = title.replace('#', '').strip()
 	
-	description = first_cell.source.splitlines()[2].strip()
+	description = ''
+	for line in first_cell.source.splitlines()[1:]:
+		if line.strip():
+			description = line.strip()
+			break
+
+	if not description:
+		print('  Description could not be found in the notebook.')
 	
 	if 'thumbnail_figure_index' in notebook.metadata:
 		thumbnail_figure_index = notebook.metadata['thumbnail_figure_index']
@@ -57,12 +65,47 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	resources = {}
 	
 	if not already_executed:
-		ep = ExecutePreprocessor(timeout=120, kernel_name='python3')
+		ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
 		try:
-			notebook, resources = ep.preprocess(notebook, resources={'metadata': {'path': os.path.abspath(os.path.dirname(notebook_path))}})
+			start = time.time()
+
+			additional_cell_1 = {
+				"cell_type": "code",
+				"execution_count": None,
+				"metadata": {},
+				"outputs": [],
+				"source": r"%matplotlib inline" + '\n' +
+					r"%config InlineBackend.print_figure_kwargs = {'bbox_inches': None, 'figsize': (8, 6)}"
+				}
+			
+			additional_cell_2 = {
+				"cell_type": "code",
+				"execution_count": None,
+				"metadata": {},
+				"outputs": [],
+				"source": "import matplotlib as mpl\nmpl.rcParams['figure.figsize'] = (8, 6)\nmpl.rcParams['figure.dpi'] = 150\nmpl.rcParams['savefig.dpi'] = 150"
+				}
+			
+			notebook.cells.insert(1, nbformat.from_dict(additional_cell_1))
+			notebook.cells.insert(2, nbformat.from_dict(additional_cell_2))
+
+			km, kc = ep.start_new_kernel(cwd=os.path.abspath(os.path.dirname(notebook_path)))
+			kc.allow_stdin = False
+
+			notebook, resources = ep.preprocess(notebook, km=km)
+
+			notebook.cells.pop(2)
+			notebook.cells.pop(1)
+
+			km.shutdown_kernel()
+			
+			end = time.time()
+			print('  Compilation took %d seconds.' % (end - start))
 		except CellExecutionError as err:
-			print('Error while processing notebook.')
-			print(err)
+			print('  Error while processing notebook:')
+			print('  ', err)
+	else:
+		print('  Notebook was already executed.')
 
 	exporter = RSTExporter()
 	output, resources = exporter.from_notebook_node(notebook, resources)
@@ -102,7 +145,7 @@ index_preamble = '''
 Tutorials
 =========
 
-These tutorials demonstrate the features of HCIPy in the context of a standard workflow.
+These tutorials demonstrate the features of HCIPy in the context of a standard workflow. Tutorials are separated in three categories, depending on the required level of familiarity with HCIPy.
 '''
 
 entry_template = '''
@@ -125,6 +168,42 @@ entry_template = '''
 				**Description:** {description}
 '''
 
+beginner_preamble = '''
+Beginner
+--------
+
+These tutorials provide an introduction to the basic parts of HCIPy. New users should read these tutorials to get started with HCIPy.
+'''
+
+intermediate_preamble = '''
+Intermediate
+------------
+
+These tutorials show the main functionality using the built-in classes of HCIPy. These tutorials focus on one aspect of high-contrast imaging.
+'''
+
+advanced_preamble = '''
+Advanced
+--------
+These tutorials show how to use HCIPy for your own research. This includes extending HCIPy with your own optical elements and advanced use cases.
+'''
+
+expert_preamble = '''
+Expert
+------
+
+These tutorials provide examples from actual published research that made heavy use of HCIPy for their optical propagations.
+'''
+
+unknown_preamble = '''
+Unknown
+-------
+
+These tutorials do not have their level of difficulty rated.
+'''
+
+level_preambles = [beginner_preamble, intermediate_preamble, advanced_preamble, expert_preamble, unknown_preamble]
+
 def compile_all_tutorials():
 	print('Compling all tutorials...')
 
@@ -137,20 +216,30 @@ def compile_all_tutorials():
 
 	# Sort by level
 	levels = ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Unknown']
-	tutorial_names = sorted(tutorial_names, key=lambda name: levels.index(tutorials[name][1]))
+
+	tutorial_names_by_level = [[] for i in range(len(levels))]
+	for name in tutorial_names:
+		tutorial_names_by_level[levels.index(tutorials[name][1])].append(name)
 
 	f = open('tutorials/index.rst', 'w')
 	f.write(index_preamble)
 
-	# Write toctree
-	f.write('\n.. toctree::\n    :maxdepth: 1\n    :hidden:\n\n')
-	for name in tutorial_names:
-		f.write('    ' + name + '/' + name + '\n')
-	f.write('\n\n')
-	
-	# Write list
-	for name in tutorial_names:
-		title, level, desc, thumb = tutorials[name]
-		f.write(entry_template.format(thumbnail_file=thumb, title=title, level=level, description=desc, name=name))
+	for preamble, names in zip(level_preambles, tutorial_names_by_level):
+		# Don't write this level if there are no tutorials in it.
+		if len(names) == 0:
+			continue
+
+		f.write(preamble)
+		
+		# Write toctree
+		f.write('\n.. toctree::\n    :maxdepth: 1\n    :hidden:\n\n')
+		for name in names:
+			f.write('    ' + name + '/' + name + '\n')
+		f.write('\n\n')
+		
+		# Write list
+		for name in names:
+			title, level, desc, thumb = tutorials[name]
+			f.write(entry_template.format(thumbnail_file=thumb, title=title, level=level, description=desc, name=name))
 	
 	f.close()

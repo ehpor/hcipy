@@ -22,7 +22,7 @@ def field_inverse_tikhonov(f, rcond=1e-15):
 	ValueError
 		If the tensor order of field `f` is not 2.
 	'''
-	from ..math_util import inverse_tikhonov
+	from ..util import inverse_tikhonov
 
 	if f.tensor_order != 2:
 		raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")

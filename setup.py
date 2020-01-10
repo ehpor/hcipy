@@ -15,6 +15,7 @@ setup(name='hcipy',
 	author='Emiel Por',
 	author_email='por@strw.leidenuniv.nl',
 	packages=find_packages(),
+	package_data={'hcipy': ['data/*']},
 	setup_requires=[
 		'setuptools_scm'],
 	install_requires=[
@@ -31,10 +32,20 @@ setup(name='hcipy',
 		"dev": [
 			"pytest",
 			"coveralls",
-			"coverage<5.0",
-			"mpmath"]},
+			"coverage",
+			"mpmath"],
+		"doc": [
+			"numpydoc",
+			"sphinx_rtd_theme",
+			"nbsphinx",
+			"jupyter_client",
+			"ipykernel",
+			"poppy",
+			"nbformat",
+			"nbconvert",
+			"sphinx-automodapi"]},
 	zip_safe=False,
-	classifiers=(
+	classifiers=[
 		"Development Status :: 3 - Alpha",
 		"License :: OSI Approved :: MIT License",
 		"Operating System :: OS Independent",
@@ -42,8 +53,6 @@ setup(name='hcipy',
 		"Programming Language :: Python :: 3.5",
 		"Programming Language :: Python :: 3.6",
 		"Programming Language :: Python :: 3.7",
-		"Topic :: Scientific/Engineering :: Astronomy"
-	),
-	license='MIT',
-	license_file='LICENSE'
+		"Topic :: Scientific/Engineering :: Astronomy"],
+	license_file="LICENSE"
 )

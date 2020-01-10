@@ -2,12 +2,13 @@ import numpy as np
 import pkg_resources
 
 def make_sellmeier_glass(A, K, L):
-	'''The Sellmeier equation for the dispersion of the refractive index of materials.
+	r'''The Sellmeier equation for the dispersion of the refractive index of materials.
 
-	The dispersion relation of the Sellmeier equation is [1]_,
+	The dispersion relation of the Sellmeier equation is [Sellmeier1872]_,
+
 	.. math:: n^2 = 1 + \sum_{i}{\frac{K_i \lambda^2}{\lambda^2-L_i}}
 
-	.. [1] W. Sellmeier 1872, Ueber die durch die Aetherschwingungen erregten Mitschwingungen der Körpertheilchen und deren Rückwirkung auf die ersteren, besonders zur Erklärung der Dispersion und ihrer Anomalien (II. Theil),"  Annalen der Physik und Chemie. 223 (11), 386–403 (1872)
+	.. [Sellmeier1872] W. Sellmeier 1872, Ueber die durch die Aetherschwingungen erregten Mitschwingungen der Körpertheilchen und deren Rückwirkung auf die ersteren, besonders zur Erklärung der Dispersion und ihrer Anomalien (II. Theil),"  Annalen der Physik und Chemie. 223 (11), 386–403 (1872)
 
 	Parameters
 	----------
@@ -32,9 +33,10 @@ def make_sellmeier_glass(A, K, L):
 	return refractive_index
 
 def make_cauchy_glass(coefficients):
-	'''The Cauchy equation for the dispersion of the refractive index of materials.
+	r'''The Cauchy equation for the dispersion of the refractive index of materials.
 
 	The dispersion relation of the Cauchy equation is,
+
 	.. math:: n = \sum_{i=0}{\frac{K_i}{\lambda^{2i}}
 
 	Parameters
@@ -100,7 +102,7 @@ def get_glasses_in_catalogue():
 def _build_glass_catalogue():
 	global _glass_catalogue
 
-	_glass_catalogue = {'IP_DIP' : make_cauchy_glass([1.5273, 6.5456E-3, 2.5345E-4])}
+	_glass_catalogue = {'IP_DIP': make_cauchy_glass([1.5273, 6.5456E-3, 2.5345E-4])}
 
 	_glass_catalogue.update(_parse_sellmeier_glass_catalogue(pkg_resources.resource_stream('hcipy', 'data/schott_glass_catalogue_2018_09.csv')))
 	_glass_catalogue.update(_parse_sellmeier_glass_catalogue(pkg_resources.resource_stream('hcipy', 'data/ohara_glass_catalogue_2019_08.csv')))

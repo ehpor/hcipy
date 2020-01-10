@@ -32,11 +32,13 @@ def parabolic_surface_sag(radius_of_curvature):
 	return conical_surface_sag(radius_of_curvature, conic_constant=-1)
 
 def conical_surface_sag(radius_of_curvature, conic_constant=0):
-	'''Makes a Field generator for the surface sag of a conical surface.
+	r'''Makes a Field generator for the surface sag of a conical surface.
 	
 	The surface profile is defined as:
+
 	.. math:: z = \frac{cr^2}{1 + \sqrt{1-\left(1+k\right)c^2r^2}}
-	With `z` the surface sag, `c` the curvature and `k` the conic constant.
+
+	with `z` the surface sag, `c` the curvature and `k` the conic constant.
 
 	Parameters
 	----------
@@ -64,10 +66,12 @@ def conical_surface_sag(radius_of_curvature, conic_constant=0):
 	return func
 
 def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_coefficients=[]):
-	'''Makes a Field generator for the surface sag of an even aspherical surface.
+	r'''Makes a Field generator for the surface sag of an even aspherical surface.
 	
 	The surface profile is defined as:
+
 	.. math:: z = \frac{cr^2}{1 + \sqrt{1-\left(1+k\right)c^2r^2}} + \sum_i=0 a_i r^{2i+4}
+	
 	With `z` the surface sag, `c` the curvature, `k` the conic constant and  :math:`a_i` the even aspheric coefficients.
 	
 	It is important to note that this definition deviates from the Zemax definition of an even aspheric surface.

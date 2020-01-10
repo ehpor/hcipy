@@ -6,7 +6,7 @@ from ..mode_basis import ModeBasis, make_LP_modes
 from ..field import Field
 
 class StepIndexFiber(AgnosticOpticalElement):
-	''' A step-index fiber.
+	'''A step-index fiber.
 
 	The modal behaviour of the step-index fiber depends on the input parameters.
 
@@ -45,9 +45,9 @@ class StepIndexFiber(AgnosticOpticalElement):
 	def mode_field_radius(self, wavelength):
 		'''The mode field radius of the fiber.
 		
-		The mode field radius is the radius of the gaussian beam best matched to the fundamental mode[1]_.
+		The mode field radius is the radius of the gaussian beam best matched to the fundamental mode [Marcuse1977]_.
 		
-		.. [1] D. Marcuse 1977, "Loss analysis of single-mode fiber splices,"  The Bell System Technical Journal 56, 703-718 (2014) 
+		.. [Marcuse1977] D. Marcuse 1977, "Loss analysis of single-mode fiber splices," The Bell System Technical Journal 56, 703-718 (2014) 
 		'''
 		V = self.V(wavelength)
 		w = self.core_radius * (0.65 + 1.619 / V**(3 / 2) + 2.879 / V**6)

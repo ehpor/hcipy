@@ -4,15 +4,40 @@ Changelog
 0.3 (Jan x, 2020)
 -----------------
 
+This HCIPy release contains full Stokes polarization support, some performance improvements and bug fixes. See the list of major changes below for a summary. This version supports Python 3.5+. This and later releases may still work with Python 2.7, but this is not a supported use case.
 
+List of major changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Many new tutorials (everyone)
+* Windows support for GifWriter (`@jamienoss <https://github.com/jamienoss>`_)
+* Support for partially polarized wavefronts using Stokes vectors (`@stevenbos <https://github.com/stevenbos>`_, `@dsdoelman <https://github.com/dsdoelman>`_ & `@ehpor <https://github.com/ehpor>`_)
+* Addition of general Jones matrix optical elements (`@dsdoelman <https://github.com/dsdoelman>`_, `@stevenbos <https://github.com/stevenbos>`_ & `@ehpor <https://github.com/ehpor>`_)
+* Addition of wave plates (`@dsdoelman <https://github.com/dsdoelman>`_, `@stevenbos <https://github.com/stevenbos>`_ & `@ehpor <https://github.com/ehpor>`_)
+* Addition of linear and circular polarizers and beam splitters (`@dsdoelman <https://github.com/dsdoelman>`_ & `@stevenbos <https://github.com/stevenbos>`_)
+* Addition of a vector vortex coronagraph (`@ehpor <https://github.com/ehpor>`_)
+* Addition of a vector Zernike wavefront sensor (`@dsdoelman <https://github.com/dsdoelman>`_)
+* Automated testing of all polarization optical elements (`@stevenbos <https://github.com/stevenbos>`_, `@dsdoelman <https://github.com/dsdoelman>`_ & `@ehpor <https://github.com/ehpor>`_)
+* Bug fix in the Zernike wavefront sensor (`@dsdoelman <https://github.com/dsdoelman>`_)
+* Addition of a material refractive index catalog (`@syhaffert <https://github.com/syhaffert>`_ & `@ehpor <https://github.com/ehpor>`_)
+* Addition of better microlenses (`@syhaffert <https://github.com/syhaffert>`_)
+* Addition of better single/few mode fibers (`@syhaffert <https://github.com/syhaffert>`_)
+* Fixed APP optimization code (`@dsdoelman <https://github.com/dsdoelman>`_)
+* Improved handling of agnostic optical elements (`@ehpor <https://github.com/ehpor>`_)
+* Improved of documentation, including developer notes (`@ehpor <https://github.com/ehpor>`_)
+* Removal of much old, unused code (`@ehpor <https://github.com/ehpor>`_)
+* Subpixel interpolation of atmospheric wavefronts is now default (`@ehpor <https://github.com/ehpor>`_)
+* Speed improvements for calculating telescope apertures of up to 12x (`@ehpor <https://github.com/ehpor>`_)
+* Evaluation of field generators can now be supersampled by any factor (`@ehpor <https://github.com/ehpor>`_)
+* Bug fix where data files were not found on pip-installed versions of HCIPy (`@ehpor <https://github.com/ehpor>`_)
 
 0.2 (Aug 7, 2019)
 -----------------
 
 This HCIPy release contains lots of new functionality, performance improvements and bug fixes. See the list of major changes below for a summary. Currently Python 2.7, 3.5-3.7 are supported. Our intention is to drop support for Python 2.7 in the near future.
 
-List of major changes:
-~~~~~~~~~~~~~~~~~~~~~~
+List of major changes
+~~~~~~~~~~~~~~~~~~~~~
 
 * Many bug fixes (everyone)
 * Many additions to the documentation (everyone)

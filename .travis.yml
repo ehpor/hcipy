@@ -25,15 +25,15 @@ matrix:
   - name: "Tests for Python 3.5 on MacOS"
     os: osx
     language: generic
-    env: PYTHON_VERSION=3.5
+    env: PYTHON_VERSION=3.5.8
   - name: "Tests for Python 3.6 on MacOS"
     os: osx
     language: generic
-    env: PYTHON_VERSION=3.6
+    env: PYTHON_VERSION=3.6.9
   - name: "Tests for Python 3.7 on MacOS"
     os: osx
     language: generic
-    env: PYTHON_VERSION=3.7
+    env: PYTHON_VERSION=3.7.5
   - name: "Make documentation"
     os: linux
     python: "3.7"
@@ -42,29 +42,11 @@ matrix:
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
-      case "${PYTHON_VERSION:-3}" in
-        2*)
-          Miniconda="Miniconda2"
-          ;;
-        3*)
-          Miniconda="Miniconda3"
-          ;;
-      esac
+      eval "$(pyenv init -)";
+      env PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install "$PYTHON_VERSION";
+      pyenv global "$PYTHON_VERSION";
 
-      wget http://repo.continuum.io/miniconda/${Miniconda}-latest-MacOSX-x86_64.sh -O miniconda.sh;
-
-      bash miniconda.sh -b -p $HOME/miniconda
-      export PATH=$HOME/miniconda/bin:$PATH
-      hash -r
-      conda info -a
-      conda config --set always_yes yes --set changeps1 no
-      conda update -q conda
-      conda create -q -n test-environment python="${PYTHON_VERSION:-3}" $*
-      source activate test-environment
-      conda update -q -y --all
-      conda install python.app
-      
-      PYTHON_CMD="pythonw";
+      PYTHON_CMD="python";
     else
       PYTHON_CMD="python";
     fi

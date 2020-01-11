@@ -108,7 +108,7 @@ class ModeBasis(object):
 			else:
 				return self
 		else:
-			T = self._transformation_matrix.todense()
+			T = np.asarray(self._transformation_matrix.todense())
 			return ModeBasis(T, self.grid)
 
 	@property
@@ -149,7 +149,7 @@ class ModeBasis(object):
 			The coefficients that correspond to the vector `b`.
 		'''
 		if self.is_sparse or dampening_factor != 0:
-			x, istop, itn, normr, norma, conda, normx = scipy.sparse.linalg.lsmr(self._transformation_matrix, b, damp=dampening_factor)
+			x, istop, itn, normr, normar, norma, conda, normx = scipy.sparse.linalg.lsmr(self._transformation_matrix, b, damp=dampening_factor)
 			return x
 		else:
 			x, residuals, rank, s = np.linalg.lstsq(self._transformation_matrix, b)

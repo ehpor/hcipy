@@ -137,6 +137,11 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	apothem = np.cos(np.pi / num_sides) * circum_diameter / 2
 	apothem += apothem * epsilon
 
+	if center is None:
+		shift = np.zeros(2)
+	else:
+		shift = center * np.ones(2)
+
 	# Make use of symmetry
 	if num_sides % 2 == 0:
 		thetas = np.arange(int(num_sides / 2), dtype='float') * np.pi / int(num_sides / 2) + angle

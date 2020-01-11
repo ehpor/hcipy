@@ -1,13 +1,145 @@
 import numpy as np
 from .detector import Detector
-from .optical_element import OpticalElement
+from .optical_element import OpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from .wavefront import Wavefront
-from ..mode_basis import ModeBasis
+from ..mode_basis import ModeBasis, make_LP_modes
 from ..field import Field
 
-def fiber_mode_gaussian(grid, mode_field_diameter):
-	r2 = grid.x**2 + grid.y**2
-	return np.exp(-r2/((0.5 * mode_field_diameter)**2))
+class StepIndexFiber(AgnosticOpticalElement):
+	'''A step-index fiber.
+
+	The modal behaviour of the step-index fiber depends on the input parameters.
+
+	Parameters
+	----------
+	core_radius : scalar
+		The radius of the high-index core.
+	NA : scalar or function of wavelength
+		The numerical aperture of the fiber.
+	fiber_length : scalar
+		The length of the optical fiber.
+	'''
+	def __init__(self, core_radius, NA, fiber_length):
+		self._core_radius = core_radius
+		self._NA = NA
+		self.fiber_length = fiber_length
+		
+		AgnosticOpticalElement.__init__(self, False, True)
+	
+	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
+		monochromatic_V = self.V(wavelength)
+		instance_data.NA = self.evaluate_parameter(self._NA, input_grid, output_grid, wavelength)
+		instance_data.fiber_modes, instance_data.beta = make_LP_modes(input_grid, monochromatic_V, self.core_radius, return_betas=True)
+
+	def num_modes(self, wavelength):
+		'''The approximate amount of modes of the fiber.
+		'''
+		V = self.V(wavelength)
+		return V**2 / 2
+
+	def V(self, wavelength):
+		'''The normalized frequency parameter for step-index fibers.
+		'''
+		return 2 * np.pi / wavelength * self.core_radius * self.NA
+
+	def mode_field_radius(self, wavelength):
+		'''The mode field radius of the fiber.
+		
+		The mode field radius is the radius of the gaussian beam best matched to the fundamental mode [Marcuse1977]_.
+		
+		.. [Marcuse1977] D. Marcuse 1977, "Loss analysis of single-mode fiber splices," The Bell System Technical Journal 56, 703-718 (2014) 
+		'''
+		V = self.V(wavelength)
+		w = self.core_radius * (0.65 + 1.619 / V**(3 / 2) + 2.879 / V**6)
+		return w
+
+	@property
+	def core_radius(self):
+		'''The core radius of this fiber.
+		'''
+		return self._core_radius
+	
+	@core_radius.setter
+	def core_radius(self, core_radius):
+		self._core_radius = core_radius
+		self.clear_cache()
+	
+	@property
+	def NA(self):
+		'''The numerical aperture of this fiber.
+		'''
+		return self._NA
+
+	@NA.setter
+	def NA(self, NA):
+		self._NA = NA
+		self.clear_cache()
+
+	def get_input_grid(self, output_grid, wavelength):
+		return output_grid
+
+	def get_output_grid(self, input_grid, wavelength):
+		return input_grid
+
+	@make_agnostic_forward
+	def modal_decomposition(self, instance_data, wavefront):
+		'''Decompose the input wavefront into the modal distribution of the fiber.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The incoming wavefront.
+		
+		Returns
+		-------
+		array_like
+			The modal coefficients.
+		'''
+		
+		M = instance_data.fiber_modes.transformation_matrix
+		mode_coefficients = np.einsum('...i, i, ij->...j', wavefront.electric_field, wavefront.grid.weights, M.conj())
+		return mode_coefficients
+
+	@make_agnostic_forward
+	def forward(self, instance_data, wavefront):
+		'''Forward propagate the light through the fiber.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The incoming wavefront.
+		
+		Returns
+		-------
+		Wavefront
+			The wavefront that exits the fiber.
+		'''
+				
+		M = instance_data.fiber_modes.transformation_matrix
+		mode_coefficients = np.einsum('...i, i, ij->...j', wavefront.electric_field, wavefront.grid.weights, M.conj())
+		output_electric_field = Field(np.einsum('...i, i, ij->...j', mode_coefficients, np.exp(1j * instance_data.beta * self.fiber_length), M.T.conj()), wavefront.grid)
+		
+		return Wavefront(output_electric_field, wavefront.wavelength)
+
+	@make_agnostic_backward
+	def backward(self, instance_data, wavefront):
+		'''Backward propagate the light through the fiber.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The incoming wavefront.
+		
+		Returns
+		-------
+		Wavefront
+			The wavefront that exits the fiber.
+		'''
+		M = instance_data.fiber_modes.transformation_matrix
+		mode_coefficients = np.einsum('...i, i, ij->...j', wavefront.electric_field, wavefront.grid.weights, M.conj())
+		output_electric_field = Field(np.einsum('...i, i, ij->...j', mode_coefficients, np.exp(-1j * instance_data.beta * self.fiber_length), M.T.conj()), wavefront.grid)
+		
+		return Wavefront(output_electric_field, wavefront.wavelength)
 
 class SingleModeFiber(Detector):
 	def __init__(self, input_grid, mode_field_diameter, mode=None):

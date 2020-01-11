@@ -70,7 +70,11 @@ class GaussianBeam(object):
 	def R(self):
 		'''The current radius of curvature of the Gaussian beam.
 		'''
-		return self.z * (1 + (self.zR / self.z)**2)
+		epsilon = 1e-16
+		if abs(self.z) < epsilon:
+			return np.inf
+		else:
+			return self.z * (1 + (self.zR / self.z)**2)
 	
 	radius_of_curvature = R
 

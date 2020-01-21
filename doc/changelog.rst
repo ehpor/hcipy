@@ -1,8 +1,8 @@
 Changelog
 =========
 
-0.3 (Jan x, 2020)
------------------
+0.3.0 (Jan 21, 2020)
+--------------------
 
 This HCIPy release contains full Stokes polarization support, some performance improvements and bug fixes. See the list of major changes below for a summary. This version supports Python 3.5+. This and later releases may still work with Python 2.7, but this is not a supported use case.
 

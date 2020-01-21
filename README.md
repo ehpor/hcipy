@@ -1,7 +1,7 @@
 [![PyPI Status](https://img.shields.io/pypi/v/hcipy.svg)](https://pypi.org/project/hcipy/)
 [![Build Status](https://img.shields.io/travis/ehpor/hcipy/master.svg?logo=travis)](https://travis-ci.org/ehpor/hcipy)
 [![Build status](https://img.shields.io/appveyor/ci/ehpor/hcipy/master.svg?logo=appveyor)](https://ci.appveyor.com/project/ehpor/hcipy/branch/master)
-[![Coverage Status](https://img.shields.io/coveralls/github/ehpor/hcipy.svg)](https://coveralls.io/r/ehpor/hcipy)
+[![Coverage Status](https://img.shields.io/codecov/c/gh/ehpor/hcipy)](https://codecov.io/gh/ehpor/hcipy)
 [![Documentation Status](https://img.shields.io/badge/docs-latest%20build-brightgreen)](https://docs.hcipy.org/dev)
 [![License](https://img.shields.io/github/license/ehpor/hcipy.svg)](https://opensource.org/licenses/MIT)
 

@@ -31,7 +31,7 @@ def check_segmentation(aperture_function):
 	segments = evaluate_supersampled(segments, grid, 2)
 
 	aperture_from_segments = segments.linear_combination(np.ones(len(segments)))
-	
+
 	assert np.allclose(aperture, aperture_from_segments)
 
 def check_aperture_against_reference(aperture_function, basename, diameter, options):
@@ -75,7 +75,7 @@ def test_magellan_aperture():
 		'normalized': [(False, ''), (True, '_normalized')],
 		'with_spiders': [(True, ''), (False, '_without_spiders')]
 	}
-	
+
 	check_aperture_against_reference(make_magellan_aperture, 'magellan', 6.5, options)
 
 def test_luvoir_a_aperture():
@@ -98,7 +98,7 @@ def test_luvoir_a_lyot_stop():
 		'normalized': [(False, ''), (True, '_normalized')],
 		'with_spiders': [(True, ''), (False, '_without_spiders')]
 	}
-	
+
 	check_aperture_against_reference(make_luvoir_a_lyot_stop, 'luvoir_a_lyot', 15, options)
 
 def test_hicat_aperture():
@@ -121,5 +121,5 @@ def test_hicat_lyot_stop():
 		'normalized': [(False, ''), (True, '_normalized')],
 		'with_spiders': [(True, ''), (False, '_without_spiders')]
 	}
-	
+
 	check_aperture_against_reference(make_hicat_lyot_stop, 'hicat_lyot', 19.9e-3, options)

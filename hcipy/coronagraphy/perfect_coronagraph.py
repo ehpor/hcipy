@@ -11,7 +11,7 @@ class PerfectCoronagraph(OpticalElement):
 
 		.. math::
 			\overline{A} = A - \Pi \sqrt{S}
-		
+
 		where :math:`\overline{A}` is the resulting complex ampliutude, :math:`\Pi` is the telescope
 		pupil, and :math:`S` is the Strehl ratio of the incoming wavefront.
 
@@ -45,7 +45,7 @@ class PerfectCoronagraph(OpticalElement):
 		for i in range(order // 2):
 			for j in range(i + 1):
 				modes.append(aperture * self.pupil_grid.x**j * self.pupil_grid.y**(i-j))
-		
+
 		self.mode_basis = ModeBasis(modes).orthogonalized
 
 		self.transformation = self.mode_basis.transformation_matrix
@@ -58,7 +58,7 @@ class PerfectCoronagraph(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The incoming wavefront (in the pupil plane)
-		
+
 		Returns
 		-------
 		Wavefront
@@ -70,7 +70,7 @@ class PerfectCoronagraph(OpticalElement):
 		wf.electric_field -= correction
 
 		return wf
-	
+
 	def backward(self, wavefront):
 		'''Propagate the wavefront backwards through the perfect coronagraph.
 
@@ -80,14 +80,14 @@ class PerfectCoronagraph(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The incoming wavefront (in the pupil plane)
-		
+
 		Returns
 		-------
 		Wavefront
 			The post-coronagraphic wavefront (in the pupil plane).
 		'''
 		return self.forward(wavefront)
-	
+
 	def get_transformation_matrix_forward(self, wavelength=1):
 		'''Get the forward propagation transformation matrix.
 
@@ -95,14 +95,14 @@ class PerfectCoronagraph(OpticalElement):
 		----------
 		wavelength : scalar
 			The wavelength at which to calculate the transformation matrix.
-		
+
 		Returns
 		-------
 		ndarray
 			The forward transformation_matrix.
 		'''
 		return np.eye(self.pupil_grid.size) - self.transformation.dot(self.coeffs * self.transformation_inverse)
-	
+
 	def get_transformation_matrix_backward(self, wavelength=1):
 		'''Get the backwards propagation transformation matrix.
 
@@ -112,7 +112,7 @@ class PerfectCoronagraph(OpticalElement):
 		----------
 		wavelength : scalar
 			The wavelength at which to calculate the transformation matrix.
-		
+
 		Returns
 		-------
 		ndarray

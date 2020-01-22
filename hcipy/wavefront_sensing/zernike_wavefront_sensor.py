@@ -12,8 +12,8 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 	This class uses a propagation scheme of [1]_, similar to that of Lyot coronagraphs
 	with a small blocking mask, see [2]_.
 
-	.. [1] N'Diaye et al. 2013, "Calibration of quasi-static 
-		aberrations in exoplanet direct-imaging instruments with a 
+	.. [1] N'Diaye et al. 2013, "Calibration of quasi-static
+		aberrations in exoplanet direct-imaging instruments with a
 		Zernike phase-mask sensor"
 
 	.. [2] Soummer et al. 2007, "Fast computation of Lyot-style
@@ -50,7 +50,7 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		'''Propagates a wavefront through the wavefront sensor.
 
 		Parameters
-		----------		
+		----------
 		wavefront : Wavefront
 			The input wavefront that will propagate through the system.
 
@@ -71,7 +71,7 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		'''Propagates a wavefront backwards through the wavefront sensor.
 
 		Parameters
-		----------		
+		----------
 		wavefront : Wavefront
 			The input wavefront that will propagate through the system.
 
@@ -90,7 +90,7 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 
 class ZernikeWavefrontSensorEstimator(WavefrontSensorEstimator):
 	'''Estimates the wavefront slopes from pyramid wavefront sensor images.
-	
+
 	Parameters
 	----------
 	aperture : function
@@ -99,7 +99,7 @@ class ZernikeWavefrontSensorEstimator(WavefrontSensorEstimator):
 		The grid on which the output of a pyramid wavefront sensor is sampled.
 	reference : Field
 		A reference image to subtract from the Zernike wavefront sensor data.
-			
+
 	Attributes
 	----------
 	measurement_grid : Grid
@@ -143,14 +143,14 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 
 	This class uses a propagation scheme of [2]_, similar to that of Lyot coronagraphs
 	with a small blocking mask, see [3]_. The reference wavefront is also propagated
-	through a half-wave retarder because the vector-Zernike mask is a half-wave 
-	retarder. 
-	
-	.. [1] Doelman et al. 2019, "Simultaneous phase and amplitude aberration sensing 
+	through a half-wave retarder because the vector-Zernike mask is a half-wave
+	retarder.
+
+	.. [1] Doelman et al. 2019, "Simultaneous phase and amplitude aberration sensing
 		with a liquid-crystal vector-Zernike phase mask"
 
-	.. [2] N'Diaye et al. 2013, "Calibration of quasi-static 
-		aberrations in exoplanet direct-imaging instruments with a 
+	.. [2] N'Diaye et al. 2013, "Calibration of quasi-static
+		aberrations in exoplanet direct-imaging instruments with a
 		Zernike phase-mask sensor"
 
 	.. [3] Soummer et al. 2007, "Fast computation of Lyot-style
@@ -182,7 +182,7 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		phase_dot_diameter *= pupil_diameter / reference_wavelength
 		focal_grid = make_uniform_grid([num_pix, num_pix], phase_dot_diameter)
 		phase_dot = circular_aperture(phase_dot_diameter)(focal_grid) * phase_step
-		
+
 		self.vZWFS_mask = LinearRetarder(phase_retardation, phase_dot / 2)
 
 		# Make half-wave plate for reference offset
@@ -232,7 +232,7 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		'''Propagates a wavefront backwards through the wavefront sensor.
 
 		Parameters
-		----------		
+		----------
 		wavefront : Wavefront
 			The input wavefront that will propagate through the system.
 

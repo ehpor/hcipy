@@ -99,7 +99,7 @@ class SurfaceApodizer(Apodizer):
 	@property
 	def opd(self):
 		return self.construct_function(lambda n, surf: (n - 1) * surf, self.refractive_index, self.surface_sag)
-	
+
 	optical_path_difference = opd
 
 	@property
@@ -135,7 +135,7 @@ class ComplexSurfaceApodizer(OpticalElement):
 		self.amplitude = amplitude
 		self.surface = surface
 		self.refractive_index = refractive_index
-	
+
 	def phase_for(self, wavelength):
 		'''Get the phase screen at a certain wavelength.
 
@@ -152,15 +152,15 @@ class ComplexSurfaceApodizer(OpticalElement):
 
 	def forward(self, wavefront):
 		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
-		
+
 		wf = wavefront.copy()
 		wf.electric_field *= self.amplitude * np.exp(1j * opd * wf.wavenumber)
 
 		return wf
-	
+
 	def backward(self, wavefront):
 		opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
-		
+
 		wf = wavefront.copy()
 		wf.electric_field *= self.amplitude * np.exp(-1j * opd * wf.wavenumber)
 
@@ -171,7 +171,7 @@ class MultiplexedComplexSurfaceApodizer(OpticalElement):
 		self.amplitude = amplitude
 		self.surface = surface
 		self.refractive_index = refractive_index
-	
+
 	def forward(self, wavefront):
 		apodizer_mask = 0
 		for amplitude, surface in zip(self.amplitude, self.surface):
@@ -181,13 +181,13 @@ class MultiplexedComplexSurfaceApodizer(OpticalElement):
 		wf = wavefront.copy()
 		wf.electric_field *= apodizer_mask
 		return wf
-	
+
 	def backward(self, wavefront):
 		apodizer_mask = 0
 		for amplitude, surface in zip(self.amplitude, self.surface):
 			opd = (self.refractive_index(wavefront.wavelength) - 1) * surface
 			apodizer_mask += amplitude * np.exp(1j * opd * wavefront.wavenumber)
-			
+
 		wf = wavefront.copy()
 		wf.electric_field /= apodizer_mask
 		return wf

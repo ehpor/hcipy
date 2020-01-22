@@ -1,11 +1,11 @@
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
-from hcipy import * 
+from hcipy import *
 
 N = 512
 
-#Defining the grids. 
+#Defining the grids.
 pupil_grid = make_pupil_grid(N)
 focal_grid = make_focal_grid(pupil_grid, 8, 5)
 
@@ -16,7 +16,7 @@ prop = FraunhoferPropagator(pupil_grid, focal_grid)
 aperture = circular_aperture(1)(pupil_grid)
 
 #The wavefront in the pupil.
-pupil_wavefront = Wavefront(aperture) 
+pupil_wavefront = Wavefront(aperture)
 
 #Now we propagate it to the focal plane.
 focal_wavefront = prop(pupil_wavefront)
@@ -25,10 +25,10 @@ focal_wavefront = prop(pupil_wavefront)
 focal_wavefront.total_power = 1000
 
 #---------------------------------------------------------------------------------
-#First example with scalars for the noise sources. 
+#First example with scalars for the noise sources.
 #---------------------------------------------------------------------------------
 
-flatfield = 0.05 # = 5% flat field error 
+flatfield = 0.05 # = 5% flat field error
 darkcurrentrate = 2 # = dark current counts per second
 readnoise = 100 # = rms counts per read out
 photonnoise = True
@@ -52,7 +52,7 @@ for t in integration_time:
 plt.show()
 
 #---------------------------------------------------------------------------------
-#Second example with arrays for the noise sources. 
+#Second example with arrays for the noise sources.
 #---------------------------------------------------------------------------------
 
 flatfield = 1 + Field(np.random.rand(focal_wavefront.power.size) * 0.05, focal_grid)

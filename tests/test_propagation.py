@@ -29,7 +29,7 @@ def test_fraunhofer_propagation_circular():
 						assert np.abs(img - reference).max() < 1e-5
 					else:
 						assert False # This should never happen.
-	
+
 def test_fraunhofer_propagation_rectangular():
 	for num_pix in [512, 1024]:
 		pupil_grid = make_pupil_grid(num_pix)
@@ -64,18 +64,18 @@ def single_propagation_test(propagator, number_of_pixels, wavelength, a, b, rela
 	distance = relative_distance * threshold_distance
 
 	prop = propagator(pupil_grid, distance, num_oversampling=2)
-	
+
 	aperture = evaluate_supersampled(rectangular_aperture([2 * a, 2 * b]), pupil_grid, 2)
-	
+
 	img_forward = prop.forward(Wavefront(aperture, wavelength)).intensity
 	img_backward = prop.backward(Wavefront(aperture, wavelength)).intensity
-	
+
 	def generate_reference_field(reference_grid):
 		w_x1 = np.sqrt(2 / (distance * wavelength)) * (reference_grid.x - a)
 		w_x2 = np.sqrt(2 / (distance * wavelength)) * (reference_grid.x + a)
 		w_y1 = np.sqrt(2 / (distance * wavelength)) * (reference_grid.y - b)
 		w_y2 = np.sqrt(2 / (distance * wavelength)) * (reference_grid.y + b)
-		
+
 		fresnel = scipy.special.fresnel
 
 		ssa_x1, csa_x1 = fresnel(w_x1)
@@ -94,16 +94,16 @@ def single_propagation_test(propagator, number_of_pixels, wavelength, a, b, rela
 		reference = np.abs(Field(reference, reference_grid))**2
 
 		return reference
-	
+
 	reference_image = evaluate_supersampled(generate_reference_field, pupil_grid, 2)
 
 	img_forward = subsample_field(img_forward, 8)
 	img_backward = subsample_field(img_backward, 8)
 	reference_image = subsample_field(reference_image, 8)
-	
+
 	absolute_error_forward = np.abs(img_forward - reference_image).max()
 	assert absolute_error_forward < error_threshold
-	
+
 	absolute_error_backward = np.abs(img_backward - reference_image).max()
 	assert absolute_error_backward < error_threshold
 

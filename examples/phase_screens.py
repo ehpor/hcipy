@@ -48,7 +48,7 @@ for t in np.linspace(0, 100, 5001):
 	wf2 = atmosphere.forward(wf)
 	wf2.electric_field *= aperture
 	img = Field(prop(wf2).intensity, focal_grid)
-	
+
 	plt.clf()
 	plt.subplot(1,2,1)
 	imshow_field(wf2.phase, cmap='RdBu')

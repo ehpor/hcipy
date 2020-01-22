@@ -24,7 +24,7 @@ class AtmosphericLayer(OpticalElement):
 		L0 : scalar
 			The outer scale of the layer.
 		velocity : scalar or array_like
-			The velocity of the layer. If a scalar is given, its direction is 
+			The velocity of the layer. If a scalar is given, its direction is
 			chosen randomly.
 		height : scalar
 			The height of the atmospheric layer above the ground.
@@ -53,7 +53,7 @@ class AtmosphericLayer(OpticalElement):
 
 		self.height = height
 		self._t = 0
-	
+
 	def evolve_until(self, t):
 		'''Evolve the atmospheric layer until time `t`.
 
@@ -63,10 +63,10 @@ class AtmosphericLayer(OpticalElement):
 			The time to which to evolve the atmospheric layer.
 		'''
 		raise NotImplementedError()
-	
+
 	def reset(self):
 		'''Reset the phase screen.
-		
+
 		This will create a randomized uncorrelated phase screen.
 		'''
 		raise NotImplementedError()
@@ -76,17 +76,17 @@ class AtmosphericLayer(OpticalElement):
 		'''The current time of the atmospheric layer.
 		'''
 		return self._t
-	
+
 	@t.setter
 	def t(self, t):
 		self.evolve_until(t)
-	
+
 	@property
 	def Cn_squared(self):
 		'''The integrated value of Cn^2 for the layer.
 		'''
 		return self._Cn_squared
-	
+
 	@Cn_squared.setter
 	def Cn_squared(self, Cn_squared):
 		raise NotImplementedError()
@@ -96,17 +96,17 @@ class AtmosphericLayer(OpticalElement):
 		'''The outer scale of the phase structure function.
 		'''
 		return self._outer_scale
-	
+
 	@outer_scale.setter
 	def outer_scale(self, L0):
 		raise NotImplementedError()
-	
+
 	@property
 	def L0(self):
 		'''The outer scale of the phase structure function.
 		'''
 		return self.outer_scale
-	
+
 	@L0.setter
 	def L0(self, L0):
 		self.outer_scale = L0
@@ -125,7 +125,7 @@ class AtmosphericLayer(OpticalElement):
 				if vel > 0:
 					self._velocity *= velocity / vel
 					return
-			
+
 			theta = np.random.rand() * 2 * np.pi
 			self._velocity = velocity * np.array([np.cos(theta), np.sin(theta)])
 		else:
@@ -142,16 +142,16 @@ class AtmosphericLayer(OpticalElement):
 			The wavelength at which to calculate the phase screen.
 		'''
 		raise NotImplementedError()
-	
+
 	@property
 	def output_grid(self):
 		return self.input_grid
-	
+
 	def forward(self, wf):
 		wf = wf.copy()
 		wf.electric_field *= np.exp(1j * self.phase_for(wf.wavelength))
 		return wf
-	
+
 	def backward(self, wf):
 		wf = wf.copy()
 		wf.electric_field *= np.exp(-1j * self.phase_for(wf.wavelength))
@@ -162,7 +162,7 @@ class MultiLayerAtmosphere(OpticalElement):
 		'''A multi-layer atmospheric model.
 
 		This :class:`OpticalElement` can model turbulence and scintilation effects
-		due to atmospheric turbulence by propagating light through a series of 
+		due to atmospheric turbulence by propagating light through a series of
 		infinitely-thin atmospheric phase screens at different altitudes. The distance
 		between two phase screens can be propagated using Fresnel propagation, or using
 		no :class:`Propagator`.
@@ -203,16 +203,16 @@ class MultiLayerAtmosphere(OpticalElement):
 			self.elements.append(self.layers[j])
 			if self.scintilation and i < len(propagators):
 				self.elements.append(propagators[i])
-		
+
 		if self.scintilation and sorted_heights[-1] > 0:
 			self.elements.append(FresnelPropagator(grid, sorted_heights[-1]))
-		
+
 		self._dirty = False
-	
+
 	def reset(self):
 		for l in self.layers:
 			l.reset()
-	
+
 	@property
 	def layers(self):
 		'''A list of :class:`AtmosphericLayer` objects.
@@ -223,7 +223,7 @@ class MultiLayerAtmosphere(OpticalElement):
 	def layers(self, layers):
 		self._layers = layers
 		self._dirty = True
-	
+
 	def phase_for(self, wavelength):
 		'''Get the unwrapped phase for the atmosphere.
 
@@ -231,7 +231,7 @@ class MultiLayerAtmosphere(OpticalElement):
 		----------
 		wavelength : scalar
 			The wavelength at which to calculate the phase screen.
-		
+
 		Returns
 		-------
 		Field
@@ -239,9 +239,9 @@ class MultiLayerAtmosphere(OpticalElement):
 		'''
 		if self.scintilation:
 			raise ValueError('Cannot get the unwrapped phase for an atmosphere with scintilation.')
-		
+
 		return np.sum([l.phase_for(wavelength) for l in self.layers], axis=0)
-	
+
 	@property
 	def scintilation(self):
 		'''Whether to include scintilation effects in the propagation.
@@ -252,7 +252,7 @@ class MultiLayerAtmosphere(OpticalElement):
 	def scintilation(self, scintilation):
 		self._dirty = scintilation != self.scintilation
 		self._scintilation = scintilation
-	
+
 	def evolve_until(self, t):
 		'''Evolve all atmospheric layers to a time t.
 
@@ -264,36 +264,36 @@ class MultiLayerAtmosphere(OpticalElement):
 		for l in self.layers:
 			l.evolve_until(t)
 		self._t = t
-	
+
 	@property
 	def Cn_squared(self):
 		'''The total Cn^2 value of the simulated atmosphere.
 		'''
 		return np.sum([l.Cn_squared for l in self.layers])
-	
+
 	@Cn_squared.setter
 	def Cn_squared(self, Cn_squared):
 		old_Cn_squared = self.Cn_squared
 		for l in self.layers:
 			l.Cn_squared = l.Cn_squared / old_Cn_squared * Cn_squared
-	
+
 	@property
 	def outer_scale(self):
 		'''The outer scale of all layers.
 		'''
 		return self.layers[0].outer_scale
-	
+
 	@outer_scale.setter
 	def outer_scale(self, L0):
 		for l in self.layers:
 			l.outer_scale = L0
-	
+
 	@property
 	def t(self):
 		'''The current time.
 		'''
 		return self._t
-	
+
 	@t.setter
 	def t(self, t):
 		self.evolve_until(t)
@@ -301,16 +301,16 @@ class MultiLayerAtmosphere(OpticalElement):
 	def forward(self, wavefront):
 		if self._dirty:
 			self.calculate_propagators()
-		
+
 		wf = wavefront.copy()
 		for el in self.elements:
 			wf = el.forward(wf)
 		return wf
-	
+
 	def backward(self, wavefront):
 		if self._dirty:
 			self.calculate_propagators()
-		
+
 		wf = wavefront.copy()
 		for el in reversed(self.elements):
 			wf = el.backward(wf)
@@ -325,7 +325,7 @@ def phase_covariance_von_karman(r0, L0):
 		The Fried parameter.
 	L0 : scalar
 		The outer scale.
-	
+
 	Returns
 	-------
 	Field generator
@@ -333,7 +333,7 @@ def phase_covariance_von_karman(r0, L0):
 	'''
 	def func(grid):
 		r = grid.as_('polar').r + 1e-10
-		
+
 		a = (L0 / r0)**(5 / 3)
 		b = gamma(11 / 6) / (2**(5 / 6) * np.pi**(8 / 3))
 		c = (24 / 5 * gamma(6 / 5))**(5 / 6)
@@ -352,7 +352,7 @@ def phase_structure_function_von_karman(r0, L0):
 		The Fried parameter.
 	L0 : scalar
 		The outer scale.
-	
+
 	Returns
 	-------
 	Field generator
@@ -360,7 +360,7 @@ def phase_structure_function_von_karman(r0, L0):
 	'''
 	def func(grid):
 		r = grid.as_('polar').r + 1e-10
-		
+
 		a = (L0 / r0)**(5 / 3)
 		b = 2**(1 / 6) * gamma(11 / 6) / np.pi**(8 / 3)
 		c = (24 / 5 * gamma(6 / 5))**(5 / 6)
@@ -380,7 +380,7 @@ def power_spectral_density_von_karman(r0, L0):
 		The Fried parameter.
 	L0 : scalar
 		The outer scale.
-	
+
 	Returns
 	-------
 	Field generator
@@ -405,7 +405,7 @@ def Cn_squared_from_fried_parameter(r0, wavelength):
 		The Fried parameter.
 	wavelength : scalar
 		The wavelength at which the Fried parameter is measured.
-	
+
 	Returns
 	-------
 	scalar
@@ -423,7 +423,7 @@ def fried_parameter_from_Cn_squared(Cn_squared, wavelength):
 		The integrated Cn^2 value for the atmosphere.
 	wavelength : scalar
 		The wavelength at which to calculate the Fried parameter.
-	
+
 	Returns
 	-------
 	scalar
@@ -441,7 +441,7 @@ def seeing_to_fried_parameter(seeing, wavelength):
 		The FWHM of the seeing.
 	wavelength : scalar
 		The wavelength at which the seeing is measured.
-	
+
 	Returns
 	-------
 	scalar
@@ -458,7 +458,7 @@ def fried_parameter_to_seeing(r0, wavelength):
 		The Fried parameter.
 	wavelength : scalar
 		The wavelength at which the Fried parameter is measured.
-	
+
 	Returns
 	-------
 	scalar

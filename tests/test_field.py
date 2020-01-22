@@ -25,7 +25,7 @@ def test_field_dot():
 	BB = np.empty_like(B)
 	for i in range(grid.size):
 		BB[...,i] = A[...,i].dot(A[...,i])
-	
+
 	assert np.allclose(B, BB)
 
 	b = field_dot(a, a)
@@ -51,14 +51,14 @@ def test_field_dot():
 	BB = np.empty_like(B)
 	for i in range(grid.size):
 		BB[...,i] = A[...,i].dot(N)
-	
+
 	assert np.allclose(B, BB)
 
 def test_field_trace():
 	grid = make_pupil_grid(2)
-	
+
 	A = Field(np.random.randn(3,3,grid.size), grid)
-	
+
 	B = field_trace(A)
 	BB = np.array([np.trace(A[...,i]) for i in range(grid.size)])
 
@@ -73,7 +73,7 @@ def test_field_inv():
 	BB = np.empty_like(B)
 	for i in range(grid.size):
 		BB[...,i] = np.linalg.inv(A[...,i])
-	
+
 	assert np.allclose(B, BB)
 
 def test_field_transpose():
@@ -85,7 +85,7 @@ def test_field_transpose():
 	BB = np.empty_like(B)
 	for i in range(grid.size):
 		BB[..., i] = A[..., i].T
-	
+
 	assert np.allclose(B, BB)
 
 def test_field_conjugate_transpose():
@@ -97,7 +97,7 @@ def test_field_conjugate_transpose():
 	BB = np.empty_like(B)
 	for i in range(grid.size):
 		BB[..., i] = A[..., i].T.conj()
-	
+
 	assert np.allclose(B, BB)
 
 def test_field_adjoint():
@@ -109,7 +109,7 @@ def test_field_adjoint():
 	BB = np.empty_like(B)
 	for i in range(grid.size):
 		BB[..., i] = np.linalg.inv(A[..., i]) * np.linalg.det(A[..., i])
-	
+
 	assert np.allclose(B, BB)
 
 def test_field_inverse_tikhonov():
@@ -120,10 +120,10 @@ def test_field_inverse_tikhonov():
 	for reg in [1e-1, 1e-3, 1e-6]:
 		B = field_inverse_tikhonov(A, reg)
 		BB = np.empty_like(B)
-		
+
 		for i in range(grid.size):
 			BB[...,i] = inverse_tikhonov(A[...,i], reg)
-		
+
 		assert np.allclose(B, BB)
 
 def test_field_inverse_truncated():
@@ -137,7 +137,7 @@ def test_field_inverse_truncated():
 
 		for i in range(grid.size):
 			BB[...,i] = inverse_truncated(A[...,i], reg)
-		
+
 		assert np.allclose(B, BB)
 
 def test_field_inverse_truncated_modal():
@@ -151,7 +151,7 @@ def test_field_inverse_truncated_modal():
 
 		for i in range(grid.size):
 			BB[...,i] = inverse_truncated_modal(A[...,i], num_modes)
-		
+
 		assert np.allclose(B, BB)
 
 def test_field_cross():
@@ -164,14 +164,14 @@ def test_field_cross():
 	CC = np.empty_like(C)
 	for i in range(grid.size):
 		CC[..., i] = np.cross(A[:, i], B[:, i])
-	
+
 	assert np.allclose(C, CC)
 
 def test_field_svd():
 	grid = make_pupil_grid(2)
-	
+
 	A = Field(np.random.randn(5,10,grid.size), grid)
-	
+
 	U, S, Vh = field_svd(A)
 	u, s, vh = field_svd(A, False)
 

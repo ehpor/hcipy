@@ -13,7 +13,7 @@ class ConvolveFFT(object):
 		self.cutout = fft.cutout_input
 
 		mft = MatrixFourierTransform(kernel.grid, fft.output_grid)
-		
+
 
 	def forward(self, field):
 		f = np.zeros(self.internal_shape, dtype='complex')

@@ -29,9 +29,9 @@ class MicroLensArray(OpticalElement):
 	def __init__(self, input_grid, lenslet_grid, focal_length, lenslet_shape=None):
 		self.input_grid = input_grid
 		self.focal_length = focal_length
-		
+
 		self.mla_grid = lenslet_grid
-		
+
 		if lenslet_shape is None:
 			indices, distances = closest_points(lenslet_grid, input_grid)
 
@@ -44,15 +44,15 @@ class MicroLensArray(OpticalElement):
 			for i, (x,y) in enumerate(lenslet_grid.as_('cartesian').points):
 				shifted_grid = input_grid.shifted((x,y))
 				mask = lenslet_shape(shifted_grid) != 0
-				
+
 				self.mla_opd[mask] = (-1 / (2 * focal_length)) * (shifted_grid.x[mask]**2 + shifted_grid.y[mask]**2)
 				self.mla_index[mask] = i
-		
+
 		self.mla_surface = SurfaceApodizer(self.mla_opd, 2)
 
 	def forward(self, wavefront):
 		return self.mla_surface.forward(wavefront)
-		
+
 	def backward(self, wavefront):
 		return self.mla_surface.backward(wavefront)
 
@@ -78,8 +78,8 @@ class SphericalMicroLensArray(OpticalElement):
 		The aspheric coefficients of the micro-lenses.
 	'''
 	def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5):
-		
-		self.input_grid = input_grid		
+
+		self.input_grid = input_grid
 		self.mla_grid = lenslet_grid
 		self.n = refractive_index
 		self.radius_of_curvature = radius_of_curvature
@@ -97,12 +97,12 @@ class SphericalMicroLensArray(OpticalElement):
 			if np.count_nonzero(mask) > 0:
 				self.mla_index[mask] = i
 				self.mla_opd[mask] += self.surface_sag(subset_grid)
-			
+
 		self.mla_surface = SurfaceApodizer(self.mla_opd, refractive_index)
 
 	def forward(self, wavefront):
 		return self.mla_surface.forward(wavefront)
-		
+
 	def backward(self, wavefront):
 		return self.mla_surface.backward(wavefront)
 
@@ -127,8 +127,8 @@ class EvenAsphereMicroLensArray(OpticalElement):
 		The aspheric coefficients of the micro-lenses.
 	'''
 	def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, conic_constant=0, aspheric_coefficients=[]):
-		
-		self.input_grid = input_grid		
+
+		self.input_grid = input_grid
 		self.mla_grid = lenslet_grid
 		self.n = refractive_index
 		self.radius_of_curvature = radius_of_curvature
@@ -148,11 +148,11 @@ class EvenAsphereMicroLensArray(OpticalElement):
 			if np.count_nonzero(mask) > 0:
 				self.mla_index[mask] = i
 				self.mla_opd[mask] += self.surface_sag(subset_grid)
-			
+
 		self.mla_surface = SurfaceApodizer(self.mla_opd, refractive_index)
 
 	def forward(self, wavefront):
 		return self.mla_surface.forward(wavefront)
-		
+
 	def backward(self, wavefront):
 		return self.mla_surface.backward(wavefront)

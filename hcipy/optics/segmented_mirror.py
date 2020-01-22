@@ -12,8 +12,8 @@ from .deformable_mirror import DeformableMirror
 class SegmentedDeformableMirror(DeformableMirror):
 	'''A segmented deformable mirror.
 
-	This deformable mirror class can simulate devices such as those 
-	made by IrisAO and BMC. All segments are controlled in piston, 
+	This deformable mirror class can simulate devices such as those
+	made by IrisAO and BMC. All segments are controlled in piston,
 	tip and tilt.
 
 	Parameters
@@ -25,13 +25,13 @@ class SegmentedDeformableMirror(DeformableMirror):
 		self.segments = segments
 		self.actuators = np.zeros(len(segments) * 3)
 		self.input_grid = segments.grid
-	
+
 	@property
 	def segments(self):
 		'''The segments of this deformable mirror in a ModeBasis.
 		'''
 		return self._segments
-	
+
 	@segments.setter
 	def segments(self, segments):
 		self._segments = segments
@@ -63,17 +63,17 @@ class SegmentedDeformableMirror(DeformableMirror):
 
 		tip = ModeBasis(tip)
 		tilt = ModeBasis(tilt)
-		
+
 		self.influence_functions = segments + tip + tilt
-	
+
 	def get_segment_actuators(self, segment_id):
 		'''Get the actuators for an individual segment of the DM.
-		
+
 		Parameters
 		----------
 		segment_id : int
 			The index of the segment for which to get the actuators.
-		
+
 		Returns
 		-------
 		piston : scalar

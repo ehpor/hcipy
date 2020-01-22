@@ -3,7 +3,7 @@ import numpy as np
 
 def check_energy_conservation(shift_input, scale, shift_output, q, fov, dims):
 	print(shift_input, scale, shift_output, q, fov, dims)
-	
+
 	grid = make_uniform_grid(dims, 1).shifted(shift_input).scaled(scale)
 	f_in = Field(np.random.randn(grid.size), grid)
 	#f_in = Field(np.exp(-30 * grid.as_('polar').r**2), grid)
@@ -33,7 +33,7 @@ def check_energy_conservation(shift_input, scale, shift_output, q, fov, dims):
 				# for all fourier transform combinations.
 				assert np.allclose(f_in, f_out)
 				assert np.allclose(energy_in, energy_out)
-			
+
 			energy_ratios.append(energy_ratio)
 			patterns_match.append(pattern_match)
 

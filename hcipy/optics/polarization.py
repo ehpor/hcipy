@@ -5,16 +5,16 @@ from .optical_element import OpticalElement, make_agnostic_forward, make_agnosti
 from ..field import Field, field_inv, field_dot, field_transpose, field_conjugate_transpose
 
 def rotation_matrix(angle):
-	'''Two dimensional rotation matrix. 
+	'''Two dimensional rotation matrix.
 
 	Parameters
 	----------
 	angle : scaler
-		rotation angle in radians 
+		rotation angle in radians
 
 	Returns
 	-------
-	ndarray 
+	ndarray
 		The rotation matrix.
 	'''
 	return np.array([[np.cos(angle),  np.sin(angle)],[-np.sin(angle), np.cos(angle)]])
@@ -31,16 +31,16 @@ class JonesMatrixOpticalElement(AgnosticOpticalElement):
 		self.jones_matrix = jones_matrix
 
 		AgnosticOpticalElement.__init__(self, True, True)
-	
+
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		instance_data.jones_matrix = self.evaluate_parameter(self.jones_matrix, input_grid, output_grid, wavelength)
-	
+
 	def get_input_grid(self, output_grid, wavelength):
 		return output_grid
-	
+
 	def get_output_grid(self, input_grid, wavelength):
 		return input_grid
-	
+
 	@make_agnostic_forward
 	def forward(self, instance_data, wavefront):
 		'''Propgate the wavefront through the Jones matrix.
@@ -49,7 +49,7 @@ class JonesMatrixOpticalElement(AgnosticOpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -68,7 +68,7 @@ class JonesMatrixOpticalElement(AgnosticOpticalElement):
 			wf.electric_field = field_dot(instance_data.jones_matrix, wf.electric_field)
 
 			return wf
-	
+
 	@make_agnostic_backward
 	def backward(self, instance_data, wavefront):
 		'''Propagate the wavefront backwards through the Jones matrix.
@@ -77,7 +77,7 @@ class JonesMatrixOpticalElement(AgnosticOpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -99,17 +99,17 @@ class JonesMatrixOpticalElement(AgnosticOpticalElement):
 
 	@property
 	def mueller_matrix(self):
-		'''Returns the Mueller matrix corresponding to the Jones matrix. 
+		'''Returns the Mueller matrix corresponding to the Jones matrix.
 		'''
 		return self.construct_function(jones_to_mueller, self.jones_matrix)
 
 	def __mul__(self, b):
-		'''Multiply the Jones matrix on the right side with the Jones matrix m. 
+		'''Multiply the Jones matrix on the right side with the Jones matrix m.
 
 		Parameters
 		----------
 		m : JonesMatrixOpticalElement, Field or matrix
-			The Jones matrix with which to multiply. 
+			The Jones matrix with which to multiply.
 		'''
 		if hasattr(b, 'jones_matrix'):
 			jones_matrix = self.construct_function(field_dot, self.jones_matrix, b.jones_matrix)
@@ -143,13 +143,13 @@ class PhaseRetarder(JonesMatrixOpticalElement):
 			phi_plus = np.exp(1j * phase_retardation / 2)
 			phi_minus = np.exp(-1j * phase_retardation / 2)
 
-			# calculating the individual components 
+			# calculating the individual components
 			j11 = phi_plus * np.cos(fast_axis_orientation)**2 + phi_minus * np.sin(fast_axis_orientation)**2
 			j12 = (phi_plus - phi_minus) * np.exp(-1j * circularity) * np.cos(fast_axis_orientation) * np.sin(fast_axis_orientation)
 			j21 = (phi_plus - phi_minus) * np.exp(1j * circularity) * np.cos(fast_axis_orientation) * np.sin(fast_axis_orientation)
 			j22 = phi_plus * np.sin(fast_axis_orientation)**2 + phi_minus * np.cos(fast_axis_orientation)**2
 
-			# constructing the Jones matrix. 
+			# constructing the Jones matrix.
 			jones_matrix = np.array([[j11, j12], [j21, j22]])
 
 			if hasattr(j11, 'grid'):
@@ -208,7 +208,7 @@ class LinearRetarder(PhaseRetarder):
 
 class CircularRetarder(PhaseRetarder):
 	'''A general circular retarder.
-	
+
 	Parameters
 	----------
 	phase_retardation : scalar or Field
@@ -221,7 +221,7 @@ class CircularRetarder(PhaseRetarder):
 
 class QuarterWavePlate(LinearRetarder):
 	'''A quarter-wave plate.
-	
+
 	Parameters
 	----------
 	fast_axis_orientation : scalar or Field
@@ -232,7 +232,7 @@ class QuarterWavePlate(LinearRetarder):
 
 class HalfWavePlate(LinearRetarder):
 	'''A half-wave plate.
-	
+
 	Parameters
 	----------
 	fast_axis_orientation : scalar or Field
@@ -242,15 +242,15 @@ class HalfWavePlate(LinearRetarder):
 		LinearRetarder.__init__(self, np.pi, fast_axis_orientation)
 
 class GeometricPhaseElement(LinearRetarder):
-	'''A general geometric phase element. 
+	'''A general geometric phase element.
 
 	Parameters
 	----------
-	phase_pattern : Field or array_like 
-		The phase pattern in radians. 
-	leakage : scalar 
+	phase_pattern : Field or array_like
+		The phase pattern in radians.
+	leakage : scalar
 		The relative leakage strength (0 = no leakage, 1 = maximum leakage)
-	retardance_offset : scalar 
+	retardance_offset : scalar
 		The retardance offset from half wave in radians. This will result in leakage.
 	'''
 	def __init__(self, phase_pattern, leakage=None, retardance_offset=0):
@@ -259,7 +259,7 @@ class GeometricPhaseElement(LinearRetarder):
 			if leakage < 0 or leakage > 1:
 				raise ValueError('Leakage must be between 0 and 1.')
 
-			# Calculating the required retardance offset to get the leakage. 
+			# Calculating the required retardance offset to get the leakage.
 			retardance_offset = 2 * np.arcsin(np.sqrt(leakage))
 
 		LinearRetarder.__init__(self, np.pi - retardance_offset, phase_pattern / 2)
@@ -284,9 +284,9 @@ class LinearPolarizer(JonesMatrixOpticalElement):
 			s = np.sin(angle)
 
 			return np.array([[c**2, c * s],[c * s, s**2]])
-		
+
 		return self.construct_function(jones, self.polarization_angle)
-	
+
 	@jones_matrix.setter
 	def jones_matrix(self, b):
 		pass
@@ -312,22 +312,22 @@ class LinearPolarizingBeamSplitter(OpticalElement):
 	Parameters
 	----------
 	polarization_angle : scalar or Field
-		The polarization angle of the polarizer. 
+		The polarization angle of the polarizer.
 	'''
 	def __init__(self, polarization_angle, wavelength=1):
 		self.polarization_angle = polarization_angle
-		
+
 	@property
 	def polarization_angle(self):
 		'''The angle of polarization of the linear polarizer.
 		'''
 		return self._polarization_angle
-	
+
 	@polarization_angle.setter
 	def polarization_angle(self, polarization_angle):
 		self._polarization_angle = polarization_angle
 
-		# Calculating two Jones matrices for the two ports.		
+		# Calculating two Jones matrices for the two ports.
 		self.polarizer_port_1 = LinearPolarizer(polarization_angle)
 		self.polarizer_port_2 = LinearPolarizer(polarization_angle + np.pi / 2)
 
@@ -338,13 +338,13 @@ class LinearPolarizingBeamSplitter(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
-		wf_1 : Wavefront 
+		wf_1 : Wavefront
 			The wavefront propagated through a polarizer under the polarization angle.
 
-		wf_2 : Wavefront 
+		wf_2 : Wavefront
 			The propagated wavefront through a polarizer perpendicular to the first one.
 		'''
 
@@ -371,21 +371,21 @@ class CircularPolarizingBeamSplitter(OpticalElement):
 
 	The circular polarizing beam splitter is a combination of a quarter-wave plate and a polarizing beam splitter. The
 	quarter-wave plate rotation angle is 45 degrees and the polarizing beam-splitter rotation angle is zero degrees.
-	Therefore, the first of the returned wavefronts will have a linear polarization state with an electric field equal 
-	to the amount of left-circular polarization in the incoming wavefront. The second wavefront will be perpendicular 
-	to the first and with electric field equal to the amount of right-circular polarization in the incoming wavefront. 
+	Therefore, the first of the returned wavefronts will have a linear polarization state with an electric field equal
+	to the amount of left-circular polarization in the incoming wavefront. The second wavefront will be perpendicular
+	to the first and with electric field equal to the amount of right-circular polarization in the incoming wavefront.
 
 	Parameters
 	----------
 	polarization_angle : scalar or Field
-		The polarization angle of the polarizer. 
+		The polarization angle of the polarizer.
 	'''
 	def __init__(self, wavelength=1):
 		self.polarization_angle = 0
 		self.quarter_wave_angle = np.pi / 4
 		self.quarter_wave_plate = QuarterWavePlate(self.quarter_wave_angle)
 		self.linear_polarizing_beam_splitter = LinearPolarizingBeamSplitter(self.polarization_angle)
-		
+
 	def forward(self, wavefront):
 		'''Propgate the wavefront through the CBS.
 
@@ -393,13 +393,12 @@ class CircularPolarizingBeamSplitter(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
-		wf_1 : Wavefront 
+		wf_1 : Wavefront
 			The wavefront propagated through a quarter-wave plate at 45 degrees and a polarizer 0 degrees.
-
-		wf_2 : Wavefront 
+		wf_2 : Wavefront
 			The wavefront propagated through a quarter-wave plate at 45 degrees and a polarizer 90 degrees.
 		'''
 		wf_1, wf_2 = self.linear_polarizing_beam_splitter.forward(self.quarter_wave_plate.forward(wavefront))

@@ -59,7 +59,7 @@ def make_pupil_grid(dims, diameter=1):
 	diameter : ndarray or scalar
 		The diameter of the grid in each dimension. If this is a scalar, this diameter
 		is used for all dimensions.
-	
+
 	Returns
 	-------
 	Grid
@@ -71,17 +71,17 @@ def make_pupil_grid(dims, diameter=1):
 def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1):
 	'''Make a grid for a focal plane from a pupil grid.
 
-	Calculate the focal grid corresponding to the pupil grid, using an FFT grid as a guide. The 
-	resulting grid focal will always contain the origin (0, 0) point. The extent of the pupil 
+	Calculate the focal grid corresponding to the pupil grid, using an FFT grid as a guide. The
+	resulting grid focal will always contain the origin (0, 0) point. The extent of the pupil
 	grid will be used as the diameter of the pupil. If the pupil is undersized on the pupil
 	grid, the resulting focal grid needs to be rescaled manually.
-	
+
 	.. note::
 		In almost all cases, it is preferable to use :func:`make_focal_grid_replacement`. This
 		function allows you to directly set the diameter, and doesn't require the user to pass
-		the pupil grid as an argument. `make_focal_grid_from_pupil_grid()` retains old functionality 
-		and serves as a backwards compatibility function, due to its ubiquitous usage in HCIPy code. 
-		`make_focal_grid_from_pupil_grid()` will be deprecated in future versions, and new code 
+		the pupil grid as an argument. `make_focal_grid_from_pupil_grid()` retains old functionality
+		and serves as a backwards compatibility function, due to its ubiquitous usage in HCIPy code.
+		`make_focal_grid_from_pupil_grid()` will be deprecated in future versions, and new code
 		should aim to use its replacement.
 
 	Parameters
@@ -97,7 +97,7 @@ def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length
 		The focal length used for calculating the spatial resolution at the focal plane.
 	wavelength : scalar
 		The reference wavelength used for calculating the spatial resolution at the focal plane.
-	
+
 	Returns
 	-------
 	Grid
@@ -110,14 +110,14 @@ def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length
 		fov = 1
 	else:
 		fov = (num_airy * np.ones(pupil_grid.ndim, dtype='float')) / (pupil_grid.shape / 2)
-	
+
 	if np.max(fov) > 1:
 		import warnings
 		warnings.warn('Focal grid is larger than the maximum allowed angle (fov=%.03f). You may see wrapping when doing propagations.' % np.max(fov), stacklevel=2)
-		
+
 	uv = make_fft_grid(pupil_grid, q, fov)
 	focal_grid = uv.scaled(f_lambda / (2*np.pi))
-	
+
 	return focal_grid
 
 def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, focal_length=None, f_number=None, reference_wavelength=None):
@@ -145,8 +145,8 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
 	num_airy : scalar or array_like
 		The spatial extent of the grid in radius in resolution elements (= lambda f / D).
 	spatial_resolution : scalar	or array_like
-		The physical size of a resolution element (= lambda f / D). It this is not given, 
-		the spatial resolution will be calculated from the given `focal_length`, 
+		The physical size of a resolution element (= lambda f / D). It this is not given,
+		the spatial resolution will be calculated from the given `focal_length`,
 		`reference_wavelength` and `pupil_diameter`.
 	pupil_diameter : scalar or array_like
 		The diameter of the pupil. If it is an array, this indicates the diameter in x and y.
@@ -157,12 +157,12 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
 		the given pupil diameter and focal length.
 	reference_wavelength : scalar
 		The reference wavelength used for calculating the spatial resolution at the focal plane.
-	
+
 	Returns
 	-------
 	Grid
 		A Grid describing the sampling for a focal plane.
-	
+
 	Raises
 	------
 	ValueError
@@ -177,7 +177,7 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
 					raise ValueError('You only supplied a reference wavelength and forgot to supply either an f_number or a (pupil_diameter, focal_length).')
 			else:
 				f_number = focal_length / pupil_diameter
-		
+
 		if spatial_resolution is None:
 			if reference_wavelength is None:
 				raise ValueError('You supplied an f_number or (pupil_diameter, focal_length), and forgot to supply a reference wavelength.')
@@ -203,21 +203,21 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
 		If the hexagons contained in the grid.
 	center : ndarray
 		The center of the grid in cartesian coordinates.
-	
+
 	Returns
 	-------
 	Grid
-		A :class:`CartesianGrid` with `UnstructuredCoords`, indicating the 
+		A :class:`CartesianGrid` with `UnstructuredCoords`, indicating the
 		center of the hexagons.
 	'''
 	if center is None:
 		center = np.zeros(2)
-	
+
 	apothem = circum_diameter * np.sqrt(3) / 4
 
 	q = [0]
 	r = [0]
-	
+
 	for n in range(1, n_rings + 1):
 		#top
 		q += list(range(n, 0, -1))
@@ -237,7 +237,7 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
 		# left top
 		q += [n] * n
 		r += list(range(-n, 0))
-	
+
 	x = (-np.array(q) + np.array(r)) * circum_diameter / 2 + center[0]
 	y = (np.array(q) + np.array(r)) * apothem * 2 + center[1]
 
@@ -251,10 +251,10 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
 def make_chebyshev_grid(dims, minimum=None, maximum=None):
 	if minimum is None:
 		minimum = -1
-	
+
 	if maximum is None:
 		maximum = 1
-	
+
 	dims = np.array(dims)
 	minimum = np.ones(len(dims)) * minimum
 	maximum = np.ones(len(dims)) * maximum
@@ -267,7 +267,7 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None):
 		c = np.cos(np.pi * (2 * np.arange(dim) + 1) / (2.0 * dim))
 		c = middle + interval * c
 		sep_coords.append(c)
-	
+
 	return CartesianGrid(SeparatedCoords(sep_coords))
 
 def make_supersampled_grid(grid, oversampling):
@@ -284,7 +284,7 @@ def make_supersampled_grid(grid, oversampling):
 		The factor by which to oversample. If this is a scalar, it will be rounded to
 		the nearest integer. If this is an array, a different oversampling factor will
 		be used for each dimension.
-	
+
 	Returns
 	-------
 	Grid
@@ -300,7 +300,7 @@ def make_supersampled_grid(grid, oversampling):
 		return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
 	elif grid.is_separated:
 		raise NotImplementedError()
-	
+
 	raise ValueError('Cannot create a supersampled grid from a non-separated grid.')
 
 def make_subsampled_grid(grid, undersampling):
@@ -317,7 +317,7 @@ def make_subsampled_grid(grid, undersampling):
 		The factor by which to undersample. If this is a scalar, it will be rounded to
 		the nearest integer. If this is an array, a different undersampling factor will
 		be used for each dimension.
-	
+
 	Returns
 	-------
 	Grid
@@ -333,7 +333,7 @@ def make_subsampled_grid(grid, undersampling):
 		return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
 	elif grid.is_separated:
 		raise NotImplementedError()
-	
+
 	raise ValueError("Cannot create a subsampled grid from a non-separated grid.")
 
 def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
@@ -348,8 +348,8 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 		The field to subsample. The grid of this field must have the right
 		dimensions to be able to be subsampled.
 	subsampling : integer or scalar or ndarray
-		The subsampling factor. If this is a scalar, it will be rounded to the 
-		nearest integer. If this is an array, the subsampling factor will be 
+		The subsampling factor. If this is a scalar, it will be rounded to the
+		nearest integer. If this is an array, the subsampling factor will be
 		different for each dimension.
 	new_grid : Grid
 		If this grid is given, no new grid will be calculated and this grid will
@@ -372,13 +372,13 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 
 	if new_grid is None:
 		new_grid = make_subsampled_grid(field.grid, subsampling)
-	
+
 	reshape = []
 	axes = []
 	for i, s in enumerate(new_grid.shape):
 		reshape.extend([s, subsampling])
 		axes.append(2 * i + 1)
-	
+
 	if field.tensor_order > 0:
 		reshape = list(field.tensor_shape) + reshape
 		axes = np.array(axes) + field.tensor_order
@@ -395,7 +395,7 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 
 	if statistic not in available_statistics:
 		raise ValueError('This statistic is not recognized.')
-	
+
 	if field.grid.is_regular:
 		# All weights will be the same, so the array can be combined without taking the weights into account.
 		return Field(available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
@@ -453,9 +453,9 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 			if make_sparse:
 				field = scipy.sparse.csr_matrix(field)
 				field.eliminate_zeros()
-			
+
 			modes.append(field)
-		
+
 		return ModeBasis(modes, grid)
 
 	oversampling = (np.round(oversampling) * np.ones(grid.ndim)).astype('int')
@@ -498,7 +498,7 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 		field.grid = grid
 		return field
 	else:
-		# Cannot use sub grids, so fall back to evaluation of generator on the full 
+		# Cannot use sub grids, so fall back to evaluation of generator on the full
 		# supersampled grid.
 		supersampled_grid = make_supersampled_grid(grid, oversampling)
 		field = field_generator(supersampled_grid)
@@ -506,7 +506,7 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 
 def make_uniform_vector_field(field, jones_vector):
 	'''Make an uniform vector field from a scalar field and a jones vector.
-	
+
 	Parameters
 	----------
 	field : Field
@@ -524,7 +524,7 @@ def make_uniform_vector_field(field, jones_vector):
 
 def make_uniform_vector_field_generator(field_generator, jones_vector):
 	'''Make an uniform vector field generator from a scalar field generator and a jones vector.
-	
+
 	Parameters
 	----------
 	field_generator : Field generator
@@ -537,7 +537,7 @@ def make_uniform_vector_field_generator(field_generator, jones_vector):
 	Field generator
 		This function can be evaluated on a grid to get a Field.
 	'''
-	
+
 	def func(grid):
 		scalar_field = field_generator(grid)
 		return Field([ei * scalar_field for ei in jones_vector], grid)

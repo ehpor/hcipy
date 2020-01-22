@@ -28,7 +28,7 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
 		The modes which to remove from the surface aberration. The peak-to-valley
 		is enforced before these modes are removed. This allows for correctting surface
 		errors with optic alignment.
-	
+
 	Returns
 	-------
 	Field
@@ -38,10 +38,10 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
 		res = Field(grid.as_('polar').r**exponent, grid)
 		res[grid.as_('polar').r == 0] = 0
 		return res
-	
+
 	if aperture is None:
 		aperture = circular_aperture(diameter)(pupil_grid)
-	
+
 	screen = SpectralNoiseFactoryFFT(psd, pupil_grid).make_random()()
 	screen *= ptv / np.ptp(screen[aperture != 0])
 
@@ -49,7 +49,7 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
 		trans = remove_modes.transformation_matrix
 		trans_inv = inverse_tikhonov(trans, 1e-6)
 		screen -= trans.dot(trans_inv.dot(screen))
-	
+
 	return Field(screen * aperture, pupil_grid)
 
 class SurfaceAberration(SurfaceApodizer):
@@ -102,12 +102,12 @@ class SurfaceAberrationAtDistance(OpticalElement):
 
 	def forward(self, wavefront):
 		'''Propagate a wavefront forwards through the surface aberration.
-	
+
 		Parameters
 		----------
 		wavefront : Wavefront
 			The incoming wavefront.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -117,15 +117,15 @@ class SurfaceAberrationAtDistance(OpticalElement):
 		wf = self.fresnel.forward(wavefront)
 		wf = self.surface_aberration.forward(wf)
 		return self.fresnel.backward(wf)
-	
+
 	def backward(self, wavefront):
 		'''Propagate a wavefront backwards through the surface aberration.
-	
+
 		Parameters
 		----------
 		wavefront : Wavefront
 			The incoming wavefront.
-		
+
 		Returns
 		-------
 		Wavefront

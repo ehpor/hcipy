@@ -8,7 +8,7 @@ class Configuration(object):
 	def __init__(self):
 		if not hasattr(Configuration, '_config'):
 			self.reset()
-	
+
 	def __getitem__(self, key):
 		'''Get the value for the key.
 
@@ -18,7 +18,7 @@ class Configuration(object):
 			The configuration key.
 		'''
 		return Configuration._config[key]
-	
+
 	def __setitem__(self, key, value):
 		'''Set the value for the key.
 
@@ -30,11 +30,11 @@ class Configuration(object):
 			The value to set this to.
 		'''
 		Configuration._config[key] = value
-	
+
 	def get_config_path(self):
 		'''Get the current path of the configuration file.
 
-		If no configuration file is present, a new one will be made, 
+		If no configuration file is present, a new one will be made,
 		and its path will be returned.
 
 		Returns
@@ -56,7 +56,7 @@ class Configuration(object):
 		for path in paths:
 			if os.path.exists(path):
 				return path
-		
+
 		# No configuration file is available, make a new one.
 		path = paths[-1]
 		directory = os.path.dirname(path)
@@ -67,8 +67,8 @@ class Configuration(object):
 		f.write(default_configuration)
 		f.close()
 
-		return path	
-	
+		return path
+
 	def reset(self):
 		'''Read the configuration file from the configuration directory.
 		'''

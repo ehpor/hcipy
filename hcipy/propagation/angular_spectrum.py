@@ -9,9 +9,9 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
 	'''The monochromatic angular spectrum propagator for scalar fields.
 
 	The scalar Angular Spectrum propagator is implemented as described by
-	[1]_. The propagation of an electric field can be described as a transfer 
-	function in frequency space. The transfer function is taken from 
-	equation 9 of [1]_, and the related impulse response is taken from 
+	[1]_. The propagation of an electric field can be described as a transfer
+	function in frequency space. The transfer function is taken from
+	equation 9 of [1]_, and the related impulse response is taken from
 	equation 6 of [1]_.
 
 	.. [1] Robert R. McLeod and Kelvin H. Wagner 2014, "Vector Fourier optics of anisotropic materials," Adv. Opt. Photon. 6, 368-412 (2014)
@@ -45,9 +45,9 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		if not input_grid.is_regular or not input_grid.is_('cartesian'):
 			raise ValueError('The input grid must be a regular, Cartesian grid.')
-	
+
 		instance_data.fft = FastFourierTransform(input_grid, q=2)
-		
+
 		k = 2 * np.pi / wavelength * self.evaluate_parameter(self.refractive_index, input_grid, output_grid, wavelength)
 		L_max = np.max(input_grid.dims * input_grid.delta)
 
@@ -104,19 +104,19 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
 
 	def get_input_grid(self, output_grid, wavelength):
 		return output_grid
-	
+
 	def get_output_grid(self, input_grid, wavelength):
 		return input_grid
 
 	@make_agnostic_forward
 	def forward(self, instance_data, wavefront):
 		'''Propagate a wavefront forward by a certain distance.
-	
+
 		Parameters
 		----------
 		wavefront : Wavefront
 			The incoming wavefront.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -130,12 +130,12 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
 	@make_agnostic_backward
 	def backward(self, instance_data, wavefront):
 		'''Propagate a wavefront backward by a certain distance.
-	
+
 		Parameters
 		----------
 		wavefront : Wavefront
 			The incoming wavefront.
-		
+
 		Returns
 		-------
 		Wavefront

@@ -5,19 +5,19 @@ from math import *
 # Values where x doesn't fit in any of the bins are ignored.
 def binned_profile(y, x, bins=20):
 	'''Create a profile of y(x) in the specified bins.
-	
+
 	Parameters
 	----------
 	y : array_like
 		The y-coordinates of the data points. This should be 1-dimensional.
 	x : array_like
-		The x-coordinates of the data points. This should be 1-dimensional 
+		The x-coordinates of the data points. This should be 1-dimensional
 		and the same size as `y`.
 	bins : array_like or int
-		The bin edges of the profile. If this is an integer, `bins` is the 
+		The bin edges of the profile. If this is an integer, `bins` is the
 		number of bins that will be equally distributed along the whole range
 		of `x`.
-	
+
 	Returns
 	-------
 	bin_centers : array_like
@@ -53,11 +53,11 @@ def azimutal_profile(image, num_bins):
 	Parameters
 	----------
 	image : Field
-		The image that we want an azimuthal profile from. This image must be 
+		The image that we want an azimuthal profile from. This image must be
 		two-dimensional.
 	num_bins : int
 		The number of bins in theta. Bins will be equally distributed in theta.
-	
+
 	Returns
 	-------
 	bin_centers : array_like
@@ -80,11 +80,11 @@ def radial_profile(image, bin_size):
 	Parameters
 	----------
 	image : Field
-		The image that we want an azimuthal profile from. This image must be 
+		The image that we want an azimuthal profile from. This image must be
 		two-dimensional.
 	bin_size : scalar
 		The extent of each bin. Each bin will be a ring from r to r+`bin_size`.
-	
+
 	Returns
 	-------
 	bin_centers : array_like
@@ -97,9 +97,9 @@ def radial_profile(image, bin_size):
 		The number of samples per bin.
 	'''
 	r = image.grid.as_('polar').r
-	
+
 	n_bins = int(np.ceil(r.max() / bin_size))
 	max_bin = n_bins * bin_size
 	bins = np.linspace(0, max_bin, n_bins+1)
-	
+
 	return binned_profile(image, r, bins)

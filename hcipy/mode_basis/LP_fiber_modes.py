@@ -16,7 +16,7 @@ def eigenvalue_equation(u, m, V):
 		The azimuthal order
 	V : scalar
 		The normalized frequency parameter of the fiber.
-	
+
 	Returns
 	-------
 	scalar
@@ -34,7 +34,7 @@ def find_branch_cuts(m, V):
 		The azimuthal order
 	V : scalar
 		The normalized frequency parameter of the fiber.
-	
+
 	Returns
 	-------
 	Tuple
@@ -57,7 +57,7 @@ def find_branch_cuts(m, V):
 		return u0, w0
 	else:
 		return None
-	
+
 
 def LP_radial(m, u, w, r):
 	'''Evaluates the radial profile of the LP modes.
@@ -72,7 +72,7 @@ def LP_radial(m, u, w, r):
 		The normalized outer propagation constant.
 	r : array_like
 		The radial coordinates on which to evaluate the bessel modes.
-	
+
 	Returns
 	-------
 	array_like
@@ -100,7 +100,7 @@ def LP_azimuthal(m, theta):
 		The azimuthal order
 	theta : array_like
 		The azimuthal coordinates on which to evaluate the cosine and sine modes.
-	
+
 	Returns
 	-------
 	array_like
@@ -143,11 +143,11 @@ def make_LP_modes(grid, V_number, core_radius, return_betas=False):
 	modes = []
 	betas = []
 	while finding_new_modes:
-		
+
 		solutions = find_branch_cuts(m, V_number)
 		if solutions is not None:
 			for ui, wi in zip(solutions[0], solutions[1]):
-				
+
 				radial_prodile = LP_radial(m, ui, wi, R)
 				beta = np.sqrt((V_number**2 + wi**2 - ui**2) / (2 * core_radius**2))
 
@@ -166,13 +166,13 @@ def make_LP_modes(grid, V_number, core_radius, return_betas=False):
 			m += 1
 		else:
 			finding_new_modes = False
-	
+
 	# Sort the modes according to their propagation constant
 	betas = np.array(betas)
 	index_sorting = np.argsort(betas)[::-1]
 	modes = np.array(modes)[index_sorting].T
 	betas = betas[index_sorting]
-	
+
 	if return_betas:
 		return ModeBasis(modes, grid), np.array(betas)
 	else:

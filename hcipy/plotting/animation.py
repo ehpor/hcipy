@@ -72,7 +72,7 @@ class GifWriter(object):
 		else:
 			if cmap is not None:
 				data = matplotlib.cm.get_cmap(cmap)(data, bytes=True)
-			
+
 			imageio.imwrite(dest, data, format='png')
 
 		self.num_frames += 1
@@ -93,7 +93,7 @@ class GifWriter(object):
 			The file extension of the image files.
 		num_files_to_convert : integer or None
 			How many frames are expected in the directory. If None, then no check will be done.
-		
+
 		Raises
 		------
 		OSError
@@ -166,7 +166,7 @@ class FFMpegWriter(object):
 	ValueError
 		If the codec was not given and could not be guessed based on the file extension.
 	RuntimeError
-		If something went wrong during initialization of the call to FFMpeg. Most likely, 
+		If something went wrong during initialization of the call to FFMpeg. Most likely,
 		FFMpeg is not installed and/or not available from the commandline.
 	'''
 	def __init__(self, filename, codec=None, framerate=24, quality=None, preset=None):
@@ -183,27 +183,27 @@ class FFMpegWriter(object):
 		self.filename = filename
 		self.codec = codec
 		self.framerate = framerate
-		
+
 		if codec == 'libx264':
 			if quality is None:
 				quality = 10
 			if preset is None:
 				preset = 'veryslow'
-			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe', 
+			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
 				'-vcodec','png', '-r', str(framerate), '-i', '-']
-			command.extend(['-vcodec', 'libx264', '-preset', preset, '-r', 
+			command.extend(['-vcodec', 'libx264', '-preset', preset, '-r',
 				str(framerate), '-crf', str(quality), filename])
 		elif codec == 'mpeg4':
 			if quality is None:
 				quality = 4
-			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe', 
+			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
 				'-vcodec','png', '-r', str(framerate), '-i', '-']
-			command.extend(['-vcodec', 'mpeg4', '-q:v', str(quality), '-r', 
+			command.extend(['-vcodec', 'mpeg4', '-q:v', str(quality), '-r',
 				str(framerate), filename])
 		elif codec == 'libvpx-vp9':
 			if quality is None:
 				quality = 30
-			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe', 
+			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
 				'-vcodec','png', '-r', str(framerate), '-i', '-']
 			if quality < 0:
 				command.extend(['-vcodec', 'libvpx-vp9', '-lossless', '1',
@@ -256,7 +256,7 @@ class FFMpegWriter(object):
 		else:
 			if not cmap is None:
 				arr = matplotlib.cm.get_cmap(cmap)(arr, bytes=True)
-			
+
 			imageio.imwrite(self.p.stdin, arr, format='png')
 
 	def close(self):
@@ -272,8 +272,8 @@ class FFMpegWriter(object):
 
 	def _repr_html_(self):
 		'''Get an HTML representation of the generated video.
-		
-		Helper function for Jupyter notebooks. The video will be inline embedded in an 
+
+		Helper function for Jupyter notebooks. The video will be inline embedded in an
 		HTML5 video tag using base64 encoding. This is not very efficient, so only use this
 		for small video files.
 

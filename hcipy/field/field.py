@@ -9,7 +9,7 @@ class Field(np.ndarray):
 		An array of values or tensors for each point in the :class:`Grid`.
 	grid : Grid
 		The corresponding :class:`Grid` on which the values are set.
-	
+
 	Attributes
 	----------
 	grid : Grid
@@ -20,12 +20,12 @@ class Field(np.ndarray):
 		obj = np.asarray(arr).view(cls)
 		obj.grid = grid
 		return obj
-	
+
 	def __array_finalize__(self, obj):
 		if obj is None:
 			return
 		self.grid = getattr(obj, 'grid', None)
-	
+
 	@property
 	def tensor_order(self):
 		'''The order of the tensor of the field.
@@ -37,25 +37,25 @@ class Field(np.ndarray):
 		'''The shape of the tensor of the field.
 		'''
 		return np.array(self.shape)[:-1]
-	
+
 	@property
 	def is_scalar_field(self):
 		'''True if this field is a scalar field (ie. a tensor order of 0), False otherwise.
 		'''
 		return self.tensor_order == 0
-	
+
 	@property
 	def is_vector_field(self):
 		'''True if this field is a vector field (ie. a tensor order of 1), False otherwise.
 		'''
 		return self.tensor_order == 1
-	
+
 	@property
 	def is_valid_field(self):
 		'''True if the field corresponds with its grid.
 		'''
 		return self.shape[-1] == self.grid.size
-	
+
 	@property
 	def shaped(self):
 		'''The reshaped version of this field.
@@ -73,7 +73,7 @@ class Field(np.ndarray):
 			return self.reshape(new_shape)
 
 		return self.reshape(self.grid.shape)
-	
+
 	def at(self, p):
 		'''The value of this field closest to point p.
 
@@ -81,7 +81,7 @@ class Field(np.ndarray):
 		----------
 		p : array_like
 			The point at which the closest value should be returned.
-		
+
 		Returns
 		-------
 		array_like

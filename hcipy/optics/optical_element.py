@@ -9,7 +9,7 @@ class OpticalElement(object):
 
 	This class can propagate a :class:`Wavefront` through an optical element
 	(or free space), therefore modifying it. Any OpticalElement should be agnostic
-	of the grid and wavelength of the wavefront. If it's not, you can use the 
+	of the grid and wavelength of the wavefront. If it's not, you can use the
 	:func:`make_agnostic_optical_element` decorator to create an agnostic optical
 	element out of a gnostic one.
 	'''
@@ -20,14 +20,14 @@ class OpticalElement(object):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
 			The propagated wavefront.
 		'''
 		return self.forward(wavefront)
-	
+
 	def forward(self, wavefront):
 		'''Propagate a wavefront forward through the optical element.
 
@@ -37,14 +37,14 @@ class OpticalElement(object):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
 			The propagated wavefront.
 		'''
 		raise NotImplementedError()
-	
+
 	def backward(self, wavefront):
 		'''Propagate a wavefront backward through the optical element.
 
@@ -58,19 +58,19 @@ class OpticalElement(object):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
 			The propagated wavefront.
 		'''
 		raise NotImplementedError()
-	
+
 	def get_transformation_matrix_forward(self, wavelength=1):
-		'''Calculate the linear transformation matrix that corresponds 
+		'''Calculate the linear transformation matrix that corresponds
 		to a forward propagation.
 
-		The matrix is defined such that `E_out = M.dot(E_in)`, where `E_out` and 
+		The matrix is defined such that `E_out = M.dot(E_in)`, where `E_out` and
 		`E_in` are the electric fields of the output and input respectively, and
 		`M` is the transformation matrix returned by this function.
 
@@ -85,19 +85,19 @@ class OpticalElement(object):
 		----------
 		wavelength : scalar
 			The wavelength for which the transformation matrix will be calculated.
-		
+
 		Returns
 		-------
 		ndarray
 			The full propagation matrix.
 		'''
 		raise NotImplementedError()
-	
+
 	def get_transformation_matrix_backward(self, wavelength=1):
-		'''Calculate the linear transformation matrix that corresponds 
+		'''Calculate the linear transformation matrix that corresponds
 		to a backward propagation.
 
-		The matrix is defined such that `E_in = M.dot(E_out)`, where `E_out` and 
+		The matrix is defined such that `E_in = M.dot(E_out)`, where `E_out` and
 		`E_in` are the electric fields of the output and input plane respectively, and
 		`M` is the transformation matrix returned by this function.
 
@@ -116,14 +116,14 @@ class OpticalElement(object):
 		----------
 		wavelength : scalar
 			The wavelength for which the transformation matrix will be calculated.
-		
+
 		Returns
 		-------
 		ndarray
 			The full propagation matrix.
 		'''
 		raise NotImplementedError()
-	
+
 	def get_instance(self, input_grid=None, output_grid=None, wavelength=None):
 		'''Return an OpticalElement that can handle wavefronts with input_grid and wavelength.
 
@@ -143,7 +143,7 @@ class OpticalElement(object):
 			The grid on which the output wavefront is defined.
 		wavelength : scalar
 			The wavelength on which the wavefront is defined.
-		
+
 		Returns
 		-------
 		OpticalElement
@@ -153,7 +153,7 @@ class OpticalElement(object):
 
 class EmptyOpticalElement(OpticalElement):
 	'''An empty optical element.
-	
+
 	This optical element doesn't modify the wavefront at all. This can be used as a replacement
 	for optical elements. For example, when you don't want to use a coronagraph for code that expects
 	an optical element as a coronagraph, you can pass an instance of this class to effectively do nothing.
@@ -165,14 +165,14 @@ class EmptyOpticalElement(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
 			The propagated wavefront.
 		'''
 		return wavefront
-	
+
 	def backward(self, wavefront):
 		'''Propagate the wavefront backward through the empty optical element.
 
@@ -180,14 +180,14 @@ class EmptyOpticalElement(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
 			The propagated wavefront.
 		'''
 		return wavefront
-	
+
 	def get_transformation_matrix_forward(self, wavelength=1):
 		'''Calculate the backward linear transformation matrix for the empty optical element.
 
@@ -195,14 +195,14 @@ class EmptyOpticalElement(OpticalElement):
 		----------
 		wavelength : scalar
 			The wavelength for which the transformation matrix will be calculated.
-		
+
 		Returns
 		-------
 		ndarray
 			The full propagation matrix.
 		'''
 		return np.array(1)
-	
+
 	def get_transformation_matrix_backward(self, wavelength=1):
 		'''Calculate the backward linear transformation matrix for the empty optical element.
 
@@ -210,7 +210,7 @@ class EmptyOpticalElement(OpticalElement):
 		----------
 		wavelength : scalar
 			The wavelength for which the transformation matrix will be calculated.
-		
+
 		Returns
 		-------
 		ndarray
@@ -242,7 +242,7 @@ def _get_function_parameters(func):
 	----------
 	func : function
 		The function to get the parameter names for.
-	
+
 	Returns
 	-------
 	list of str
@@ -262,7 +262,7 @@ WAVELENGTH_DEPENDENT = 4
 class AgnosticOpticalElement(OpticalElement):
 	'''Base class for optical elements that require additional processing/caching for supporting different grids or wavelengths.
 
-	This class is mant to simplify the creation of agnostic optical elements. When you have an 
+	This class is mant to simplify the creation of agnostic optical elements. When you have an
 	optical element that explicitly needs an input grid and/or wavelength on initialization, you can
 	use this class to simplify making it accept all input/output grids and/or wavelengths.
 
@@ -279,7 +279,7 @@ class AgnosticOpticalElement(OpticalElement):
 	Parameters
 	----------
 	grid_dependent : boolean
-		If the instances should be separated by grid. Separate instances will be made if their grids change 
+		If the instances should be separated by grid. Separate instances will be made if their grids change
 		between invocations.
 	wavelength_dependent : boolean
 		If the instances should be separated by grid.Separate instances will be made if wavelength changes
@@ -294,7 +294,7 @@ class AgnosticOpticalElement(OpticalElement):
 		self._max_in_cache = max_in_cache
 
 		self.clear_cache()
-	
+
 	def _get_cache_keys(self, input_grid, output_grid, wavelength):
 		'''Get all keys for the instance cache.
 
@@ -318,7 +318,7 @@ class AgnosticOpticalElement(OpticalElement):
 			if input_grid is None:
 				if output_grid is None:
 					raise ValueError('Grid dependent, but no grids are given for lookup.')
-				
+
 				key_parts.append([(None, output_grid)])
 			elif output_grid is None:
 				key_parts.append([(input_grid, None)])
@@ -326,7 +326,7 @@ class AgnosticOpticalElement(OpticalElement):
 				key_parts.append([(input_grid, output_grid), (input_grid, None), (None, output_grid)])
 		else:
 			key_parts.append([(None, None)])
-			
+
 		if self._wavelength_dependent:
 			if wavelength is None:
 				raise ValueError('Wavelength dependent, but no wavelength is given for lookup.')
@@ -335,16 +335,16 @@ class AgnosticOpticalElement(OpticalElement):
 			key_parts.append([(wavelength_key,)])
 		else:
 			key_parts.append([(None,)])
-		
+
 		keys = []
 		for parts in itertools.product(*key_parts):
 			key = ()
 			for p in parts:
 				key += p
 			keys.append(key)
-		
+
 		return keys
-	
+
 	def clear_cache(self):
 		'''Clear the instance cache.
 
@@ -355,7 +355,7 @@ class AgnosticOpticalElement(OpticalElement):
 		'''
 		self._instance_data_cache = collections.OrderedDict()
 		self._num_in_cache = 0
-	
+
 	def _add_to_cache(self, instance_data, cache_keys=None):
 		if self._num_in_cache == self._max_in_cache:
 			# Remove last added item
@@ -365,21 +365,21 @@ class AgnosticOpticalElement(OpticalElement):
 			old_cache_keys = self._get_cache_keys(value.input_grid, value.output_grid, value.wavelength)
 			for i in range(len(old_cache_keys) - 1):
 				self._instance_data_cache.popitem(False)
-			
+
 			# Update number of instance data items
 			self._num_in_cache -= 1
-		
+
 		# Calculate cache keys
 		if cache_keys is None:
 			cache_keys = self._get_cache_keys(instance_data.input_grid, instance_data.output_grid, instance_data.wavelength)
-		
+
 		# Add instance data under each of these keys
 		for cache_key in cache_keys:
 			self._instance_data_cache[cache_key] = instance_data
 
 		# Update number of instance data items
 		self._num_in_cache += 1
-	
+
 	def _get_parameter_signature(self, parameter):
 		'''Guess the signature of a given parameter.
 
@@ -391,7 +391,7 @@ class AgnosticOpticalElement(OpticalElement):
 		----------
 		parameter : anything
 			The parameter for which to guess the signature.
-		
+
 		Returns
 		-------
 		int
@@ -428,7 +428,7 @@ class AgnosticOpticalElement(OpticalElement):
 			return INPUT_GRID_DEPENDENT & OUTPUT_GRID_DEPENDENT & WAVELENGTH_DEPENDENT
 		else:
 			return 0
-	
+
 	def evaluate_parameter(self, parameter, input_grid, output_grid, wavelength):
 		'''Evaluate the parameter as function of (input_grid, output_grid, wavelength).
 
@@ -445,12 +445,12 @@ class AgnosticOpticalElement(OpticalElement):
 			The output grid.
 		wavelength : scalar or None
 			The wavelength.
-		
+
 		Returns
 		-------
 		any type
 			The evaluated parameter.
-		
+
 		Raises
 		------
 		RuntimeError
@@ -465,7 +465,7 @@ class AgnosticOpticalElement(OpticalElement):
 		if signature & INPUT_GRID_DEPENDENT:
 			if input_grid is None:
 				input_grid = self.get_input_grid(output_grid, wavelength)
-			
+
 			args.append(input_grid)
 		if signature & OUTPUT_GRID_DEPENDENT:
 			if output_grid is None:
@@ -474,19 +474,19 @@ class AgnosticOpticalElement(OpticalElement):
 			args.append(output_grid)
 		if signature & WAVELENGTH_DEPENDENT:
 			args.append(wavelength)
-		
+
 		try:
 			return parameter(*args)
 		except Exception:
 			raise RuntimeError('Parameter could not be evaluated.')
-	
+
 	def construct_function(self, function, *args, **kwargs):
 		'''Construct a function based on the given function and arguments.
 
 		The arguments can be (input_grid, output_grid, wavelength) or any subset of this.
 		The returned function has parameters which encompass all given parameters.
 
-		This function is especially usefull for creating properties that depend on 
+		This function is especially usefull for creating properties that depend on
 		parameters that depend on input_grid, output_grid and/or wavelength.
 
 		Parameters
@@ -497,12 +497,12 @@ class AgnosticOpticalElement(OpticalElement):
 			The arguments for the given function.
 		**kwargs : anything
 			The keyword arguments for the given function.
-		
+
 		Returns
 		-------
 		function
 			The constructed function.
-		
+
 		Raises
 		------
 		RuntimeError
@@ -514,10 +514,10 @@ class AgnosticOpticalElement(OpticalElement):
 
 		for arg in args:
 			signature |= self._get_parameter_signature(arg)
-		
+
 		for kwarg in kwargs.values():
 			signature |= self._get_parameter_signature(kwarg)
-		
+
 		# Check original function for direct parameter dependencies
 		function_params = _get_function_parameters(function)
 
@@ -536,7 +536,7 @@ class AgnosticOpticalElement(OpticalElement):
 		# If parameters are not a function of anything, evaluate the function now and return the result
 		if signature == 0:
 			return function(*args, **kwargs)
-		
+
 		# Put all args in kwargs, but ignore input_grid, output_grid and wavelength
 		index = 0
 		for param_name in function_params:
@@ -545,7 +545,7 @@ class AgnosticOpticalElement(OpticalElement):
 
 			kwargs[param_name] = args[index]
 			index += 1
-			
+
 			if len(args) == index:
 				break
 
@@ -616,10 +616,10 @@ class AgnosticOpticalElement(OpticalElement):
 			# Try to guess input and output grid.
 			if input_grid is None:
 				input_grid = self.get_input_grid(output_grid, wavelength)
-			
+
 			if output_grid is None:
 				output_grid = self.get_output_grid(input_grid, wavelength)
-			
+
 			# Recalculate cache keys and try again.
 			cache_keys = self._get_cache_keys(input_grid, output_grid, wavelength)
 
@@ -634,9 +634,9 @@ class AgnosticOpticalElement(OpticalElement):
 
 				# Add instance data to cache.
 				self._add_to_cache(instance_data, cache_keys)
-		
+
 		return instance_data
-	
+
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		'''Make an instance for this specific input_grid, output_grid, wavelength.
 
@@ -668,14 +668,14 @@ class AgnosticOpticalElement(OpticalElement):
 			The output grid.
 		wavelength : scalar
 			The wavelength.
-		
+
 		Returns
 		-------
 		Grid
 			The best-guess input grid based on the given output grid and wavelength.
 		'''
 		return None
-	
+
 	def get_output_grid(self, input_grid, wavelength):
 		'''Calculate a best guess for the output grid given an input grid and wavelength.
 
@@ -687,7 +687,7 @@ class AgnosticOpticalElement(OpticalElement):
 			The input grid.
 		wavelength : scalar
 			The wavelength.
-		
+
 		Returns
 		-------
 		Grid
@@ -705,7 +705,7 @@ class AgnosticOpticalElement(OpticalElement):
 		----------
 		name : str
 			The name of the requested attribute.
-		
+
 		Returns
 		-------
 		function
@@ -713,10 +713,10 @@ class AgnosticOpticalElement(OpticalElement):
 		'''
 		def attribute(input_grid=None, output_grid=None, wavelength=None):
 			instance_data = self.get_instance_data(input_grid, output_grid, wavelength)
-			
+
 			return getattr(instance_data, name)
 		return attribute
-	
+
 def make_agnostic_forward(forward):
 	'''A decorator for a forward function on an AgnosticOpticalElement.
 
@@ -727,7 +727,7 @@ def make_agnostic_forward(forward):
 	----------
 	forward : function
 		The modified forward-type function.
-	
+
 	Returns
 	-------
 	function
@@ -736,7 +736,7 @@ def make_agnostic_forward(forward):
 	def res(self, wavefront, *args, **kwargs):
 		# Look up instance data
 		instance_data = self.get_instance_data(wavefront.grid, None, wavefront.wavelength)
-		
+
 		return forward(self, instance_data, wavefront, *args, **kwargs)
 	return res
 
@@ -750,7 +750,7 @@ def make_agnostic_backward(backward):
 	----------
 	backward : function
 		The modified backward-type function.
-	
+
 	Returns
 	-------
 	function
@@ -766,7 +766,7 @@ def make_agnostic_backward(backward):
 def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_dependent_arguments=None, num_in_cache=50): # pragma: no cover
 	'''Create an optical element that is agnostic to input_grid or wavelength from one that is not.
 
-	This decorator is meant to simplify the creation of agnostic optical elements. When you have an 
+	This decorator is meant to simplify the creation of agnostic optical elements. When you have an
 	optical element that explicitly needs an input grid and/or wavelength on initialization, you can
 	use this decorator to modify it to make it accept all input grids and/or wavelengths.
 
@@ -775,29 +775,29 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 	or `wavelength_dependent_arguments`). This evaluation is done by calling the argument with either
 	the input_grid or wavelength, before passing it to the initializer of the optical element provided
 	by the user. When an argument can be both dependent on input grid and wavelength, you can pass a
-	function with double arguments. This will be evaluated as `arg(input_grid, wavelength)`. If the 
+	function with double arguments. This will be evaluated as `arg(input_grid, wavelength)`. If the
 	argument only has a single parameter, this function will make a guess on whether it is input_grid
 	or wavelength dependent and try both possibilities.
 
 	Parameters
 	----------
 	grid_dependent_arguments : list of strings or None
-		A list of all names of parameters that could vary with input_grid. These parameters will be 
+		A list of all names of parameters that could vary with input_grid. These parameters will be
 		evaluated on the grid if they are callable. If this is None, this indicates that no parameters
 		can depend on input_grid, and that the optical element was already input_grid agnostic.
 	wavelength_dependent_arguments : list of strings or None
-		A list of all names of parameters that could vary with wavelength. These parameters will be 
+		A list of all names of parameters that could vary with wavelength. These parameters will be
 		evaluated at the wavelength if they are callable. If this is None, this indicates that no parameters
 		can depend on wavelength, and that the optical element was already wavelength agnostic.
 	num_in_cache : int
 		The maximum size of the internal cache for optical elements. Reduce this if the cache is using
 		too much memory, increase if there are a lot of cache misses.
-	
+
 	Returns
 	-------
 	class
 		The new optical element class that is now agnostic to input grid and wavelength.
-	
+
 	Raises
 	------
 	RuntimeError
@@ -811,7 +811,7 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 
 	if wavelength_dependent_arguments is None:
 		wavelength_dependent_arguments = []
-	
+
 	def decorator(optical_element_class):
 		gnostic_param_names = _get_function_parameters(optical_element_class.__init__)[1:]
 
@@ -824,14 +824,14 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 
 				self._parameters = dict(zip(gnostic_param_names, args))
 				self._parameters.update(kwargs)
-			
+
 			def get_instance(self, input_grid=None, output_grid=None, wavelength=None):
 				if grid_dependent and ((input_grid is None) == (output_grid is None)):
 					raise ValueError('You need to supply either an input or output grid.')
-				
+
 				if wavelength_dependent and (wavelength is None):
 					raise ValueError('You need to supply a wavelength.')
-				
+
 				# Get cache key
 				cache_key = ()
 
@@ -840,7 +840,7 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 						cache_key += ('input', input_grid)
 					else:
 						cache_key += ('output', output_grid)
-				
+
 				if wavelength_dependent:
 					# Use approximate wavelength as a key (match if within 1e-9 relatively).
 					wavelength_key = int(np.round(np.log(wavelength) / np.log(1 + 1e-9)))
@@ -849,12 +849,12 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 				# Is there an element in the cache.
 				if cache_key in self._cache:
 					return self._cache[cache_key]
-				
+
 				if output_grid is not None:
 					# If we supplied an output grid, it needs to be listed into the cache, as we
 					# cannot initialize/create an optical element from an output grid.
 					raise RuntimeError('Output grid is not known. Perform a forward propagation first before backwards propagation on the same grid.')
-				
+
 				# If the cache is full, remove the oldest element to make room for a new one.
 				if len(self._cache) == 2 * num_in_cache:
 					self._cache.popitem(False)
@@ -867,13 +867,13 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 					element_parameters['input_grid'] = input_grid
 				if 'wavelength' in gnostic_param_names:
 					element_parameters['wavelength'] = wavelength
-				
+
 				# Evaluate grid dependent arguments (including double-dependent arguments)
 				for param_name in grid_dependent_arguments:
 					if not callable(element_parameters[param_name]):
 						# Argument is not callable, so no evaluation can be done.
 						continue
-					
+
 					if param_name in wavelength_dependent_arguments:
 						# Argument can be a function of either or both. Check between either or both first.
 						param_parameters = _get_function_parameters(element_parameters[param_name])
@@ -884,7 +884,7 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 								function_of = 'input_grid'
 							elif 'lam' in param_parameters[0] or 'wave' in param_parameters[0] or 'wvl' in param_parameters[0]:
 								function_of = 'wavelength'
-							
+
 							# Try first choice
 							try:
 								if function_of == 'input_grid':
@@ -917,13 +917,13 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 						except Exception:
 							# Function evaluation failed. Raise exception.
 							raise RuntimeError('The argument %s can not be evaluated.' % param_name)
-				
+
 				# Evaluate wavelength dependent arguments
 				for param_name in wavelength_dependent_arguments:
 					if not callable(element_parameters[param_name]):
 						# Argument is not callable, so no evaluation can be done.
 						continue
-					
+
 					if param_name in grid_dependent_arguments:
 						# Argument already handled above.
 						continue
@@ -934,7 +934,7 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 					except Exception:
 						# Function evaluation failed. Raise exception.
 						raise RuntimeError('The argument %s can not be evaluated.' % param_name)
-				
+
 				# Create element.
 				elem = optical_element_class(**element_parameters)
 
@@ -949,16 +949,16 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 					self._cache[cache_key_output] = elem
 
 				return elem
-				
+
 			def forward(self, wavefront, *args, **kwargs):
 				return self.get_instance(input_grid=wavefront.electric_field.grid, wavelength=wavefront.wavelength).forward(wavefront, *args, **kwargs)
-			
+
 			def backward(self, wavefront, *args, **kwargs):
 				return self.get_instance(output_grid=wavefront.electric_field.grid, wavelength=wavefront.wavelength).backward(wavefront, *args, **kwargs)
-			
+
 			def get_transformation_matrix_forward(self, input_grid, wavelength, *args, **kwargs):
 				return self.get_instance(input_grid=input_grid, wavelength=wavelength).get_transformation_matrix_forward(input_grid, wavelength, *args, **kwargs)
-			
+
 			def get_transformation_matrix_backward(self, output_grid, wavelength, *args, **kwargs):
 				return self.get_instance(output_grid=output_grid, wavelength=wavelength).get_transformation_matrix_backward(output_grid, wavelength, *args, **kwargs)
 
@@ -983,7 +983,7 @@ class OpticalSystem(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -993,9 +993,9 @@ class OpticalSystem(OpticalElement):
 
 		for optical_element in self.optical_elements:
 			wf = optical_element.forward(wf)
-		
+
 		return wf
-	
+
 	def backward(self, wavefront):
 		'''Propagate a wavefront backward through the optical system.
 
@@ -1005,7 +1005,7 @@ class OpticalSystem(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -1015,9 +1015,9 @@ class OpticalSystem(OpticalElement):
 
 		for optical_element in reversed(self.optical_elements):
 			wf = optical_element.backward(wf)
-		
+
 		return wf
-	
+
 	def get_transformation_matrix_forward(self, wavelength=1):
 		'''Calculate the forward linear transformation matrix.
 
@@ -1025,7 +1025,7 @@ class OpticalSystem(OpticalElement):
 		----------
 		wavelength : scalar
 			The wavelength for which the transformation matrix will be calculated.
-		
+
 		Returns
 		-------
 		ndarray
@@ -1035,9 +1035,9 @@ class OpticalSystem(OpticalElement):
 
 		for optical_element in self.optical_elements:
 			matrix = np.dot(optical_element.get_transformation_matrix_forward(wavelength), matrix)
-		
+
 		return matrix
-	
+
 	def get_transformation_matrix_backward(self, wavelength=1):
 		'''Calculate the forward linear transformation matrix.
 
@@ -1045,7 +1045,7 @@ class OpticalSystem(OpticalElement):
 		----------
 		wavelength : scalar
 			The wavelength for which the transformation matrix will be calculated.
-		
+
 		Returns
 		-------
 		ndarray
@@ -1055,9 +1055,9 @@ class OpticalSystem(OpticalElement):
 
 		for optical_element in reversed(self.optical_elements):
 			matrix = np.dot(optical_element.get_transformation_matrix_backward(wavelength), matrix)
-		
+
 		return matrix
-	
+
 	@property
 	def optical_elements(self):
 		'''The list of optical elements contained in this optical system.

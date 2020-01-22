@@ -20,7 +20,7 @@ def make_gaussian_pokes(grid, mu, sigma, cutoff=5):
 		The factor of sigma beyond which the Gaussian will be set to zero. The ModeBasis will
 		be sparse to reduce memory usage. If the cutoff is None, there will be no cutoff, and
 		the returned ModeBasis will be dense.
-	
+
 	Returns
 	-------
 	ModeBasis
@@ -39,11 +39,11 @@ def make_gaussian_pokes(grid, mu, sigma, cutoff=5):
 		if cutoff is not None:
 			res -= np.exp(-0.5 * cutoff**2)
 			res[r2 > (cutoff * s)**2] = 0
-			
+
 			res = csr_matrix(res)
 			res.eliminate_zeros()
-		
+
 		return res
-	
+
 	pokes = [poke(m, s) for m, s in zip(mu.points, sigma)]
 	return ModeBasis(pokes, grid)

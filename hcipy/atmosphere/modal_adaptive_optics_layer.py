@@ -21,7 +21,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 		ps -= self.transformation_matrix.dot(self.corrected_coeffs[0] / wavelength)
 
 		return ps
-	
+
 	def evolve_until(self, t):
 		self.layer.evolve_until(t)
 
@@ -29,15 +29,15 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 		if len(self.corrected_coeffs) > self.lag:
 			self.corrected_coeffs.pop(0)
 		self.corrected_coeffs.append(coeffs)
-	
+
 	@property
 	def Cn_squared(self):
 		return self.layer.Cn_squared
-	
+
 	@Cn_squared.setter
 	def Cn_squared(self, Cn_squared):
 		self.layer.Cn_squared = Cn_squared
-	
+
 	@property
 	def outer_scale(self):
 		return self.layer.L0
@@ -45,7 +45,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 	@outer_scale.setter
 	def L0(self, L0):
 		self.layer.L0 = L0
-	
+
 	def reset(self):
 		self.corrected_coeffs = []
 		self.layer.reset()

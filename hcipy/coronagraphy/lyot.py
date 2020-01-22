@@ -4,9 +4,9 @@ from ..propagation import FraunhoferPropagator
 class LyotCoronagraph(OpticalElement):
 	'''A Lyot coronagraph with a small focal-plane mask.
 
-	The area outside of this focal-plane mask is assumed to be fully transmisive. The 
+	The area outside of this focal-plane mask is assumed to be fully transmisive. The
 	method for propagation is based on [1]_.
-	
+
 	.. [1] Soummer et al. 2007, "Fast computation of Lyot-style
 		coronagraph propagation".
 
@@ -31,13 +31,13 @@ class LyotCoronagraph(OpticalElement):
 			# Focal plane mask is a field.
 			grid = focal_plane_mask.grid
 			self.focal_plane_mask = Apodizer(focal_plane_mask)
-		
+
 		if lyot_stop is not None and not hasattr(lyot_stop, 'input_grid'):
 			lyot_stop = Apodizer(lyot_stop)
 		self.lyot_stop = lyot_stop
-		
+
 		self.prop = FraunhoferPropagator(input_grid, focal_plane_mask.grid)
-	
+
 	def forward(self, wavefront):
 		'''Propagate the wavefront through the Lyot coronagraph.
 
@@ -45,7 +45,7 @@ class LyotCoronagraph(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate. This wavefront is assumed to be in the pupil plane.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -61,7 +61,7 @@ class LyotCoronagraph(OpticalElement):
 			lyot = self.lyot_stop.forward(lyot)
 
 		return lyot
-	
+
 	def backward(self, wavefront):
 		'''Propagate the wavefront from the Lyot plane to the pupil plane.
 
@@ -69,7 +69,7 @@ class LyotCoronagraph(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -79,7 +79,7 @@ class LyotCoronagraph(OpticalElement):
 			wf = self.lyot_stop.backward(wavefront)
 		else:
 			wf = wavefront
-		
+
 		wf_foc = self.prop.forward(wf)
 		wf_foc.electric_field -= self.focal_plane_mask.backward(wf_foc).electric_field
 
@@ -114,9 +114,9 @@ class OccultedLyotCoronagraph(OpticalElement):
 			# Focal plane mask is a field.
 			grid = focal_plane_mask.grid
 			self.focal_plane_mask = Apodizer(focal_plane_mask)
-		
+
 		self.prop = FraunhoferPropagator(input_grid, focal_plane_mask.grid)
-	
+
 	def forward(self, wavefront):
 		'''Propagate the wavefront through the Lyot coronagraph.
 
@@ -124,14 +124,14 @@ class OccultedLyotCoronagraph(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate. This wavefront is assumed to be in the pupil plane.
-		
+
 		Returns
 		-------
 		Wavefront
 			The Lyot-plane wavefront.
 		'''
 		return self.prop.backward(self.focal_plane_mask.forward(self.prop.forward(wavefront)))
-	
+
 	def backward(self, wavefront):
 		'''Propagate the wavefront from the Lyot plane to the pupil plane.
 
@@ -139,7 +139,7 @@ class OccultedLyotCoronagraph(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront

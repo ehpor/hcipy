@@ -14,7 +14,7 @@ def make_linear_interpolator_separated(field, grid=None, fill_value=np.nan):
 	fill_value : scalar
 		The value to use for points outside of the domain of the input field. If this is None, the values
 		outside the domain are extrapolated.
-	
+
 	Returns
 	-------
 	Field generator
@@ -25,7 +25,7 @@ def make_linear_interpolator_separated(field, grid=None, fill_value=np.nan):
 		grid = field.grid
 	else:
 		field = Field(field, grid)
-	
+
 	axes_reversed = np.array(grid.separated_coords)
 	interp = RegularGridInterpolator(axes_reversed, field.shaped, 'linear', False, fill_value)
 
@@ -47,7 +47,7 @@ def make_linear_interpolator_unstructured(field, grid=None, fill_value=np.nan):
 		The grid of the field. If it is given, the grid of `field` is replaced by this grid.
 	fill_value : scalar
 		The value to use for points outside of the domain of the input field. Extrapolation is not supported.
-	
+
 	Returns
 	-------
 	Field generator
@@ -56,18 +56,18 @@ def make_linear_interpolator_unstructured(field, grid=None, fill_value=np.nan):
 	'''
 	if fill_value is None:
 		raise ValueError('Extrapolation is not supported for a linear interpolator on an unstructured grid.')
-	
+
 	if grid is None:
 		grid = field.grid
 	else:
 		field = Field(field, grid)
-	
+
 	interp = LinearNDInterpolator(grid.points, field, fill_value)
 
 	def interpolator(evaluated_grid):
 		res = interp(grid.points)
 		return Field(res, evaluated_grid)
-	
+
 	return interpolator
 
 def make_linear_interpolator(field, grid=None, fill_value=None):
@@ -82,7 +82,7 @@ def make_linear_interpolator(field, grid=None, fill_value=None):
 	fill_value : scalar or None
 		The value to use for points outside of the domain of the input field. Extrapolation is not supported.
 		If it is None, a numpy.nan value will be used for points outside of the domain.
-	
+
 	Returns
 	-------
 	Field generator
@@ -91,7 +91,7 @@ def make_linear_interpolator(field, grid=None, fill_value=None):
 	'''
 	if grid is None:
 		grid = field.grid
-	
+
 	if grid.is_unstructured:
 		return make_linear_interpolator_unstructured(field, grid)
 	else:

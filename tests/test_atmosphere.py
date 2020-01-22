@@ -24,7 +24,7 @@ def zernike_variance_von_karman(n, m, R, k0, Cn_squared, wavelength):
 		The integrated Cn^2 profile.
 	wavelength : scalar
 		The wavelength at which to calculate the variance.
-	
+
 	Returns
 	-------
 	scalar
@@ -58,17 +58,17 @@ def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propag
 		layer.reset()
 		if propagate_phase_screen:
 			layer.t = np.sqrt(2) * D_tel / velocity
-		
+
 		phase = layer.phase_for(wavelength)
 		total_variance.append(np.var(phase[aperture>0]))
-	
+
 	variance_measured = np.mean(total_variance)
-	
+
 	variance_theory = 0
 	for i in range(num_modes):
 		n, m = noll_to_zernike(i + 2)
 		variance_theory += zernike_variance_von_karman(n, m, D_tel / 2., 1. / outer_scale, layer.Cn_squared, wavelength)
-	
+
 	assert (variance_measured / variance_theory - 1) < 0.1
 
 def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, propagate_phase_screen):
@@ -82,10 +82,10 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
 	layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, [velocity / np.sqrt(2), velocity / np.sqrt(2)], use_interpolation=False)
 
 	zernike_modes = make_zernike_basis(num_modes + 20, D_tel, pupil_grid, starting_mode=2, radial_cutoff=False)
-	
+
 	weights = evaluate_supersampled(circular_aperture(D_tel), pupil_grid, 32)
 	zernike_modes = ModeBasis([z * np.sqrt(weights) for z in zernike_modes])
-	
+
 	transformation_matrix = zernike_modes.transformation_matrix
 	projection_matrix = inverse_tikhonov(transformation_matrix, 1e-9)
 
@@ -96,11 +96,11 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
 		layer.reset()
 		if propagate_phase_screen:
 			layer.t = np.sqrt(2) * D_tel / velocity
-		
+
 		phase = layer.phase_for(wavelength)
 		coeffs = projection_matrix.dot(phase * np.sqrt(weights))[:num_modes]
 		mode_coeffs.append(coeffs)
-		
+
 	variances_simulated = np.var(mode_coeffs, axis=0)
 
 	variances_theory = []

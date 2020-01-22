@@ -12,7 +12,7 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 		back focal plane. The implementation follows [1]_.
 
 		.. [1] Goodman, J.W., 2005 Introduction to Fourier optics. Roberts and Company Publishers.
-	
+
 		Parameters
 		----------
 		input_grid : Grid
@@ -30,7 +30,7 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 		self._focal_length = focal_length
 
 		AgnosticOpticalElement.__init__(self, grid_dependent=True, wavelength_dependent=True)
-	
+
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		focal_length = self.evaluate_parameter(self.focal_length, input_grid, output_grid, wavelength)
 
@@ -38,32 +38,32 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 		instance_data.fourier_transform = make_fourier_transform(input_grid, instance_data.uv_grid)
 
 		instance_data.norm_factor = 1 / (1j * focal_length * wavelength)
-	
+
 	@property
 	def focal_length(self):
 		return self._focal_length
-	
+
 	@focal_length.setter
 	def focal_length(self, focal_length):
 		self._focal_length = focal_length
 
 		self.clear_cache()
-	
+
 	def get_input_grid(self, output_grid, wavelength):
 		return self.input_grid
-	
+
 	def get_output_grid(self, input_grid, wavelength):
 		return self._output_grid
 
 	@make_agnostic_forward
 	def forward(self, instance_data, wavefront):
 		'''Propagate a wavefront forward through the lens.
-	
+
 		Parameters
 		----------
 		wavefront : Wavefront
 			The incoming wavefront.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -71,16 +71,16 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 		'''
 		U_new = instance_data.fourier_transform.forward(wavefront.electric_field) * instance_data.norm_factor
 		return Wavefront(Field(U_new, instance_data.output_grid), wavefront.wavelength, wavefront.input_stokes_vector)
-	
+
 	@make_agnostic_backward
 	def backward(self, instance_data, wavefront):
 		'''Propagate a wavefront backward through the lens.
-	
+
 		Parameters
 		----------
 		wavefront : Wavefront
 			The incoming wavefront.
-		
+
 		Returns
 		-------
 		Wavefront

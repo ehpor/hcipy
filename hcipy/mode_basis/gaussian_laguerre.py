@@ -28,7 +28,7 @@ def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
 		The mode field diameter of the mode.
 	grid : Grid
 		The grid on which to evaluate the mode.
-	
+
 	Returns
 	-------
 	Field
@@ -55,7 +55,7 @@ def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
 def make_gaussian_laguerre_basis(grid, pmax, lmax, mode_field_diameter, pmin=0):
 	'''Creates a Gaussian-Laguerre mode basis.
 
-	This function evaluates Gaussian-Laguerre modes. For each radial order 
+	This function evaluates Gaussian-Laguerre modes. For each radial order
 	within [pmin, pmax] it will calculate the azimuthal order [-lmax, lmax] inclusive.
 	This function returns a ModeBasis made out of these Gaussian-Laguerre modes.
 

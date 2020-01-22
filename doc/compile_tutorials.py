@@ -18,7 +18,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 
 	if not os.path.exists(os.path.dirname(export_path)):
 		os.makedirs(os.path.dirname(export_path))
-	
+
 	# Read in notebook
 	notebook = nbformat.read(notebook_path, 4)
 
@@ -28,7 +28,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	title = first_cell.source.splitlines()[0]
 	if '#' in title:
 		title = title.replace('#', '').strip()
-	
+
 	description = ''
 	for line in first_cell.source.splitlines()[1:]:
 		if line.strip():
@@ -37,19 +37,19 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 
 	if not description:
 		print('  Description could not be found in the notebook.')
-	
+
 	if 'thumbnail_figure_index' in notebook.metadata:
 		thumbnail_figure_index = notebook.metadata['thumbnail_figure_index']
 	else:
 		thumbnail_figure_index = -1
-	
+
 	if 'level' in notebook.metadata:
 		level = notebook.metadata['level'].capitalize()
 	elif 'difficulty' in notebook.metadata:
 		level = notebook.metadata['difficulty'].capitalize()
 	else:
 		level = 'Unknown'
-	
+
 	# Check if the tutorial was already compiled.
 	if os.path.exists(export_path + '.rst'):
 		if os.path.getmtime(export_path + '.rst') > os.path.getmtime(notebook_path):
@@ -63,7 +63,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	already_executed = any(c.get('outputs') or c.get('execution_count') for c in notebook.cells if c.cell_type == 'code')
 
 	resources = {}
-	
+
 	if not already_executed:
 		ep = ExecutePreprocessor(timeout=600, kernel_name='python3')
 		try:
@@ -77,7 +77,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 				"source": r"%matplotlib inline" + '\n' +
 					r"%config InlineBackend.print_figure_kwargs = {'bbox_inches': None, 'figsize': (8, 6)}"
 				}
-			
+
 			additional_cell_2 = {
 				"cell_type": "code",
 				"execution_count": None,
@@ -85,7 +85,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 				"outputs": [],
 				"source": "import matplotlib as mpl\nmpl.rcParams['figure.figsize'] = (8, 6)\nmpl.rcParams['figure.dpi'] = 150\nmpl.rcParams['savefig.dpi'] = 150"
 				}
-			
+
 			notebook.cells.insert(1, nbformat.from_dict(additional_cell_1))
 			notebook.cells.insert(2, nbformat.from_dict(additional_cell_2))
 
@@ -98,7 +98,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 			notebook.cells.pop(1)
 
 			km.shutdown_kernel()
-			
+
 			end = time.time()
 			print('  Compilation took %d seconds.' % (end - start))
 		except CellExecutionError as err:
@@ -136,7 +136,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 		img.save(thumb_dest)
 	except:
 		shutil.copyfile('_static/no_thumb.png', thumb_dest)
-	
+
 	print('  Done!')
 
 	return title, level, description, thumb_dest.split('/', 1)[-1]
@@ -164,7 +164,7 @@ entry_template = '''
 			.. container:: tutorial_description
 
 				**Level:** {level}
-				
+
 				**Description:** {description}
 '''
 
@@ -230,16 +230,16 @@ def compile_all_tutorials():
 			continue
 
 		f.write(preamble)
-		
+
 		# Write toctree
 		f.write('\n.. toctree::\n    :maxdepth: 1\n    :hidden:\n\n')
 		for name in names:
 			f.write('    ' + name + '/' + name + '\n')
 		f.write('\n\n')
-		
+
 		# Write list
 		for name in names:
 			title, level, desc, thumb = tutorials[name]
 			f.write(entry_template.format(thumbnail_file=thumb, title=title, level=level, description=desc, name=name))
-	
+
 	f.close()

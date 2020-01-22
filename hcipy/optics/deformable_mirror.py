@@ -17,7 +17,7 @@ def make_actuator_positions(num_actuators_across_pupil, actuator_spacing):
 		The number of actuators across the pupil. The total number of actuators will be this number squared.
 	actuator_spacing : scalar
 		The spacing between actuators before tilting the deformable mirror.
-	
+
 	Returns
 	-------
 	Grid
@@ -43,7 +43,7 @@ def make_gaussian_influence_functions(pupil_grid, num_actuators_across_pupil, ac
 		The amount of crosstalk between the actuators. This is defined as the value of the influence function
 		at a nearest-neighbour actuator.
 	cutoff : scalar
-		The distance from the center of the actuator, as a fraction of the actuator spacing, where the 
+		The distance from the center of the actuator, as a fraction of the actuator spacing, where the
 		influence function is truncated to zero.
 	x_tilt : scalar
 		The tilt of the deformable mirror around the x-axis in radians.
@@ -68,7 +68,7 @@ def make_gaussian_influence_functions(pupil_grid, num_actuators_across_pupil, ac
 	pokes = make_gaussian_pokes(evaluated_grid, actuator_positions, sigma, cutoff)
 	pokes.transformation_matrix /= np.cos(x_tilt) * np.cos(y_tilt)
 	pokes.grid = pupil_grid
-	
+
 	return pokes
 
 def make_xinetics_influence_functions(pupil_grid, num_actuators_across_pupil, actuator_spacing, x_tilt=0, y_tilt=0, z_tilt=0):
@@ -114,7 +114,7 @@ def make_xinetics_influence_functions(pupil_grid, num_actuators_across_pupil, ac
 		res.eliminate_zeros()
 
 		return res
-	
+
 	return ModeBasis([poke(p) for p in actuator_positions.points], pupil_grid)
 
 class DeformableMirror(OpticalElement):
@@ -136,7 +136,7 @@ class DeformableMirror(OpticalElement):
 
 		self.input_grid = influence_functions.grid
 		self._surface = self.input_grid.zeros()
-	
+
 	@property
 	def num_actuators(self):
 		return self._actuators.size
@@ -144,11 +144,11 @@ class DeformableMirror(OpticalElement):
 	@property
 	def actuators(self):
 		return self._actuators
-	
+
 	@actuators.setter
 	def actuators(self, actuators):
 		self._actuators = actuators
-	
+
 	def forward(self, wavefront):
 		'''Propagate a wavefront through the deformable mirror.
 
@@ -156,7 +156,7 @@ class DeformableMirror(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The incoming wavefront.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -165,7 +165,7 @@ class DeformableMirror(OpticalElement):
 		wf = wavefront.copy()
 		wf.electric_field *= np.exp(2j * self.surface * wavefront.wavenumber)
 		return wf
-	
+
 	def backward(self, wavefront):
 		'''Propagate a wavefront backwards through the deformable mirror.
 
@@ -173,7 +173,7 @@ class DeformableMirror(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The incoming wavefront.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -182,18 +182,18 @@ class DeformableMirror(OpticalElement):
 		wf = wavefront.copy()
 		wf.electric_field *= np.exp(-2j * self.surface * wavefront.wavenumber)
 		return wf
-	
+
 	@property
 	def influence_functions(self):
 		'''The influence function for each of the actuators of this deformable mirror.
 		'''
 		return self._influence_functions
-	
+
 	@influence_functions.setter
 	def influence_functions(self, influence_functions):
 		self._influence_functions = influence_functions
 		self._actuators_for_cached_surface = None
-	
+
 	@property
 	def surface(self):
 		'''The surface of the deformable mirror in meters.
@@ -201,12 +201,12 @@ class DeformableMirror(OpticalElement):
 		if self._actuators_for_cached_surface is not None:
 			if np.all(self.actuators == self._actuators_for_cached_surface):
 				return self._surface
-		
+
 		self._surface = self.influence_functions.linear_combination(self.actuators)
 		self._actuators_for_cached_surface = self.actuators.copy()
-		
+
 		return self._surface
-	
+
 	@property
 	def opd(self):
 		'''The optical path difference in meters that this deformable
@@ -223,7 +223,7 @@ class DeformableMirror(OpticalElement):
 			The dm surface rms.
 		'''
 		self._actuators = np.random.randn(self._actuators.size) * rms
-		
+
 	def phase_for(self, wavelength):
 		'''Get the phase that is added to a wavefront with a specified wavelength.
 
@@ -231,14 +231,14 @@ class DeformableMirror(OpticalElement):
 		----------
 		wavelength : scalar
 			The wavelength at which to calculate the phase deformation.
-		
+
 		Returns
 		-------
 		Field
 			The calculated phase deformation.
 		'''
 		return 2 * self.surface * 2*np.pi / wavelength
-	
+
 	def flatten(self):
 		'''Flatten the DM by setting all actuators to zero.
 		'''
@@ -247,7 +247,7 @@ class DeformableMirror(OpticalElement):
 def label_actuator_centroid_positions(influence_functions, label_format='{:d}', **text_kwargs):
 	'''Display centroid positions for a set of influence functions.
 
-	The location of each of the actuators is calculated using a weighted centroid, and 
+	The location of each of the actuators is calculated using a weighted centroid, and
 	at that location a label is written to the open Matplotlib Figure. The text can be
 	modified with `label_format`, which is formatted with new-style Python formatting:
 	`label_format.format(i)` where `i` is the actuator index.
@@ -259,7 +259,7 @@ def label_actuator_centroid_positions(influence_functions, label_format='{:d}', 
 	label_format : string
 		The text that will be displayed at the actuator centroid. This must be a new-style
 		formattable string.
-	
+
 	Raises
 	------
 	ValueError

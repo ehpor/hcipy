@@ -9,80 +9,80 @@ class CoordsBase(object):
 		'''Make a copy.
 		'''
 		return copy.deepcopy(self)
-	
+
 	def __add__(self, b):
 		'''Add `b` to the coordinates separately and return the result.
 		'''
 		res = self.copy()
 		res += b
 		return res
-	
+
 	def __iadd__(self, b):
 		'''Add `b` to the coordinates separately in-place.
 		'''
 		raise NotImplementedError()
-	
+
 	def __radd__(self, b):
 		'''Add `b` to the coordinates separately and return the result.
 		'''
 		return self + b
-	
+
 	def __sub__(self, b):
 		'''Subtract `b` from the coordinates separately and return the result.
 		'''
 		return self + (-b)
-	
+
 	def __isub__(self, b):
 		'''Subtract `b` from the coordinates separately in-place.
 		'''
 		self += (-b)
 		return self
-	
+
 	def __mul__(self, f):
 		'''Multiply each coordinate with `f` separately and return the result.
 		'''
 		res = self.copy()
 		res *= f
 		return res
-	
+
 	def __rmul__(self, f):
 		'''Multiply each coordinate with `f` separately and return the result.
 		'''
 		return self * f
-	
+
 	def __imul__(self, f):
 		'''Multiply each coordinate with `f` separately in-place.
 		'''
 		raise NotImplementedError()
-	
+
 	def __div__(self, f):
 		'''Divide each coordinate with `f` separately and return the result.
 		'''
 		return self * (1./f)
-	
+
 	def __idiv__(self, f):
 		'''Divide each coordinate with `f` separately in-place.
 		'''
 		self *= (1./f)
 		return self
-	
+
 	def __getitem__(self, i):
 		'''The `i`-th point for these coordinates.
 		'''
 		raise NotImplementedError()
-	
+
 	@property
 	def is_separated(self):
 		'''True if the coordinates are separated, False otherwise.
 		'''
 		return hasattr(self, 'separated_coords')
-	
+
 	@property
 	def is_regular(self):
 		'''True if the coordinates are regularly-spaced, False otherwise.
 		'''
 		return hasattr(self, 'regular_coords')
-	
+
 	@property
 	def is_unstructured(self):
 		'''True if the coordinates are not structured, False otherwise.
@@ -93,13 +93,13 @@ class CoordsBase(object):
 		'''Reverse the ordering of points in-place.
 		'''
 		raise NotImplementedError()
-	
+
 	@property
 	def size(self):
 		'''The number of points.
 		'''
 		raise NotImplementedError()
-	
+
 	def __len__(self):
 		'''The number of dimensions.
 		'''
@@ -121,17 +121,17 @@ class UnstructuredCoords(CoordsBase):
 		'''The number of points.
 		'''
 		return self.coords[0].size
-	
+
 	def __len__(self):
 		'''The number of dimensions.
 		'''
 		return len(self.coords)
-	
+
 	def __getitem__(self, i):
 		'''The `i`-th point for these coordinates.
 		'''
 		return self.coords[i]
-	
+
 	def __iadd__(self, b):
 		'''Add `b` to the coordinates separately in-place.
 		'''
@@ -139,7 +139,7 @@ class UnstructuredCoords(CoordsBase):
 		for i in range(len(self.coords)):
 			self.coords[i] += b[i]
 		return self
-	
+
 	def __imul__(self, f):
 		'''Multiply each coordinate with `f` separately in-place.
 		'''
@@ -147,7 +147,7 @@ class UnstructuredCoords(CoordsBase):
 		for i in range(len(self.coords)):
 			self.coords[i] *= f[i]
 		return self
-	
+
 	def reverse(self):
 		'''Reverse the ordering of points in-place.
 		'''
@@ -187,31 +187,31 @@ class SeparatedCoords(CoordsBase):
 		'''The number of points.
 		'''
 		return np.prod(self.shape)
-	
+
 	def __len__(self):
 		'''The number of dimensions.
 		'''
 		return len(self.separated_coords)
-	
+
 	@property
 	def dims(self):
 		'''The number of points along each dimension.
 		'''
 		return np.array([len(c) for c in self.separated_coords])
-	
+
 	@property
 	def shape(self):
 		'''The shape of an ``numpy.ndarray`` with the right dimensions.
 		'''
 		return self.dims[::-1]
-	
+
 	def __iadd__(self, b):
 		'''Add `b` to the coordinates separately in-place.
 		'''
 		for i in range(len(self)):
 			self.separated_coords[i] += b[i]
 		return self
-	
+
 	def __imul__(self, f):
 		'''Multiply each coordinate with `f` separately in-place.
 		'''
@@ -222,7 +222,7 @@ class SeparatedCoords(CoordsBase):
 			for i in range(len(self)):
 				self.separated_coords[i] *= f[i]
 		return self
-	
+
 	def reverse(self):
 		'''Reverse the ordering of points in-place.
 		'''
@@ -256,7 +256,7 @@ class RegularCoords(CoordsBase):
 			self.dims = np.array([dims]).astype('int')
 		else:
 			self.dims = np.array(dims).astype('int')
-		
+
 		if np.isscalar(delta):
 			self.delta = np.array([delta]*len(self.dims))
 		else:
@@ -288,12 +288,12 @@ class RegularCoords(CoordsBase):
 		'''The number of points.
 		'''
 		return np.prod(self.dims)
-	
+
 	def __len__(self):
 		'''The number of dimensions.
 		'''
 		return len(self.dims)
-	
+
 	@property
 	def shape(self):
 		'''The shape of an ``numpy.ndarray`` with the right dimensions.
@@ -308,20 +308,20 @@ class RegularCoords(CoordsBase):
 		t = s0[:j] + (-1,) + s0[j + 1:]
 		output = self.separated_coords[i].reshape(t)
 		return np.broadcast_to(output, self.shape).ravel()
-	
+
 	def __iadd__(self, b):
 		'''Add `b` to the coordinates separately in-place.
 		'''
 		self.zero += b
 		return self
-	
+
 	def __imul__(self, f):
 		'''Multiply each coordinate with `f` separately in-place.
 		'''
 		self.delta *= f
 		self.zero *= f
 		return self
-	
+
 	def reverse(self):
 		'''Reverse the ordering of points in-place.
 		'''

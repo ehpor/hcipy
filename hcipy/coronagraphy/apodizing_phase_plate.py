@@ -1,6 +1,6 @@
 import numpy as np
 from ..propagation import FraunhoferPropagator
-from ..field import Field   
+from ..field import Field
 
 from ..optics import GeometricPhaseElement
 
@@ -8,8 +8,8 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 	"""
 	Accelerated Gerchberg-Saxton-like algorithm for APP design by
 	Christoph Keller [1]_ and based on Douglas-Rachford operator splitting.
-	The acceleration was inspired by the paper by Jim Fienup [2]_. The 
-	acceleration can provide speed-ups of up to two orders of magnitude and 
+	The acceleration was inspired by the paper by Jim Fienup [2]_. The
+	acceleration can provide speed-ups of up to two orders of magnitude and
 	produce better APPs.
 
 	.. [1] Keller C.U., 2016, "Novel instrument concepts for
@@ -17,7 +17,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 		Ground-based and Airborne Instrumentation for Astronomy VI, 99089V
 		doi: 10.1117/12.2232633; https://doi.org/10.1117/12.2232633
 
-	.. [2] J. R. Fienup, 1976, "Reconstruction of an object from the modulus 
+	.. [2] J. R. Fienup, 1976, "Reconstruction of an object from the modulus
 		of its Fourier transform," Opt. Lett. 3, 27-29
 
 	Parameters
@@ -42,7 +42,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 	-------
 	Wavefront
 		The APP as a wavefront.
-	
+
 	Raises
 	------
 	ValueError
@@ -164,11 +164,11 @@ class VectorApodizingPhasePlate(GeometricPhaseElement):
 
 	Parameters
 	----------
-	phase_pattern : field or array_like 
-		The phase pattern generating the vAPP PSFs (radians).		
-	leakage : scalar 
+	phase_pattern : field or array_like
+		The phase pattern generating the vAPP PSFs (radians).
+	leakage : scalar
 		The relative leakage strength (0 = no leakage, 1 = maximum leakage)
-	retardance_offset : scalar 
+	retardance_offset : scalar
 		The retardance offset from half wave in radians. This will result in leakage.
 	'''
 	def __init__(self, phase_pattern, leakage=None, retardance_offset=0, wavelength=1):

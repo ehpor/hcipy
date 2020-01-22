@@ -18,14 +18,14 @@ class FourierTransform(object):
 		----------
 		field : Field
 			The field to Fourier transform.
-		
+
 		Returns
 		--------
 		Field
 			The Fourier transform of the field.
 		'''
 		raise NotImplementedError()
-	
+
 	def backward(self, field):
 		'''Returns the inverse Fourier transform of the :class:`Field` field.
 
@@ -33,14 +33,14 @@ class FourierTransform(object):
 		----------
 		field : Field
 			The field to inverse Fourier transform.
-		
+
 		Returns
 		--------
 		Field
 			The inverse Fourier transform of the field.
 		'''
 		raise NotImplementedError()
-	
+
 	def get_transformation_matrix_forward(self):
 		'''Returns the transformation matrix corresonding to the
 		Fourier transform.
@@ -57,7 +57,7 @@ class FourierTransform(object):
 		A *= self.input_grid.weights
 
 		return A
-	
+
 	def get_transformation_matrix_backward(self):
 		'''Returns the transformation matrix corresonding to the
 		Fourier transform.
@@ -78,16 +78,16 @@ class FourierTransform(object):
 
 def time_it(function, t_max=5, n_max=100):
 	import time
-	
+
 	start = time.time()
 	times = []
-	
+
 	while (time.time() < start + t_max) and (len(times) < n_max):
 		t1 = time.time()
 		function()
 		t2 = time.time()
 		times.append(t2 - t1)
-	
+
 	return np.median(times)
 
 def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='estimate'):
@@ -106,10 +106,10 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 	fov : scalar
 		Describes how far out the Fourier domain extends. A value of 1 means the same amount of samples as the spatial domain.
 	planner : string
-		If it is 'estimate', performance of the different methods will be estimated from theoretical complexity estimates. 
+		If it is 'estimate', performance of the different methods will be estimated from theoretical complexity estimates.
 		If it is 'measure', actual Fourier transforms will be performed to get the actual performance. The latter takes longer,
 		but is more accurate.
-	
+
 	Returns
 	-------
 	FourierTransform
@@ -163,7 +163,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 			method = 'mft'
 		else:
 			method = 'naive'
-	
+
 	# Make the Fourier transform
 	if method == 'fft':
 		return FastFourierTransform(input_grid, q, fov)
@@ -176,7 +176,7 @@ def multiplex_for_tensor_fields(func):
 	'''A decorator for automatically multiplexing a function over the tensor directions.
 
 	This function is used internally for simplifying the implementation of the Fourier transforms.
-	
+
 	Parameters
 	----------
 	func : function

@@ -20,7 +20,7 @@ class PeriodicOpticalElement(OpticalElement):
 		'''
 		self.input_grid = input_grid.copy()
 		self.input_grid = self.input_grid.rotated(orientation)
-		
+
 		if even_grid:
 			xf = (np.fmod(abs(self.input_grid.x), pitch) - pitch / 2) * np.sign(self.input_grid.x)
 			yf = (np.fmod(abs(self.input_grid.y), pitch) - pitch / 2) * np.sign(self.input_grid.y)
@@ -30,11 +30,11 @@ class PeriodicOpticalElement(OpticalElement):
 
 		periodic_grid = CartesianGrid(UnstructuredCoords((xf, yf)))
 		self.apodization = apodization(periodic_grid)
-			
+
 	def forward(self, wavefront):
 		wf = wavefront.copy()
 		return self.apodization.forward(wf)
-		
+
 	def backward(self, wavefront):
 		wf = wavefront.copy()
 		return self.apodization.backward(wf)

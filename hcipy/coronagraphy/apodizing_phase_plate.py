@@ -59,6 +59,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 	# define dark zone as location where contrast requirement is < 1e-1
 	dark_zone = contrast < 0.1
 
+	old_image = None
 	for i in range(num_iterations):
 		# calculate image plane electric field
 		image = propagator.forward(app)
@@ -69,10 +70,8 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 
 		# modify focal plane electic field using acceleration
 		new_image = image.copy()
-		if beta != 0 and i > 1:
-			new_image.electric_field[dark_zone] = (
-				old_image.electric_field[dark_zone] * beta
-				- new_image.electric_field[dark_zone] * (1 + beta))
+		if beta != 0 and old_image is not None:
+			new_image.electric_field[dark_zone] = old_image.electric_field[dark_zone] * beta - new_image.electric_field[dark_zone] * (1 + beta)
 		else:
 			new_image.electric_field[dark_zone] = 0
 		old_image = new_image.copy()
@@ -84,8 +83,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 		app.electric_field[~aperture] = 0
 
 		# enforce unity transmission within aperture support
-		app.electric_field[aperture] *= (
-			wavefront.amplitude[aperture] / app.amplitude[aperture])
+		app.electric_field[aperture] *= wavefront.amplitude[aperture] / app.amplitude[aperture]
 
 	return app
 

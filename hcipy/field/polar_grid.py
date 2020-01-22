@@ -53,9 +53,8 @@ class PolarGrid(Grid):
 		Grid
 			Itself to allow for chaining these transformations.
 		'''
-
-		grid = PolarGrid(UnstructuredCoords(self.coords)).as_('cartesian')
-		self.coords = new_grid.shift(shift).as_('polar').coords
+		new_grid = PolarGrid(UnstructuredCoords(self.coords)).as_('cartesian')
+		self.coords = new_grid.shifted(shift).as_('polar').coords
 
 		return self
 

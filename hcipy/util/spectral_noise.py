@@ -139,7 +139,7 @@ class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 		N_2 = self.input_grid_2.size
 
 		C_1 = Field(np.zeros(N_1, dtype='complex'), self.C_1.grid)
-		C_2 = Field(np.zeros(N_1, dtype='complex'), self.C_2.grid)
+		C_2 = Field(np.zeros(N_2, dtype='complex'), self.C_2.grid)
 
 		return SpectralNoiseMultiscale(self, C_1, C_2)
 

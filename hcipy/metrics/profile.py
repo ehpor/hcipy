@@ -26,7 +26,7 @@ def binned_profile(y, x, bins=20):
 		The standard deviation within each bin.
 	num_per_bin : array_like
 		The number of samples per bin.
-	
+
 	Raises
 	------
 	RuntimeError

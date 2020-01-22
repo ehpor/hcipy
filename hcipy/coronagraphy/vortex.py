@@ -394,7 +394,6 @@ def get_ravc_planet_transmission(central_obscuration_ratio, charge=2):
 	elif charge == 4:
 		R1 = np.sqrt(np.sqrt(R0**2 * (R0**2 + 4)) - 2*R0**2)
 		R2 = np.sqrt(R1**2 + R0**2)
-		t1 = 0
 		t2 = (R1**2 - R0**2) / (R1**2 + R0**2)
 
 		return t2**2 * (1 - R2**2) / (1 - R0**2)

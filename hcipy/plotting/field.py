@@ -285,6 +285,9 @@ def contour_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 	else:
 		raise NotImplementedError()
 
+	ax.set_xlim(min_x, max_x)
+	ax.set_ylim(min_y, max_y)
+
 	return cs
 
 def contourf_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
@@ -341,6 +344,9 @@ def contourf_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 		cs = ax.contourf(X, Y, z, *args, **kwargs)
 	else:
 		raise NotImplementedError()
+
+	ax.set_xlim(min_x, max_x)
+	ax.set_ylim(min_y, max_y)
 
 	return cs
 

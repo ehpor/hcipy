@@ -216,7 +216,7 @@ class FFMpegWriter(object):
 
 		try:
 			self.p = Popen(command, stdin=PIPE)
-		except OSError as err:
+		except OSError:
 			raise RuntimeError('Something went wrong when opening FFMpeg. Is FFMpeg installed and accessible from the command line?')
 		self.closed = False
 

@@ -54,6 +54,13 @@ def test_regular_polygon_aperture():
 
 	check_aperture_against_reference(functools.partial(regular_polygon_aperture, circum_diameter=1), 'polygon', 1, options)
 
+def test_elliptical_aperture():
+	options = {
+		'diameters': [([0.5, 0.5], '_round'), ([1, 0.5], '_elongated')]
+	}
+
+	check_aperture_against_reference(elliptical_aperture, 'ellipse', 1, options)
+
 def test_obstructed_circular_aperture():
 	options = {
 		'central_obscuration_ratio': [(0.1, '_small_obscuration'), (0.3, '_large_obscuration')],

@@ -62,11 +62,13 @@ def elliptical_aperture(diameters, center=None):
 	def func(grid):
 		if grid.is_separated:
 			x, y = grid.separated_coords
-			f = (((((x - shift[0]) / (diameters[0] / 2))**2)[np.newaxis, :] + ((y - shift[1]) / (diameters[1] / 2))**2)[:, np.newaxis] <= 1).ravel()
+			f = ((((x - shift[0]) / (diameters[0] / 2))**2)[np.newaxis, :] + (((y - shift[1]) / (diameters[1] / 2))**2)[:, np.newaxis] <= 1).ravel()
+			print('a', f.shape, x.shape, y.shape)
 		else:
 			x, y = grid.as_('cartesian').coords
 			f = (((x - shift[0]) / (diameters[0] / 2))**2 + ((y - shift[1]) / (diameters[1] / 2))**2) <= 1
 
+		print(f.shape)
 		return Field(f.astype('float'), grid)
 
 	return func

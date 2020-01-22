@@ -1,6 +1,6 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
-from ..optics import *
-from ..field import *
+from ..optics import OpticalSystem, MicroLensArray
+from ..field import CartesianGrid, Field
 from ..aperture import *
 from ..propagation import FresnelPropagator
 from scipy import ndimage

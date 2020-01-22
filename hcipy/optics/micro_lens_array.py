@@ -1,7 +1,7 @@
 import numpy as np
 from .apodization import SurfaceApodizer
 from .optical_element import OpticalElement
-from .surface_profiles import *
+from .surface_profiles import spherical_surface_sag, even_aspheric_surface_sag
 from ..field import Field
 
 def closest_points(point_grid, evaluated_grid):

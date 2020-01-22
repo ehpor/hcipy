@@ -1,8 +1,8 @@
 import numpy as np
 
-from ..optics import OpticalElement, Wavefront, LinearRetarder, JonesMatrixOpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
+from ..optics import OpticalElement, LinearRetarder, JonesMatrixOpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..propagation import FraunhoferPropagator
-from ..field import make_focal_grid, Field, make_pupil_grid
+from ..field import make_focal_grid, Field
 from ..aperture import circular_aperture
 from ..fourier import FastFourierTransform, MatrixFourierTransform
 

@@ -1,8 +1,4 @@
-import numpy as np
-
 from .optical_element import AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
-from .wavefront import Wavefront
-from ..field import Field
 
 class Magnifier(AgnosticOpticalElement):
 	def __init__(self, magnification):

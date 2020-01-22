@@ -1,6 +1,5 @@
 import numpy as np
-from math import sqrt, floor
-from scipy.special import binom
+from math import sqrt
 
 def noll_to_zernike(i):
 	'''Get the Zernike index from a Noll index.

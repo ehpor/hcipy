@@ -1,7 +1,6 @@
 from __future__ import division
 
 from .atmospheric_model import AtmosphericLayer, phase_covariance_von_karman, fried_parameter_from_Cn_squared
-from ..util import SpectralNoiseFactoryMultiscale
 from ..field import Field, RegularCoords, UnstructuredCoords, CartesianGrid
 from .finite_atmospheric_layer import FiniteAtmosphericLayer
 
@@ -9,7 +8,6 @@ import numpy as np
 from scipy import linalg
 from scipy.ndimage import affine_transform
 
-import time
 import warnings
 
 class InfiniteAtmosphericLayer(AtmosphericLayer):

@@ -1,5 +1,5 @@
 import numpy as np
-import copy
+
 from .grid import Grid
 
 class PolarGrid(Grid):

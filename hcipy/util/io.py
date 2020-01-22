@@ -1,7 +1,4 @@
-import numpy as np
-
-from ..field import Field, make_pupil_grid
-from ..mode_basis import ModeBasis
+from ..field import Field
 
 def read_fits(filename):
 	'''Read an array from a fits file.

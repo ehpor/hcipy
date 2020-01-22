@@ -1,5 +1,4 @@
 import numpy as np
-import copy
 from .grid import Grid
 from .coordinates import UnstructuredCoords
 

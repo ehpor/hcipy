@@ -1,5 +1,4 @@
 import numpy as np
-from ..field import Field
 from ..util import large_poisson
 
 class Detector(object):

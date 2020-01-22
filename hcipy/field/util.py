@@ -7,8 +7,6 @@ from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
 from .field import Field
 from .cartesian_grid import CartesianGrid
 
-import itertools
-
 def make_uniform_grid(dims, extent, center=0, has_center=False):
 	'''Create a uniformly-spaced :class:`Grid` of a certain shape and size.
 

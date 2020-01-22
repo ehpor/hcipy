@@ -1,8 +1,6 @@
 from .atmospheric_model import AtmosphericLayer
 from ..util import inverse_tikhonov
 
-import numpy as np
-
 class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 	def __init__(self, layer, controlled_modes, lag):
 		self.layer = layer

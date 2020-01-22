@@ -1,5 +1,4 @@
 from .infinite_atmospheric_layer import InfiniteAtmosphericLayer
-from .atmospheric_model import MultiLayerAtmosphere
 
 import numpy as np
 

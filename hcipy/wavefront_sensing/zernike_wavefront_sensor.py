@@ -1,6 +1,6 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
-from ..optics import PhaseApodizer, LinearRetarder, Wavefront, HalfWavePlate
+from ..optics import PhaseApodizer, LinearRetarder, Wavefront
 from ..aperture import circular_aperture
 from ..field import make_uniform_grid, Field
 

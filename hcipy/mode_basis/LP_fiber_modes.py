@@ -1,6 +1,5 @@
 import numpy as np
-from matplotlib import pyplot as plt
-from scipy.special import jv,kn,kv
+from scipy.special import jv, kn
 from scipy.optimize import fsolve
 
 from ..mode_basis import ModeBasis

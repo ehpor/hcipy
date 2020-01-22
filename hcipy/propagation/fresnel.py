@@ -1,9 +1,9 @@
 import numpy as np
-from .propagator import Propagator
+
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..field import Field
 from ..fourier import FastFourierTransform
-from ..field import evaluate_supersampled, make_pupil_grid, subsample_field
+from ..field import evaluate_supersampled, make_pupil_grid
 
 class FresnelPropagator(AgnosticOpticalElement):
 	'''The monochromatic Fresnel propagator for scalar fields.

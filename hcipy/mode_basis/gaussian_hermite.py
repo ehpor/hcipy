@@ -1,5 +1,5 @@
 import numpy as np
-from math import sqrt, floor
+from math import sqrt
 from scipy.special import eval_hermite
 
 def index_to_hermite(i):

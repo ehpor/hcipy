@@ -2,7 +2,7 @@ import numpy as np
 
 from .wavefront import Wavefront, jones_to_mueller
 from .optical_element import OpticalElement, make_agnostic_forward, make_agnostic_backward, AgnosticOpticalElement
-from ..field import Field, field_inv, field_dot, field_transpose, field_conjugate_transpose
+from ..field import Field, field_inv, field_dot, field_conjugate_transpose
 
 def rotation_matrix(angle):
 	'''Two dimensional rotation matrix.

@@ -1,11 +1,6 @@
-import os
 import numpy as np
-import matplotlib.pyplot as plt
 import scipy.sparse
 
-from .optical_element import OpticalElement
-from ..field import Field
-from ..plotting import imshow_field
 from ..mode_basis import ModeBasis
 from .deformable_mirror import DeformableMirror
 

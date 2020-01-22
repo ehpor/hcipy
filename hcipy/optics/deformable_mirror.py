@@ -3,7 +3,7 @@ from scipy.sparse import csr_matrix
 import pkg_resources
 
 from .optical_element import OpticalElement
-from ..field import Field, make_uniform_grid
+from ..field import make_uniform_grid
 from ..mode_basis import ModeBasis, make_gaussian_pokes
 from ..interpolation import make_linear_interpolator_separated
 from ..util import read_fits

@@ -1,5 +1,4 @@
 import numpy as np
-from ..propagation import FraunhoferPropagator
 from ..field import Field
 
 from ..optics import GeometricPhaseElement

@@ -1,5 +1,4 @@
 import os
-import warnings
 import yaml
 
 class Configuration(object):
@@ -73,7 +72,7 @@ class Configuration(object):
 		'''Read the configuration file from the configuration directory.
 		'''
 		with open(self.get_config_path()) as f:
-			Configuration._config = yaml.load(f.read())
+			Configuration._config = yaml.safe_load(f.read())
 
 		if Configuration._config is None:
 			Configuration._config = {}

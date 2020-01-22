@@ -1,5 +1,5 @@
 import numpy as np
-from ..field import CartesianGrid, UnstructuredCoords, make_hexagonal_grid, Field
+from ..field import CartesianGrid, make_hexagonal_grid, Field
 from .generic import *
 
 def make_vlt_aperture():

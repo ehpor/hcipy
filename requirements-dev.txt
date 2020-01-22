@@ -1,4 +1,4 @@
 pytest
-coveralls
-coverage<5.0
+codecov
+coverage
 mpmath

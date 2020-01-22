@@ -31,7 +31,7 @@ setup(name='hcipy',
 	extras_require={
 		"dev": [
 			"pytest",
-			"coveralls",
+			"codecov",
 			"coverage",
 			"mpmath"],
 		"doc": [

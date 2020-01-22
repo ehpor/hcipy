@@ -95,7 +95,7 @@ script:
 
 after_success:
   - if [ "$TEST_COVERAGE" = true ]; then
-      travis_retry coveralls;
+      travis_retry codecov;
     fi
 
   - if [ "$MAKE_DOCS" = true ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then

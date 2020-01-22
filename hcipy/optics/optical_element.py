@@ -763,7 +763,7 @@ def make_agnostic_backward(backward):
 		return backward(self, instance_data, wavefront, *args, **kwargs)
 	return res
 
-def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_dependent_arguments=None, num_in_cache=50):
+def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_dependent_arguments=None, num_in_cache=50): # pragma: no cover
 	'''Create an optical element that is agnostic to input_grid or wavelength from one that is not.
 
 	This decorator is meant to simplify the creation of agnostic optical elements. When you have an 
@@ -803,6 +803,9 @@ def make_agnostic_optical_element(grid_dependent_arguments=None, wavelength_depe
 	RuntimeError
 		If one of the argument gave an error during evaluation.
 	'''
+	import warnings
+	warnings.warn('This function will be removed in a future release. Please switch to a AgnosticOpticalElement class instead.', warnings.DeprecationWarning)
+
 	if grid_dependent_arguments is None:
 		grid_dependent_arguments = []
 

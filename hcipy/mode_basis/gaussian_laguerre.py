@@ -3,7 +3,7 @@ from math import sqrt
 from scipy.special import eval_genlaguerre
 
 def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
-	r'''Creates a Gaussian-Hermite mode.
+	r'''Creates a Gaussian-Laguerre mode.
 
 	This function evaluates a (p,l) order Gaussian-Laguerre mode on a grid.
 	The definition of the modes are the following,
@@ -42,12 +42,14 @@ def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
 		R, Theta = grid.as_('polar').coords
 
 	# Easy access
-	r = 2*R/mode_field_diameter
+	r = 2 * R / mode_field_diameter
 	r2 = r**2
-	# The mode
-	lg = (r*sqrt(2))**(abs(l)) * np.exp(-r2) * np.exp(-1j*l*Theta) * eval_genlaguerre(p, abs(l), 2*r2)
-	# Numerically normalize the modes
-	lg /= np.sum(np.abs(lg)**2 * grid.weights)
+
+	# Compute the mode
+	lg = (r * sqrt(2))**abs(l) * np.exp(-r2) * np.exp(-1j * l * Theta) * eval_genlaguerre(p, abs(l), 2 * r2)
+
+	# Numerically normalize the mode
+	lg /= np.sqrt(np.sum(np.abs(lg)**2 * grid.weights))
 
 	return Field(lg, grid)
 

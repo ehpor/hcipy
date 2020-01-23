@@ -34,6 +34,11 @@ def make_cosine_basis(grid, fourier_grid, sort_by_energy=True):
 			continue
 
 		mode = Field(np.cos(np.dot(p, c)), grid)
+
+		# Correctly normalize the non-zero energy mode.
+		if not np.dot(p, p) < _epsilon**2:
+			mode *= np.sqrt(2)
+
 		modes.append(mode)
 
 		j = fourier_grid.closest_to(-p)
@@ -82,7 +87,12 @@ def make_sine_basis(grid, fourier_grid, sort_by_energy=True):
 		if i in ignore_list:
 			continue
 
-		mode = Field(np.sin(np.dot(p, c)), grid)
+		mode = Field(np.sin(np.dot(p, c)) * np.sqrt(2), grid)
+
+		# Filter out the zero energy mode.
+		if np.dot(p, p) < _epsilon**2:
+			continue
+
 		modes.append(mode)
 
 		j = fourier_grid.closest_to(-p)
@@ -159,9 +169,12 @@ def make_fourier_basis(grid, fourier_grid, sort_by_energy=True):
 
 	modes = []
 	for i, E in enumerate(energies):
-		modes.append(modes_cos[i])
+		# Filter out and correctly normalize zero energy vs non-zero energy modes.
 		if E > _epsilon:
-			modes.append(modes_sin[i])
+			modes.append(modes_cos[i] * np.sqrt(2))
+			modes.append(modes_sin[i] * np.sqrt(2))
+		else:
+			modes.append(modes_cos[i])
 
 	return ModeBasis(modes)
 

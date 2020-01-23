@@ -23,10 +23,13 @@ def index_to_hermite(i):
 
 	# Get the max order
 	o = int((np.sqrt(8 * i + 1) - 1) / 2)
+
 	# Get the y order
 	m = int(i - o * (o + 1) / 2)
+
 	# Get the x order
 	n = o - m
+
 	return n, m
 
 def gaussian_hermite(n, m, mode_field_diameter=1, grid=None):
@@ -71,10 +74,10 @@ def gaussian_hermite(n, m, mode_field_diameter=1, grid=None):
 		r2 = (2 * grid.r / mode_field_diameter)**2
 
 	# Calculate the mode.
-	hg = np.exp(-r2) * eval_hermite(n, 2*sqrt(2) * x / mode_field_diameter) * eval_hermite(m, 2*sqrt(2) * y / mode_field_diameter)
+	hg = np.exp(-r2) * eval_hermite(n, 2 * sqrt(2) * x / mode_field_diameter) * eval_hermite(m, 2 * sqrt(2) * y / mode_field_diameter)
 
 	# Numerically normalize the mode
-	hg /= np.sum(np.abs(hg)**2 * grid.weights)
+	hg /= np.sqrt(np.sum(np.abs(hg)**2 * grid.weights))
 
 	return Field(hg, grid)
 
@@ -125,5 +128,5 @@ def make_gaussian_hermite_basis(grid, num_modes, mode_field_diameter, starting_m
 	'''
 	from .mode_basis import ModeBasis
 
-	modes = [gaussian_hermite_index(i, mode_field_diameter, grid) for i in range(starting_mode, starting_mode+num_modes)]
+	modes = [gaussian_hermite_index(i, mode_field_diameter, grid) for i in range(starting_mode, starting_mode + num_modes)]
 	return ModeBasis(modes)

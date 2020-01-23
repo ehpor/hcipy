@@ -65,7 +65,7 @@ def conical_surface_sag(radius_of_curvature, conic_constant=0):
 
 	return func
 
-def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_coefficients=[]):
+def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_coefficients=None):
 	r'''Makes a Field generator for the surface sag of an even aspherical surface.
 
 	The surface profile is defined as:
@@ -92,6 +92,9 @@ def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_co
 	Field generator
 		This function can be evaluated on a grid to get the sag profile.
 	'''
+	if aspheric_coefficients is None:
+		aspheric_coefficients = []
+
 	def func(grid):
 		x = grid.x
 		y = grid.y

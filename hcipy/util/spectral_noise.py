@@ -4,7 +4,10 @@ import copy
 from ..field import Field
 
 class SpectralNoiseFactory(object):
-	def __init__(self, psd, output_grid, psd_args=(), psd_kwargs={}):
+	def __init__(self, psd, output_grid, psd_args=(), psd_kwargs=None):
+		if psd_kwargs is None:
+			psd_kwargs = {}
+
 		self.psd = psd
 		self.psd_args = psd_args
 		self.psd_kwargs = psd_kwargs
@@ -51,8 +54,11 @@ class SpectralNoise(object):
 		return self()
 
 class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
-	def __init__(self, psd, output_grid, oversample=1, psd_args=(), psd_kwargs={}):
+	def __init__(self, psd, output_grid, oversample=1, psd_args=(), psd_kwargs=None):
 		from ..fourier import FastFourierTransform
+
+		if psd_kwargs is None:
+			psd_kwargs = {}
 
 		SpectralNoiseFactory.__init__(self, psd, output_grid, psd_args, psd_kwargs)
 
@@ -102,8 +108,11 @@ class SpectralNoiseFFT(SpectralNoise):
 		return self.factory.fourier.backward(self.C).real
 
 class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
-	def __init__(self, psd, output_grid, oversampling, psd_args=(), psd_kwargs={}):
+	def __init__(self, psd, output_grid, oversampling, psd_args=(), psd_kwargs=None):
 		from ..fourier import FastFourierTransform, MatrixFourierTransform
+
+		if psd_kwargs is None:
+			psd_kwargs = {}
 
 		SpectralNoiseFactory.__init__(self, psd, output_grid, psd_args, psd_kwargs)
 

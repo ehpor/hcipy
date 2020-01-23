@@ -126,14 +126,16 @@ class EvenAsphereMicroLensArray(OpticalElement):
 	aspheric_coefficients : array_like
 		The aspheric coefficients of the micro-lenses.
 	'''
-	def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, conic_constant=0, aspheric_coefficients=[]):
-
+	def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, conic_constant=0, aspheric_coefficients=None):
 		self.input_grid = input_grid
 		self.mla_grid = lenslet_grid
 		self.n = refractive_index
 		self.radius_of_curvature = radius_of_curvature
 		self.conic_constant = conic_constant
-		self.aspheric_coefficients = aspheric_coefficients
+		if aspheric_coefficients is None:
+			self.aspheric_coefficients = []
+		else:
+			self.aspheric_coefficients = aspheric_coefficients
 
 		self.mla_index = -self.input_grid.ones()
 		self.mla_opd = self.input_grid.zeros()

@@ -50,7 +50,7 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 		self.clear_cache()
 	
 	def get_input_grid(self, output_grid, wavelength):
-		return self.input_grid
+		return self._input_grid
 	
 	def get_output_grid(self, input_grid, wavelength):
 		return self._output_grid

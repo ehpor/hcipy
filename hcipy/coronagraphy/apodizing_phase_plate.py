@@ -6,17 +6,17 @@ from ..optics import GeometricPhaseElement
 def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0):
 	"""
 	Accelerated Gerchberg-Saxton-like algorithm for APP design by
-	Christoph Keller [1]_ and based on Douglas-Rachford operator splitting.
-	The acceleration was inspired by the paper by Jim Fienup [2]_. The
+	Christoph Keller [Keller2016]_ and based on Douglas-Rachford operator splitting.
+	The acceleration was inspired by the paper by Jim Fienup [Fienup1976]_. The
 	acceleration can provide speed-ups of up to two orders of magnitude and
 	produce better APPs.
 
-	.. [1] Keller C.U., 2016, "Novel instrument concepts for
+	.. [Keller2016] Keller C.U., 2016, "Novel instrument concepts for
 		characterizing directly imaged exoplanets", Proc. SPIE 9908,
 		Ground-based and Airborne Instrumentation for Astronomy VI, 99089V
 		doi: 10.1117/12.2232633; https://doi.org/10.1117/12.2232633
 
-	.. [2] J. R. Fienup, 1976, "Reconstruction of an object from the modulus
+	.. [Fienup1976] J. R. Fienup, 1976, "Reconstruction of an object from the modulus
 		of its Fourier transform," Opt. Lett. 3, 27-29
 
 	Parameters

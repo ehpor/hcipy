@@ -1,5 +1,4 @@
 from ..optics import Apodizer, OpticalElement, Wavefront
-from ..propagation import FraunhoferPropagator
 from ..field import Field
 from ..fourier import FastFourierTransform, make_fft_grid
 

@@ -54,7 +54,7 @@ def make_nearest_interpolator_unstructured(field, grid=None):
 	else:
 		field = Field(field, grid)
 
-	interp = NearestNDInterpolator(grid.points, field, fill_value)
+	interp = NearestNDInterpolator(grid.points, field)
 
 	def interpolator(evaluated_grid):
 		res = interp(grid.points)

@@ -9,12 +9,13 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
 	'''The monochromatic angular spectrum propagator for scalar fields.
 
 	The scalar Angular Spectrum propagator is implemented as described by
-	[1]_. The propagation of an electric field can be described as a transfer
+	[McLeod2014]_. The propagation of an electric field can be described as a transfer
 	function in frequency space. The transfer function is taken from
-	equation 9 of [1]_, and the related impulse response is taken from
-	equation 6 of [1]_.
+	equation 9 of [McLeod2014]_, and the related impulse response is taken from
+	equation 6 of [McLeod2014]_.
 
-	.. [1] Robert R. McLeod and Kelvin H. Wagner 2014, "Vector Fourier optics of anisotropic materials," Adv. Opt. Photon. 6, 368-412 (2014)
+	.. [McLeod2014] Robert R. McLeod and Kelvin H. Wagner 2014, "Vector Fourier optics of
+		anisotropic materials," Adv. Opt. Photon. 6, 368-412 (2014)
 
 	Parameters
 	----------

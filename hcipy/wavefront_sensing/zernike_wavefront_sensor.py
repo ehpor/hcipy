@@ -9,14 +9,14 @@ import numpy as np
 class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 	'''The optical elements for a Zernike wavefront sensor.
 
-	This class uses a propagation scheme of [1]_, similar to that of Lyot coronagraphs
-	with a small blocking mask, see [2]_.
+	This class uses a propagation scheme of [NDiaye2013]_, similar to that of Lyot coronagraphs
+	with a small blocking mask, see [Soummer2007]_.
 
-	.. [1] N'Diaye et al. 2013, "Calibration of quasi-static
+	.. [NDiaye2013] N'Diaye et al. 2013, "Calibration of quasi-static
 		aberrations in exoplanet direct-imaging instruments with a
 		Zernike phase-mask sensor"
 
-	.. [2] Soummer et al. 2007, "Fast computation of Lyot-style
+	.. [Soummer2007] Soummer et al. 2007, "Fast computation of Lyot-style
 		coronagraph propagation"
 
 	Parameters
@@ -139,21 +139,21 @@ class ZernikeWavefrontSensorEstimator(WavefrontSensorEstimator):
 class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 	'''The optical elements for a vector-Zernike wavefront sensor.
 
-	The vector Zernike is based on [1]_.
+	The vector Zernike is based on [Doelman2019]_.
 
-	This class uses a propagation scheme of [2]_, similar to that of Lyot coronagraphs
-	with a small blocking mask, see [3]_. The reference wavefront is also propagated
+	This class uses a propagation scheme of [NDiaye2013]_, similar to that of Lyot coronagraphs
+	with a small blocking mask, see [Soummer2007]_. The reference wavefront is also propagated
 	through a half-wave retarder because the vector-Zernike mask is a half-wave
 	retarder.
 
-	.. [1] Doelman et al. 2019, "Simultaneous phase and amplitude aberration sensing
+	.. [[Doelman2019] Doelman et al. 2019, "Simultaneous phase and amplitude aberration sensing
 		with a liquid-crystal vector-Zernike phase mask"
 
-	.. [2] N'Diaye et al. 2013, "Calibration of quasi-static
+	.. [NDiaye2013] N'Diaye et al. 2013, "Calibration of quasi-static
 		aberrations in exoplanet direct-imaging instruments with a
 		Zernike phase-mask sensor"
 
-	.. [3] Soummer et al. 2007, "Fast computation of Lyot-style
+	.. [Soummer2007] Soummer et al. 2007, "Fast computation of Lyot-style
 		coronagraph propagation"
 
 	Parameters

@@ -7,7 +7,7 @@ class PerfectCoronagraph(OpticalElement):
 	'''A perfect coronagraph for a certain aperture and order.
 
 		These type of coronagraphs suppress all light for a flat wavefront. The incoming complex
-		amplitude :math:`A` is modified as follows (following [1]_):
+		amplitude :math:`A` is modified as follows (following [Cavarroc2006]_):
 
 		.. math::
 			\overline{A} = A - \Pi \sqrt{S}
@@ -16,10 +16,13 @@ class PerfectCoronagraph(OpticalElement):
 		pupil, and :math:`S` is the Strehl ratio of the incoming wavefront.
 
 		Higher orders are added by fitting higher-order electric field modes to the incoming
-		wavefront and subtracting those, following [2]_.
+		wavefront and subtracting those, following [Guyon2006]_.
 
-		.. [1] Celine Cavarroc et al. "Fundamental limitations on Earth-like planet detection with extremely large telescopes." Astronomy & Astrophysics 447.1 (2006): 397-403
-		.. [2] Olivier Guyon et al. "Theoretical limits on extrasolar terrestrial planet detection with coronagraphs." The Astrophysical Journal Supplement Series 167.1 (2006): 81
+		.. [Cavarroc2006] Celine Cavarroc et al. "Fundamental limitations on Earth-like planet detection with
+			extremely large telescopes." Astronomy & Astrophysics 447.1 (2006): 397-403
+
+		.. [Guyon2006] Olivier Guyon et al. "Theoretical limits on extrasolar terrestrial planet detection
+			with coronagraphs." The Astrophysical Journal Supplement Series 167.1 (2006): 81
 
 		Parameters
 		----------
@@ -30,7 +33,7 @@ class PerfectCoronagraph(OpticalElement):
 		coeffs : list or ndarray or None
 			The coefficients that are used for subtraction. This allows for partial suppression of certain
 			modes, which can be used to design perfect coronagraphs that are insensitive to stellar
-			radius [2]_. If it is None, all modes are completely suppressed.
+			radius [Guyon2006]_. If it is None, all modes are completely suppressed.
 		'''
 	def __init__(self, aperture, order=2, coeffs=None):
 		self.pupil_grid = aperture.grid

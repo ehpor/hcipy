@@ -306,9 +306,10 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_unders
 	'''Make field generators for the pupil and Lyot-stop masks for a
 	ring apodized vortex coronagraph.
 
-	The formulas were implemented according to [1]_.
+	The formulas were implemented according to [Mawet2013]_.
 
-	.. [1] Dimitri Mawet et al. 2013 "Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive ring apodizers" The Astrophysical Journal Supplement Series 209.1 (2013): 7
+	.. [Mawet2013] Dimitri Mawet et al. 2013 "Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive
+		ring apodizers" The Astrophysical Journal Supplement Series 209.1 (2013): 7
 
 	Parameters
 	----------
@@ -366,9 +367,10 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_unders
 def get_ravc_planet_transmission(central_obscuration_ratio, charge=2):
 	'''Get the planet transmission for a ring-apodized vortex coronagraph.
 
-	The formulas were implemented according to [1]_.
+	The formulas were implemented according to [Mawet2013]_.
 
-	.. [1] Dimitri Mawet et al. 2013 "Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive ring apodizers" The Astrophysical Journal Supplement Series 209.1 (2013): 7
+	.. [Mawet2013] Dimitri Mawet et al. 2013 "Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive
+		ring apodizers" The Astrophysical Journal Supplement Series 209.1 (2013): 7
 
 	Parameters
 	----------

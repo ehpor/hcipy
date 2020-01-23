@@ -1,4 +1,4 @@
-from ..optics import OpticalSystem
+from ..optics import OpticalSystem, NoiselessDetector, EmptyOpticalElement, FrameCorrector
 
 class WavefrontSensorOptics(OpticalSystem):
 	'''The optics for a wavefront sensor.

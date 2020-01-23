@@ -1,6 +1,6 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
-from ..optics import SurfaceApodizer, MultiplexedComplexSurfaceApodizer
+from ..optics import MultiplexedComplexSurfaceApodizer
 from ..field import make_pupil_grid, make_focal_grid, Field
 
 import numpy as np

@@ -1,5 +1,6 @@
 import numpy as np
 from .optical_element import OpticalElement
+from ..field import CartesianGrid, UnstructuredCoords
 
 class PeriodicOpticalElement(OpticalElement):
 	def __init__(self, input_grid, pitch, apodization, orientation=0, even_grid=False):

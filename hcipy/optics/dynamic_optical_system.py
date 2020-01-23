@@ -1,5 +1,4 @@
 import heapq
-import numpy as np
 
 class DynamicOpticalSystem(object):
 	'''A dynamically varying optical system.

@@ -1,5 +1,5 @@
 import numpy as np
-from ..field import CartesianGrid, make_hexagonal_grid, Field
+from ..field import make_hexagonal_grid, Field
 from .generic import make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture
 
 def make_vlt_aperture():

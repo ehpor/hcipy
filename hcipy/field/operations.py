@@ -249,7 +249,7 @@ def field_inverse_truncated(f, rcond=1e-15):
 			res[..., i] = inverse_truncated(f[..., i], rcond)
 		return Field(res, f.grid)
 	else:
-		return inverse_truncated(f, num_modes)
+		return inverse_truncated(f, rcond)
 
 def field_inverse_truncated_modal(f, num_modes):
 	'''Invert a tensor field of order 2 using mode truncation.
@@ -313,7 +313,7 @@ def field_inv(f):
 		res = np.moveaxis(np.linalg.inv(np.moveaxis(f, -1, 0)), 0, -1)
 		return Field(res, f.grid)
 	else:
-		return np.linalg.inv(a)
+		return np.linalg.inv(f)
 
 def field_svd(f, full_matrices=True, compute_uv=True):
 	'''Calculate the singular value decomposition for a tensor field of order 2.

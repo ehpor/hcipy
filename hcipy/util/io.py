@@ -1,5 +1,3 @@
-from ..field import Field
-
 def read_fits(filename):
 	'''Read an array from a fits file.
 

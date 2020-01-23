@@ -1,7 +1,5 @@
 from __future__ import division
 
-import warnings
-
 import numpy as np
 from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
 from .field import Field

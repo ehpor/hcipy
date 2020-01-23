@@ -89,9 +89,10 @@ def zernike_radial(n, m, r, cache=None):
 
 	We use the q-recursive method, which uses recurrence relations to calculate the radial
 	Zernike polynomials without using factorials. A description of the method can be found
-	in [1]_. Additionally, this function optionally caches results of previous calls.
+	in [Chong2003]_. Additionally, this function optionally caches results of previous calls.
 
-	.. [1] Chong, C. W., Raveendran, P., & Mukundan, R. (2003). A comparative analysis of algorithms for fast computation of Zernike moments. Pattern Recognition, 36(3), 731-742.
+	.. [Chong2003] Chong, C. W., Raveendran, P., & Mukundan, R. (2003). A comparative analysis of algorithms
+		for fast computation of Zernike moments. Pattern Recognition, 36(3), 731-742.
 
 	Parameters
 	----------

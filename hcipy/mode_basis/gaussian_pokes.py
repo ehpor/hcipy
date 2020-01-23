@@ -30,7 +30,7 @@ def make_gaussian_pokes(grid, mu, sigma, cutoff=5):
 		if grid.is_('cartesian'):
 			r2 = (grid.x - m[0])**2 + (grid.y - m[1])**2
 		else:
-			r2 = grid.shifted(p).as_('polar').r**2
+			r2 = grid.shifted(-m).as_('polar').r**2
 
 		res = np.exp(-0.5 * r2 / s**2)
 

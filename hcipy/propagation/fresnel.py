@@ -8,9 +8,9 @@ from ..field import evaluate_supersampled, make_pupil_grid
 class FresnelPropagator(AgnosticOpticalElement):
 	'''The monochromatic Fresnel propagator for scalar fields.
 
-	The Fresnel propagator is implemented as described in [1]_.
+	The Fresnel propagator is implemented as described in [Goodman2005]_.
 
-	.. [1] Goodman, J.W., 2005 Introduction to Fourier optics. Roberts and Company Publishers.
+	.. [Goodman2005] Goodman, J.W., 2005 Introduction to Fourier optics. Roberts and Company Publishers.
 
 	Parameters
 	----------

@@ -1,6 +1,7 @@
 import numpy as np
 
 from .grid import Grid
+from .coordinates import UnstructuredCoords
 
 class PolarGrid(Grid):
 	'''A grid representing a two-dimensional Polar coordinate system.

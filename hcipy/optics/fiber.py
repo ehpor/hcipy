@@ -182,7 +182,7 @@ class SingleModeFiberArray(OpticalElement):
 		self.fiber_grid = fiber_grid
 
 		self.fiber_modes = [mode(input_grid.shifted(-p), *args, **kwargs) for p in fiber_grid]
-		self.fiber_modes = [mode / np.sqrt(np.sum(np.abs(mode)**2 * input_grid.weights)) for mode in self.fiber_modes]
+		self.fiber_modes = [m / np.sqrt(np.sum(np.abs(m)**2 * input_grid.weights)) for m in self.fiber_modes]
 		self.fiber_modes = ModeBasis(self.fiber_modes)
 
 		self.projection_matrix = self.fiber_modes.transformation_matrix

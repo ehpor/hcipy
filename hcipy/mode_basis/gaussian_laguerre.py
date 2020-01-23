@@ -1,5 +1,5 @@
 import numpy as np
-from math import sqrt, floor
+from math import sqrt
 from scipy.special import eval_genlaguerre
 
 def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):

@@ -15,7 +15,6 @@ red_A200 = '#FF5252'
 red_A400 = '#FF1744'
 red_A700 = '#D50000'
 red = red_700
-#red = [red_200, red_300, red_400, red_500, red_600, red_700, red_800, red_900, red_A100, red_A200, red_A400, red_A700]
 
 pink_50 = '#FCE4EC'
 pink_100 = '#F8BBD0'
@@ -32,7 +31,6 @@ pink_A200 = '#FF4081'
 pink_A400 = '#F50057'
 pink_A700 = '#C51162'
 pink = pink_700
-#pink = [pink_50, pink_100, pink_200, pink_300, pink_400, pink_500, pink_600, pink_700, pink_800, pink_900, pink_A100, pink_A200, pink_A400, pink_A700]
 
 purple_50 = '#F3E5F5'
 purple_100 = '#E1BEE7'
@@ -49,7 +47,6 @@ purple_A200 = '#E040FB'
 purple_A400 = '#D500F9'
 purple_A700 = '#AA00FF'
 purple = purple_700
-#purple = [purple_50, purple_100, purple_200, purple_300, purple_400, purple_500, purple_600, purple_700, purple_800, purple_900, purple_A100, purple_A200, purple_A400, purple_A700]
 
 deep_purple_50 = '#EDE7F6'
 deep_purple_100 = '#D1C4E9'
@@ -66,7 +63,6 @@ deep_purple_A200 = '#7C4DFF'
 deep_purple_A400 = '#651FFF'
 deep_purple_A700 = '#6200EA'
 deep_purple = deep_purple_700
-#deep_purple = [deep_purple_50, deep_purple_100, deep_purple_200, deep_purple_300, deep_purple_400, deep_purple_500, deep_purple_600, deep_purple_700, deep_purple_800, deep_purple_900, deep_purple_A100, deep_purple_A200, deep_purple_A400, deep_purple_A700]
 
 indigo_50 = '#E8EAF6'
 indigo_100 = '#C5CAE9'
@@ -83,7 +79,6 @@ indigo_A200 = '#536DFE'
 indigo_A400 = '#3D5AFE'
 indigo_A700 = '#304FFE'
 indigo = indigo_700
-#indigo = [indigo_50, indigo_100, indigo_200, indigo_300, indigo_400, indigo_500, indigo_600, indigo_700, indigo_800, indigo_900, indigo_A100, indigo_A200, indigo_A400, indigo_A700]
 
 blue_50 = '#E3F2FD'
 blue_100 = '#BBDEFB'
@@ -100,7 +95,6 @@ blue_A200 = '#448AFF'
 blue_A400 = '#2979FF'
 blue_A700 = '#2962FF'
 blue = blue_700
-#blue = [blue_50, blue_100, blue_200, blue_300, blue_400, blue_500, blue_600, blue_700, blue_800, blue_900, blue_A100, blue_A200, blue_A400, blue_A700]
 
 light_blue_50 = '#E1F5FE'
 light_blue_100 = '#B3E5FC'
@@ -117,7 +111,6 @@ light_blue_A200 = '#40C4FF'
 light_blue_A400 = '#00B0FF'
 light_blue_A700 = '#0091EA'
 light_blue = light_blue_700
-#light_blue = [light_blue_50, light_blue_100, light_blue_200, light_blue_300, light_blue_400, light_blue_500, light_blue_600, light_blue_700, light_blue_800, light_blue_900, light_blue_A100, light_blue_A200, light_blue_A400, light_blue_A700]
 
 cyan_50 = '#E0F7FA'
 cyan_100 = '#B2EBF2'
@@ -134,7 +127,6 @@ cyan_A200 = '#18FFFF'
 cyan_A400 = '#00E5FF'
 cyan_A700 = '#00B8D4'
 cyan = cyan_700
-#cyan = [cyan_50, cyan_100, cyan_200, cyan_300, cyan_400, cyan_500, cyan_600, cyan_700, cyan_800, cyan_900, cyan_A100, cyan_A200, cyan_A400, cyan_A700]
 
 teal_50 = '#E0F2F1'
 teal_100 = '#B2DFDB'
@@ -151,7 +143,6 @@ teal_A200 = '#64FFDA'
 teal_A400 = '#1DE9B6'
 teal_A700 = '#00BFA5'
 teal = teal_700
-#teal = [teal_50, teal_100, teal_200, teal_300, teal_400, teal_500, teal_600, teal_700, teal_800, teal_900, teal_A100, teal_A200, teal_A400, teal_A700]
 
 green_50 = '#E8F5E9'
 green_100 = '#C8E6C9'
@@ -168,7 +159,6 @@ green_A200 = '#69F0AE'
 green_A400 = '#00E676'
 green_A700 = '#00C853'
 green = green_700
-#green = [green_50, green_100, green_200, green_300, green_400, green_500, green_600, green_700, green_800, green_900, green_A100, green_A200, green_A400, green_A700]
 
 light_green_50 = '#F1F8E9'
 light_green_100 = '#DCEDC8'
@@ -185,7 +175,6 @@ light_green_A200 = '#B2FF59'
 light_green_A400 = '#76FF03'
 light_green_A700 = '#64DD17'
 light_green = light_green_700
-#light_green = [light_green_50, light_green_100, light_green_200, light_green_300, light_green_400, light_green_500, light_green_600, light_green_700, light_green_800, light_green_900, light_green_A100, light_green_A200, light_green_A400, light_green_A700]
 
 lime_50 = '#F9FBE7'
 lime_100 = '#F0F4C3'
@@ -202,7 +191,6 @@ lime_A200 = '#EEFF41'
 lime_A400 = '#C6FF00'
 lime_A700 = '#AEEA00'
 lime = lime_700
-#lime = [lime_50, lime_100, lime_200, lime_300, lime_400, lime_500, lime_600, lime_700, lime_800, lime_900, lime_A100, lime_A200, lime_A400, lime_A700]
 
 yellow_50 = '#FFFDE7'
 yellow_100 = '#FFF9C4'
@@ -219,7 +207,6 @@ yellow_A200 = '#FFFF00'
 yellow_A400 = '#FFEA00'
 yellow_A700 = '#FFD600'
 yellow = yellow_700
-#yellow = [yellow_50, yellow_100, yellow_200, yellow_300, yellow_400, yellow_500, yellow_600, yellow_700, yellow_800, yellow_900, yellow_A100, yellow_A200, yellow_A400, yellow_A700]
 
 amber_50 = '#FFF8E1'
 amber_100 = '#FFECB3'
@@ -236,7 +223,6 @@ amber_A200 = '#FFD740'
 amber_A400 = '#FFC400'
 amber_A700 = '#FFAB00'
 amber = amber_700
-#amber = [amber_50, amber_100, amber_200, amber_300, amber_400, amber_500, amber_600, amber_700, amber_800, amber_900, amber_A100, amber_A200, amber_A400, amber_A700]
 
 orange_50 = '#FFF3E0'
 orange_100 = '#FFE0B2'
@@ -253,7 +239,6 @@ orange_A200 = '#FFAB40'
 orange_A400 = '#FF9100'
 orange_A700 = '#FF6D00'
 orange = orange_700
-#orange = [orange_50, orange_100, orange_200, orange_300, orange_400, orange_500, orange_600, orange_700, orange_800, orange_900, orange_A100, orange_A200, orange_A400, orange_A700]
 
 deep_orange_50 = '#FBE9E7'
 deep_orange_100 = '#FFCCBC'
@@ -270,7 +255,6 @@ deep_orange_A200 = '#FF6E40'
 deep_orange_A400 = '#FF3D00'
 deep_orange_A700 = '#DD2C00'
 deep_orange = deep_orange_700
-#deep_orange = [deep_orange_50, deep_orange_100, deep_orange_200, deep_orange_300, deep_orange_400, deep_orange_500, deep_orange_600, deep_orange_700, deep_orange_800, deep_orange_900, deep_orange_A100, deep_orange_A200, deep_orange_A400, deep_orange_A700]
 
 brown_50 = '#EFEBE9'
 brown_100 = '#D7CCC8'
@@ -283,7 +267,6 @@ brown_700 = '#5D4037'
 brown_800 = '#4E342E'
 brown_900 = '#3E2723'
 brown = brown_700
-#brown = [brown_50, brown_100, brown_200, brown_300, brown_400, brown_500, brown_600, brown_700, brown_800, brown_900]
 
 grey_50 = '#FAFAFA'
 grey_100 = '#F5F5F5'
@@ -296,7 +279,6 @@ grey_700 = '#616161'
 grey_800 = '#424242'
 grey_900 = '#212121'
 grey = grey_700
-#grey = [grey_50, grey_100, grey_200, grey_300, grey_400, grey_500, grey_600, grey_700, grey_800, grey_900]
 
 blue_grey_50 = '#ECEFF1'
 blue_grey_100 = '#CFD8DC'
@@ -309,4 +291,3 @@ blue_grey_700 = '#455A64'
 blue_grey_800 = '#37474F'
 blue_grey_900 = '#263238'
 blue_grey = blue_grey_700
-#blue_grey = [blue_grey_50, blue_grey_100, blue_grey_200, blue_grey_300, blue_grey_400, blue_grey_500, blue_grey_600, blue_grey_700, blue_grey_800, blue_grey_900]

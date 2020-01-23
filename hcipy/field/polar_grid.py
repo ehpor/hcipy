@@ -1,11 +1,12 @@
 import numpy as np
-import copy
+
 from .grid import Grid
+from .coordinates import UnstructuredCoords
 
 class PolarGrid(Grid):
 	'''A grid representing a two-dimensional Polar coordinate system.
 	'''
-	
+
 	_coordinate_system = 'polar'
 
 	@property
@@ -19,7 +20,7 @@ class PolarGrid(Grid):
 		''' The angular coordinate (dimension 1).
 		'''
 		return self.coords[1]
-	
+
 	def scale(self, scale):
 		'''Scale the grid in-place.
 
@@ -27,7 +28,7 @@ class PolarGrid(Grid):
 		----------
 		scale : array_like
 			The factor with which to scale the grid.
-		
+
 		Returns
 		-------
 		Grid
@@ -47,18 +48,17 @@ class PolarGrid(Grid):
 		----------
 		shift : array_like
 			The amount with which to shift the grid.
-		
+
 		Returns
 		-------
 		Grid
 			Itself to allow for chaining these transformations.
 		'''
-		
-		grid = PolarGrid(UnstructuredCoords(self.coords)).as_('cartesian')
-		self.coords = new_grid.shift(shift).as_('polar').coords
+		new_grid = PolarGrid(UnstructuredCoords(self.coords)).as_('cartesian')
+		self.coords = new_grid.shifted(shift).as_('polar').coords
 
 		return self
-	
+
 	def shifted(self, shift):
 		'''A shifted copy of this grid.
 
@@ -69,7 +69,7 @@ class PolarGrid(Grid):
 		----------
 		shift : array_like
 			The amount with which to shift the grid.
-		
+
 		Returns
 		-------
 		Grid
@@ -78,7 +78,7 @@ class PolarGrid(Grid):
 		grid = self.as_('cartesian')
 		grid.shift(shift)
 		return grid
-	
+
 	def rotate(self, angle, axis=None):
 		'''Rotate the grid in-place.
 
@@ -88,7 +88,7 @@ class PolarGrid(Grid):
 			The angle in radians.
 		axis : ndarray or None
 			The axis of rotation. For this (polar) grid, it is ignored.
-		
+
 		Returns
 		-------
 		Grid
@@ -96,14 +96,14 @@ class PolarGrid(Grid):
 		'''
 		self.theta += angle
 		return self
-	
+
 	@staticmethod
 	def _get_automatic_weights(coords):
 		return None
 
 def _cartesian_to_polar(self):
 	from .coordinates import UnstructuredCoords
-	
+
 	x = self.x
 	y = self.y
 	r = np.hypot(x, y)
@@ -113,7 +113,7 @@ def _cartesian_to_polar(self):
 def _polar_to_cartesian(self):
 	from .coordinates import UnstructuredCoords
 	from .cartesian_grid import CartesianGrid
-	
+
 	r = self.r
 	theta = self.theta
 	x = r * np.cos(theta)

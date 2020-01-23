@@ -1,9 +1,16 @@
-__all__ = ['generate_app_keller', 'generate_app_por', 'VectorApodizingPhasePlate']
-__all__ += ['KnifeEdgeLyotCoronagraph']
-__all__ += ['LyotCoronagraph', 'OccultedLyotCoronagraph']
-__all__ += ['PerfectCoronagraph']
-__all__ += []
-__all__ += ['VortexCoronagraph', 'VectorVortexCoronagraph', 'make_ravc_masks', 'get_ravc_planet_transmission']
+__all__ = [
+    'generate_app_keller',
+    'generate_app_por',
+    'VectorApodizingPhasePlate',
+    'KnifeEdgeLyotCoronagraph',
+    'LyotCoronagraph',
+    'OccultedLyotCoronagraph',
+    'PerfectCoronagraph',
+    'VortexCoronagraph',
+    'VectorVortexCoronagraph',
+    'make_ravc_masks',
+    'get_ravc_planet_transmission'
+]
 
 from .apodizing_phase_plate import *
 from .knife_edge import *

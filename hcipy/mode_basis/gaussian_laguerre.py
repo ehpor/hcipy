@@ -1,9 +1,9 @@
 import numpy as np
-from math import sqrt, floor
+from math import sqrt
 from scipy.special import eval_genlaguerre
 
 def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
-	r'''Creates a Gaussian-Hermite mode.
+	r'''Creates a Gaussian-Laguerre mode.
 
 	This function evaluates a (p,l) order Gaussian-Laguerre mode on a grid.
 	The definition of the modes are the following,
@@ -28,7 +28,7 @@ def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
 		The mode field diameter of the mode.
 	grid : Grid
 		The grid on which to evaluate the mode.
-	
+
 	Returns
 	-------
 	Field
@@ -42,12 +42,14 @@ def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
 		R, Theta = grid.as_('polar').coords
 
 	# Easy access
-	r = 2*R/mode_field_diameter
+	r = 2 * R / mode_field_diameter
 	r2 = r**2
-	# The mode
-	lg = (r*sqrt(2))**(abs(l)) * np.exp(-r2) * np.exp(-1j*l*Theta) * eval_genlaguerre(p, abs(l), 2*r2)
-	# Numerically normalize the modes
-	lg /= np.sum(np.abs(lg)**2 * grid.weights)
+
+	# Compute the mode
+	lg = (r * sqrt(2))**abs(l) * np.exp(-r2) * np.exp(-1j * l * Theta) * eval_genlaguerre(p, abs(l), 2 * r2)
+
+	# Numerically normalize the mode
+	lg /= np.sqrt(np.sum(np.abs(lg)**2 * grid.weights))
 
 	return Field(lg, grid)
 
@@ -55,7 +57,7 @@ def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
 def make_gaussian_laguerre_basis(grid, pmax, lmax, mode_field_diameter, pmin=0):
 	'''Creates a Gaussian-Laguerre mode basis.
 
-	This function evaluates Gaussian-Laguerre modes. For each radial order 
+	This function evaluates Gaussian-Laguerre modes. For each radial order
 	within [pmin, pmax] it will calculate the azimuthal order [-lmax, lmax] inclusive.
 	This function returns a ModeBasis made out of these Gaussian-Laguerre modes.
 

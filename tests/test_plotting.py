@@ -17,9 +17,9 @@ def test_gif_writer():
 
 		plt.clf()
 		imshow_field(field)
-		
+
 		mw.add_frame()
-	
+
 	mw.close()
 
 	assert os.path.isfile('test.gif')

@@ -43,7 +43,7 @@ def get_mean_intensity_in_roi(img, mask):
 		The focal-plane image.
 	mask : Field or array_like
 		A binary array describing the region of interest.
-	
+
 	Returns
 	-------
 	scalar
@@ -63,7 +63,7 @@ def get_mean_raw_contrast(img, mask, ref_img):
 	img_ref : Field or array_like
 		A reference focal-plane image without aberrations. This is used
 		to determine the Strehl ratio.
-	
+
 	Returns
 	-------
 	scalar

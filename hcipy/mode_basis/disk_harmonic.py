@@ -17,16 +17,16 @@ def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
 	D : scalar
 		The diameter of the pupil.
 	bc : string
-		The boundary conditions to use. This can be either 'dirichlet', or 
+		The boundary conditions to use. This can be either 'dirichlet', or
 		'neumann' for a Dirichlet or Neumann boundary condition respectively.
 	grid : Grid
 		The grid on which to evaluate the function.
-	
+
 	Returns
 	-------
 	Field
 		The disk harmonic function evaluated on `grid`.
-	
+
 	Raises
 	------
 	ValueError
@@ -47,7 +47,7 @@ def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
 		norm = 1
 	else:
 		raise ValueError('Boundary condition not recognized.')
-	
+
 	if m_negative:
 		z = norm * jv(m, lambda_mn * r) * np.sin(m * theta)
 	else:
@@ -71,14 +71,14 @@ def disk_harmonic_energy(n, m, bc='dirichlet'):
 	m : int
 		Azimuthal order
 	bc : string
-		The boundary conditions to use. This can be either 'dirichlet', or 
+		The boundary conditions to use. This can be either 'dirichlet', or
 		'neumann' for a Dirichlet or Neumann boundary condition respectively.
-	
+
 	Returns
 	-------
 	scalar
 		The energy corresponding to the mode.
-	
+
 	Raises
 	------
 	ValueError
@@ -92,7 +92,7 @@ def disk_harmonic_energy(n, m, bc='dirichlet'):
 		lambda_mn = jnp_zeros(m, n)[-1]
 	else:
 		raise ValueError('Boundary condition not recognized.')
-	
+
 	return lambda_mn**2
 
 def get_disk_harmonic_orders_sorted(num_modes, bc='dirichlet'):
@@ -103,9 +103,9 @@ def get_disk_harmonic_orders_sorted(num_modes, bc='dirichlet'):
 	num_modes : int
 		The number of modes to return.
 	bc : string
-		The boundary conditions to use. This can be either 'dirichlet', or 
+		The boundary conditions to use. This can be either 'dirichlet', or
 		'neumann' for a Dirichlet or Neumann boundary condition respectively.
-	
+
 	Returns
 	-------
 	list of tuples
@@ -118,7 +118,7 @@ def get_disk_harmonic_orders_sorted(num_modes, bc='dirichlet'):
 	while len(results) < num_modes:
 		k = np.argmin(energies)
 		order = orders[k]
-		
+
 		if order[1] != 0:
 			results.append((order[0], -order[1]))
 		results.append(order)
@@ -149,9 +149,9 @@ def make_disk_harmonic_basis(grid, num_modes, D=1, bc='dirichlet'):
 	D : scalar
 		The diameter of the disk.
 	bc : string
-		The boundary conditions to use. This can be either 'dirichlet', or 
+		The boundary conditions to use. This can be either 'dirichlet', or
 		'neumann' for a Dirichlet or Neumann boundary condition respectively.
-	
+
 	Returns
 	-------
 	ModeBasis

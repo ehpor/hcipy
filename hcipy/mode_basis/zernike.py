@@ -1,6 +1,5 @@
 import numpy as np
-from math import sqrt, floor
-from scipy.special import binom
+from math import sqrt
 
 def noll_to_zernike(i):
 	'''Get the Zernike index from a Noll index.
@@ -9,7 +8,7 @@ def noll_to_zernike(i):
 	----------
 	i : int
 		The Noll index.
-	
+
 	Returns
 	-------
 	n : int
@@ -31,7 +30,7 @@ def ansi_to_zernike(i):
 	----------
 	i : int
 		The ANSI index.
-	
+
 	Returns
 	-------
 	n : int
@@ -52,7 +51,7 @@ def zernike_to_ansi(n, m):
 		The radial Zernike order.
 	m : int
 		The azimuthal Zernike order.
-	
+
 	Returns
 	-------
 	int
@@ -69,7 +68,7 @@ def zernike_to_noll(n, m):
 		The radial Zernike order.
 	m : int
 		The azimuthal Zernike order.
-	
+
 	Returns
 	-------
 	int
@@ -90,9 +89,10 @@ def zernike_radial(n, m, r, cache=None):
 
 	We use the q-recursive method, which uses recurrence relations to calculate the radial
 	Zernike polynomials without using factorials. A description of the method can be found
-	in [1]_. Additionally, this function optionally caches results of previous calls.
+	in [Chong2003]_. Additionally, this function optionally caches results of previous calls.
 
-	.. [1] Chong, C. W., Raveendran, P., & Mukundan, R. (2003). A comparative analysis of algorithms for fast computation of Zernike moments. Pattern Recognition, 36(3), 731-742.
+	.. [Chong2003] Chong, C. W., Raveendran, P., & Mukundan, R. (2003). A comparative analysis of algorithms
+		for fast computation of Zernike moments. Pattern Recognition, 36(3), 731-742.
 
 	Parameters
 	----------
@@ -104,10 +104,10 @@ def zernike_radial(n, m, r, cache=None):
 		The (normalized) radial coordinates on which to calculate the polynomial.
 	cache : dictionary or None
 		A dictionary containing previously calculated Zernike modes on the same grid.
-		This function is for speedup only, and therefore the cache is expected to be 
+		This function is for speedup only, and therefore the cache is expected to be
 		valid. You can reuse the cache for future calculations on the same exact grid.
 		The given dictionary is updated with the current calculation.
-	
+
 	Returns
 	-------
 	array_like
@@ -118,7 +118,7 @@ def zernike_radial(n, m, r, cache=None):
 	if cache is not None:
 		if ('rad', n, m) in cache:
 			return cache[('rad', n, m)]
-	
+
 	if n == m:
 		res = r**n
 	elif (n - m) == 2:
@@ -139,7 +139,7 @@ def zernike_radial(n, m, r, cache=None):
 
 	if cache is not None:
 		cache[('rad', n, m)] = res
-	
+
 	return res
 
 def zernike_azimuthal(m, theta, cache=None):
@@ -155,10 +155,10 @@ def zernike_azimuthal(m, theta, cache=None):
 		The azimuthal coordinates on which to calculate the polynomial.
 	cache : dictionary or None
 		A dictionary containing previously calculated Zernike modes on the same grid.
-		This function is for speedup only, and therefore the cache is expected to be 
+		This function is for speedup only, and therefore the cache is expected to be
 		valid. You can reuse the cache for future calculations on the same exact grid.
 		The given dictionary is updated with the current calculation.
-	
+
 	Returns
 	-------
 	array_like
@@ -167,19 +167,19 @@ def zernike_azimuthal(m, theta, cache=None):
 	if cache is not None:
 		if ('azim', m) in cache:
 			return cache[('azim', m)]
-	
+
 	if m < 0:
 		res = sqrt(2) * np.sin(-m * theta)
 	elif m == 0:
 		return 1
 	else:
 		res = sqrt(2) * np.cos(m * theta)
-	
+
 	if cache is not None:
 		cache[('azim', m)] = res
-	
+
 	return res
-	
+
 def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None):
 	'''Evaluate the Zernike polynomial on a grid.
 
@@ -198,10 +198,10 @@ def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None):
 		Whether to apply a circular aperture to cutoff the modes.
 	cache : dictionary or None
 		A dictionary containing previously calculated Zernike modes on the same grid.
-		This function is for speedup only, and therefore the cache is expected to be 
+		This function is for speedup only, and therefore the cache is expected to be
 		valid. You can reuse the cache for future calculations on the same exact grid.
 		The given dictionary is updated with the current calculation.
-	
+
 	Returns
 	-------
 	Field or Field generator
@@ -212,7 +212,7 @@ def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None):
 
 	if grid is None:
 		return lambda grid: zernike(n, m, D, grid)
-	
+
 	if grid.is_separated and grid.is_('polar'):
 		R, Theta = grid.separated_coords
 		z_r = zernike_radial(n, m, 2 * R / D, cache)
@@ -224,7 +224,7 @@ def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None):
 		z = sqrt(n + 1) * zernike_azimuthal(m, theta, cache) * zernike_radial(n, m, 2 * r / D, cache)
 		if radial_cutoff:
 			z *= (2 * r) < D
-	
+
 	return Field(z, grid)
 
 def zernike_ansi(i, D=1, grid=None, radial_cutoff=True, cache=None):
@@ -243,10 +243,10 @@ def zernike_ansi(i, D=1, grid=None, radial_cutoff=True, cache=None):
 		Whether to apply a circular aperture to cutoff the modes.
 	cache : dictionary or None
 		A dictionary containing previously calculated Zernike modes on the same grid.
-		This function is for speedup only, and therefore the cache is expected to be 
+		This function is for speedup only, and therefore the cache is expected to be
 		valid. You can reuse the cache for future calculations on the same exact grid.
 		The given dictionary is updated with the current calculation.
-	
+
 	Returns
 	-------
 	Field or Field generator
@@ -272,10 +272,10 @@ def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None):
 		Whether to apply a circular aperture to cutoff the modes.
 	cache : dictionary or None
 		A dictionary containing previously calculated Zernike modes on the same grid.
-		This function is for speedup only, and therefore the cache is expected to be 
+		This function is for speedup only, and therefore the cache is expected to be
 		valid. You can reuse the cache for future calculations on the same exact grid.
 		The given dictionary is updated with the current calculation.
-	
+
 	Returns
 	-------
 	Field or Field generator
@@ -300,14 +300,14 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
 	starting_mode : int
 		The first mode to evaluate.
 	ansi : boolean
-		If this is True, the modes will be indexed using ANSI indices. Otherwise, a Noll 
+		If this is True, the modes will be indexed using ANSI indices. Otherwise, a Noll
 		indexing scheme is used.
 	radial_cutoff : boolean
 		Whether to apply a circular aperture to cutoff the modes.
 	use_cache : boolean
 		Whether to use a cache while calculating the modes. A cache uses memory, so turn it
 		off when you are limited on memory.
-	
+
 	Returns
 	-------
 	ModeBasis or list of Field generators
@@ -321,7 +321,7 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
 		polar_grid = None
 	else:
 		polar_grid = grid.as_('polar')
-	
+
 	if use_cache:
 		cache = {}
 	else:

@@ -1,16 +1,16 @@
 import numpy as np
-from .propagator import Propagator
+
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..field import Field
 from ..fourier import FastFourierTransform
-from ..field import evaluate_supersampled, make_pupil_grid, subsample_field
+from ..field import evaluate_supersampled, make_pupil_grid
 
 class FresnelPropagator(AgnosticOpticalElement):
 	'''The monochromatic Fresnel propagator for scalar fields.
 
-	The Fresnel propagator is implemented as described in [1]_.
+	The Fresnel propagator is implemented as described in [Goodman2005]_.
 
-	.. [1] Goodman, J.W., 2005 Introduction to Fourier optics. Roberts and Company Publishers.
+	.. [Goodman2005] Goodman, J.W., 2005 Introduction to Fourier optics. Roberts and Company Publishers.
 
 	Parameters
 	----------
@@ -41,9 +41,9 @@ class FresnelPropagator(AgnosticOpticalElement):
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		if not input_grid.is_regular or not input_grid.is_('cartesian'):
 			raise ValueError('The input grid must be a regular, Cartesian grid.')
-	
+
 		instance_data.fft = FastFourierTransform(input_grid, q=2)
-		
+
 		k = 2 * np.pi / wavelength * self.evaluate_parameter(self.refractive_index, input_grid, output_grid, wavelength)
 		L_max = np.max(input_grid.dims * input_grid.delta)
 
@@ -98,19 +98,19 @@ class FresnelPropagator(AgnosticOpticalElement):
 
 	def get_input_grid(self, output_grid, wavelength):
 		return output_grid
-	
+
 	def get_output_grid(self, input_grid, wavelength):
 		return input_grid
 
 	@make_agnostic_forward
 	def forward(self, instance_data, wavefront):
 		'''Propagate a wavefront forward by a certain distance.
-	
+
 		Parameters
 		----------
 		wavefront : Wavefront
 			The incoming wavefront.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -124,12 +124,12 @@ class FresnelPropagator(AgnosticOpticalElement):
 	@make_agnostic_backward
 	def backward(self, instance_data, wavefront):
 		'''Propagate a wavefront backward by a certain distance.
-	
+
 		Parameters
 		----------
 		wavefront : Wavefront
 			The incoming wavefront.
-		
+
 		Returns
 		-------
 		Wavefront

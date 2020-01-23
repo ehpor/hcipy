@@ -13,7 +13,7 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
 		self.center = np.zeros(2)
 
 		self.reset()
-	
+
 	def reset(self):
 		self.psd = power_spectral_density_von_karman(fried_parameter_from_Cn_squared(self.Cn_squared, 1), self.L0)
 
@@ -21,33 +21,33 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
 		self.noise = self.noise_factory.make_random()
 
 		self._dirty = False
-	
+
 	def phase_for(self, wavelength):
 		if self._dirty:
 			self.reset()
-		
+
 		if self._achromatic_screen is None:
 			self._achromatic_screen = self.noise.shifted(self.center)()
-		
+
 		return self._achromatic_screen / wavelength
-	
+
 	def evolve_until(self, t):
 		self.center = self.velocity * t
 		self._achromatic_screen = None
-	
+
 	@property
 	def Cn_squared(self):
 		return self._Cn_squared
-	
+
 	@Cn_squared.setter
 	def Cn_squared(self, Cn_squared):
 		self._Cn_squared = Cn_squared
 		self._dirty = True
-	
+
 	@property
 	def outer_scale(self):
 		return self._L0
-	
+
 	@outer_scale.setter
 	def L0(self, L0):
 		self._L0 = L0

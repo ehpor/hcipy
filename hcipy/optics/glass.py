@@ -8,7 +8,10 @@ def make_sellmeier_glass(A, K, L):
 
 	.. math:: n^2 = 1 + \sum_{i}{\frac{K_i \lambda^2}{\lambda^2-L_i}}
 
-	.. [Sellmeier1872] W. Sellmeier 1872, Ueber die durch die Aetherschwingungen erregten Mitschwingungen der Körpertheilchen und deren Rückwirkung auf die ersteren, besonders zur Erklärung der Dispersion und ihrer Anomalien (II. Theil),"  Annalen der Physik und Chemie. 223 (11), 386–403 (1872)
+	.. [Sellmeier1872] W. Sellmeier 1872, Ueber die durch die Aetherschwingungen erregten
+		Mitschwingungen der Körpertheilchen und deren Rückwirkung auf die ersteren, besonders
+		zur Erklärung der Dispersion und ihrer Anomalien (II. Theil),"  Annalen der Physik und
+		Chemie. 223 (11), 386–403 (1872)
 
 	Parameters
 	----------
@@ -21,7 +24,7 @@ def make_sellmeier_glass(A, K, L):
 
 	Returns
 	-------
-	function 
+	function
 		The refractive index profile function
 	'''
 	def refractive_index(wavelength):
@@ -46,7 +49,7 @@ def make_cauchy_glass(coefficients):
 
 	Returns
 	-------
-	function 
+	function
 		The refractive index profile function
 	'''
 	def refractive_index(wavelength):
@@ -66,7 +69,7 @@ def get_refractive_index(glass_name):
 	----------
 	glass_name : str
 		The name of the glass.
-	
+
 	Returns
 	-------
 	callable
@@ -74,16 +77,16 @@ def get_refractive_index(glass_name):
 	'''
 	if _glass_catalogue is None:
 		_build_glass_catalogue()
-	
+
 	if glass_name not in _glass_catalogue:
 		# Not found. Try to find suggestion.
 		for key in _glass_catalogue.keys():
 			if key.lower() == glass_name.lower():
 				raise ValueError('The requested glass "%s" was not found in the catalogue. Did you mean "%s"?' % (glass_name, key))
-		
+
 		# No suggestion found, raise
 		raise ValueError('The requested glass "%s" was not found in the catalogue.' % glass_name)
-	
+
 	return _glass_catalogue[glass_name]
 
 def get_glasses_in_catalogue():
@@ -96,7 +99,7 @@ def get_glasses_in_catalogue():
 	'''
 	if _glass_catalogue is None:
 		_build_glass_catalogue()
-	
+
 	return _glass_catalogue.keys()
 
 def _build_glass_catalogue():

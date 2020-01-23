@@ -14,7 +14,7 @@ def large_poisson(lam, thresh=1e6):
 		Expectation value for the Poisson distribution. Must be >= 0.
 	thresh : float
 		The threshold at which the distribution switched from a Poisson to a normal distribution.
-	
+
 	Returns
 	-------
 	array_like
@@ -22,7 +22,7 @@ def large_poisson(lam, thresh=1e6):
 	"""
 	large = lam > thresh
 	small = ~large
-	
+
 	# Use normal approximation if the number of photons is large
 	n = np.zeros(lam.shape)
 	n[large] = np.round(lam[large] + np.random.normal(size=np.sum(large)) * np.sqrt(lam[large]))
@@ -30,5 +30,5 @@ def large_poisson(lam, thresh=1e6):
 
 	if hasattr(lam, 'grid'):
 		n = Field(n, lam.grid)
-	
+
 	return n

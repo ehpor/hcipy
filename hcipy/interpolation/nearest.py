@@ -11,7 +11,7 @@ def make_nearest_interpolator_separated(field, grid=None):
 		The field to interpolate.
 	grid : Grid or None
 		The grid of the field. If it is given, the grid of `field` is replaced by this grid.
-	
+
 	Returns
 	-------
 	Field generator
@@ -22,7 +22,7 @@ def make_nearest_interpolator_separated(field, grid=None):
 		grid = field.grid
 	else:
 		field = Field(field, grid)
-	
+
 	axes_reversed = np.array(grid.separated_coords)
 	interp = RegularGridInterpolator(axes_reversed, field.shaped, 'nearest', False)
 
@@ -42,7 +42,7 @@ def make_nearest_interpolator_unstructured(field, grid=None):
 		The field to interpolate.
 	grid : Grid or None
 		The grid of the field. If it is given, the grid of `field` is replaced by this grid.
-	
+
 	Returns
 	-------
 	Field generator
@@ -53,13 +53,13 @@ def make_nearest_interpolator_unstructured(field, grid=None):
 		grid = field.grid
 	else:
 		field = Field(field, grid)
-	
-	interp = NearestNDInterpolator(grid.points, field, fill_value)
+
+	interp = NearestNDInterpolator(grid.points, field)
 
 	def interpolator(evaluated_grid):
 		res = interp(grid.points)
 		return Field(res, evaluated_grid)
-	
+
 	return interpolator
 
 def make_nearest_interpolator(field, grid=None):
@@ -71,7 +71,7 @@ def make_nearest_interpolator(field, grid=None):
 		The field to interpolate.
 	grid : Grid or None
 		The grid of the field. If it is given, the grid of `field` is replaced by this grid.
-	
+
 	Returns
 	-------
 	Field generator
@@ -80,7 +80,7 @@ def make_nearest_interpolator(field, grid=None):
 	'''
 	if grid is None:
 		grid = field.grid
-	
+
 	if grid.is_unstructured:
 		return make_nearest_interpolator_unstructured(field, grid)
 	else:

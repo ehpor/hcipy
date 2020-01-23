@@ -33,7 +33,7 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		'''Propagates a wavefront through the modulated pyramid wavefront sensor.
 
 		Parameters
-		----------		
+		----------
 		wavefront : Wavefront
 			The input wavefront that will propagate through the system.
 
@@ -80,14 +80,14 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 
 		self.input_grid = input_grid
 		D = np.max(input_grid.delta * (input_grid.shape - 1))
-		
+
 		if separation is None:
 			separation = D
 
 		# Oversampling necessary to see all frequencies in the output wavefront sensor plane
 		qmin = max(2 * separation / D, 1)
 		if q is None:
-			q = qmin 
+			q = qmin
 		elif q < qmin:
 			raise ValueError('The requested focal plane sampling is too low to sufficiently sample the wavefront sensor output.')
 
@@ -95,10 +95,10 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 			self.num_airy = np.max(input_grid.shape - 1) / 2
 		else:
 			self.num_airy = num_airy
-		
+
 		self.focal_grid = make_focal_grid(q, self.num_airy, reference_wavelength=wavelength_0, pupil_diameter=D, focal_length=1)
 		self.output_grid = make_pupil_grid(qmin * input_grid.dims, qmin * D)
-		
+
 		# Make all the optical elements
 		self.spatial_filter = Apodizer(circular_aperture(2 * self.num_airy * wavelength_0 / D)(self.focal_grid))
 		pyramid_surface = -separation / (2 * (refractive_index(wavelength_0) - 1)) * (np.abs(self.focal_grid.x) + np.abs(self.focal_grid.y))
@@ -112,7 +112,7 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		'''Propagates a wavefront through the pyramid wavefront sensor.
 
 		Parameters
-		----------		
+		----------
 		wavefront : Wavefront
 			The input wavefront that will propagate through the system.
 
@@ -131,7 +131,7 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		'''Propagates a wavefront backwards through the pyramid wavefront sensor.
 
 		Parameters
-		----------		
+		----------
 		wavefront : Wavefront
 			The input wavefront that will propagate through the system.
 
@@ -148,14 +148,14 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 
 class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 	'''Estimates the wavefront slopes from pyramid wavefront sensor images.
-	
+
 	Parameters
 	----------
 	aperture : function
 		A function which mask the pupils for the normalized differences.
 	output_grid : Grid
 		The grid on which the output of a pyramid wavefront sensor is sampled.
-	
+
 	Attributes
 	----------
 	measurement_grid : Grid
@@ -176,7 +176,7 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 		----------
 		images - list
 			A list of scalar intensity fields containing pyramid wavefront sensor images.
-			
+
 		Returns
 		-------
 		res - Field

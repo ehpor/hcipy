@@ -11,7 +11,7 @@ class SVD(object):
 
 	When a sparse matrix is passed, and no number of modes is given, all but one
 	mode will be calculated. The reason is that the sparse SVD implementation in Scipy
-	doesn't allow calculation of all modes. If all modes are required, the user 
+	doesn't allow calculation of all modes. If all modes are required, the user
 	must pass a densified version of the matrix (ie. `M.toarray()`).
 
 	Parameters

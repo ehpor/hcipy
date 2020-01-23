@@ -1,5 +1,4 @@
 from .infinite_atmospheric_layer import InfiniteAtmosphericLayer
-from .atmospheric_model import MultiLayerAtmosphere
 
 import numpy as np
 
@@ -11,5 +10,5 @@ def make_standard_atmospheric_layers(input_grid, L0=10):
 	layers = []
 	for h, v, cn in zip(heights, velocities, Cn_squared):
 		layers.append(InfiniteAtmosphericLayer(input_grid, cn, L0, v, h, 2))
-	
+
 	return layers

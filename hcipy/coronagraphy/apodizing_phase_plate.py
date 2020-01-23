@@ -1,23 +1,22 @@
 import numpy as np
-from ..propagation import FraunhoferPropagator
-from ..field import Field   
+from ..field import Field
 
 from ..optics import GeometricPhaseElement
 
 def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0):
 	"""
 	Accelerated Gerchberg-Saxton-like algorithm for APP design by
-	Christoph Keller [1]_ and based on Douglas-Rachford operator splitting.
-	The acceleration was inspired by the paper by Jim Fienup [2]_. The 
-	acceleration can provide speed-ups of up to two orders of magnitude and 
+	Christoph Keller [Keller2016]_ and based on Douglas-Rachford operator splitting.
+	The acceleration was inspired by the paper by Jim Fienup [Fienup1976]_. The
+	acceleration can provide speed-ups of up to two orders of magnitude and
 	produce better APPs.
 
-	.. [1] Keller C.U., 2016, "Novel instrument concepts for
+	.. [Keller2016] Keller C.U., 2016, "Novel instrument concepts for
 		characterizing directly imaged exoplanets", Proc. SPIE 9908,
 		Ground-based and Airborne Instrumentation for Astronomy VI, 99089V
 		doi: 10.1117/12.2232633; https://doi.org/10.1117/12.2232633
 
-	.. [2] J. R. Fienup, 1976, "Reconstruction of an object from the modulus 
+	.. [Fienup1976] J. R. Fienup, 1976, "Reconstruction of an object from the modulus
 		of its Fourier transform," Opt. Lett. 3, 27-29
 
 	Parameters
@@ -42,7 +41,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 	-------
 	Wavefront
 		The APP as a wavefront.
-	
+
 	Raises
 	------
 	ValueError
@@ -60,6 +59,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 	# define dark zone as location where contrast requirement is < 1e-1
 	dark_zone = contrast < 0.1
 
+	old_image = None
 	for i in range(num_iterations):
 		# calculate image plane electric field
 		image = propagator.forward(app)
@@ -70,10 +70,8 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 
 		# modify focal plane electic field using acceleration
 		new_image = image.copy()
-		if beta != 0 and i > 1:
-			new_image.electric_field[dark_zone] = (
-				old_image.electric_field[dark_zone] * beta
-				- new_image.electric_field[dark_zone] * (1 + beta))
+		if beta != 0 and old_image is not None:
+			new_image.electric_field[dark_zone] = old_image.electric_field[dark_zone] * beta - new_image.electric_field[dark_zone] * (1 + beta)
 		else:
 			new_image.electric_field[dark_zone] = 0
 		old_image = new_image.copy()
@@ -85,8 +83,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 		app.electric_field[~aperture] = 0
 
 		# enforce unity transmission within aperture support
-		app.electric_field[aperture] *= (
-			wavefront.amplitude[aperture] / app.amplitude[aperture])
+		app.electric_field[aperture] *= wavefront.amplitude[aperture] / app.amplitude[aperture]
 
 	return app
 
@@ -164,11 +161,11 @@ class VectorApodizingPhasePlate(GeometricPhaseElement):
 
 	Parameters
 	----------
-	phase_pattern : field or array_like 
-		The phase pattern generating the vAPP PSFs (radians).		
-	leakage : scalar 
+	phase_pattern : field or array_like
+		The phase pattern generating the vAPP PSFs (radians).
+	leakage : scalar
 		The relative leakage strength (0 = no leakage, 1 = maximum leakage)
-	retardance_offset : scalar 
+	retardance_offset : scalar
 		The retardance offset from half wave in radians. This will result in leakage.
 	'''
 	def __init__(self, phase_pattern, leakage=None, retardance_offset=0, wavelength=1):

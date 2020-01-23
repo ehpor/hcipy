@@ -31,7 +31,7 @@ def check_segmentation(aperture_function):
 	segments = evaluate_supersampled(segments, grid, 2)
 
 	aperture_from_segments = segments.linear_combination(np.ones(len(segments)))
-	
+
 	assert np.allclose(aperture, aperture_from_segments)
 
 def check_aperture_against_reference(aperture_function, basename, diameter, options):
@@ -54,6 +54,13 @@ def test_regular_polygon_aperture():
 
 	check_aperture_against_reference(functools.partial(regular_polygon_aperture, circum_diameter=1), 'polygon', 1, options)
 
+def test_elliptical_aperture():
+	options = {
+		'diameters': [([0.5, 0.5], '_round'), ([1, 0.5], '_elongated')]
+	}
+
+	check_aperture_against_reference(elliptical_aperture, 'ellipse', 1, options)
+
 def test_obstructed_circular_aperture():
 	options = {
 		'central_obscuration_ratio': [(0.1, '_small_obscuration'), (0.3, '_large_obscuration')],
@@ -68,7 +75,7 @@ def test_magellan_aperture():
 		'normalized': [(False, ''), (True, '_normalized')],
 		'with_spiders': [(True, ''), (False, '_without_spiders')]
 	}
-	
+
 	check_aperture_against_reference(make_magellan_aperture, 'magellan', 6.5, options)
 
 def test_luvoir_a_aperture():
@@ -91,7 +98,7 @@ def test_luvoir_a_lyot_stop():
 		'normalized': [(False, ''), (True, '_normalized')],
 		'with_spiders': [(True, ''), (False, '_without_spiders')]
 	}
-	
+
 	check_aperture_against_reference(make_luvoir_a_lyot_stop, 'luvoir_a_lyot', 15, options)
 
 def test_hicat_aperture():
@@ -114,5 +121,5 @@ def test_hicat_lyot_stop():
 		'normalized': [(False, ''), (True, '_normalized')],
 		'with_spiders': [(True, ''), (False, '_without_spiders')]
 	}
-	
+
 	check_aperture_against_reference(make_hicat_lyot_stop, 'hicat_lyot', 19.9e-3, options)

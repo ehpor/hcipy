@@ -137,11 +137,11 @@ def test_perfect_coronagraph():
 		for tilt in tilts:
 			leakage = coro(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilt))).total_power
 			coronagraph_leakage.append(leakage)
-		
+
 		y = np.log10(coronagraph_leakage)
 		x = np.log10(tilts)
 		n = len(x)
-		
+
 		# Do a linear fit on the log-log data to get the power-law coefficient
 		beta = ((x * y).sum() - x.sum() * y.sum() / n) / ((x * x).sum() - x.sum()**2 / n)
 		assert np.abs(beta - order) / order < 1e-3

@@ -3,7 +3,8 @@ import numpy as np
 
 from ..field import Field
 
-def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None, non_linear_axes=False, cmap=None, mask=None, mask_color='k', grid_units=1, *args, **kwargs):
+def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None,
+		non_linear_axes=False, cmap=None, mask=None, mask_color='k', grid_units=1, *args, **kwargs):
 	'''Display a two-dimensional image on a matplotlib figure.
 
 	This function serves as an easy replacement for the matplotlib.pyplot.imshow() function.
@@ -15,17 +16,17 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		The field that we want to display. If this is an ndarray,
 		then the parameter `grid` needs to be supplied. If the field
 		is complex, then it will be automatically fed into :func:`complex_field_to_rgb`.
-		If the field is a vector field with length 3 or 4, these will be 
+		If the field is a vector field with length 3 or 4, these will be
 		interpreted as an RGB or RGBA field.
 	grid : Grid or None
 		If a grid is supplied, it will be used instead of the grid of `field`.
 	ax : matplotlib axes
 		The axes which to draw on. If it is not given, the current axes will be used.
 	vmin : scalar
-		The minimum value on the colorbar. If it is not given, then the minimum value 
+		The minimum value on the colorbar. If it is not given, then the minimum value
 		of the field will be used.
 	vmax : scalar
-		The maximum value on the colorbar. If it is not given, then the maximum value 
+		The maximum value on the colorbar. If it is not given, then the maximum value
 		of the field will be used.
 	aspect : ['auto', 'equal', scalar]
 		If 'auto', changes the image aspect ratio to match that of the axes.
@@ -53,7 +54,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 	grid_units : scalar or array_like
 		The size of a unit square. The grid will be scaled by the inverse of this number before
 		plotting. If this is a scalar, an isotropic scaling will be applied.
-	
+
 	Returns
 	-------
 	AxesImage
@@ -65,7 +66,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 
 	if ax is None:
 		ax = plt.gca()
-	
+
 	ax.set_aspect(aspect)
 
 	# Set/Find the correct grid and scale according to received grid units.
@@ -89,7 +90,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		norm = None
 	else:
 		f = field
-	
+
 	# Automatically determine vmin, vmax, norm if not overridden
 	if norm is None and not np.iscomplexobj(field):
 		if vmin is None:
@@ -97,7 +98,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		if vmax is None:
 			vmax = np.nanmax(f)
 		norm = mpl.colors.Normalize(vmin, vmax)
-	
+
 	# Get extent
 	c_grid = grid.as_('cartesian')
 	min_x, min_y, max_x, max_y = c_grid.x.min(), c_grid.y.min(), c_grid.x.max(), c_grid.y.max()
@@ -109,18 +110,18 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		if np.iscomplexobj(field) or field.tensor_order > 0:
 			z = np.rollaxis(z, 0, z.ndim)
 	else:
-		# We can't draw this directly. 
+		# We can't draw this directly.
 		raise NotImplementedError()
 
 	if non_linear_axes:
 		# Use pcolormesh to display
 		x_mid = (x[1:] + x[:-1]) / 2
 		y_mid = (y[1:] + y[:-1]) / 2
-		
+
 		x2 = np.concatenate(([1.5 * x[0] - 0.5 * x[1]], x_mid, [1.5 * x[-1] - 0.5 * x[-2]]))
 		y2 = np.concatenate(([1.5 * y[0] - 0.5 * y[1]], y_mid, [1.5 * y[-1] - 0.5 * y[-2]]))
 		X, Y = np.meshgrid(x2, y2)
-		
+
 		im = ax.pcolormesh(X, Y, z, *args, norm=norm, rasterized=True, cmap=cmap, **kwargs)
 	else:
 		# Use NonUniformImage to display
@@ -175,15 +176,15 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
 		The field that we want to display. If this is an ndarray,
 		then the parameter `grid` needs to be supplied. If the field
 		is complex, then it will be automatically fed into :func:`complex_field_to_rgb`.
-		If the field is a vector field with length 3 or 4, these will be 
+		If the field is a vector field with length 3 or 4, these will be
 		interpreted as an RGB or RGBA field.
 	grid : Grid or None
 		If a grid is supplied, it will be used instead of the grid of `field`.
 	vmin : scalar
-		The minimum value on the colorbar. If it is not given, then the minimum value 
+		The minimum value on the colorbar. If it is not given, then the minimum value
 		of the field will be used.
 	vmax : scalar
-		The maximum value on the colorbar. If it is not given, then the maximum value 
+		The maximum value on the colorbar. If it is not given, then the maximum value
 		of the field will be used.
 	norm : Normalize
 		A Normalize instance is used to scale the input to the (0, 1) range for
@@ -239,7 +240,7 @@ def contour_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 		The field that we want to display. If this is an ndarray,
 		then the parameter `grid` needs to be supplied. If the field
 		is complex, then it will be automatically fed into :func:`complex_field_to_rgb`.
-		If the field is a vector field with length 3 or 4, these will be 
+		If the field is a vector field with length 3 or 4, these will be
 		interpreted as an RGB or RGBA field.
 	grid : Grid or None
 		If a grid is supplied, it will be used instead of the grid of `field`.
@@ -248,7 +249,7 @@ def contour_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 	grid_units : scalar or array_like
 		The size of a unit square. The grid will be scaled by the inverse of this number before
 		plotting. If this is a scalar, an isotropic scaling will be applied.
-	
+
 	Returns
 	-------
 	QuadContourSet
@@ -285,6 +286,9 @@ def contour_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 	else:
 		raise NotImplementedError()
 
+	ax.set_xlim(min_x, max_x)
+	ax.set_ylim(min_y, max_y)
+
 	return cs
 
 def contourf_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
@@ -296,7 +300,7 @@ def contourf_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 		The field that we want to display. If this is an ndarray,
 		then the parameter `grid` needs to be supplied. If the field
 		is complex, then it will be automatically fed into :func:`complex_field_to_rgb`.
-		If the field is a vector field with length 3 or 4, these will be 
+		If the field is a vector field with length 3 or 4, these will be
 		interpreted as an RGB or RGBA field.
 	grid : Grid or None
 		If a grid is supplied, it will be used instead of the grid of `field`.
@@ -305,7 +309,7 @@ def contourf_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 	grid_units : scalar or array_like
 		The size of a unit square. The grid will be scaled by the inverse of this number before
 		plotting. If this is a scalar, an isotropic scaling will be applied.
-	
+
 	Returns
 	-------
 	QuadContourSet
@@ -335,12 +339,15 @@ def contourf_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 		# We can contour directly
 		x, y = grid.coords.separated_coords
 		z = field.shaped
-		
+
 		X, Y = np.meshgrid(x, y)
-		
+
 		cs = ax.contourf(X, Y, z, *args, **kwargs)
 	else:
 		raise NotImplementedError()
+
+	ax.set_xlim(min_x, max_x)
+	ax.set_ylim(min_y, max_y)
 
 	return cs
 
@@ -370,12 +377,12 @@ def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
 		A Normalize instance is used to scale the absolute value to the (0, 1) range
 		used for the value or saturation for the returned color. If it is not given,
 		a linear scale will be used.
-	
+
 	Returns
 	-------
 	Field
 		A vector field containing the red, green and blue components.
-	
+
 	Raises
 	------
 	ValueError

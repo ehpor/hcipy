@@ -1,5 +1,4 @@
 from ..optics import Apodizer, OpticalElement, Wavefront
-from ..propagation import FraunhoferPropagator
 from ..field import Field
 from ..fourier import FastFourierTransform, make_fft_grid
 
@@ -34,7 +33,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		fft = FastFourierTransform(input_grid, q, 1)
 		self.cutout_input = (Ellipsis, fft.cutout_input[1])
 		self.internal_shape = input_grid.shape[0], fft.internal_shape[1]
-		
+
 		# Create the knife-edge focal-plane mask along the x-axis.
 		focal_mask_grid = make_fft_grid(input_grid, q).scaled(1.0 / (2 * np.pi))
 		x = focal_mask_grid.separated_coords[0]
@@ -44,7 +43,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		# Pre-shift the mask to speed up propagations
 		# FIXME: not necessary when 1D FFTs on 2D grids are implemented.
 		self.focal_mask = np.fft.fftshift(self.focal_mask)
-		
+
 		if apodizer is not None and not hasattr(apodizer, 'input_grid'):
 			apodizer = Apodizer(apodizer)
 		self.apodizer = apodizer
@@ -52,7 +51,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		if lyot_stop is not None and not hasattr(lyot_stop, 'input_grid'):
 			lyot_stop = Apodizer(lyot_stop)
 		self.lyot_stop = lyot_stop
-	
+
 	def forward(self, wavefront):
 		'''Propagate a wavefront forward through the knife-edge coronagraph.
 
@@ -60,7 +59,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -71,7 +70,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 
 		ap = np.zeros(self.internal_shape, dtype='complex')
 		ap[tuple(self.cutout_input)] = wavefront.electric_field.shaped
-		
+
 		# FIXME: use 1D FFTs on 2D grids implementation when available, instead of this.
 		post_coro = np.fft.ifft(np.fft.fft(ap, axis=1) * self.focal_mask[np.newaxis,:], axis=1)
 		post_coro = Field(post_coro[self.cutout_input].ravel(), wavefront.electric_field.grid)
@@ -80,9 +79,9 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 
 		if self.lyot_stop is not None:
 			wavefront = self.lyot_stop.forward(wavefront)
-		
+
 		return wavefront
-	
+
 	def backward(self, wavefront):
 		'''Propagate a wavefront backward through the knife-edge coronagraph.
 
@@ -90,7 +89,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The wavefront to propagate.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -101,7 +100,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 
 		ap = np.zeros(self.internal_shape, dtype='complex')
 		ap[tuple(self.cutout_input)] = wavefront.electric_field.shaped
-		
+
 		# FIXME: use 1D FFTs on 2D grids implementation when available, instead of this.
 		post_coro = np.fft.ifft(np.fft.fft(ap, axis=1) * self.focal_mask[np.newaxis,:], axis=1)
 		post_coro = Field(post_coro[self.cutout_input].ravel(), wavefront.electric_field.grid)

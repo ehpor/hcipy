@@ -1,5 +1,5 @@
 import numpy as np
-from math import sqrt, floor
+from math import sqrt
 from scipy.special import eval_hermite
 
 def index_to_hermite(i):
@@ -12,7 +12,7 @@ def index_to_hermite(i):
 	----------
 	i : int
 		The one-dimensional index.
-	
+
 	Returns
 	-------
 	n : int
@@ -23,23 +23,26 @@ def index_to_hermite(i):
 
 	# Get the max order
 	o = int((np.sqrt(8 * i + 1) - 1) / 2)
+
 	# Get the y order
 	m = int(i - o * (o + 1) / 2)
+
 	# Get the x order
 	n = o - m
+
 	return n, m
-	
+
 def gaussian_hermite(n, m, mode_field_diameter=1, grid=None):
 	r'''Creates a Gaussian-Hermite mode.
 
 	This function evaluates a (n, m) order Gaussian-Hermite mode on a grid.
 	The definition of the modes are the following,
 
-	.. math:: 
+	.. math::
 		\exp{\left(-\frac{r^2}{w_0^2}\right)} H_n\left(\sqrt{2}\frac{x}{w_0}\right) H_m\left(\sqrt{2}\frac{y}{w_0}\right).
-	
-	Here :math:`w_0` is the mode_field_radius, which is :math:`\mathrm{MFD}/2`. This defintion follows 
-	the Physicists definition of the Hermite polynomials. The modes are numerical normalized to have a 
+
+	Here :math:`w_0` is the mode_field_radius, which is :math:`\mathrm{MFD}/2`. This defintion follows
+	the Physicists definition of the Hermite polynomials. The modes are numerical normalized to have a
 	total power of 1.
 
 	More details on the Hermite Polynomials can be found on: http://mathworld.wolfram.com/HermitePolynomial.html
@@ -54,7 +57,7 @@ def gaussian_hermite(n, m, mode_field_diameter=1, grid=None):
 		The mode field diameter of the Gaussian-Laguerre mode.
 	grid : Grid
 		The grid on which to evaluate the mode.
-	
+
 	Returns
 	-------
 	Field
@@ -71,17 +74,17 @@ def gaussian_hermite(n, m, mode_field_diameter=1, grid=None):
 		r2 = (2 * grid.r / mode_field_diameter)**2
 
 	# Calculate the mode.
-	hg = np.exp(-r2) * eval_hermite(n, 2*sqrt(2) * x / mode_field_diameter) * eval_hermite(m, 2*sqrt(2) * y / mode_field_diameter)
-	
+	hg = np.exp(-r2) * eval_hermite(n, 2 * sqrt(2) * x / mode_field_diameter) * eval_hermite(m, 2 * sqrt(2) * y / mode_field_diameter)
+
 	# Numerically normalize the mode
-	hg /= np.sum(np.abs(hg)**2 * grid.weights)
-	
+	hg /= np.sqrt(np.sum(np.abs(hg)**2 * grid.weights))
+
 	return Field(hg, grid)
 
 def gaussian_hermite_index(i, mode_field_diameter=1, grid=None):
 	'''Creates a Gaussian-Hermite mode.
 
-	This function evaluates the i-th order Gaussian-Hermite mode on a grid.	
+	This function evaluates the i-th order Gaussian-Hermite mode on a grid.
 
 	Parameters
 	----------
@@ -125,5 +128,5 @@ def make_gaussian_hermite_basis(grid, num_modes, mode_field_diameter, starting_m
 	'''
 	from .mode_basis import ModeBasis
 
-	modes = [gaussian_hermite_index(i, mode_field_diameter, grid) for i in range(starting_mode, starting_mode+num_modes)]
+	modes = [gaussian_hermite_index(i, mode_field_diameter, grid) for i in range(starting_mode, starting_mode + num_modes)]
 	return ModeBasis(modes)

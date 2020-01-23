@@ -13,7 +13,7 @@ class Grid(object):
 	weights : array_like or None
 		The interval size, area, volume or hypervolume of each point, depending on the number of dimensions.
 		If this is None (default), the weights will be attempted to be calculated on the fly when needed.
-	
+
 	Attributes
 	----------
 	coords
@@ -22,33 +22,33 @@ class Grid(object):
 
 	_coordinate_system = 'none'
 	_coordinate_system_transformations = {}
-	
+
 	def __init__(self, coords, weights=None):
 		self.coords = coords
 		self.weights = weights
-	
+
 	def copy(self):
 		'''Create a copy.
 		'''
 		return copy.deepcopy(self)
-	
+
 	def subset(self, criterium):
 		'''Construct a subset of the current sampling, based on `criterium`.
 
 		Parameters
 		----------
 		criterium : function or array_like
-			The criterium used to select points. A function will be evaluated for every point. 
+			The criterium used to select points. A function will be evaluated for every point.
 			Otherwise, this must be a boolean array of integer array, used for slicing the points.
-		
+
 		Returns
 		-------
 		Grid
-			A new grid with UnstructuredCoords that includes only the points for which the criterium 
+			A new grid with UnstructuredCoords that includes only the points for which the criterium
 			was true.
 		'''
 		from .coordinates import UnstructuredCoords
-		
+
 		if hasattr(criterium, '__call__'):
 			indices = criterium(self) != 0
 		else:
@@ -56,19 +56,19 @@ class Grid(object):
 		new_coords = [c[indices] for c in self.coords]
 		new_weights = self.weights[indices]
 		return self.__class__(UnstructuredCoords(new_coords), new_weights)
-	
+
 	@property
 	def ndim(self):
 		'''The number of dimensions.
 		'''
 		return len(self.coords)
-	
+
 	@property
 	def size(self):
 		'''The number of points in this grid.
 		'''
 		return self.coords.size
-	
+
 	def __len__(self):
 		'''The number of points in this grid.
 		'''
@@ -86,7 +86,7 @@ class Grid(object):
 		if not self.is_separated:
 			raise ValueError('A non-separated grid does not have dims.')
 		return self.coords.dims
-	
+
 	@property
 	def shape(self):
 		'''The shape of a reshaped ``numpy.ndarray`` using this grid.
@@ -112,7 +112,7 @@ class Grid(object):
 		if not self.is_regular:
 			raise ValueError('A non-regular grid does not have a delta.')
 		return self.coords.delta
-	
+
 	@property
 	def zero(self):
 		'''The zero point of a regularly-spaced grid.
@@ -125,7 +125,7 @@ class Grid(object):
 		if not self.is_regular:
 			raise ValueError('A non-regular grid does not have a zero.')
 		return self.coords.zero
-	
+
 	@property
 	def separated_coords(self):
 		'''A list of coordinates for each dimension in a separated grid.
@@ -138,7 +138,7 @@ class Grid(object):
 		if not self.is_separated:
 			raise ValueError('A non-separated grid does not have separated coordinates.')
 		return self.coords.separated_coords
-	
+
 	@property
 	def regular_coords(self):
 		'''The tuple (delta, dims, zero) for a regularly-spaced grid.
@@ -151,12 +151,12 @@ class Grid(object):
 		if not self.is_regular:
 			raise ValueError('A non-regular grid does not have regular coordinates.')
 		return self.coords.regular_coords
-	
+
 	@property
 	def weights(self):
 		'''The interval size, area, volume or hypervolume of each point, depending on the number of dimensions.
 
-		The weights are attempted to be calculated on the fly if not set. If this fails, a warning is emitted and all points will be given an equal weight of one. 
+		The weights are attempted to be calculated on the fly if not set. If this fails, a warning is emitted and all points will be given an equal weight of one.
 		'''
 		if self._weights is None:
 			self._weights = self.__class__._get_automatic_weights(self.coords)
@@ -164,27 +164,27 @@ class Grid(object):
 			if self._weights is None:
 				self._weights = 1
 				warnings.warn('No automatic weights could be calculated for this grid.', stacklevel=2)
-		
+
 		if np.isscalar(self._weights):
 			return np.ones(self.size) * self._weights
 		else:
 			return self._weights
-	
+
 	@weights.setter
 	def weights(self, weights):
 		self._weights = weights
-	
+
 	@property
 	def points(self):
 		'''A list of points of this grid.
 
 		This can be used for easier iteration::
-		
+
 			for p in grid.points:
 				print(p)
 		'''
 		return np.array(self.coords).T
-	
+
 	@property
 	def is_separated(self):
 		'''True if the grid is separated, False otherwise.
@@ -196,13 +196,13 @@ class Grid(object):
 		'''True if the grid is regularly-spaced, False otherwise.
 		'''
 		return self.coords.is_regular
-	
+
 	@property
 	def is_unstructured(self):
 		'''True if the grid is unstructured, False otherwise.
 		'''
 		return self.coords.is_unstructured
-	
+
 	def is_(self, system):
 		'''Check if the coordinate system is `system`.
 
@@ -232,7 +232,7 @@ class Grid(object):
 		-------
 		Grid
 			A new :class:`Grid` in the required coordinate system.
-		
+
 		Raises
 		------
 		ValueError
@@ -242,14 +242,14 @@ class Grid(object):
 			return self
 		else:
 			return Grid._coordinate_system_transformations[self._coordinate_system][system](self)
-	
+
 	@staticmethod
 	def _add_coordinate_system_transformation(source, dest, func):
 		if source in Grid._coordinate_system_transformations:
 			Grid._coordinate_system_transformations[source][dest] = func
 		else:
 			Grid._coordinate_system_transformations[source] = {dest: func}
-	
+
 	def __getitem__(self, i):
 		'''The `i`-th point in this grid.
 		'''
@@ -262,14 +262,14 @@ class Grid(object):
 		----------
 		scale : array_like
 			The factor with which to scale the grid.
-		
+
 		Returns
 		-------
 		Grid
 			Itself to allow for chaining these transformations.
 		'''
 		raise NotImplementedError()
-	
+
 	def scaled(self, scale):
 		'''A scaled copy of this grid.
 
@@ -277,7 +277,7 @@ class Grid(object):
 		----------
 		scale : array_like
 			The factor with which to scale the grid.
-		
+
 		Returns
 		-------
 		Grid
@@ -286,7 +286,7 @@ class Grid(object):
 		grid = self.copy()
 		grid.scale(scale)
 		return grid
-	
+
 	def shift(self, shift):
 		'''Shift the grid in-place.
 
@@ -294,14 +294,14 @@ class Grid(object):
 		----------
 		shift : array_like
 			The amount with which to shift the grid.
-		
+
 		Returns
 		-------
 		Grid
 			Itself to allow for chaining these transformations.
 		'''
 		raise NotImplementedError()
-	
+
 	def shifted(self, shift):
 		'''A shifted copy of this grid.
 
@@ -309,7 +309,7 @@ class Grid(object):
 		----------
 		shift : array_like
 			The amount with which to shift the grid.
-		
+
 		Returns
 		-------
 		Grid
@@ -318,7 +318,7 @@ class Grid(object):
 		grid = self.copy()
 		grid.shift(shift)
 		return grid
-	
+
 	def rotate(self, angle, axis=None):
 		'''Rotate the grid in-place.
 
@@ -329,14 +329,14 @@ class Grid(object):
 		axis : ndarray or None
 			The axis of rotation. For two-dimensional grids, it is ignored. For
 			three-dimensional grids it is required.
-		
+
 		Returns
 		-------
 		Grid
 			Itself to allow for chaining these transformations.
 		'''
 		raise NotImplementedError()
-	
+
 	def rotated(self, angle, axis=None):
 		'''A rotated copy of this grid.
 
@@ -347,7 +347,7 @@ class Grid(object):
 		axis : ndarray or None
 			The axis of rotation. For two-dimensional grids, it is ignored. For
 			three-dimensional grids it is required.
-		
+
 		Returns
 		-------
 		Grid
@@ -379,14 +379,14 @@ class Grid(object):
 		grid = self.copy()
 		grid.reverse()
 		return grid
-	
+
 	@staticmethod
 	def _get_automatic_weights(coords):
 		raise NotImplementedError()
-	
+
 	def __str__(self):
 		return str(self.__class__.__name__) + '(' + str(self.coords.__class__.__name__) + ')'
-	
+
 	def __hash__(self):
 		h = xxhash.xxh64()
 		h.update(self._coordinate_system)
@@ -401,7 +401,7 @@ class Grid(object):
 		else:
 			for s in self.coords:
 				h.update(s)
-		
+
 		return h.intdigest()
 
 	def closest_to(self, p):
@@ -413,7 +413,7 @@ class Grid(object):
 		----------
 		p : array_like
 			The point at which to search for.
-		
+
 		Returns
 		-------
 		int
@@ -421,18 +421,18 @@ class Grid(object):
 		'''
 		rel_points = self.points - np.array(p) * np.ones(self.ndim)
 		return np.argmin(np.sum(rel_points**2, axis=-1))
-	
+
 	def zeros(self, tensor_shape=None, dtype=None):
 		'''Create a field of zeros from this `Grid`.
 
 		Parameters
 		----------
 		tensor_shape : array_like or None
-			The shape of the tensors in the to be created field. If this is None, 
+			The shape of the tensors in the to be created field. If this is None,
 			a scalar field will be created.
 		dtype : data-type
 			The numpy data-type with which to create the field.
-		
+
 		Returns
 		-------
 		Field
@@ -446,18 +446,18 @@ class Grid(object):
 			shape = np.concatenate((tensor_shape, [self.size]))
 
 		return Field(np.zeros(shape, dtype), self)
-	
+
 	def ones(self, tensor_shape=None, dtype=None):
 		'''Create a field of ones from this `Grid`.
 
 		Parameters
 		----------
 		tensor_shape : array_like or None
-			The shape of the tensors in the to be created field. If this is None, 
+			The shape of the tensors in the to be created field. If this is None,
 			a scalar field will be created.
 		dtype : data-type
 			The numpy data-type with which to create the field.
-		
+
 		Returns
 		-------
 		Field
@@ -478,11 +478,11 @@ class Grid(object):
 		Parameters
 		----------
 		tensor_shape : array_like or None
-			The shape of the tensors in the to be created field. If this is None, 
+			The shape of the tensors in the to be created field. If this is None,
 			a scalar field will be created.
 		dtype : data-type
 			The numpy data-type with which to create the field.
-		
+
 		Returns
 		-------
 		Field

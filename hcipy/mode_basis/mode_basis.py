@@ -23,7 +23,7 @@ class ModeBasis(object):
 		else:
 			sparse = False
 			is_list = isinstance(transformation_matrix, (list, tuple))
-		
+
 		if sparse:
 			if is_list:
 				self._modes = scipy.sparse.vstack(transformation_matrix, format='csr')
@@ -62,14 +62,14 @@ class ModeBasis(object):
 		Parameters
 		----------
 		copy : boolean
-			Whether to force a copy or not. A copy is always made if 
+			Whether to force a copy or not. A copy is always made if
 			the current ModeBasis is not sparse.
-		
+
 		Returns
 		-------
 		ModeBasis
 			The sparsified ModeBasis.
-		
+
 		Raises
 		------
 			TypeError
@@ -83,7 +83,7 @@ class ModeBasis(object):
 		else:
 			if self._transformation_matrix.ndim != 2:
 				raise TypeError('Cannot sparsify a mode basis of tensor fields')
-			
+
 			T = scipy.sparse.csc_matrix(self._transformation_matrix)
 			T.eliminate_zeros()
 			return ModeBasis(T, self.grid)
@@ -94,9 +94,9 @@ class ModeBasis(object):
 		Parameters
 		----------
 		copy : boolean
-			Whether to force a copy or not. A copy is always made if 
+			Whether to force a copy or not. A copy is always made if
 			the current ModeBasis is not dense.
-		
+
 		Returns
 		-------
 		ModeBasis
@@ -116,7 +116,7 @@ class ModeBasis(object):
 		'''The transformation matrix of this mode basis.
 		'''
 		return self._transformation_matrix
-	
+
 	@transformation_matrix.setter
 	def transformation_matrix(self, transformation_matrix):
 		self._transformation_matrix = transformation_matrix
@@ -129,11 +129,11 @@ class ModeBasis(object):
 
 		.. math:: J(c) = |b - A x|^2_2 + |\lambda x|^2_2
 
-		is minimized, where :math:`x` are the coefficients, and :math:`\lambda` is the 
+		is minimized, where :math:`x` are the coefficients, and :math:`\lambda` is the
 		dampening factor.
 
-		If this projection needs to be done repeatedly, you may be better off calculating 
-		the inverse of the transformation matrix directly and left-multiplying that with 
+		If this projection needs to be done repeatedly, you may be better off calculating
+		the inverse of the transformation matrix directly and left-multiplying that with
 		your vector, rather than using a least squares estimation every time.
 
 		Parameters
@@ -142,7 +142,7 @@ class ModeBasis(object):
 			The vector for which to calculate the coefficients.
 		dampening_factor : scalar
 			The Tikhonov dampening factor used for the least squares procedure.
-		
+
 		Returns
 		-------
 		array_like
@@ -162,7 +162,7 @@ class ModeBasis(object):
 		----------
 		coefficients : array_like or list
 			The coefficients of the linear combinations.
-		
+
 		Returns
 		-------
 		array_like or Field
@@ -179,7 +179,7 @@ class ModeBasis(object):
 	def orthogonalized(self):
 		'''Get an orthogonalized version of this ModeBasis.
 
-		The resulting ModeBasis spans the same vector space, but each mode is orthogonal to 
+		The resulting ModeBasis spans the same vector space, but each mode is orthogonal to
 		all others. In general the resulting `ModeBasis` is dense, so no distinction is made
 		between sparse and dense mode bases in this function. This function will always return
 		a dense mode basis.
@@ -188,7 +188,7 @@ class ModeBasis(object):
 		-------
 		ModeBasis
 			A mode basis with orthogonalized modes.
-		
+
 		Raises
 		------
 		NotImplementedError
@@ -207,14 +207,14 @@ class ModeBasis(object):
 		----------
 		item : int or slice or array_like
 			The index/indices of the mode(s).
-		
+
 		Returns
 		-------
 		Field or array_like or ModeBasis
 			The `item`-th mode in the `ModeBasis`.
 		'''
 		T = self._transformation_matrix[..., item]
-		
+
 		return_mode_basis = False
 		if self.is_sparse:
 			if T.shape[-1] != 1:
@@ -222,7 +222,7 @@ class ModeBasis(object):
 		if self.is_dense:
 			if T.ndim == self._transformation_matrix.ndim:
 				return_mode_basis = True
-		
+
 		if return_mode_basis:
 			# We are returning multiple modes; put these in a ModeBasis.
 			return ModeBasis(T, self.grid)
@@ -230,7 +230,7 @@ class ModeBasis(object):
 			# We are returning a single mode; return just this.
 			if self.is_sparse:
 				T = T.toarray()[...,0]
-			
+
 			if self.grid is None:
 				return T
 			else:
@@ -269,7 +269,7 @@ class ModeBasis(object):
 		'''
 		if isinstance(modes, ModeBasis):
 			modes = modes.transformation_matrix
-		
+
 		if self.is_sparse:
 			self._transformation_matrix = scipy.sparse.hstack((self._transformation_matrix, modes), 'csc')
 		else:
@@ -283,7 +283,7 @@ class ModeBasis(object):
 		----------
 		mode_basis : ModeBasis
 			The ModeBasis to add.
-		
+
 		Returns
 		-------
 		ModeBasis

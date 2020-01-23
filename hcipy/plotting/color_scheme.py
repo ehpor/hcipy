@@ -9,12 +9,12 @@ palettes = {
 def set_color_scheme(dark=False, publication_quality=False, cmap='viridis'):
 	"""
 	Apply a color scheme to all matplotlib figures. The setting
-	publication_quality uses LaTeX for all text in the figure. 
+	publication_quality uses LaTeX for all text in the figure.
 	"""
 	import warnings
 	warnings.warn('set_color_scheme() is deprecated. Copy the color scheme to your own file if you want to continue using it in the future.',
 		warnings.DeprecationWarning, stacklevel=2)
-	
+
 	import matplotlib as mpl
 
 	mpl.rc('lines', linewidth=1.5, markeredgewidth=0.25)
@@ -27,7 +27,7 @@ def set_color_scheme(dark=False, publication_quality=False, cmap='viridis'):
 	mpl.rc('ytick', labelsize='small')
 	mpl.rc('axes', titlesize='medium', labelsize='medium')
 	mpl.rc('legend', fontsize='medium')
-	
+
 	mpl.rc('savefig', transparent=True)
 
 	if dark:
@@ -56,9 +56,12 @@ def set_color_scheme(dark=False, publication_quality=False, cmap='viridis'):
 	else:
 		mpl.rc('text', usetex=False)
 		mpl.rc('font', family='sans-serif')
-		mpl.rc('font', serif=['Bitstream Vera Serif', 'New Century Schoolbook', 'Century Schoolbook L', 'Utopia', 'ITC Bookman', 'Bookman', 'Nimbus Roman No9 L', 'Times New Roman', 'Times', 'Palatino', 'Charter', 'serif'])
-		mpl.rcParams['font.sans-serif'] = ['Bitstream Vera Sans', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', 'sans-serif']
-		mpl.rc('font', monospace=['Bitstream Vera Sans Mono', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', 'monospace'])
+		mpl.rc('font', serif=['Bitstream Vera Serif', 'New Century Schoolbook', 'Century Schoolbook L', 'Utopia',
+			'ITC Bookman', 'Bookman','Nimbus Roman No9 L', 'Times New Roman', 'Times', 'Palatino', 'Charter', 'serif'])
+		mpl.rcParams['font.sans-serif'] = ['Bitstream Vera Sans', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial',
+			'Helvetica', 'Avant Garde', 'sans-serif']
+		mpl.rc('font', monospace=['Bitstream Vera Sans Mono', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier',
+			'Fixed', 'Terminal', 'monospace'])
 
 		mpl.rc('figure', figsize=(10, 7.1))
 		mpl.rc('font', size=14)

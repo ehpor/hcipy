@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 from hcipy import *
 import pytest
 
@@ -7,7 +7,7 @@ def test_statistics_noisy_detector():
 	grid = make_pupil_grid(N)
 
 	field = Field(np.ones(N**2), grid)
-	
+
 	#First we test photon noise, dark current noise and read noise.
 	flat_field = 0
 	dark_currents = np.logspace(1, 6, 6)
@@ -15,7 +15,7 @@ def test_statistics_noisy_detector():
 	photon_noise = True
 
 	for dc in dark_currents:
-		for rn in read_noises: 
+		for rn in read_noises:
 			#The test detector.
 			detector = NoisyDetector(input_grid=grid, include_photon_noise=photon_noise, flat_field=flat_field, dark_current_rate=dc, read_noise=rn)
 
@@ -54,14 +54,14 @@ def test_statistics_noisy_detector():
 			# integration
 			detector.integrate(field, t)
 
-			# read out 
+			# read out
 			measurement = detector.read_out()
 
 			# The std of the data by the detector.
 			std_measurement = np.std(measurement)
 
 			# The std that we expect given the input.
-			expected_std = ff * field[0] * t 
+			expected_std = ff * field[0] * t
 
 			assert np.isclose(expected_std, std_measurement, rtol=2e-02, atol=1e-05)
 
@@ -209,14 +209,14 @@ def test_degree_and_angle_of_polarization():
 	assert np.allclose(wf.degree_of_circular_polarization, 1 / np.sqrt(2))
 
 def mueller_matrix_for_general_linear_retarder(theta, delta):
-	'''Analytic expression Mueller matrix linear retarder. 
+	'''Analytic expression Mueller matrix linear retarder.
 
 	Parameters
 	----------
 	theta : scaler
-		rotation angle optic in radians 
-	delta : scalar 
-		retardance optic in radians 
+		rotation angle optic in radians
+	delta : scalar
+		retardance optic in radians
 	'''
 	retarder = np.zeros((4, 4))
 
@@ -237,12 +237,12 @@ def mueller_matrix_for_general_linear_retarder(theta, delta):
 	return retarder
 
 def mueller_matrix_for_general_linear_polarizer(theta):
-	'''Analytic expression Mueller matrix linear polarizer. 
+	'''Analytic expression Mueller matrix linear polarizer.
 
 	Parameters
 	----------
 	theta : scaler
-		rotation angle optic in radians 
+		rotation angle optic in radians
 	'''
 	polarizer = np.zeros((4, 4))
 
@@ -266,7 +266,7 @@ def test_polarization_elements():
 	grid = make_pupil_grid(N)
 	test_field = grid.ones()
 
-	# Stokes vectors used for testing. 
+	# Stokes vectors used for testing.
 	stokes_vectors = [
 		None,
 		np.array([1, 0, 0, 0]), # unpolarized
@@ -287,7 +287,7 @@ def test_polarization_elements():
 		if stokes_vector is None:
 			# Set Stokes vector for futher calculation to unpolarized light.
 			stokes_vector = np.array([1, 0, 0, 0])
- 
+
 		for angle in angles:
 			# Create quarterwave plate.
 			QWP_hcipy = QuarterWavePlate(np.radians(angle))
@@ -336,7 +336,7 @@ def test_polarization_elements():
 
 			# Test if Mueller matrix is the same as reference.
 			polarizer_ref = mueller_matrix_for_general_linear_polarizer(np.radians(angle))
-			assert np.allclose(polarizer_hcipy.mueller_matrix, polarizer_ref)     
+			assert np.allclose(polarizer_hcipy.mueller_matrix, polarizer_ref)
 
 			# Propagate wavefront through optical element.
 			wf_forward_polarizer = polarizer_hcipy.forward(test_wf)
@@ -355,7 +355,7 @@ def test_polarization_elements():
 			# Test if Mueller matrices are the same as reference.
 			polarizer_1_ref = mueller_matrix_for_general_linear_polarizer(np.radians(angle))
 			polarizer_2_ref = mueller_matrix_for_general_linear_polarizer(np.radians(angle + 90))
-			assert np.allclose(LPBS_hcipy.mueller_matrices[0], polarizer_1_ref)     
+			assert np.allclose(LPBS_hcipy.mueller_matrices[0], polarizer_1_ref)
 			assert np.allclose(LPBS_hcipy.mueller_matrices[1], polarizer_2_ref)
 
 			# Propagate wavefront through optical element.
@@ -370,10 +370,10 @@ def test_polarization_elements():
 			# Test power conservation.
 			assert np.allclose(test_wf.I, wf_forward_polarizer_1.I + wf_forward_polarizer_2.I)
 
-			# Test multiplication of polarization optics 
-			# 1) JonesMatrixOpticalElement * JonesMatrixOpticalElement 
+			# Test multiplication of polarization optics
+			# 1) JonesMatrixOpticalElement * JonesMatrixOpticalElement
 			multiplication_test_1 = polarizer_hcipy * QWP_hcipy
-			# 2) JonesMatrixOpticalElement * numpy array 
+			# 2) JonesMatrixOpticalElement * numpy array
 			multiplication_test_2 = polarizer_hcipy * QWP_hcipy.jones_matrix
 
 			multiplication_test_ref = np.dot(polarizer_ref, QWP_ref)
@@ -401,7 +401,7 @@ def test_polarization_elements():
 		CP_1_ref = np.dot(circ_polarizer_1_ref,QWP_1_ref)
 		CP_2_ref = np.dot(circ_polarizer_2_ref,QWP_1_ref)
 
-		assert np.allclose(CPBS_hcipy.mueller_matrices[0], CP_1_ref)     
+		assert np.allclose(CPBS_hcipy.mueller_matrices[0], CP_1_ref)
 		assert np.allclose(CPBS_hcipy.mueller_matrices[1], CP_2_ref)
 
 		# Propagate wavefront through optical element.

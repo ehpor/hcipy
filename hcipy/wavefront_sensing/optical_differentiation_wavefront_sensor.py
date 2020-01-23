@@ -1,7 +1,6 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
-from ..plotting import imshow_field
-from ..optics import SurfaceApodizer, PhaseApodizer, MultiplexedComplexSurfaceApodizer
+from ..optics import MultiplexedComplexSurfaceApodizer
 from ..field import make_pupil_grid, make_focal_grid, Field
 
 import numpy as np
@@ -21,7 +20,7 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 		The reference wavelength for the filter specifications.
 	refractive_index : lambda function
 		A lambda function for the refractive index which accepts a wavelength.
-	
+
 	Returns
 	----------
 	func : function
@@ -35,7 +34,7 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 		surf2 = -separation / (refractive_index(wavelength_0) - 1) * -grid.x
 		surf3 = -separation / (refractive_index(wavelength_0) - 1) * grid.y
 		surf4 = -separation / (refractive_index(wavelength_0) - 1) * -grid.y
-		
+
 		surf = (Field(surf1, grid), Field(surf2, grid), Field(surf3, grid), Field(surf4, grid))
 
 		# The physical boundaries of the mask
@@ -54,7 +53,7 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 		filter_2 = -amplitude_filter(-grid.x / filter_size)
 		filter_2[x_mask] = -1 / 2
 		filter_2 *= filter_mask
-		
+
 		filter_3 = amplitude_filter(grid.y / filter_size)
 		filter_3[y_mask] = 1 / 2
 		filter_3 *= filter_mask
@@ -121,7 +120,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 		# Need at least two times over sampling in the focal plane because we want to separate two pupils completely
 		if q < 2 * pupil_separation * np.sqrt(2):
 			q = 2 * pupil_separation * np.sqrt(2)
-		
+
 		# Create the intermediate and final grids
 		self.output_grid = make_pupil_grid(output_grid_pixels, output_grid_size)
 		self.focal_grid = make_focal_grid(pupil_grid, q=q, num_airy=num_airy, wavelength=wavelength_0)
@@ -141,7 +140,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 		'''Propagates a wavefront through the wavefront sensor.
 
 		Parameters
-		----------		
+		----------
 		wavefront : Wavefront
 			The input wavefront that will propagate through the system.
 
@@ -151,7 +150,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 			The output wavefront.
 		'''
 		wf = self.pupil_to_focal.forward(wavefront)
-		wf = self.focal_mask.forward(wf)		
+		wf = self.focal_mask.forward(wf)
 		wf = self.focal_to_pupil(wf)
 
 		return wf
@@ -288,14 +287,14 @@ class PolgODWavefrontSensorOptics(OpticalDifferentiationWavefrontSensorOptics):
 
 class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 	'''Estimates the wavefront slopes from OD wavefront sensor images.
-	
+
 	Parameters
 	----------
 	aperture : function
 		A function which mask the pupils for the normalized differences.
 	output_grid : Grid
 		The grid on which the output of an OD wavefront sensor is sampled.
-			
+
 	Attributes
 	----------
 	measurement_grid : Grid
@@ -318,7 +317,7 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 		----------
 		images : List
 			A list of scalar intensity fields containing OD wavefront sensor images.
-			
+
 		Returns
 		-------
 		res : Field
@@ -338,7 +337,7 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 
 		I_x = (I_d - I_a) / (I_a + I_d)
 		I_y = (I_c - I_b) / (I_c + I_b)
-		
+
 		I_x = I_x.ravel()[self.pupil_mask>0]
 		I_y = I_y.ravel()[self.pupil_mask>0]
 

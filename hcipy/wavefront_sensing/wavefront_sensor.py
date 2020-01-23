@@ -1,4 +1,4 @@
-from ..optics import OpticalSystem
+from ..optics import OpticalSystem, NoiselessDetector, EmptyOpticalElement, FrameCorrector
 
 class WavefrontSensorOptics(OpticalSystem):
 	'''The optics for a wavefront sensor.
@@ -21,7 +21,7 @@ class WavefrontSensorEstimator(object):
 		----------
 		images : list
 			The list of images on which to base the estimate.
-		
+
 		Returns
 		-------
 		Field or ndarray
@@ -32,7 +32,7 @@ class WavefrontSensorEstimator(object):
 class WavefrontSensor(object):
 	'''A complete wavefront sensor.
 
-	This convenience class consolidates the optics, detector, frame correction 
+	This convenience class consolidates the optics, detector, frame correction
 	and estimation parts of a wavefront sensor.
 
 	.. caution::
@@ -43,7 +43,7 @@ class WavefrontSensor(object):
 	Parameters
 	----------
 	wfs_optics : WavefrontSensorOptics object
-		The optics of the wavefront sensor. If it is not supplied, no optics 
+		The optics of the wavefront sensor. If it is not supplied, no optics
 		will be used.
 	detector : Detector object
 		The detector of the wavefront sensor. If it is not supplied, a NoiselessDetector
@@ -66,33 +66,33 @@ class WavefrontSensor(object):
 		'''The used detector.
 		'''
 		return self._detector
-	
+
 	@detector.setter
 	def detector(self, detector):
 		if detector is None:
 			self._detector = NoiselessDetector()
 		else:
 			self._detector = detector
-	
+
 	@property
 	def wfs_optics(self):
 		'''The used wavefront sensor optics.
 		'''
 		return self._wfs_optics
-	
+
 	@wfs_optics.setter
 	def wfs_optics(self, wfs_optics):
 		if wfs_optics is None:
 			self._wfs_optics = EmptyOpticalElement()
 		else:
 			self._wfs_optics = wfs_optics
-		
+
 	@property
 	def frame_corrector(self):
 		'''The used frame corrector.
 		'''
 		return self._frame_corrector
-	
+
 	@frame_corrector.setter
 	def frame_corrector(self, frame_corrector):
 		if frame_corrector is None:
@@ -106,7 +106,7 @@ class WavefrontSensor(object):
 		Parameters
 		----------
 		wavefront : Wavefront
-			The wavefront will be propagated through the wavefront sensor optics 
+			The wavefront will be propagated through the wavefront sensor optics
 			and fall onto the detector.
 		dt : scalar
 			The integration time in units of time.
@@ -115,7 +115,7 @@ class WavefrontSensor(object):
 		'''
 		wf = self.wfs_optics.forward(wavefront)
 		self.detector.integrate(wf, dt, weight)
-	
+
 	def read_out(self):
 		'''Estimate the wavefront from the read-out detector image.
 
@@ -143,13 +143,13 @@ class WavefrontSensor(object):
 		Parameters
 		----------
 		wavefront : Wavefront
-			The wavefront will be propagated through the wavefront sensor optics 
+			The wavefront will be propagated through the wavefront sensor optics
 			and fall onto the detector.
 		dt : scalar
 			The integration time in units of time.
 		weight : scalar
 			Weight of every unit of integration time.
-		
+
 		Returns
 		-------
 		Field or ndarray

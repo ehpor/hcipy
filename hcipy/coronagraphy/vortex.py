@@ -1,8 +1,8 @@
 import numpy as np
 
-from ..optics import OpticalElement, Wavefront, LinearRetarder, JonesMatrixOpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
+from ..optics import OpticalElement, LinearRetarder, JonesMatrixOpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..propagation import FraunhoferPropagator
-from ..field import make_focal_grid, Field, make_pupil_grid
+from ..field import make_focal_grid, Field
 from ..aperture import circular_aperture
 from ..fourier import FastFourierTransform, MatrixFourierTransform
 
@@ -27,7 +27,7 @@ class VortexCoronagraph(OpticalElement):
 	'''
 	def __init__(self, input_grid, charge=2, levels=4, scaling_factor=4):
 		self.input_grid = input_grid
-		
+
 		q_outer = 2
 		num_airy_outer = input_grid.shape[0] / 2
 		pupil_diameter = input_grid.shape * input_grid.delta
@@ -53,7 +53,7 @@ class VortexCoronagraph(OpticalElement):
 				mft = MatrixFourierTransform(focal_grid, fft.output_grid)
 
 				focal_mask -= mft.backward(fft.forward(self.focal_masks[j]))
-			
+
 			prop = FraunhoferPropagator(input_grid, focal_grid)
 
 			focal_grids.append(focal_grid)
@@ -68,7 +68,7 @@ class VortexCoronagraph(OpticalElement):
 		wavefront : Wavefront
 			The wavefront to propagate. This wavefront is expected to be
 			in the pupil plane.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -87,7 +87,7 @@ class VortexCoronagraph(OpticalElement):
 
 		lyot.wavelength = wavelength
 		return lyot
-	
+
 	def backward(self, wavefront):
 		'''Propagate backwards through the vortex coronagraph.
 
@@ -98,7 +98,7 @@ class VortexCoronagraph(OpticalElement):
 		----------
 		wavefront : Wavefront
 			The Lyot plane wavefront.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -196,7 +196,7 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 
 	def get_input_grid(self, output_grid, wavelength):
 		'''Get the input grid for a specified output grid and wavelength.
-		
+
 		This optical element only supports propagation to the same plane as
 		its input.
 
@@ -206,17 +206,17 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 			The output grid of the optical element.
 		wavelength : scalar or None
 			The wavelength of the outgoing light.
-		
+
 		Returns
 		-------
 		Grid
 			The input grid corresponding to the output grid and wavelength combination.
 		'''
 		return output_grid
-	
+
 	def get_output_grid(self, input_grid, wavelength):
 		'''Get the output grid for a specified input grid and wavelength.
-		
+
 		This optical element only supports propagation to the same plane as
 		its input.
 
@@ -226,7 +226,7 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 			The input grid of the optical element.
 		wavelength : scalar or None
 			The wavelength of the incoming light.
-		
+
 		Returns
 		-------
 		Grid
@@ -243,7 +243,7 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 		wavefront : Wavefront
 			The wavefront to propagate. This wavefront is expected to be
 			in the pupil plane.
-		
+
 		Returns
 		-------
 		Wavefront
@@ -306,9 +306,10 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_unders
 	'''Make field generators for the pupil and Lyot-stop masks for a
 	ring apodized vortex coronagraph.
 
-	The formulas were implemented according to [1]_.
-	
-	.. [1] Dimitri Mawet et al. 2013 "Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive ring apodizers" The Astrophysical Journal Supplement Series 209.1 (2013): 7
+	The formulas were implemented according to [Mawet2013]_.
+
+	.. [Mawet2013] Dimitri Mawet et al. 2013 "Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive
+		ring apodizers" The Astrophysical Journal Supplement Series 209.1 (2013): 7
 
 	Parameters
 	----------
@@ -320,7 +321,7 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_unders
 		The diameter of the pupil.
 	lyot_undersize : scalar
 		The fraction of the pupil diameter to which to undersize the Lyot stop.
-	
+
 	Returns
 	-------
 	pupil_mask : Field generator
@@ -366,9 +367,10 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_unders
 def get_ravc_planet_transmission(central_obscuration_ratio, charge=2):
 	'''Get the planet transmission for a ring-apodized vortex coronagraph.
 
-	The formulas were implemented according to [1]_.
-	
-	.. [1] Dimitri Mawet et al. 2013 "Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive ring apodizers" The Astrophysical Journal Supplement Series 209.1 (2013): 7
+	The formulas were implemented according to [Mawet2013]_.
+
+	.. [Mawet2013] Dimitri Mawet et al. 2013 "Ring-apodized vortex coronagraphs for obscured telescopes. I. Transmissive
+		ring apodizers" The Astrophysical Journal Supplement Series 209.1 (2013): 7
 
 	Parameters
 	----------
@@ -376,11 +378,11 @@ def get_ravc_planet_transmission(central_obscuration_ratio, charge=2):
 		The ratio of the central obscuration diameter and the pupil diameter.
 	charge : integer
 		The charge of the vortex coronagraph used.
-	
+
 	Returns
 	-------
 	scalar
-		The intensity transmission for a sufficiently off-axis point source 
+		The intensity transmission for a sufficiently off-axis point source
 		for the ring-apodized vortex coronagraph. Point sources close to the vortex
 		singularity will be lower in intensity.
 	'''
@@ -394,7 +396,6 @@ def get_ravc_planet_transmission(central_obscuration_ratio, charge=2):
 	elif charge == 4:
 		R1 = np.sqrt(np.sqrt(R0**2 * (R0**2 + 4)) - 2*R0**2)
 		R2 = np.sqrt(R1**2 + R0**2)
-		t1 = 0
 		t2 = (R1**2 - R0**2) / (R1**2 + R0**2)
 
 		return t2**2 * (1 - R2**2) / (1 - R0**2)

@@ -15,18 +15,18 @@ The library defines wavefronts and optical elements for defining an optical syst
 
 By including simulation of both adaptive optics and coronagraphy into a single framework, HCIPy allows simulations including feedback from post-coronagraphic focal-plane wavefront sensors to the AO system.
 
-For documentation, see https://docs.hcipy.org. The main website is hosted at https://hcipy.org.
+For documentation, see <https://docs.hcipy.org>. The main website is hosted at <https://hcipy.org>.
 
-# Team
+## Team
 
 HCIPy was originally developed by a small team of astronomers at Leiden Observatory, but has since received external constributions from scientists and software developers around the world. For a current list, please visit our [website](https://hcipy.org/team.html).
 
-# Citing
+## Citing
 
 If you use HCIPy for your own research, we ask you to cite the HCIPy proceeding ([Por et al. 2018](https://doi.org/10.1117/12.2314407)). If there is no appropriate place in the body text to cite the proceeding, please include something along the lines of the following in your acknowledgements:
 
 > This research made use of HCIPy, an open-source object-oriented framework written in Python for performing end-to-end simulations of high-contrast imaging instruments ([Por et al. 2018](https://doi.org/10.1117/12.2314407)).
 
-# Contributions
+## Contributions
 
 If you have something to add, or want something added to HCIPy, please let us know using a Github issue. We actively support external contributions to HCIPy, whether small or large. Please look at the [contributing guide](https://docs.hcipy.org/dev/development/contributing_guide.html) for more information.

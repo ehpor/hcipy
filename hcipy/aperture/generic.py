@@ -13,7 +13,7 @@ def circular_aperture(diameter, center=None):
 		The diameter of the aperture.
 	center : array_like
 		The center of the aperture
-	
+
 	Returns
 	-------
 	Field generator
@@ -36,7 +36,7 @@ def circular_aperture(diameter, center=None):
 			f = grid.r <= (diameter / 2)
 
 		return Field(f.astype('float'), grid)
-	
+
 	return func
 
 def elliptical_aperture(diameters, center=None):
@@ -48,7 +48,7 @@ def elliptical_aperture(diameters, center=None):
 		The diameters of the aperture in the two directions.
 	center : array_like or None
 		The center of the aperture.
-	
+
 	Returns
 	-------
 	Field generator
@@ -58,15 +58,17 @@ def elliptical_aperture(diameters, center=None):
 		shift = np.zeros(2)
 	else:
 		shift = center * np.ones(2)
-	
+
 	def func(grid):
 		if grid.is_separated:
 			x, y = grid.separated_coords
-			f = (((((x - shift[0]) / (diameters[0] / 2))**2)[np.newaxis, :] + ((y - shift[1]) / (diameters[1] / 2))**2)[:, np.newaxis] <= 1).ravel()
+			f = ((((x - shift[0]) / (diameters[0] / 2))**2)[np.newaxis, :] + (((y - shift[1]) / (diameters[1] / 2))**2)[:, np.newaxis] <= 1).ravel()
+			print('a', f.shape, x.shape, y.shape)
 		else:
 			x, y = grid.as_('cartesian').coords
 			f = (((x - shift[0]) / (diameters[0] / 2))**2 + ((y - shift[1]) / (diameters[1] / 2))**2) <= 1
 
+		print(f.shape)
 		return Field(f.astype('float'), grid)
 
 	return func
@@ -80,7 +82,7 @@ def rectangular_aperture(size, center=None):
 		The length of the sides. If this is scalar, a square aperture is assumed.
 	center : array_like
 		The center of the aperture
-	
+
 	Returns
 	-------
 	Field generator
@@ -118,7 +120,7 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 		The angle by which to turn the polygon.
 	center : array_like
 		The center of the aperture
-	
+
 	Returns
 	-------
 	Field generator
@@ -133,7 +135,7 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 		shift = center * np.ones(2)
 
 	epsilon = 1e-6
-	
+
 	apothem = np.cos(np.pi / num_sides) * circum_diameter / 2
 	apothem += apothem * epsilon
 
@@ -166,7 +168,7 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 			ind_y = np.flatnonzero(y**2 < ((circum_diameter / 2)**2))
 			if not len(ind_y):
 				return grid.zeros()
-			
+
 			m_x = slice(ind_x[0], ind_x[-1] + 1)
 			m_y = slice(ind_y[0], ind_y[-1] + 1)
 
@@ -181,7 +183,7 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 			else:
 				for theta in thetas:
 					f_sub *= (np.abs(np.sin(theta) * x)[np.newaxis, :] - (np.cos(theta) * y)[:, np.newaxis]) <= apothem
-			
+
 			f = np.zeros(g.shape)
 			f[m_y, m_x] = f_sub
 
@@ -204,9 +206,9 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 		else:
 			for theta in thetas:
 				f[m] *= (np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem
-	
+
 		return Field(f, grid)
-	
+
 	return func
 
 # Convenience function
@@ -221,7 +223,7 @@ def hexagonal_aperture(circum_diameter, angle=0, center=None):
 		The angle by which to turn the hexagon.
 	center : array_like
 		The center of the aperture
-	
+
 	Returns
 	-------
 	Field generator
@@ -240,7 +242,7 @@ def make_spider(p1, p2, spider_width):
 		The end coordinates of the spider.
 	spider_width : scalar
 		The full width of the spider.
-	
+
 	Returns
 	-------
 	Field generator
@@ -306,7 +308,7 @@ def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,
 		The number of spiders holding up the central obscuration.
 	spider_width : scalar
 		The full width of the spiders.
-	
+
 	Returns
 	-------
 	Field generator
@@ -314,7 +316,7 @@ def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,
 	'''
 	central_obscuration_diameter = pupil_diameter * central_obscuration_ratio
 
-	def func(grid):	
+	def func(grid):
 		pupil_outer = circular_aperture(pupil_diameter)(grid)
 		pupil_inner = circular_aperture(central_obscuration_diameter)(grid)
 		spiders = 1
@@ -326,7 +328,7 @@ def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,
 			y = pupil_diameter * np.sin(angle)
 
 			spiders *= make_spider((0, 0), (x, y), spider_width)(grid)
-		
+
 		return (pupil_outer - pupil_inner) * spiders
 	return func
 
@@ -337,7 +339,7 @@ def make_obstruction(aperture):
 	----------
 	aperture : Field generator
 		The aperture to invert.
-	
+
 	Returns
 	-------
 	Field generator
@@ -358,7 +360,7 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 		The transmission for each of the segments. If this is a scalar, the same transmission is used for all segments.
 	return_segments : boolean
 		Whether to return a ModeBasis of all segments as well.
-	
+
 	Returns
 	-------
 	Field generator
@@ -376,15 +378,15 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 			res[segment > 0.5] = t
 
 		return Field(res, grid)
-	
+
 	if return_segments:
 		def seg(grid, p, t):
 			return segment_shape(grid.shifted(-p)) * t
-		
+
 		segments = []
 		for p, t in zip(segment_positions.points, segment_transmissions):
 			segments.append(functools.partial(seg, p=p, t=t))
-		
+
 		return func, segments
 	else:
 		return func

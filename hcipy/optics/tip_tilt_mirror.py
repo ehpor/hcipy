@@ -17,7 +17,7 @@ class TipTiltMirror(DeformableMirror):
 	def __init__(self, input_grid):
 		self.input_grid = input_grid
 		self.actuators = np.zeros((2,))
-		
+
 		modes = ModeBasis([Field(self.input_grid.x, self.input_grid), Field(self.input_grid.y, self.input_grid)])
-		
+
 		super(TipTiltMirror, self).__init__(modes)

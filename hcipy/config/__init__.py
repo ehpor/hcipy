@@ -1,3 +1,5 @@
-__all__ = ['Configuration']
+__all__ = [
+    'Configuration'
+]
 
 from .config import *

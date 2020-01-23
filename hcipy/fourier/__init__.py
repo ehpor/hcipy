@@ -1,8 +1,15 @@
-__all__ = ['make_fourier_transform', 'FourierTransform']
-__all__ += ['make_fft_grid', 'FastFourierTransform']
-__all__ += ['ConvolveFFT', 'ShearFFT', 'RotateFFT', 'FilterFFT']
-__all__ += ['MatrixFourierTransform']
-__all__ += ['NaiveFourierTransform']
+__all__ = [
+    'make_fourier_transform',
+    'FourierTransform',
+    'make_fft_grid',
+    'FastFourierTransform',
+    'ConvolveFFT',
+    'ShearFFT',
+    'RotateFFT',
+    'FilterFFT',
+    'MatrixFourierTransform',
+    'NaiveFourierTransform'
+]
 
 from .fourier_transform import *
 from .fast_fourier_transform import *

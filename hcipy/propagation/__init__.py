@@ -1,7 +1,9 @@
-__all__ = ['Propagator']
-__all__ += ['FresnelPropagator']
-__all__ += ['FraunhoferPropagator']
-__all__ += ['AngularSpectrumPropagator']
+__all__ = [
+    'Propagator',
+    'FresnelPropagator',
+    'FraunhoferPropagator',
+    'AngularSpectrumPropagator'
+]
 
 from .propagator import *
 from .angular_spectrum import *

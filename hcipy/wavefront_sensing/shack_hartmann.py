@@ -1,7 +1,6 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..optics import OpticalSystem, MicroLensArray
-from ..field import CartesianGrid, Field
-from ..aperture import *
+from ..field import CartesianGrid, Field, SeparatedCoords
 from ..propagation import FresnelPropagator
 
 import numpy as np
@@ -40,7 +39,7 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
 			self.estimation_subapertures = np.flatnonzero(np.array(estimation_subapertures))
 		self.estimation_grid = self.mla_grid.subset(estimation_subapertures)
 
-	def estimate(self, images, use_par_map=True):
+	def estimate(self, images):
 		image = images[0]
 
 		fluxes = ndimage.measurements.sum(image, self.mla_index, self.estimation_subapertures)

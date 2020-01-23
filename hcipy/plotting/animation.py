@@ -224,7 +224,8 @@ class FFMpegWriter(object):
 		try:
 			self.close()
 		except Exception:
-			pass
+			import warnings
+			warnings.warn('Something went wrong while closing FFMpeg...', RuntimeWarning)
 
 	def add_frame(self, fig=None, arr=None, cmap=None, dpi=None):
 		'''Add a frame to the animation.

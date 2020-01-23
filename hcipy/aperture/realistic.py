@@ -63,7 +63,8 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 def make_keck_aperture():
 	pass
 
-def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, gap_padding=1, segment_transmissions=1, return_header=False, return_segments=False):
+def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gaps=True,
+		gap_padding=1, segment_transmissions=1, return_header=False, return_segments=False):
 	'''
 	This aperture changes frequently. This one is based on LUVOIR Apertures dimensions
 	from Matt Bolcar, LUVOIR lead engineer (as of 10 April 2019)
@@ -178,7 +179,8 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 	else:
 		return func
 
-def make_luvoir_a_lyot_stop(normalized=False, with_spiders=False, spider_oversize=1, inner_diameter_fraction=0.2, outer_diameter_fraction=0.9, return_header=False):
+def make_luvoir_a_lyot_stop(normalized=False, with_spiders=False, spider_oversize=1,
+		inner_diameter_fraction=0.2, outer_diameter_fraction=0.9, return_header=False):
 	'''Make a LUVOIR-A Lyot stop for the APLC coronagraph.
 
 	Parameters

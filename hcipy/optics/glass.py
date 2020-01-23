@@ -8,7 +8,10 @@ def make_sellmeier_glass(A, K, L):
 
 	.. math:: n^2 = 1 + \sum_{i}{\frac{K_i \lambda^2}{\lambda^2-L_i}}
 
-	.. [Sellmeier1872] W. Sellmeier 1872, Ueber die durch die Aetherschwingungen erregten Mitschwingungen der Körpertheilchen und deren Rückwirkung auf die ersteren, besonders zur Erklärung der Dispersion und ihrer Anomalien (II. Theil),"  Annalen der Physik und Chemie. 223 (11), 386–403 (1872)
+	.. [Sellmeier1872] W. Sellmeier 1872, Ueber die durch die Aetherschwingungen erregten
+		Mitschwingungen der Körpertheilchen und deren Rückwirkung auf die ersteren, besonders
+		zur Erklärung der Dispersion und ihrer Anomalien (II. Theil),"  Annalen der Physik und
+		Chemie. 223 (11), 386–403 (1872)
 
 	Parameters
 	----------

@@ -254,7 +254,7 @@ class FFMpegWriter(object):
 				fig = matplotlib.pyplot.gcf()
 			fig.savefig(self.p.stdin, format='png', transparent=False, dpi=dpi)
 		else:
-			if not cmap is None:
+			if cmap is not None:
 				arr = matplotlib.cm.get_cmap(cmap)(arr, bytes=True)
 
 			imageio.imwrite(self.p.stdin, arr, format='png')

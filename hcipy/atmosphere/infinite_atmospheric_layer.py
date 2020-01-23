@@ -43,7 +43,8 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 	def _make_stencils(self):
 		# Vertical
-		self.new_grid_bottom = CartesianGrid(RegularCoords(self.input_grid.delta, [self.input_grid.dims[0], 1], self.input_grid.zero - np.array([0, self.input_grid.delta[1]])))
+		zero = self.input_grid.zero - np.array([0, self.input_grid.delta[1]])
+		self.new_grid_bottom = CartesianGrid(RegularCoords(self.input_grid.delta, [self.input_grid.dims[0], 1], zero))
 
 		self.stencil_bottom = Field(np.zeros(self.input_grid.size, dtype='bool'), self.input_grid).shaped
 		self.stencil_bottom[:self.stencil_length,:] = True
@@ -55,7 +56,8 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		self.num_stencils_vertical = np.sum(self.stencil_bottom)
 
 		# Horizontal
-		self.new_grid_left = CartesianGrid(RegularCoords(self.input_grid.delta, [1, self.input_grid.dims[1]], self.input_grid.zero - np.array([self.input_grid.delta[0], 0])))
+		zero = self.input_grid.zero - np.array([self.input_grid.delta[0], 0])
+		self.new_grid_left = CartesianGrid(RegularCoords(self.input_grid.delta, [1, self.input_grid.dims[1]], zero))
 
 		self.stencil_left = Field(np.zeros(self.input_grid.size, dtype='bool'), self.input_grid).shaped
 		self.stencil_left[:,:self.stencil_length] = True
@@ -208,7 +210,8 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			ps = self._achromatic_screen.shaped
 			sub_delta = self.center - new_center * self.input_grid.delta
 			with warnings.catch_warnings():
-				warnings.filterwarnings('ignore', message='The behaviour of affine_transform with a one-dimensional array supplied for the matrix parameter has changed in scipy 0.18.0.')
+				warnings.filterwarnings('ignore',
+					message='The behaviour of affine_transform with a one-dimensional array supplied for the matrix parameter has changed in scipy 0.18.0.')
 				screen = affine_transform(ps, np.array([1,1]), (sub_delta / self.input_grid.delta)[::-1], mode='nearest', order=5)
 				self._shifted_achromatic_screen = Field(screen.ravel(), self._achromatic_screen.grid)
 		else:

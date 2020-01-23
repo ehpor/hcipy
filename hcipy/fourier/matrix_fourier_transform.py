@@ -8,7 +8,7 @@ class MatrixFourierTransform(FourierTransform):
 			raise ValueError('The input_grid must be separable in cartesian coordinates.')
 		if not output_grid.is_separated or not output_grid.is_('cartesian'):
 			raise ValueError('The output_grid must be separable in cartesian coordinates.')
-		if not input_grid.ndim in [1,2]:
+		if input_grid.ndim not in [1, 2]:
 			raise ValueError('The input_grid must be one- or two-dimensional.')
 		if input_grid.ndim != output_grid.ndim:
 			raise ValueError('The input_grid must have the same dimensions as the output_grid.')

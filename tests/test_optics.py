@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from hcipy import *
 import pytest
 
@@ -79,8 +80,10 @@ def test_glass_catalogue():
 
 def test_deformable_mirror():
 	num_pix = 256
-
-	grid = make_pupil_grid(num_pix)
+	x_tilt = np.radians(15)
+	y_tilt = np.radians(10)
+	z_tilt = np.radians(20)
+	grid = make_pupil_grid(num_pix, 1.5)
 
 	functions = [make_gaussian_influence_functions, make_xinetics_influence_functions]
 
@@ -88,8 +91,14 @@ def test_deformable_mirror():
 		actuator_spacing = 1 / num_actuators_across_pupil
 		num_actuators = num_actuators_across_pupil**2
 
+		# Check if the actuator spacing of an unrotated DM is correct
+		actuator_positions = make_actuator_positions(num_actuators_across_pupil, actuator_spacing)
+		assert np.allclose(actuator_positions.delta, actuator_spacing)
+
+		actuator_positions = make_actuator_positions(num_actuators_across_pupil, actuator_spacing, x_tilt=x_tilt, y_tilt=y_tilt, z_tilt=z_tilt)
+
 		for func in functions:
-			influence_functions = func(grid, num_actuators_across_pupil, actuator_spacing)
+			influence_functions = func(grid, num_actuators_across_pupil, actuator_spacing, x_tilt=x_tilt, y_tilt=y_tilt, z_tilt=z_tilt)
 
 			deformable_mirror = DeformableMirror(influence_functions)
 
@@ -99,6 +108,13 @@ def test_deformable_mirror():
 
 			# Check that influence functions are sparse
 			assert influence_functions.is_sparse
+
+			# Check if the centroids for each influence function are close to the predicted position.
+			for act, p in zip(influence_functions, actuator_positions.points):
+				x_pos = (act * grid.x).sum() / act.sum()
+				y_pos = (act * grid.y).sum() / act.sum()
+
+				assert np.allclose([x_pos, y_pos], p, atol=0.02)
 
 			# Mirror should start out flattened
 			assert np.std(deformable_mirror.surface) < 1e-12
@@ -124,6 +140,11 @@ def test_deformable_mirror():
 
 			# Check that the correct phase is applied
 			assert np.allclose(wf_out.phase, deformable_mirror.phase_for(1))
+
+			wf_in = deformable_mirror.backward(wf_out)
+
+			# Check that the deformable mirror is phase only
+			assert np.allclose(wf_in.electric_field, wf.electric_field)
 
 			# Check OPD
 			assert np.allclose(deformable_mirror.opd, 2 * deformable_mirror.surface)
@@ -181,6 +202,11 @@ def test_segmented_deformable_mirror():
 
 			# Return segment to zero position
 			segmented_mirror.set_segment_actuators(i, 0, 0, 0)
+
+		# Run labeling of segments
+		imshow_field(aperture)
+		label_actuator_centroid_positions(segments)
+		plt.clf()
 
 def test_wavefront_stokes():
 	N = 4

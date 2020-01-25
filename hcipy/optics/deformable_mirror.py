@@ -8,7 +8,7 @@ from ..mode_basis import ModeBasis, make_gaussian_pokes
 from ..interpolation import make_linear_interpolator_separated
 from ..util import read_fits
 
-def make_actuator_positions(num_actuators_across_pupil, actuator_spacing):
+def make_actuator_positions(num_actuators_across_pupil, actuator_spacing, x_tilt=0, y_tilt=0, z_tilt=0):
 	'''Make actuator positions using the BMC convention.
 
 	Parameters
@@ -17,14 +17,26 @@ def make_actuator_positions(num_actuators_across_pupil, actuator_spacing):
 		The number of actuators across the pupil. The total number of actuators will be this number squared.
 	actuator_spacing : scalar
 		The spacing between actuators before tilting the deformable mirror.
+	x_tilt : scalar
+		The tilt of the deformable mirror around the x-axis in radians.
+	y_tilt : scalar
+		The tilt of the deformable mirror around the y-axis in radians.
+	z_tilt : scalar
+		The tilt of the deformable mirror around the z-axis in radians.
 
 	Returns
 	-------
 	Grid
 		The actuator positions.
 	'''
-	extent = actuator_spacing * (num_actuators_across_pupil - 1)
-	return make_uniform_grid(num_actuators_across_pupil, [extent, extent])
+	extent = actuator_spacing * num_actuators_across_pupil
+	grid = make_uniform_grid(num_actuators_across_pupil, [extent, extent]).scaled(np.cos([y_tilt, x_tilt]))
+
+	if z_tilt == 0:
+		return grid
+
+	grid = grid.rotated(z_tilt)
+	return grid
 
 def make_gaussian_influence_functions(pupil_grid, num_actuators_across_pupil, actuator_spacing, crosstalk=0.15, cutoff=3, x_tilt=0, y_tilt=0, z_tilt=0):
 	'''Create influence functions with a Gaussian profile.

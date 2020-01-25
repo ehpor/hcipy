@@ -8,6 +8,7 @@ __all__ = [
     'ComplexSurfaceApodizer',
     'MultiplexedComplexSurfaceApodizer',
     'DynamicOpticalSystem',
+    'make_actuator_positions',
     'make_gaussian_influence_functions',
     'make_xinetics_influence_functions',
     'DeformableMirror',

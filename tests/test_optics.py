@@ -3,6 +3,44 @@ import matplotlib.pyplot as plt
 from hcipy import *
 import pytest
 
+def test_agnostic_apodizer():
+	wavelength = 0.2
+	aperture_achromatic = circular_aperture(1)
+	aperture_chromatic = lambda input_grid, wavelength: circular_aperture(wavelength)(input_grid)
+
+	apod_achromatic = Apodizer(aperture_achromatic)
+	apod_chromatic = Apodizer(aperture_chromatic)
+
+	phase_chromatic = lambda input_grid, wavelength: zernike(2, 0)(input_grid) * wavelength
+	apod_phase_chromatic = PhaseApodizer(phase_chromatic)
+
+	phase_achromatic = zernike(2, 0)
+	apod_phase_achromatic = PhaseApodizer(phase_achromatic)
+
+	filter_curve = lambda wavelength: np.sqrt(wavelength)
+	apod_filter = Apodizer(filter_curve)
+
+	for wl in [0.2, 0.4, 0.7]:
+		for num_pix in [32, 64, 128]:
+			for diameter in [0.5, 1, 2]:
+				pupil_grid = make_pupil_grid(num_pix, diameter)
+				wf = Wavefront(pupil_grid.ones(), wl)
+
+				pup = apod_achromatic(wf).electric_field
+				assert np.allclose(pup, aperture_achromatic(pupil_grid))
+
+				pup = apod_chromatic(wf).electric_field
+				assert np.allclose(pup, aperture_chromatic(pupil_grid, wl))
+
+				pup = apod_phase_achromatic(wf).electric_field
+				assert np.allclose(pup, np.exp(1j * phase_achromatic(pupil_grid)))
+
+				pup = apod_phase_chromatic(wf).electric_field
+				assert np.allclose(pup, np.exp(1j * phase_chromatic(pupil_grid, wl)))
+
+				pup = apod_filter(wf).electric_field
+				assert np.allclose(pup, filter_curve(wl))
+
 def test_statistics_noisy_detector():
 	N = 256
 	grid = make_pupil_grid(N)

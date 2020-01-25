@@ -420,11 +420,11 @@ class AgnosticOpticalElement(OpticalElement):
 				return 0
 		elif len(param_parameters) == 2:
 			if not self._wavelength_dependent:
-				return INPUT_GRID_DEPENDENT & OUTPUT_GRID_DEPENDENT
+				return INPUT_GRID_DEPENDENT | OUTPUT_GRID_DEPENDENT
 			else:
-				return INPUT_GRID_DEPENDENT & WAVELENGTH_DEPENDENT
+				return INPUT_GRID_DEPENDENT | WAVELENGTH_DEPENDENT
 		elif len(param_parameters) == 3:
-			return INPUT_GRID_DEPENDENT & OUTPUT_GRID_DEPENDENT & WAVELENGTH_DEPENDENT
+			return INPUT_GRID_DEPENDENT | OUTPUT_GRID_DEPENDENT | WAVELENGTH_DEPENDENT
 		else:
 			return 0
 
@@ -564,7 +564,6 @@ class AgnosticOpticalElement(OpticalElement):
 
 				return function(**evaluated_kwargs)
 		elif signature == (INPUT_GRID_DEPENDENT | WAVELENGTH_DEPENDENT):
-			print(kwargs.keys())
 			def func(input_grid, wavelength):
 				evaluated_kwargs = {}
 				for key, val in kwargs.items():

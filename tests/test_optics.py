@@ -415,3 +415,21 @@ def test_polarization_elements():
 
 		# Test power conservation.
 		assert np.allclose(test_wf.I, wf_forward_circ_polarizer_1.I + wf_forward_circ_polarizer_2.I)
+
+def test_magnifier():
+	pupil_grid = make_pupil_grid(128)
+	wf = Wavefront(circular_aperture(1)(pupil_grid))
+	wf.total_power = 1
+
+	magnifier = Magnifier(1.0)
+
+	for magnification in [0.2, 3.0, [0.3, 0.3], [0.5, 2]]:
+		magnifier.magnification = magnification
+
+		wf_backward = magnifier.backward(wf)
+		assert np.abs(wf_backward.total_power - 1) < 1e-12
+		assert hash(wf_backward.electric_field.grid) == hash(magnifier.get_input_grid(wf.electric_field.grid, 1))
+
+		wf_forward = magnifier.forward(wf)
+		assert np.abs(wf_forward.total_power - 1) < 1e-12
+		assert hash(wf_forward.electric_field.grid) == hash(magnifier.get_output_grid(wf.electric_field.grid, 1))

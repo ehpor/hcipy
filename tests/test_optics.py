@@ -77,6 +77,62 @@ def test_glass_catalogue():
 		get_refractive_index('N-Ba7')
 	assert 'Did you mean' not in str(exception_info.value)
 
+def test_deformable_mirror():
+	num_pix = 256
+
+	grid = make_pupil_grid(num_pix)
+
+	functions = [make_gaussian_influence_functions, make_xinetics_influence_functions]
+
+	for num_actuators_across_pupil in [12, 16]:
+		actuator_spacing = 1 / num_actuators_across_pupil
+		num_actuators = num_actuators_across_pupil**2
+
+		for func in functions:
+			influence_functions = func(grid, num_actuators_across_pupil, actuator_spacing)
+
+			deformable_mirror = DeformableMirror(influence_functions)
+
+			# Check number of generated influence functions
+			assert len(influence_functions) == num_actuators
+			assert deformable_mirror.num_actuators == num_actuators
+
+			# Check that influence functions are sparse
+			assert influence_functions.is_sparse
+
+			# Mirror should start out flattened
+			assert np.std(deformable_mirror.surface) < 1e-12
+
+			for i in np.random.randint(0, num_actuators, size=10):
+				deformable_mirror.actuators[i] = np.random.randn(1)
+
+				# Mirror should not be flat with poked actuator
+				assert np.std(deformable_mirror.surface) > 1e-12
+
+				deformable_mirror.actuators[i] = 0
+
+			# Mirror should be flat again
+			assert np.std(deformable_mirror.surface) < 1e-12
+
+			deformable_mirror.random(0.001)
+
+			# Mirror should have random actuator pokes
+			assert np.std(deformable_mirror.surface) > 1e-12
+
+			wf = Wavefront(grid.ones())
+			wf_out = deformable_mirror.forward(wf)
+
+			# Check that the correct phase is applied
+			assert np.allclose(wf_out.phase, deformable_mirror.phase_for(1))
+
+			# Check OPD
+			assert np.allclose(deformable_mirror.opd, 2 * deformable_mirror.surface)
+
+			deformable_mirror.flatten()
+
+			# Check that the deformable mirror is flat again
+			assert np.std(deformable_mirror.surface) < 1e-12
+
 def test_segmented_deformable_mirror():
 	num_pix = 256
 	grid = make_pupil_grid(num_pix)

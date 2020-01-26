@@ -147,7 +147,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		imshow_field(m, grid, ax=ax)
 
 	num_rows, num_cols = field.grid.shape
-	def format_coord(x, y):
+	def format_coord(x, y): # pragma: no cover
 		col = int(np.round((x - min_x) / (max_x - min_x) * (num_cols - 1)))
 		row = int(np.round((y - min_y) / (max_y - min_y) * (num_rows - 1)))
 

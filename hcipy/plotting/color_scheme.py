@@ -6,7 +6,7 @@ palettes = {
 	'dark': cycler(color=[colors.blue_700, colors.red_700, colors.green_700, colors.orange_700, colors.purple_700, colors.brown_700])
 }
 
-def set_color_scheme(dark=False, publication_quality=False, cmap='viridis'):
+def set_color_scheme(dark=False, publication_quality=False, cmap='viridis'): # pragma: no cover
 	"""
 	Apply a color scheme to all matplotlib figures. The setting
 	publication_quality uses LaTeX for all text in the figure.

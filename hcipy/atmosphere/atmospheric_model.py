@@ -13,7 +13,7 @@ class AtmosphericLayer(OpticalElement):
 
 		This class serves as a base class for all atmospheric layers. Multiply
 		atmospheric layers can be combined into an :class:`MultiLayerAtmosphere` which
-		provides modelling of scintilation between layers.
+		provides modelling of scintillation between layers.
 
 		Parameters
 		----------
@@ -158,10 +158,10 @@ class AtmosphericLayer(OpticalElement):
 		return wf
 
 class MultiLayerAtmosphere(OpticalElement):
-	def __init__(self, layers, scintilation=False):
+	def __init__(self, layers, scintillation=False):
 		'''A multi-layer atmospheric model.
 
-		This :class:`OpticalElement` can model turbulence and scintilation effects
+		This :class:`OpticalElement` can model turbulence and scintillation effects
 		due to atmospheric turbulence by propagating light through a series of
 		infinitely-thin atmospheric phase screens at different altitudes. The distance
 		between two phase screens can be propagated using Fresnel propagation, or using
@@ -171,12 +171,12 @@ class MultiLayerAtmosphere(OpticalElement):
 		----------
 		layers : list of AtmosphericLayer objects
 			The series of atmospheric layers in this model.
-		scintilation : bool
+		scintillation : bool
 			If True, then the distance between two phase screens is propagated using
 			a :class:`FresnelPropagator`. Otherwise, no propagator will be used.
 		'''
 		self.layers = layers
-		self._scintilation = scintilation
+		self._scintillation = scintillation
 		self._t = 0
 		self._dirty = True
 
@@ -195,16 +195,16 @@ class MultiLayerAtmosphere(OpticalElement):
 		delta_heights = sorted_heights[:-1] - sorted_heights[1:]
 		grid = self.layers[0].input_grid
 
-		if self.scintilation:
+		if self.scintillation:
 			propagators = [FresnelPropagator(grid, h) for h in delta_heights]
 
 		self.elements = []
 		for i, j in enumerate(layer_indices):
 			self.elements.append(self.layers[j])
-			if self.scintilation and i < len(propagators):
+			if self.scintillation and i < len(propagators):
 				self.elements.append(propagators[i])
 
-		if self.scintilation and sorted_heights[-1] > 0:
+		if self.scintillation and sorted_heights[-1] > 0:
 			self.elements.append(FresnelPropagator(grid, sorted_heights[-1]))
 
 		self._dirty = False
@@ -237,21 +237,21 @@ class MultiLayerAtmosphere(OpticalElement):
 		Field
 			The total unwrapped phase screen.
 		'''
-		if self.scintilation:
-			raise ValueError('Cannot get the unwrapped phase for an atmosphere with scintilation.')
+		if self.scintillation:
+			raise ValueError('Cannot get the unwrapped phase for an atmosphere with scintillation.')
 
 		return np.sum([l.phase_for(wavelength) for l in self.layers], axis=0)
 
 	@property
-	def scintilation(self):
-		'''Whether to include scintilation effects in the propagation.
+	def scintillation(self):
+		'''Whether to include scintillation effects in the propagation.
 		'''
-		return self._scintilation
+		return self._scintillation
 
-	@scintilation.setter
-	def scintilation(self, scintilation):
-		self._dirty = scintilation != self.scintilation
-		self._scintilation = scintilation
+	@scintillation.setter
+	def scintillation(self, scintillation):
+		self._dirty = scintillation != self.scintillation
+		self._scintillation = scintillation
 
 	def evolve_until(self, t):
 		'''Evolve all atmospheric layers to a time t.

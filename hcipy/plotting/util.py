@@ -165,7 +165,7 @@ def imshow_pupil_phase(pupil_phase, grid=None, phase_limits=None, vmin=None, vma
 		pupil_phase = Field(pupil_phase, grid)
 
 	if np.iscomplexobj(pupil_phase):
-		phase = np.angle(pupil_phase)
+		phase = Field(np.angle(pupil_phase), pupil_phase.grid)
 		mask = np.abs(pupil_phase)
 	else:
 		phase = pupil_phase
@@ -177,7 +177,7 @@ def imshow_pupil_phase(pupil_phase, grid=None, phase_limits=None, vmin=None, vma
 			complex_field *= mask
 
 		complex_field /= np.mean(complex_field)
-		phase = np.angle(complex_field)
+		phase = Field(np.angle(complex_field), phase.grid)
 
 	if phase_limits is None:
 		phase_limits = max(-phase[mask > 0].min(), phase[mask > 0].max())

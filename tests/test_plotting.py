@@ -67,3 +67,24 @@ def test_contour_field():
 
 	contourf_field(field)
 	plt.clf()
+
+def test_imshow_util():
+	pupil_grid = make_pupil_grid(128)
+	focal_grid = make_focal_grid(4, 16)
+
+	aperture = make_magellan_aperture(True)(pupil_grid)
+	prop = FraunhoferPropagator(pupil_grid, focal_grid)
+
+	wf = Wavefront(aperture)
+	wf.electric_field *= np.exp(0.1j * zernike(6, 2, radial_cutoff=False)(pupil_grid))
+
+	imshow_pupil_phase(wf, remove_piston=True, crosshairs=True, title='phase')
+	plt.clf()
+
+	img = prop(wf)
+
+	imshow_psf(img, colorbar_orientation='vertical', normalization='peak', crosshairs=True, title='psf')
+	plt.clf()
+
+	imshow_psf(img, scale='linear', colorbar_orientation='vertical', normalization='peak', crosshairs=True, title='psf')
+	plt.clf()

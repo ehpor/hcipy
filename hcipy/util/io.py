@@ -57,6 +57,66 @@ def _guess_file_format(filename):
 	else:
 		return None
 
+def _make_metadata(file_type):
+	from ..version import get_version
+	import datetime
+
+	tree = {
+		'meta': {
+			'author': 'HCIPy %s' % get_version(),
+			'date_utc': datetime.datetime.utcnow().isoformat(),
+			'file_type': file_type
+		}
+	}
+
+	return tree
+
+def read_grid(filename, fmt=None):
+	from ..field import Grid
+
+	if fmt is None:
+		fmt = _guess_file_format(filename)
+
+		if fmt is None:
+			raise ValueError('Format not given and could not be guessed based on the file extension.')
+
+	if fmt in ['asdf', 'fits']:
+		import asdf
+
+		f = asdf.open(filename)
+		grid = Grid.from_dict(f.tree['grid'])
+		f.close()
+
+		return grid
+	else:
+		raise NotImplementedError('This file format has not been implemented.')
+
+def write_grid(grid, filename, fmt=None, overwrite=True):
+	if fmt is None:
+		fmt = _guess_file_format(filename)
+
+		if fmt is None:
+			raise ValueError('Format not given and could not be guessed based on the file extension.')
+
+	tree = _make_metadata('grid')
+	tree['grid'] = grid.to_dict()
+
+	if fmt == 'asdf':
+		import asdf
+
+		target = asdf.AsdfFile(tree)
+		target.write_to(filename, all_array_compression='zlib')
+	elif fmt == 'fits':
+		from astropy.io import fits
+		import asdf
+
+		hdulist = fits.HDUList()
+
+		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
+		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
+	else:
+		raise NotImplementedError('This file format has not been implemented.')
+
 def read_field(filename, fmt=None):
 	from ..field import Field
 
@@ -82,25 +142,18 @@ def read_field(filename, fmt=None):
 		f.close()
 
 		return field
+	else:
+		raise NotImplementedError('This file format has not been implemented.')
 
 def write_field(field, filename, fmt=None, overwrite=True):
-	from ..version import get_version
-	import datetime
-
 	if fmt is None:
 		fmt = _guess_file_format(filename)
 
 		if fmt is None:
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
-	tree = {
-		'field': field.to_dict(),
-		'meta': {
-			'author': 'HCIPy %s' % get_version(),
-			'date': datetime.datetime.utcnow().isoformat(),
-			'type': 'Field'
-		}
-	}
+	tree = _make_metadata('field')
+	tree['field'] = field.to_dict()
 
 	if fmt == 'asdf':
 		import asdf
@@ -128,9 +181,10 @@ def write_field(field, filename, fmt=None, overwrite=True):
 
 			hdulist[0].header.update(w.to_header())
 
-
 		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
 		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
+	else:
+		raise NotImplementedError('This file format has not been implemented.')
 
 """
 def write_mode_basis(mode_basis, filename):

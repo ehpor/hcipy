@@ -1,34 +1,42 @@
 import numpy as np
 import os
 from hcipy import *
-import matplotlib.pyplot as plt
+
+def test_grid_io():
+	grid1 = make_pupil_grid(128)
+	grid2 = CartesianGrid(SeparatedCoords(grid1.separated_coords))
+	grid3 = grid1.as_('polar')
+
+	grids = [grid1, grid2, grid3]
+	formats = ['asdf', 'fits', 'fits.gz']
+	filenames = ['grid_test.' + fmt for fmt in formats]
+
+	for g in grids:
+		for fname in filenames:
+			write_grid(g, fname)
+			new_grid = read_grid(fname)
+
+			assert hash(g) == hash(new_grid)
+
+	for fname in filenames:
+		os.remove(fname)
 
 def test_field_io():
 	grid = make_pupil_grid(256, [1, 1])
 	field = circular_aperture(1)(grid)
 
-	write_field(field, 'field_test.asdf')
-	new_field = read_field('field_test.asdf')
+	formats = ['asdf', 'fits', 'fits.gz']
+	filenames = ['field_test.' + fmt for fmt in formats]
 
-	assert np.allclose(field, new_field)
-	assert hash(field.grid) == hash(new_field.grid)
+	for fname in filenames:
+		write_field(field, fname)
+		new_field = read_field(fname)
 
-	write_field(field, 'field_test.fits')
-	new_field = read_field('field_test.fits')
+		assert np.allclose(field, new_field)
+		assert hash(field.grid) == hash(new_field.grid)
 
-	assert np.allclose(field, new_field)
-	assert hash(field.grid) == hash(new_field.grid)
-
-	write_field(field, 'field_test.fits.gz')
-	new_field = read_field('field_test.fits.gz')
-
-	assert np.allclose(field, new_field)
-	assert hash(field.grid) == hash(new_field.grid)
-
-	#os.remove('field_test.asdf')
-	#os.remove('field_test.fits')
-
-test_field_io()
+	for fname in filenames:
+		os.remove(fname)
 
 """
 def test_write_mode_basis():

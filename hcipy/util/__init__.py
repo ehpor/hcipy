@@ -12,6 +12,8 @@ __all__ = [
     'SVD',
     'read_fits',
     'write_fits',
+    'read_grid',
+    'write_grid',
     'read_field',
     'write_field'
 ]

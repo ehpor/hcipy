@@ -8,7 +8,7 @@ class Grid(object):
 
 	Parameters
 	----------
-	coords : CoordsBase
+	coords : Coords
 		The actual definition of the coordinate values.
 	weights : array_like or None
 		The interval size, area, volume or hypervolume of each point, depending on the number of dimensions.
@@ -22,6 +22,7 @@ class Grid(object):
 
 	_coordinate_system = 'none'
 	_coordinate_system_transformations = {}
+	_coordinate_systems = {}
 
 	def __init__(self, coords, weights=None):
 		self.coords = coords
@@ -31,6 +32,29 @@ class Grid(object):
 		'''Create a copy.
 		'''
 		return copy.deepcopy(self)
+
+	@classmethod
+	def from_dict(cls, tree):
+		from .coordinates import Coords
+
+		coords = Coords.from_dict(tree['coords'])
+		grid_class = Grid._coordinate_systems[tree['coordinate_system']]
+
+		if 'weights' in tree:
+			weights = tree['weights']
+		else:
+			weights = None
+
+		return grid_class(coords, weights)
+
+	def to_dict(self):
+		tree = {
+			'coordinate_system': self._coordinate_system,
+			'coords': self.coords.to_dict(),
+			'weights': self._weights
+		}
+
+		return tree
 
 	def subset(self, criterium):
 		'''Construct a subset of the current sampling, based on `criterium`.
@@ -249,6 +273,10 @@ class Grid(object):
 			Grid._coordinate_system_transformations[source][dest] = func
 		else:
 			Grid._coordinate_system_transformations[source] = {dest: func}
+
+	@staticmethod
+	def _add_coordinate_system(name, grid_class):
+		Grid._coordinate_systems[name] = grid_class
 
 	def __getitem__(self, i):
 		'''The `i`-th point in this grid.

@@ -1,3 +1,5 @@
+import numpy as np
+
 def read_fits(filename):
 	'''Read an array from a fits file.
 
@@ -46,6 +48,90 @@ def write_fits(data, filename, shape=None, overwrite=True):
 		hdu = fits.PrimaryHDU(data)
 
 	hdu.writeto(filename, overwrite=True)
+
+def _guess_file_format(filename):
+	if filename.endswith('asdf'):
+		return 'asdf'
+	elif filename.endswith('fits') or filename.endswith('fits.gz'):
+		return 'fits'
+	else:
+		return None
+
+def read_field(filename, fmt=None):
+	from ..field import Field
+
+	if fmt is None:
+		fmt = _guess_file_format(filename)
+
+		if fmt is None:
+			raise ValueError('Format not given and could not be guessed based on the file extension.')
+
+	if fmt == 'asdf':
+		import asdf
+
+		f = asdf.open(filename)
+		field = Field.from_dict(f.tree['field'])
+		f.close()
+
+		return field
+	elif fmt == 'fits':
+		import asdf
+
+		f = asdf.open(filename)
+		field = Field.from_dict(f.tree['field']).ravel()
+		f.close()
+
+		return field
+
+def write_field(field, filename, fmt=None, overwrite=True):
+	from ..version import get_version
+	import datetime
+
+	if fmt is None:
+		fmt = _guess_file_format(filename)
+
+		if fmt is None:
+			raise ValueError('Format not given and could not be guessed based on the file extension.')
+
+	tree = {
+		'field': field.to_dict(),
+		'meta': {
+			'author': 'HCIPy %s' % get_version(),
+			'date': datetime.datetime.utcnow().isoformat(),
+			'type': 'Field'
+		}
+	}
+
+	if fmt == 'asdf':
+		import asdf
+
+		target = asdf.AsdfFile(tree)
+		target.write_to(filename, all_array_compression='zlib')
+	elif fmt == 'fits':
+		from astropy.io import fits
+		import asdf
+
+		hdulist = fits.HDUList()
+
+		if field.grid.is_separated:
+			hdulist.append(fits.ImageHDU(np.asarray(field.shaped)))
+			tree['field']['values'] = hdulist[0].data
+
+		if field.grid.is_regular:
+			from astropy import wcs
+
+			w = wcs.WCS(naxis=2)
+			w.wcs.crpix = np.ones(2)
+			w.wcs.cdelt = field.grid.delta
+			w.wcs.crval = field.grid.zero
+			w.wcs.ctype = ['X', 'Y']
+
+			hdulist[0].header.update(w.to_header())
+
+
+		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
+		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
+
 """
 def write_mode_basis(mode_basis, filename):
 	'''A function that writes a mode basis as fits file.

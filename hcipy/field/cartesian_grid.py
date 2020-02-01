@@ -25,7 +25,6 @@ def _get_rotation_matrix(ndim, angle, axis=None):
 class CartesianGrid(Grid):
 	'''A grid representing a N-dimensional Cartesian coordinate system.
 	'''
-
 	_coordinate_system = 'cartesian'
 
 	@property
@@ -149,3 +148,5 @@ class CartesianGrid(Grid):
 				weights.append(w)
 
 			return np.multiply.reduce(np.ix_(*weights[::-1])).ravel()
+
+Grid._add_coordinate_system('cartesian', CartesianGrid)

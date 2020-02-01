@@ -1,14 +1,24 @@
 import numpy as np
 import copy
 
-class CoordsBase(object):
+class Coords(object):
 	'''Base class for coordinates.
 	'''
+	_coordinate_types = {}
 
 	def copy(self):
 		'''Make a copy.
 		'''
 		return copy.deepcopy(self)
+
+	@classmethod
+	def from_dict(cls, tree):
+		coordinate_class = Coords._coordinate_types[tree['type']]
+
+		return coordinate_class.from_dict(tree)
+
+	def to_dict(self):
+		raise NotImplementedError()
 
 	def __add__(self, b):
 		'''Add `b` to the coordinates separately and return the result.
@@ -105,7 +115,10 @@ class CoordsBase(object):
 		'''
 		raise NotImplementedError()
 
-class UnstructuredCoords(CoordsBase):
+	def _add_coordinate_type(coordinate_type, coordinate_class):
+		Coords._coordinate_types[coordinate_type] = coordinate_class
+
+class UnstructuredCoords(Coords):
 	'''An unstructured list of points.
 
 	Parameters
@@ -114,7 +127,22 @@ class UnstructuredCoords(CoordsBase):
 		A tuple of a list of positions for each dimension.
 	'''
 	def __init__(self, coords):
-		self.coords = list(coords)
+		self.coords = [np.array(c) for c in coords]
+
+	@classmethod
+	def from_dict(cls, tree):
+		if tree['type'] != 'unstructured':
+			raise ValueError('The type of coordinates should be "unstructured".')
+
+		return cls(tree['coords'])
+
+	def to_dict(self):
+		tree = {
+			'type': 'unstructured',
+			'coords': self.coords
+		}
+
+		return tree
 
 	@property
 	def size(self):
@@ -155,7 +183,7 @@ class UnstructuredCoords(CoordsBase):
 			self.coords[i] = self.coords[i][::-1]
 		return self
 
-class SeparatedCoords(CoordsBase):
+class SeparatedCoords(Coords):
 	'''A list of points that are separable along each dimension.
 
 	The actual points are given by the iterated tensor product of the `separated_coords`.
@@ -173,6 +201,21 @@ class SeparatedCoords(CoordsBase):
 	def __init__(self, separated_coords):
 		# Make a copy to avoid modification from outside the class
 		self.separated_coords = [copy.deepcopy(s) for s in separated_coords]
+
+	@classmethod
+	def from_dict(cls, tree):
+		if tree['type'] != 'separated':
+			raise ValueError('The type of coordinates should be "separated".')
+
+		return cls(tree['separated_coords'])
+
+	def to_dict(self):
+		tree = {
+			'type': 'separated',
+			'separated_coords': self.separated_coords
+		}
+
+		return tree
 
 	def __getitem__(self, i):
 		'''The `i`-th point for these coordinates.
@@ -230,7 +273,7 @@ class SeparatedCoords(CoordsBase):
 			self.separated_coords[i] = self.separated_coords[i][::-1]
 		return self
 
-class RegularCoords(CoordsBase):
+class RegularCoords(Coords):
 	'''A list of points that have a regular spacing in all dimensions.
 
 	Parameters
@@ -268,6 +311,23 @@ class RegularCoords(CoordsBase):
 			self.zero = np.array([zero]*len(self.dims))
 		else:
 			self.zero = np.array(zero)
+
+	@classmethod
+	def from_dict(cls, tree):
+		if tree['type'] != 'regular':
+			raise ValueError('The type of coordinates should be "regular".')
+
+		return cls(tree['delta'], tree['dims'], tree['zero'])
+
+	def to_dict(self):
+		tree = {
+			'type': 'regular',
+			'delta': self.delta.tolist(),
+			'dims': self.dims.tolist(),
+			'zero': self.zero.tolist()
+		}
+
+		return tree
 
 	@property
 	def separated_coords(self):
@@ -329,3 +389,7 @@ class RegularCoords(CoordsBase):
 		self.delta = -self.delta
 		self.zero = maximum
 		return self
+
+Coords._add_coordinate_type('unstructured', UnstructuredCoords)
+Coords._add_coordinate_type('separated', SeparatedCoords)
+Coords._add_coordinate_type('regular', RegularCoords)

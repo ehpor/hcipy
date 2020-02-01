@@ -6,7 +6,6 @@ from .coordinates import UnstructuredCoords
 class PolarGrid(Grid):
 	'''A grid representing a two-dimensional Polar coordinate system.
 	'''
-
 	_coordinate_system = 'polar'
 
 	@property
@@ -119,6 +118,8 @@ def _polar_to_cartesian(self):
 	x = r * np.cos(theta)
 	y = r * np.sin(theta)
 	return CartesianGrid(UnstructuredCoords([x, y]))
+
+Grid._add_coordinate_system('polar', PolarGrid)
 
 Grid._add_coordinate_system_transformation('cartesian', 'polar', _cartesian_to_polar)
 Grid._add_coordinate_system_transformation('polar', 'cartesian', _polar_to_cartesian)

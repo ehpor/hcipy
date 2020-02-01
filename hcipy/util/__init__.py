@@ -11,7 +11,9 @@ __all__ = [
     'inverse_tikhonov',
     'SVD',
     'read_fits',
-    'write_fits'
+    'write_fits',
+    'read_field',
+    'write_field'
 ]
 
 from .spectral_noise import *

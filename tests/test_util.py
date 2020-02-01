@@ -1,6 +1,35 @@
 import numpy as np
 import os
 from hcipy import *
+import matplotlib.pyplot as plt
+
+def test_field_io():
+	grid = make_pupil_grid(256, [1, 1])
+	field = circular_aperture(1)(grid)
+
+	write_field(field, 'field_test.asdf')
+	new_field = read_field('field_test.asdf')
+
+	assert np.allclose(field, new_field)
+	assert hash(field.grid) == hash(new_field.grid)
+
+	write_field(field, 'field_test.fits')
+	new_field = read_field('field_test.fits')
+
+	assert np.allclose(field, new_field)
+	assert hash(field.grid) == hash(new_field.grid)
+
+	write_field(field, 'field_test.fits.gz')
+	new_field = read_field('field_test.fits.gz')
+
+	assert np.allclose(field, new_field)
+	assert hash(field.grid) == hash(new_field.grid)
+
+	#os.remove('field_test.asdf')
+	#os.remove('field_test.fits')
+
+test_field_io()
+
 """
 def test_write_mode_basis():
 	# grid for the test mode basis

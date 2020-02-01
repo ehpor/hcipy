@@ -14,7 +14,6 @@ class Field(np.ndarray):
 	----------
 	grid : Grid
 		The grid on which the values are defined.
-
 	'''
 	def __new__(cls, arr, grid):
 		obj = np.asarray(arr).view(cls)
@@ -25,6 +24,20 @@ class Field(np.ndarray):
 		if obj is None:
 			return
 		self.grid = getattr(obj, 'grid', None)
+
+	@classmethod
+	def from_dict(cls, tree):
+		from .grid import Grid
+
+		return cls(tree['values'], Grid.from_dict(tree['grid']))
+
+	def to_dict(self):
+		tree = {
+			'values': np.asarray(self),
+			'grid': self.grid.to_dict()
+		}
+
+		return tree
 
 	@property
 	def tensor_order(self):

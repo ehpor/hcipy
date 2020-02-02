@@ -41,7 +41,7 @@ class Grid(object):
 		grid_class = Grid._coordinate_systems[tree['coordinate_system']]
 
 		if 'weights' in tree:
-			weights = tree['weights']
+			weights = copy.deepcopy(tree['weights'])
 		else:
 			weights = None
 

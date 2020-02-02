@@ -29,7 +29,7 @@ class Field(np.ndarray):
 	def from_dict(cls, tree):
 		from .grid import Grid
 
-		return cls(tree['values'], Grid.from_dict(tree['grid']))
+		return cls(np.array(tree['values']), Grid.from_dict(tree['grid']))
 
 	def to_dict(self):
 		tree = {

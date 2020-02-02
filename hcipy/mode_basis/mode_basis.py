@@ -29,7 +29,7 @@ class ModeBasis(object):
 				self._modes = scipy.sparse.vstack(transformation_matrix, format='csr')
 				self._transformation_matrix = self._modes.T.tocsc()
 			else:
-				self._modes = transformation_matrix.tocsr()
+				self._modes = transformation_matrix.T.tocsr()
 				self._transformation_matrix = transformation_matrix.tocsc()
 		else:
 			if is_list:
@@ -43,6 +43,49 @@ class ModeBasis(object):
 			self.grid = transformation_matrix[0].grid
 		else:
 			self.grid = None
+
+	@classmethod
+	def from_dict(cls, tree):
+		from ..field import Grid
+
+		if isinstance(tree['transformation_matrix'], dict):
+			data = np.array(tree['transformation_matrix']['data'])
+			indices = np.array(tree['transformation_matrix']['indices'])
+			indptr = np.array(tree['transformation_matrix']['indptr'])
+			shape = tree['transformation_matrix']['shape']
+
+			transformation_matrix = scipy.sparse.csc_matrix((data, indices, indptr), shape=shape)
+		else:
+			transformation_matrix = np.array(tree['transformation_matrix'])
+
+		if 'grid' in tree:
+			mode_basis = cls(transformation_matrix, Grid.from_dict(tree['grid']))
+		else:
+			mode_basis = cls(transformation_matrix)
+
+		if tree['is_sparse']:
+			return mode_basis.to_sparse()
+		else:
+			return mode_basis.to_dense()
+
+	def to_dict(self):
+		if self.is_sparse:
+			transformation_matrix = {
+				'data': self._transformation_matrix.data,
+				'indices': self._transformation_matrix.indices,
+				'indptr': self._transformation_matrix.indptr,
+				'shape': list(self._transformation_matrix.shape)
+			}
+		else:
+			transformation_matrix = self.transformation_matrix
+
+		tree = {
+			'grid': self.grid.to_dict(),
+			'transformation_matrix': transformation_matrix,
+			'is_sparse': self.is_sparse
+		}
+
+		return tree
 
 	@property
 	def is_sparse(self):
@@ -245,6 +288,12 @@ class ModeBasis(object):
 			The number of modes in the `ModeBasis`.
 		'''
 		return self.transformation_matrix.shape[-1]
+
+	@property
+	def num_modes(self):
+		'''The number of modes in the `ModeBasis`.
+		'''
+		return len(self)
 
 	def append(self, mode):
 		'''Append `mode` to this mode basis.

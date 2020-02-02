@@ -82,4 +82,4 @@ def make_gaussian_laguerre_basis(grid, pmax, lmax, mode_field_diameter, pmin=0):
 	from .mode_basis import ModeBasis
 
 	modes = [gaussian_laguerre(pi, li, mode_field_diameter, grid) for li in range(-lmax, lmax + 1) for pi in range(pmin, pmax)]
-	return ModeBasis(modes)
+	return ModeBasis(modes, grid)

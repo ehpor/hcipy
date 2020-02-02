@@ -160,4 +160,4 @@ def make_disk_harmonic_basis(grid, num_modes, D=1, bc='dirichlet'):
 	orders = get_disk_harmonic_orders_sorted(num_modes, bc)
 
 	modes = [disk_harmonic(order[0], order[1], D, bc, grid) for order in orders]
-	return ModeBasis(modes)
+	return ModeBasis(modes, grid)

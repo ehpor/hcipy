@@ -89,7 +89,7 @@ def read_grid(filename, fmt=None):
 
 		return grid
 	else:
-		raise NotImplementedError('This file format has not been implemented.')
+		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
 def write_grid(grid, filename, fmt=None, overwrite=True):
 	if fmt is None:
@@ -115,7 +115,7 @@ def write_grid(grid, filename, fmt=None, overwrite=True):
 		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
 		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
 	else:
-		raise NotImplementedError('This file format has not been implemented.')
+		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
 def read_field(filename, fmt=None):
 	from ..field import Field
@@ -143,7 +143,7 @@ def read_field(filename, fmt=None):
 
 		return field
 	else:
-		raise NotImplementedError('This file format has not been implemented.')
+		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
 def write_field(field, filename, fmt=None, overwrite=True):
 	if fmt is None:
@@ -173,69 +173,98 @@ def write_field(field, filename, fmt=None, overwrite=True):
 		if field.grid.is_regular:
 			from astropy import wcs
 
-			w = wcs.WCS(naxis=2)
-			w.wcs.crpix = np.ones(2)
+			w = wcs.WCS(naxis=field.grid.ndim)
+			w.wcs.crpix = np.ones(field.grid.ndim)
 			w.wcs.cdelt = field.grid.delta
 			w.wcs.crval = field.grid.zero
-			w.wcs.ctype = ['X', 'Y']
+			w.wcs.ctype = ['X', 'Y', 'Z', 'W'][:field.grid.ndim]
 
 			hdulist[0].header.update(w.to_header())
 
 		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
 		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
 	else:
-		raise NotImplementedError('This file format has not been implemented.')
+		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
-"""
-def write_mode_basis(mode_basis, filename):
-	'''A function that writes a mode basis as fits file.
+def read_mode_basis(filename, fmt=None):
+	from ..mode_basis import ModeBasis
 
-	Parameters
-	----------
-	mode_basis : ModeBasis
-		The mode basis that will be saved as fits file.
-	filename : string
-		The name that the fits file will get.
-	'''
-	# the number of modes in the basis
-	Nmodes = len(mode_basis)
+	if fmt is None:
+		fmt = _guess_file_format(filename)
 
-	# the shape of the field if it were shaped
-	shape = mode_basis[0].grid.shape
+		if fmt is None:
+			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
-	write_fits(np.array([mode_basis]), filename, shape=[Nmodes, shape[0], shape[1]])
+	if fmt == 'asdf':
+		import asdf
 
-def read_mode_basis(filename, grid=None):
-	'''A function that reads a saved mode basis fits file as a proper mode basis.
+		f = asdf.open(filename)
+		mode_basis = ModeBasis.from_dict(f.tree['mode_basis'])
+		f.close()
 
-	Reads a mode basis fits file, assuming that it has been saved in the format by write_mode_basis().
-	A grid on which the modes are sampled can be given, otherwise the function make_pupil_grid()
-	will be used for the grid generation.
+		return mode_basis
+	elif fmt == 'fits':
+		import asdf
+		from ..field import Grid
 
-	Parameters
-	----------
-	filename : string
-		The name of the fits file.
-	grid : Grid
-		If given, the grid on which the modes are sampled.
+		f = asdf.open(filename)
+		tree = f.tree['mode_basis']
 
-	Returns
-	-------
-	ModeBasis
-		The read-in ModeBasis from the file.
-	'''
-	# Load the data cube which contains the mode basis.
-	data_cube = read_fits(filename)
+		if 'modes' in tree:
+			grid = Grid.from_dict(tree['grid'])
+			modes = tree['modes']
 
-	# Sett a default grid if none is provided
-	if grid is None:
-		grid = make_pupil_grid(data_cube.shape[2:0:-1])
+			old_shape = np.concatenate((modes.shape[:-grid.ndim], [grid.size]))
+			tree['transformation_matrix'] = modes.reshape(old_shape).T
+			del tree['modes']
 
-	# Load the modes as Fields and adding them to the list
-	modes = []
-	for i in np.arange(data_cube.shape[0]):
-		modes.append(Field(data_cube[i,:,:].ravel(), grid))
+		mode_basis = ModeBasis.from_dict(tree)
+		f.close()
 
-	# Return the proper mode basis
-	return ModeBasis(modes)
-"""
+		return mode_basis
+	else:
+		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
+
+def write_mode_basis(mode_basis, filename, fmt=None, overwrite=True):
+	if fmt is None:
+		fmt = _guess_file_format(filename)
+
+		if fmt is None:
+			raise ValueError('Format not given and could not be guessed based on the file extension.')
+
+	tree = _make_metadata('mode_basis')
+	tree['mode_basis'] = mode_basis.to_dict()
+
+	if fmt == 'asdf':
+		import asdf
+
+		target = asdf.AsdfFile(tree)
+		target.write_to(filename, all_array_compression='zlib')
+	elif fmt == 'fits':
+		from astropy.io import fits
+		import asdf
+		from astropy import wcs
+
+		hdulist = fits.HDUList()
+
+		if mode_basis.grid and mode_basis.grid.is_separated:
+			new_shape = np.concatenate(([-1], mode_basis.grid.shape))
+			modes = np.ascontiguousarray(mode_basis.to_dense().transformation_matrix.T.reshape(new_shape))
+
+			hdulist.append(fits.ImageHDU(np.asarray(modes)))
+
+			w = wcs.WCS(naxis=mode_basis.grid.ndim)
+			w.wcs.crpix = np.ones(mode_basis.grid.ndim)
+			w.wcs.cdelt = mode_basis.grid.delta
+			w.wcs.crval = mode_basis.grid.zero
+			w.wcs.ctype = ['X', 'Y', 'Z', 'W'][:mode_basis.grid.ndim]
+
+			hdulist[0].header.update(w.to_header())
+
+			del tree['mode_basis']['transformation_matrix']
+			tree['mode_basis']['modes'] = hdulist[0].data
+
+		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
+		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
+	else:
+		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)

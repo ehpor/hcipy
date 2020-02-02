@@ -129,4 +129,4 @@ def make_gaussian_hermite_basis(grid, num_modes, mode_field_diameter, starting_m
 	from .mode_basis import ModeBasis
 
 	modes = [gaussian_hermite_index(i, mode_field_diameter, grid) for i in range(starting_mode, starting_mode + num_modes)]
-	return ModeBasis(modes)
+	return ModeBasis(modes, grid)

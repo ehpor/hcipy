@@ -332,4 +332,4 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
 	if grid is None:
 		return modes
 	else:
-		return ModeBasis(modes)
+		return ModeBasis(modes, grid)

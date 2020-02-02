@@ -27,7 +27,8 @@ setup(name='hcipy',
 		"astropy",
 		"imageio",
 		"xxhash",
-		"numexpr"],
+		"numexpr",
+		"asdf"],
 	extras_require={
 		"dev": [
 			"pytest",

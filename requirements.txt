@@ -7,3 +7,4 @@ astropy
 imageio
 xxhash
 numexpr
+asdf

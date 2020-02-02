@@ -158,7 +158,7 @@ class AtmosphericLayer(OpticalElement):
 		return wf
 
 class MultiLayerAtmosphere(OpticalElement):
-	def __init__(self, layers, scintillation=False):
+	def __init__(self, layers, scintillation=False, scintilation=None):
 		'''A multi-layer atmospheric model.
 
 		This :class:`OpticalElement` can model turbulence and scintillation effects
@@ -175,6 +175,13 @@ class MultiLayerAtmosphere(OpticalElement):
 			If True, then the distance between two phase screens is propagated using
 			a :class:`FresnelPropagator`. Otherwise, no propagator will be used.
 		'''
+		# Retain backwards compatibility.
+		if scintilation is not None:
+			import warnings
+			warings.warn('Please use the correct spelling for scintillation.')
+
+			scintillation = scintilation
+
 		self.layers = layers
 		self._scintillation = scintillation
 		self._t = 0

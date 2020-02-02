@@ -178,7 +178,7 @@ class MultiLayerAtmosphere(OpticalElement):
 		# Retain backwards compatibility.
 		if scintilation is not None:
 			import warnings
-			warings.warn('Please use the correct spelling for scintillation.')
+			warnings.warn('Please use the correct spelling for scintillation.')
 
 			scintillation = scintilation
 

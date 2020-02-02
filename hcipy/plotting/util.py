@@ -152,7 +152,6 @@ def imshow_pupil_phase(pupil_phase, grid=None, phase_limits=None, vmin=None, vma
 	kwargs : dictionary
 		Any keyword arguments will be sent to `imshow_field()`.
 	'''
-	import matplotlib as mpl
 	import matplotlib.pyplot as plt
 
 	if ax is None:

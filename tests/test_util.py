@@ -40,7 +40,7 @@ def test_mode_basis_io():
 	grid = make_pupil_grid(128)
 	mode_bases = [
 		make_zernike_basis(20, 1, grid, 1),
-		make_xinetics_influence_functions(grid, 8, 1/8)
+		make_xinetics_influence_functions(grid, 8, 1 / 8)
 	]
 
 	formats = ['asdf', 'fits', 'fits.gz']

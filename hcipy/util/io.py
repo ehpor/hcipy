@@ -136,9 +136,17 @@ def read_field(filename, fmt=None):
 		return field
 	elif fmt == 'fits':
 		import asdf
+		from ..field import Grid
 
 		f = asdf.open(filename)
-		field = Field.from_dict(f.tree['field']).ravel()
+		tree = f.tree['field']
+
+		if 'grid' in tree:
+			grid = Grid.from_dict(tree['grid'])
+			new_shape = np.concatenate((tree['values'].shape[:-grid.ndim], [grid.size])).astype('int')
+			tree['values'] = tree['values'].reshape(new_shape)
+
+		field = Field.from_dict(tree).reshape(new_shape)
 		f.close()
 
 		return field
@@ -167,7 +175,7 @@ def write_field(field, filename, fmt=None, overwrite=True):
 		hdulist = fits.HDUList()
 
 		if field.grid.is_separated:
-			hdulist.append(fits.ImageHDU(np.asarray(field.shaped)))
+			hdulist.append(fits.ImageHDU(np.ascontiguousarray(field.shaped)))
 			tree['field']['values'] = hdulist[0].data
 
 		if field.grid.is_regular:

@@ -1,6 +1,45 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from hcipy import *
 import pytest
+
+def test_agnostic_apodizer():
+	wavelength = 0.2
+	aperture_achromatic = circular_aperture(1)
+	aperture_chromatic = lambda input_grid, wavelength: circular_aperture(wavelength)(input_grid)
+
+	apod_achromatic = Apodizer(aperture_achromatic)
+	apod_chromatic = Apodizer(aperture_chromatic)
+
+	phase_chromatic = lambda input_grid, wavelength: zernike(2, 0)(input_grid) * wavelength
+	apod_phase_chromatic = PhaseApodizer(phase_chromatic)
+
+	phase_achromatic = zernike(2, 0)
+	apod_phase_achromatic = PhaseApodizer(phase_achromatic)
+
+	filter_curve = lambda wavelength: np.sqrt(wavelength)
+	apod_filter = Apodizer(filter_curve)
+
+	for wl in [0.2, 0.4, 0.7]:
+		for num_pix in [32, 64, 128]:
+			for diameter in [0.5, 1, 2]:
+				pupil_grid = make_pupil_grid(num_pix, diameter)
+				wf = Wavefront(pupil_grid.ones(), wl)
+
+				pup = apod_achromatic(wf).electric_field
+				assert np.allclose(pup, aperture_achromatic(pupil_grid))
+
+				pup = apod_chromatic(wf).electric_field
+				assert np.allclose(pup, aperture_chromatic(pupil_grid, wl))
+
+				pup = apod_phase_achromatic(wf).electric_field
+				assert np.allclose(pup, np.exp(1j * phase_achromatic(pupil_grid)))
+
+				pup = apod_phase_chromatic(wf).electric_field
+				assert np.allclose(pup, np.exp(1j * phase_chromatic(pupil_grid, wl)))
+
+				pup = apod_filter(wf).electric_field
+				assert np.allclose(pup, filter_curve(wl))
 
 def test_statistics_noisy_detector():
 	N = 256
@@ -77,6 +116,82 @@ def test_glass_catalogue():
 		get_refractive_index('N-Ba7')
 	assert 'Did you mean' not in str(exception_info.value)
 
+def test_deformable_mirror():
+	num_pix = 256
+	x_tilt = np.radians(15)
+	y_tilt = np.radians(10)
+	z_tilt = np.radians(20)
+	grid = make_pupil_grid(num_pix, 1.5)
+
+	functions = [make_gaussian_influence_functions, make_xinetics_influence_functions]
+
+	for num_actuators_across_pupil in [12, 16]:
+		actuator_spacing = 1 / num_actuators_across_pupil
+		num_actuators = num_actuators_across_pupil**2
+
+		# Check if the actuator spacing of an unrotated DM is correct
+		actuator_positions = make_actuator_positions(num_actuators_across_pupil, actuator_spacing)
+		assert np.allclose(actuator_positions.delta, actuator_spacing)
+
+		actuator_positions = make_actuator_positions(num_actuators_across_pupil, actuator_spacing, x_tilt=x_tilt, y_tilt=y_tilt, z_tilt=z_tilt)
+
+		for func in functions:
+			influence_functions = func(grid, num_actuators_across_pupil, actuator_spacing, x_tilt=x_tilt, y_tilt=y_tilt, z_tilt=z_tilt)
+
+			deformable_mirror = DeformableMirror(influence_functions)
+
+			# Check number of generated influence functions
+			assert len(influence_functions) == num_actuators
+			assert deformable_mirror.num_actuators == num_actuators
+
+			# Check that influence functions are sparse
+			assert influence_functions.is_sparse
+
+			# Check if the centroids for each influence function are close to the predicted position.
+			for act, p in zip(influence_functions, actuator_positions.points):
+				x_pos = (act * grid.x).sum() / act.sum()
+				y_pos = (act * grid.y).sum() / act.sum()
+
+				assert np.allclose([x_pos, y_pos], p, atol=0.02)
+
+			# Mirror should start out flattened
+			assert np.std(deformable_mirror.surface) < 1e-12
+
+			for i in np.random.randint(0, num_actuators, size=10):
+				deformable_mirror.actuators[i] = np.random.randn(1)
+
+				# Mirror should not be flat with poked actuator
+				assert np.std(deformable_mirror.surface) > 1e-12
+
+				deformable_mirror.actuators[i] = 0
+
+			# Mirror should be flat again
+			assert np.std(deformable_mirror.surface) < 1e-12
+
+			deformable_mirror.random(0.001)
+
+			# Mirror should have random actuator pokes
+			assert np.std(deformable_mirror.surface) > 1e-12
+
+			wf = Wavefront(grid.ones())
+			wf_out = deformable_mirror.forward(wf)
+
+			# Check that the correct phase is applied
+			assert np.allclose(wf_out.phase, deformable_mirror.phase_for(1))
+
+			wf_in = deformable_mirror.backward(wf_out)
+
+			# Check that the deformable mirror is phase only
+			assert np.allclose(wf_in.electric_field, wf.electric_field)
+
+			# Check OPD
+			assert np.allclose(deformable_mirror.opd, 2 * deformable_mirror.surface)
+
+			deformable_mirror.flatten()
+
+			# Check that the deformable mirror is flat again
+			assert np.std(deformable_mirror.surface) < 1e-12
+
 def test_segmented_deformable_mirror():
 	num_pix = 256
 	grid = make_pupil_grid(num_pix)
@@ -125,6 +240,11 @@ def test_segmented_deformable_mirror():
 
 			# Return segment to zero position
 			segmented_mirror.set_segment_actuators(i, 0, 0, 0)
+
+		# Run labeling of segments
+		imshow_field(aperture)
+		label_actuator_centroid_positions(segments)
+		plt.clf()
 
 def test_wavefront_stokes():
 	N = 4
@@ -415,3 +535,21 @@ def test_polarization_elements():
 
 		# Test power conservation.
 		assert np.allclose(test_wf.I, wf_forward_circ_polarizer_1.I + wf_forward_circ_polarizer_2.I)
+
+def test_magnifier():
+	pupil_grid = make_pupil_grid(128)
+	wf = Wavefront(circular_aperture(1)(pupil_grid))
+	wf.total_power = 1
+
+	magnifier = Magnifier(1.0)
+
+	for magnification in [0.2, 3.0, [0.3, 0.3], [0.5, 2]]:
+		magnifier.magnification = magnification
+
+		wf_backward = magnifier.backward(wf)
+		assert np.abs(wf_backward.total_power - 1) < 1e-12
+		assert hash(wf_backward.electric_field.grid) == hash(magnifier.get_input_grid(wf.electric_field.grid, 1))
+
+		wf_forward = magnifier.forward(wf)
+		assert np.abs(wf_forward.total_power - 1) < 1e-12
+		assert hash(wf_forward.electric_field.grid) == hash(magnifier.get_output_grid(wf.electric_field.grid, 1))

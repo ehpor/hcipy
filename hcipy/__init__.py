@@ -48,9 +48,5 @@ __all__.extend(util.__all__)
 __all__.extend(wavefront_control.__all__)
 __all__.extend(wavefront_sensing.__all__)
 
-from pkg_resources import get_distribution, DistributionNotFound
-try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
-    # package is not installed
-    pass
+from .version import get_version
+__version__ = get_version()

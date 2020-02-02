@@ -13,7 +13,7 @@ HCIPy is available on PyPI, so installation can be as easy as:
 It is also possible to install the latest development version from Github, by:
 
 .. code-block:: shell
-    
+
     git clone https://github.com/ehpor/hcipy
     cd hcipy
     pip install -e .
@@ -43,7 +43,7 @@ If you want to install the latest development verison, but do not intend to rece
 Dependencies
 ------------
 
-All Python dependencies will be installed alongside HCIPy by the installer. These include:
+All Python dependencies of HCIPy will be installed automatically by the installer. These include:
 
 * **numpy** (for all numerical calculations)
 * **scipy** (for advanced linear algebra)
@@ -54,6 +54,7 @@ All Python dependencies will be installed alongside HCIPy by the installer. Thes
 * **imageio** (for image writing)
 * **xxhash** (for efficiently hashing Grids)
 * **numexpr** (for speedup of lengthy numerical operations)
+* **asdf** (for reading and writing of HCIPy objects)
 
 However, there is one dependency that ``pip`` does not automatically install. This is FFMpeg, which is used for writing out animations to video files. Installation of FFMpeg is not necessary, unless you want to use the ``FFMpegWriter`` class in HCIPy.
 
@@ -97,7 +98,7 @@ A single submodule can be tested as well, for example:
 Building the documentation
 --------------------------
 
-A pre-built version of the documentation is always available `online <https://docs.hcipy.org>`_, in fact, you're most likely reading it from that website right now. 
+A pre-built version of the documentation is always available `online <https://docs.hcipy.org>`_, in fact, you're most likely reading it from that website right now.
 
 The HCIPy documentation uses Sphinx to build an HTML website containing the documentation. If you want to build a local copy, you'll first have to install the documentation dependencies first:
 

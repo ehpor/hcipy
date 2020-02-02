@@ -1,10 +1,18 @@
 import numpy as np
 import scipy.sparse
 
-from ..field import Field
+from ..field import Field, Grid
 
 class ModeBasis(object):
-	'''A list of modes.
+	'''A linear basis of modes.
+
+	Modes can be stored both in a dense or sparse format. A sparse mode basis reduces memory usage when modes
+	are localized and contain a lot of zeros. Projection onto and linear combinations of modes are done seamlessly,
+	regardless of the sparsity of the mode basis. If a grid is available, linear combinations automatically become
+	Fields.
+
+	You can create your own mode bases by supplying a list of modes, or a transformation matrix that transforms from
+	mode coefficients to the mode. You can also use a number of built-in mode bases in HCIPy.
 
 	Parameters
 	----------
@@ -29,7 +37,7 @@ class ModeBasis(object):
 				self._modes = scipy.sparse.vstack(transformation_matrix, format='csr')
 				self._transformation_matrix = self._modes.T.tocsc()
 			else:
-				self._modes = transformation_matrix.tocsr()
+				self._modes = transformation_matrix.T.tocsr()
 				self._transformation_matrix = transformation_matrix.tocsc()
 		else:
 			if is_list:
@@ -43,6 +51,71 @@ class ModeBasis(object):
 			self.grid = transformation_matrix[0].grid
 		else:
 			self.grid = None
+
+	@classmethod
+	def from_dict(cls, tree):
+		'''Make a ModeBasis from a dictionary, previously created by `to_dict()`.
+
+		Parameters
+		----------
+		tree : dictionary
+			The dictionary from which to make a new ModeBasis object.
+
+		Returns
+		-------
+		ModeBasis
+			The created object.
+
+		Raises
+		------
+		ValueError
+			If the dictionary is not formatted correctly.
+		'''
+		if isinstance(tree['transformation_matrix'], dict):
+			data = np.array(tree['transformation_matrix']['data'])
+			indices = np.array(tree['transformation_matrix']['indices'])
+			indptr = np.array(tree['transformation_matrix']['indptr'])
+			shape = tree['transformation_matrix']['shape']
+
+			transformation_matrix = scipy.sparse.csc_matrix((data, indices, indptr), shape=shape)
+		else:
+			transformation_matrix = np.array(tree['transformation_matrix'])
+
+		if 'grid' in tree:
+			mode_basis = cls(transformation_matrix, Grid.from_dict(tree['grid']))
+		else:
+			mode_basis = cls(transformation_matrix)
+
+		if tree['is_sparse']:
+			return mode_basis.to_sparse()
+		else:
+			return mode_basis.to_dense()
+
+	def to_dict(self):
+		'''Convert the object to a dictionary for serialization.
+
+		Returns
+		-------
+		dictionary
+			The created dictionary.
+		'''
+		if self.is_sparse:
+			transformation_matrix = {
+				'data': self._transformation_matrix.data,
+				'indices': self._transformation_matrix.indices,
+				'indptr': self._transformation_matrix.indptr,
+				'shape': list(self._transformation_matrix.shape)
+			}
+		else:
+			transformation_matrix = self.transformation_matrix
+
+		tree = {
+			'grid': self.grid.to_dict(),
+			'transformation_matrix': transformation_matrix,
+			'is_sparse': self.is_sparse
+		}
+
+		return tree
 
 	@property
 	def is_sparse(self):
@@ -245,6 +318,12 @@ class ModeBasis(object):
 			The number of modes in the `ModeBasis`.
 		'''
 		return self.transformation_matrix.shape[-1]
+
+	@property
+	def num_modes(self):
+		'''The number of modes in the `ModeBasis`.
+		'''
+		return len(self)
 
 	def append(self, mode):
 		'''Append `mode` to this mode basis.

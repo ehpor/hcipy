@@ -76,7 +76,7 @@ class FourierTransform(object):
 
 		return A
 
-def time_it(function, t_max=5, n_max=100):
+def _time_it(function, t_max=1, n_max=100):
 	import time
 
 	start = time.time()
@@ -149,9 +149,9 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 				fft = FastFourierTransform(input_grid, q, fov)
 				mft = MatrixFourierTransform(input_grid, output_grid)
 
-				a = np.zeros(input_grid.size, dtype='complex')
-				fft_time = time_it(lambda: fft.forward(a))
-				mft_time = time_it(lambda: mft.forward(a))
+				a = input_grid.zeros(dtype='complex')
+				fft_time = _time_it(lambda: fft.forward(a))
+				mft_time = _time_it(lambda: mft.forward(a))
 
 				if fft_time > mft_time:
 					method = 'mft'

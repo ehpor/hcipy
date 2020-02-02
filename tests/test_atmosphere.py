@@ -162,3 +162,68 @@ def test_infinite_atmosphere_zernike_variances_in_depth():
 	check_zernike_variances(0.5e-6, 8, 0.1, 10, True)
 	check_zernike_variances(0.5e-6, 1, 0.3, 10, True)
 	check_zernike_variances(0.5e-6, 1, 0.1, 40, True)
+
+def test_multi_layer_atmosphere():
+	r0 = 0.1
+	wavelength = 500e-9
+
+	pupil_grid = make_pupil_grid(256, 1.5)
+	layers = make_standard_atmospheric_layers(pupil_grid)
+
+	atmospheric_model = MultiLayerAtmosphere(layers, scintillation=False)
+	atmospheric_model.Cn_squared = Cn_squared_from_fried_parameter(r0, wavelength)
+	atmospheric_model.reset()
+
+	aperture = Field(np.exp(-(pupil_grid.as_('polar').r / 0.65)**20), pupil_grid)
+	wf = Wavefront(aperture, wavelength)
+
+	# Model with no scintillation should only not modify amplitude
+	wf_out = atmospheric_model.forward(wf)
+	assert np.allclose(wf_out.amplitude, aperture)
+
+	# It only should modify phase
+	electric_field_compare = aperture * np.exp(1j * atmospheric_model.phase_for(wavelength))
+	electric_field_simulated = wf_out.electric_field.copy()
+
+	electric_field_compare /= electric_field_compare.mean()
+	electric_field_simulated /= electric_field_simulated.mean()
+	assert np.allclose(electric_field_compare, electric_field_simulated)
+
+	wf_in = atmospheric_model.backward(wf_out)
+	assert np.allclose(wf_in.electric_field, aperture)
+
+	# Scintillation should also modify amplitude of the wavefront
+	atmospheric_model.scintillation = True
+	wf_out = atmospheric_model.forward(wf)
+	assert not np.allclose(wf_out.amplitude, aperture)
+
+	# Trying to get the phase for a model with scintillation should throw an exception
+	with pytest.raises(ValueError):
+		phase = atmospheric_model.phase_for(wavelength)
+
+	# Evolving a wavefront should modify the underlying layers
+	atmospheric_model.evolve_until(1)
+	wf_out2 = atmospheric_model.forward(wf)
+	assert not np.allclose(wf_out.electric_field, wf_out2.electric_field)
+
+def test_fried_parameter_seeing():
+	for i in range(10):
+		seeing = np.random.uniform(0.5, 2) * np.pi / 648000 # radians
+		wavelength = np.random.uniform(500e-9, 800e-9)
+
+		fried_parameter = seeing_to_fried_parameter(seeing, wavelength)
+		seeing_recovered = fried_parameter_to_seeing(fried_parameter, wavelength)
+
+		assert np.allclose(seeing_recovered, seeing)
+
+def test_phase_covariance_phase_structure_function_von_karman():
+	grid = make_uniform_grid([256, 256], [1, 1], has_center=True)
+
+	for r0 in [0.1, 0.2]:
+		for L0 in [10, 20]:
+			phase_structure_function = phase_structure_function_von_karman(r0, L0)(grid)
+			phase_covariance = phase_covariance_von_karman(r0, L0)(grid)
+
+			phase_structure_function_from_covariance = 2 * (phase_covariance.max() - phase_covariance)
+
+			assert np.allclose(phase_structure_function_from_covariance, phase_structure_function)

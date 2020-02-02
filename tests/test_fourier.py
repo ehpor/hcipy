@@ -2,8 +2,6 @@ from hcipy import *
 import numpy as np
 
 def check_energy_conservation(shift_input, scale, shift_output, q, fov, dims):
-	print(shift_input, scale, shift_output, q, fov, dims)
-
 	grid = make_uniform_grid(dims, 1).shifted(shift_input).scaled(scale)
 	f_in = Field(np.random.randn(grid.size), grid)
 	#f_in = Field(np.exp(-30 * grid.as_('polar').r**2), grid)
@@ -73,3 +71,22 @@ def test_fourier_symmetries_2d():
 			for fov in [1,0.5,0.8]:
 				for dims in [[8,8],[8,16],[9,9],[9,18]]:
 					check_symmetry(scale, q, fov, dims)
+
+def test_make_fourier_transform():
+	input_grid = make_pupil_grid(128)
+
+	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='estimate')
+	assert type(ft) == FastFourierTransform
+
+	ft = make_fourier_transform(input_grid, q=8, fov=0.3, planner='estimate')
+	assert type(ft) == MatrixFourierTransform
+
+	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='measure')
+	assert type(ft) == FastFourierTransform
+
+	ft = make_fourier_transform(input_grid, q=8, fov=0.1, planner='measure')
+	assert type(ft) == MatrixFourierTransform
+
+	output_grid = CartesianGrid(UnstructuredCoords([np.random.randn(100), np.random.randn(100)]))
+	ft = make_fourier_transform(input_grid, output_grid)
+	assert type(ft) == NaiveFourierTransform

@@ -56,7 +56,7 @@ def make_cosine_basis(grid, fourier_grid, sort_by_energy=True):
 		ind = np.argsort(energies)
 		modes = [modes[i] for i in ind]
 
-	return ModeBasis(modes)
+	return ModeBasis(modes, grid)
 
 def make_sine_basis(grid, fourier_grid, sort_by_energy=True):
 	'''Make a sine basis.
@@ -110,7 +110,7 @@ def make_sine_basis(grid, fourier_grid, sort_by_energy=True):
 		ind = np.argsort(energies)
 		modes = [modes[i] for i in ind]
 
-	return ModeBasis(modes)
+	return ModeBasis(modes, grid)
 
 def make_fourier_basis(grid, fourier_grid, sort_by_energy=True):
 	'''Make a Fourier basis.
@@ -176,7 +176,7 @@ def make_fourier_basis(grid, fourier_grid, sort_by_energy=True):
 		else:
 			modes.append(modes_cos[i])
 
-	return ModeBasis(modes)
+	return ModeBasis(modes, grid)
 
 def make_complex_fourier_basis(grid, fourier_grid, sort_by_energy=True):
 	'''Make a complex Fourier basis.
@@ -206,4 +206,4 @@ def make_complex_fourier_basis(grid, fourier_grid, sort_by_energy=True):
 		ind = np.argsort(energies)
 		modes = [modes[i] for i in ind]
 
-	return ModeBasis(modes)
+	return ModeBasis(modes, grid)

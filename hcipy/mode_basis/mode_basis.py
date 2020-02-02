@@ -1,10 +1,18 @@
 import numpy as np
 import scipy.sparse
 
-from ..field import Field
+from ..field import Field, Grid
 
 class ModeBasis(object):
-	'''A list of modes.
+	'''A linear basis of modes.
+
+	Modes can be stored both in a dense or sparse format. A sparse mode basis reduces memory usage when modes
+	are localized and contain a lot of zeros. Projection onto and linear combinations of modes are done seamlessly,
+	regardless of the sparsity of the mode basis. If a grid is available, linear combinations automatically become
+	Fields.
+
+	You can create your own mode bases by supplying a list of modes, or a transformation matrix that transforms from
+	mode coefficients to the mode. You can also use a number of built-in mode bases in HCIPy.
 
 	Parameters
 	----------
@@ -46,8 +54,23 @@ class ModeBasis(object):
 
 	@classmethod
 	def from_dict(cls, tree):
-		from ..field import Grid
+		'''Make a ModeBasis from a dictionary, previously created by `to_dict()`.
 
+		Parameters
+		----------
+		tree : dictionary
+			The dictionary from which to make a new ModeBasis object.
+
+		Returns
+		-------
+		ModeBasis
+			The created object.
+
+		Raises
+		------
+		ValueError
+			If the dictionary is not formatted correctly.
+		'''
 		if isinstance(tree['transformation_matrix'], dict):
 			data = np.array(tree['transformation_matrix']['data'])
 			indices = np.array(tree['transformation_matrix']['indices'])
@@ -69,6 +92,13 @@ class ModeBasis(object):
 			return mode_basis.to_dense()
 
 	def to_dict(self):
+		'''Convert the object to a dictionary for serialization.
+
+		Returns
+		-------
+		dictionary
+			The created dictionary.
+		'''
 		if self.is_sparse:
 			transformation_matrix = {
 				'data': self._transformation_matrix.data,

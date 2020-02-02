@@ -50,6 +50,18 @@ def write_fits(data, filename, shape=None, overwrite=True):
 	hdu.writeto(filename, overwrite=True)
 
 def _guess_file_format(filename):
+	'''Guess the file format from the filename.
+
+	Parameters
+	----------
+	filename : string
+		The filename of the file.
+
+	Returns
+	-------
+	string
+		The file type. This is one of ["asdf", "fits"].
+	'''
 	if filename.endswith('asdf'):
 		return 'asdf'
 	elif filename.endswith('fits') or filename.endswith('fits.gz'):
@@ -58,6 +70,21 @@ def _guess_file_format(filename):
 		return None
 
 def _make_metadata(file_type):
+	'''Make a metadata section for file output.
+
+	This contains the version of HCIPy used to write the file, the current time and
+	date and the file type.
+
+	Parameters
+	----------
+	file_type : string
+		The identifier string for what is going to be stored in the file.
+
+	Returns
+	-------
+	dictionary
+		The metadata.
+	'''
 	from ..version import get_version
 	import datetime
 
@@ -72,6 +99,27 @@ def _make_metadata(file_type):
 	return tree
 
 def read_grid(filename, fmt=None):
+	'''Read a grid from a file.
+
+	Parameters
+	----------
+	filename : string
+		The path of the file you want to read the grid from.
+	fmt : string
+		The file format. If it is not given, the file format will be guessed from the file extension.
+
+	Returns
+	-------
+	Grid
+		The read grid.
+
+	Raises
+	------
+	ValueError
+		If the file format could not be guessed from the file extension.
+	NotImplementedError
+		If the file format was not yet implemented.
+	'''
 	from ..field import Grid
 
 	if fmt is None:
@@ -92,6 +140,24 @@ def read_grid(filename, fmt=None):
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
 def write_grid(grid, filename, fmt=None, overwrite=True):
+	'''Write a grid to a file.
+
+	Parameters
+	----------
+	grid : Grid
+		The grid to write to the file.
+	filename : string
+		The path of the file you want to write to.
+	fmt : string
+		The file format. If it is not given, the file format will be guessed based on the file extension.
+	overwrite : boolean
+		Whether to overwrite the file, if it already exists.
+
+	Raises
+	------
+	NotImplementedError
+		If the file format was not yet implemented.
+	'''
 	if fmt is None:
 		fmt = _guess_file_format(filename)
 
@@ -118,6 +184,27 @@ def write_grid(grid, filename, fmt=None, overwrite=True):
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
 def read_field(filename, fmt=None):
+	'''Read a field from a file.
+
+	Parameters
+	----------
+	filename : string
+		The path of the file you want to read the field from.
+	fmt : string
+		The file format. If it is not given, the file format will be guessed from the file extension.
+
+	Returns
+	-------
+	Field
+		The read field.
+
+	Raises
+	------
+	ValueError
+		If the file format could not be guessed from the file extension.
+	NotImplementedError
+		If the file format was not yet implemented.
+	'''
 	from ..field import Field
 
 	if fmt is None:
@@ -154,6 +241,24 @@ def read_field(filename, fmt=None):
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
 def write_field(field, filename, fmt=None, overwrite=True):
+	'''Write a field to a file.
+
+	Parameters
+	----------
+	field : Field
+		The field to write to the file.
+	filename : string
+		The path of the file you want to write to.
+	fmt : string
+		The file format. If it is not given, the file format will be guessed based on the file extension.
+	overwrite : boolean
+		Whether to overwrite the file, if it already exists.
+
+	Raises
+	------
+	NotImplementedError
+		If the file format was not yet implemented.
+	'''
 	if fmt is None:
 		fmt = _guess_file_format(filename)
 
@@ -195,6 +300,27 @@ def write_field(field, filename, fmt=None, overwrite=True):
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
 def read_mode_basis(filename, fmt=None):
+	'''Read a mode basis from a file.
+
+	Parameters
+	----------
+	filename : string
+		The path of the file you want to read the mode basis from.
+	fmt : string
+		The file format. If it is not given, the file format will be guessed from the file extension.
+
+	Returns
+	-------
+	ModeBasis
+		The read mode basis.
+
+	Raises
+	------
+	ValueError
+		If the file format could not be guessed from the file extension.
+	NotImplementedError
+		If the file format was not yet implemented.
+	'''
 	from ..mode_basis import ModeBasis
 
 	if fmt is None:
@@ -234,6 +360,24 @@ def read_mode_basis(filename, fmt=None):
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
 def write_mode_basis(mode_basis, filename, fmt=None, overwrite=True):
+	'''Write a mode basis to a file.
+
+	Parameters
+	----------
+	mode_basis : ModeBasis
+		The mode basis to write to the file.
+	filename : string
+		The path of the file you want to write to.
+	fmt : string
+		The file format. If it is not given, the file format will be guessed based on the file extension.
+	overwrite : boolean
+		Whether to overwrite the file, if it already exists.
+
+	Raises
+	------
+	NotImplementedError
+		If the file format was not yet implemented.
+	'''
 	if fmt is None:
 		fmt = _guess_file_format(filename)
 

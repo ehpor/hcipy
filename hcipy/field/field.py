@@ -27,11 +27,35 @@ class Field(np.ndarray):
 
 	@classmethod
 	def from_dict(cls, tree):
+		'''Make a Field from a dictionary, previously created by `to_dict()`.
+
+		Parameters
+		----------
+		tree : dictionary
+			The dictionary from which to make a new Field object.
+
+		Returns
+		-------
+		Field
+			The created object.
+
+		Raises
+		------
+		ValueError
+			If the dictionary is not formatted correctly.
+		'''
 		from .grid import Grid
 
 		return cls(np.array(tree['values']), Grid.from_dict(tree['grid']))
 
 	def to_dict(self):
+		'''Convert the object to a dictionary for serialization.
+
+		Returns
+		-------
+		dictionary
+			The created dictionary.
+		'''
 		tree = {
 			'values': np.asarray(self),
 			'grid': self.grid.to_dict()

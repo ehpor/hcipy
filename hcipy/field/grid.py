@@ -35,6 +35,23 @@ class Grid(object):
 
 	@classmethod
 	def from_dict(cls, tree):
+		'''Make a Grid from a dictionary, previously created by `to_dict()`.
+
+		Parameters
+		----------
+		tree : dictionary
+			The dictionary from which to make a new Grid object.
+
+		Returns
+		-------
+		Grid
+			The created object.
+
+		Raises
+		------
+		ValueError
+			If the dictionary is not formatted correctly.
+		'''
 		from .coordinates import Coords
 
 		coords = Coords.from_dict(tree['coords'])
@@ -48,6 +65,13 @@ class Grid(object):
 		return grid_class(coords, weights)
 
 	def to_dict(self):
+		'''Convert the object to a dictionary for serialization.
+
+		Returns
+		-------
+		dictionary
+			The created dictionary.
+		'''
 		tree = {
 			'coordinate_system': self._coordinate_system,
 			'coords': self.coords.to_dict(),

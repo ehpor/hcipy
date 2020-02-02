@@ -131,12 +131,36 @@ class UnstructuredCoords(Coords):
 
 	@classmethod
 	def from_dict(cls, tree):
+		'''Make an UnstructuredCoords from a dictionary, previously created by `to_dict()`.
+
+		Parameters
+		----------
+		tree : dictionary
+			The dictionary from which to make a new UnstructuredCoords object.
+
+		Returns
+		-------
+		UnstructuredCoords
+			The created object.
+
+		Raises
+		------
+		ValueError
+			If the dictionary is not formatted correctly.
+		'''
 		if tree['type'] != 'unstructured':
 			raise ValueError('The type of coordinates should be "unstructured".')
 
 		return cls(tree['coords'])
 
 	def to_dict(self):
+		'''Convert the object to a dictionary for serialization.
+
+		Returns
+		-------
+		dictionary
+			The created dictionary.
+		'''
 		tree = {
 			'type': 'unstructured',
 			'coords': self.coords
@@ -204,12 +228,36 @@ class SeparatedCoords(Coords):
 
 	@classmethod
 	def from_dict(cls, tree):
+		'''Make an SeparatedCoords from a dictionary, previously created by `to_dict()`.
+
+		Parameters
+		----------
+		tree : dictionary
+			The dictionary from which to make a new SeparatedCoords object.
+
+		Returns
+		-------
+		SeparatedCoords
+			The created object.
+
+		Raises
+		------
+		ValueError
+			If the dictionary is not formatted correctly.
+		'''
 		if tree['type'] != 'separated':
 			raise ValueError('The type of coordinates should be "separated".')
 
 		return cls(tree['separated_coords'])
 
 	def to_dict(self):
+		'''Convert the object to a dictionary for serialization.
+
+		Returns
+		-------
+		dictionary
+			The created dictionary.
+		'''
 		tree = {
 			'type': 'separated',
 			'separated_coords': self.separated_coords
@@ -314,12 +362,36 @@ class RegularCoords(Coords):
 
 	@classmethod
 	def from_dict(cls, tree):
+		'''Make an RegularCoords from a dictionary, previously created by `to_dict()`.
+
+		Parameters
+		----------
+		tree : dictionary
+			The dictionary from which to make a new RegularCoords object.
+
+		Returns
+		-------
+		RegularCoords
+			The created object.
+
+		Raises
+		------
+		ValueError
+			If the dictionary is not formatted correctly.
+		'''
 		if tree['type'] != 'regular':
 			raise ValueError('The type of coordinates should be "regular".')
 
 		return cls(tree['delta'], tree['dims'], tree['zero'])
 
 	def to_dict(self):
+		'''Convert the object to a dictionary for serialization.
+
+		Returns
+		-------
+		dictionary
+			The created dictionary.
+		'''
 		tree = {
 			'type': 'regular',
 			'delta': self.delta.tolist(),

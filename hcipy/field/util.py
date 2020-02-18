@@ -4,6 +4,7 @@ import numpy as np
 from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
 from .field import Field
 from .cartesian_grid import CartesianGrid
+from .grid import Grid
 
 def make_uniform_grid(dims, extent, center=0, has_center=False):
 	'''Create a uniformly-spaced :class:`Grid` of a certain shape and size.
@@ -26,7 +27,6 @@ def make_uniform_grid(dims, extent, center=0, has_center=False):
 	Grid
 		A :class:`Grid` with :class:`RegularCoords`.
 	'''
-
 	num_dims = max(np.array([dims]).shape[-1], np.array([extent]).shape[-1], np.array([center]).shape[-1])
 
 	dims = (np.ones(num_dims) * dims).astype('int')
@@ -73,12 +73,10 @@ def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length
 	grid, the resulting focal grid needs to be rescaled manually.
 
 	.. note::
-		In almost all cases, it is preferable to use :func:`make_focal_grid_replacement`. This
+		In almost all cases, it is preferable to use :func:`make_focal_grid`. This
 		function allows you to directly set the diameter, and doesn't require the user to pass
 		the pupil grid as an argument. `make_focal_grid_from_pupil_grid()` retains old functionality
 		and serves as a backwards compatibility function, due to its ubiquitous usage in HCIPy code.
-		`make_focal_grid_from_pupil_grid()` will be deprecated in future versions, and new code
-		should aim to use its replacement.
 
 	Parameters
 	----------
@@ -164,6 +162,9 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
 	ValueError
 		If both no spatial resolution and no complete set of (focal length, reference wavelength and pupil diameter) was supplied.
 	'''
+	if isinstance(q, Grid):
+		raise ValueError('The function signature was changed as of HCIPy 0.3.0. Please use the new signature (prefered), or use make_focal_grid_from_pupil_grid() if you want to retain old behaviour.')
+
 	if spatial_resolution is None:
 		if f_number is None:
 			if pupil_diameter is None or focal_length is None:

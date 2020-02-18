@@ -33,6 +33,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		self._make_initial_phase_screen()
 
 		self.center = np.zeros(2)
+		self._t = 0
 
 		self._initialized = True
 
@@ -184,13 +185,18 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		if t is None:
 			self.reset()
 			return
-
+	
+		# Get the old and new center positions
 		old_center = np.round(self.center / self.input_grid.delta).astype('int')
-
-		self.center = self.velocity * t
-		new_center = np.round(self.center / self.input_grid.delta).astype('int')
-
-		delta = new_center - old_center
+		self.center = self.center + self.velocity * (t - self._t)
+		new_pixel_center = np.round(self.center / self.input_grid.delta).astype('int')
+		
+		self._t = t
+		
+		# Measure the number of full pixel shifts
+		delta = new_pixel_center - old_center
+		# Measure the sub-pixel shift
+		sub_delta = self.center - new_pixel_center * self.input_grid.delta
 
 		for i in range(abs(delta[0])):
 			if delta[0] < 0:
@@ -208,7 +214,6 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			# Use bilinear interpolation to interpolate the achromatic phase screen to the correct position.
 			# This is to avoid sudden shifts by discrete pixels.
 			ps = self._achromatic_screen.shaped
-			sub_delta = self.center - new_center * self.input_grid.delta
 			with warnings.catch_warnings():
 				warnings.filterwarnings('ignore',
 					message='The behaviour of affine_transform with a one-dimensional array supplied for the matrix parameter has changed in scipy 0.18.0.')

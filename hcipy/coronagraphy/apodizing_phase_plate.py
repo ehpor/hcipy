@@ -168,6 +168,6 @@ class VectorApodizingPhasePlate(GeometricPhaseElement):
 	retardance_offset : scalar
 		The retardance offset from half wave in radians. This will result in leakage.
 	'''
-	def __init__(self, phase_pattern, leakage=None, retardance_offset=0, wavelength=1):
+	def __init__(self, phase_pattern, leakage=None, retardance_offset=0):
 
-		GeometricPhaseElement.__init__(self, phase_pattern, leakage, retardance_offset, wavelength)
+		GeometricPhaseElement.__init__(self, phase_pattern, leakage, retardance_offset)

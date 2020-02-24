@@ -188,24 +188,27 @@ class FFMpegWriter(object):
 		if codec == 'libx264':
 			if quality is None:
 				quality = 10
+
 			if preset is None:
 				preset = 'veryslow'
+
 			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
-				'-vcodec','png', '-r', str(framerate), '-i', '-']
-			command.extend(['-vcodec', 'libx264', '-preset', preset, '-r',
-				str(framerate), '-crf', str(quality), filename])
+				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-pix_fmt', 'yuv420p',
+				'-i', '-', '-vcodec', 'libx264', '-preset', preset, '-r',
+				str(framerate), '-crf', str(quality), filename]
 		elif codec == 'mpeg4':
 			if quality is None:
 				quality = 4
+
 			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
-				'-vcodec','png', '-r', str(framerate), '-i', '-']
-			command.extend(['-vcodec', 'mpeg4', '-q:v', str(quality), '-r',
-				str(framerate), filename])
+				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-i', '-',
+				'-vcodec', 'mpeg4', '-q:v', str(quality), '-r', str(framerate), filename]
 		elif codec == 'libvpx-vp9':
 			if quality is None:
 				quality = 30
+
 			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
-				'-vcodec','png', '-r', str(framerate), '-i', '-']
+				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-i', '-']
 			if quality < 0:
 				command.extend(['-vcodec', 'libvpx-vp9', '-lossless', '1',
 					'-r', str(framerate), filename])
@@ -228,7 +231,7 @@ class FFMpegWriter(object):
 			import warnings
 			warnings.warn('Something went wrong while closing FFMpeg...', RuntimeWarning)
 
-	def add_frame(self, fig=None, arr=None, cmap=None, dpi=None):
+	def add_frame(self, fig=None, data=None, cmap=None, dpi=None):
 		'''Add a frame to the animation.
 
 		Parameters
@@ -251,15 +254,16 @@ class FFMpegWriter(object):
 		if self.closed:
 			raise RuntimeError('Attempted to add a frame to a closed FFMpegWriter.')
 
-		if arr is None:
+		if data is None:
 			if fig is None:
 				fig = matplotlib.pyplot.gcf()
+
 			fig.savefig(self.p.stdin, format='png', transparent=False, dpi=dpi)
 		else:
 			if cmap is not None:
-				arr = matplotlib.cm.get_cmap(cmap)(arr, bytes=True)
+				data = matplotlib.cm.get_cmap(cmap)(data, bytes=True)
 
-			imageio.imwrite(self.p.stdin, arr, format='png')
+			imageio.imwrite(self.p.stdin, data, format='png')
 
 	def close(self):
 		'''Close the animation writer and finish the video file.

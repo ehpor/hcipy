@@ -193,8 +193,8 @@ class FFMpegWriter(object):
 				preset = 'veryslow'
 
 			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
-				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-pix_fmt', 'yuv420p',
-				'-i', '-', '-vcodec', 'libx264', '-preset', preset, '-r',
+				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-i', '-',
+				'-vcodec', 'libx264', '-pix_fmt', 'yuv420p', '-preset', preset, '-r',
 				str(framerate), '-crf', str(quality), filename]
 		elif codec == 'mpeg4':
 			if quality is None:

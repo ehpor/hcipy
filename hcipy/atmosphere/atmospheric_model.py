@@ -132,7 +132,7 @@ class AtmosphericLayer(OpticalElement):
 			self._velocity = np.array(velocity)
 
 	def phase_for(self, wavelength):
-		'''Get the phase screen at a certain wavelength.
+		'''Get the phase screen in radians at a certain wavelength.
 
 		Each atmospheric layer is modelled as an infinitely-thin phase screen.
 
@@ -232,7 +232,7 @@ class MultiLayerAtmosphere(OpticalElement):
 		self._dirty = True
 
 	def phase_for(self, wavelength):
-		'''Get the unwrapped phase for the atmosphere.
+		'''Get the unwrapped phase in radians for the atmosphere.
 
 		Parameters
 		----------

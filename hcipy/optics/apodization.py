@@ -137,7 +137,7 @@ class ComplexSurfaceApodizer(OpticalElement):
 		self.refractive_index = refractive_index
 
 	def phase_for(self, wavelength):
-		'''Get the phase screen at a certain wavelength.
+		'''Get the phase screen in radians at a certain wavelength.
 
 		Parameters
 		----------

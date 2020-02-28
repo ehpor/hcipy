@@ -237,7 +237,7 @@ class DeformableMirror(OpticalElement):
 		self._actuators = np.random.randn(self._actuators.size) * rms
 
 	def phase_for(self, wavelength):
-		'''Get the phase that is added to a wavefront with a specified wavelength.
+		'''Get the phase in radians that is added to a wavefront with a specified wavelength.
 
 		Parameters
 		----------

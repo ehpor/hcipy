@@ -146,7 +146,7 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 	through a half-wave retarder because the vector-Zernike mask is a half-wave
 	retarder.
 
-	.. [[Doelman2019] Doelman et al. 2019, "Simultaneous phase and amplitude aberration sensing
+	.. [Doelman2019] Doelman et al. 2019, "Simultaneous phase and amplitude aberration sensing
 		with a liquid-crystal vector-Zernike phase mask"
 
 	.. [NDiaye2013] N'Diaye et al. 2013, "Calibration of quasi-static

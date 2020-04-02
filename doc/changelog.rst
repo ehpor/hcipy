@@ -1,6 +1,24 @@
 Changelog
 =========
 
+0.3.1 (Apr 2, 2020)
+-------------------
+
+This HCIPy release fixes a major bug in the caching algorithm for backwards propagation, among some other minor improvmenets. See the list of all changes below for a summary. This version supports Python 3.5+.
+
+List of major changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Bug fix in the caching algorithm when using backwards propagation for the first time (`@ehpor <https://github.com/ehpor>`_)
+* Add input/output to FITS and ASDF files for Field, Grid and ModeBasis (`@ehpor <https://github.com/ehpor>`_)
+* Fixed normalization for the Fourier, Gaussian-Hermite and Gaussian-Laguerre mode bases (`@ehpor <https://github.com/ehpor>`_)
+* Allow anamorphic magnification (`@ehpor <https://github.com/ehpor>`_)
+* Allow variable wind speed for atmospheric layers (`@syhaffert <https://github.com/syhaffert>`_)
+* Add plotting utilities for pupils and PSFs (`@ehpor <https://github.com/ehpor>`_)
+* Fix FFMpegWriter for MacOS (`@ehpor <https://github.com/ehpor>`_ & `@stevenbos <https://github.com/stevenbos>`_)
+* Minor documentation clarifications (`@ehpor <https://github.com/ehpor>`_)
+* Increased test coverage (`@ehpor <https://github.com/ehpor>`_)
+
 0.3.0 (Jan 21, 2020)
 --------------------
 

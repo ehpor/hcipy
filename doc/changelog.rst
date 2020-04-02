@@ -4,7 +4,7 @@ Changelog
 0.3.1 (Apr 2, 2020)
 -------------------
 
-This HCIPy release fixes a major bug in the caching algorithm for backwards propagation, among some other minor improvmenets. See the list of all changes below for a summary. This version supports Python 3.5+.
+This HCIPy release fixes a major bug in the caching algorithm for backwards propagation, among some other minor improvements. See the list of all changes below for a summary. This version supports Python 3.5+.
 
 List of major changes
 ~~~~~~~~~~~~~~~~~~~~~

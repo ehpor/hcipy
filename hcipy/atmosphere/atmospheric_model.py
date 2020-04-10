@@ -247,7 +247,9 @@ class MultiLayerAtmosphere(OpticalElement):
 		if self.scintillation:
 			raise ValueError('Cannot get the unwrapped phase for an atmosphere with scintillation.')
 
-		return np.sum([l.phase_for(wavelength) for l in self.layers], axis=0)
+		unwrapped_phases = [layer.phase_for(wavelength) for layer in self.layers]
+
+		return Field(np.sum(unwrapped_phases, axis=0), unwrapped_phases[-1].grid)
 
 	@property
 	def scintillation(self):

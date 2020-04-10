@@ -4,37 +4,37 @@ from ..mode_basis import ModeBasis
 from ..util import inverse_truncated
 
 class PerfectCoronagraph(OpticalElement):
-	'''A perfect coronagraph for a certain aperture and order.
+	r'''A perfect coronagraph for a certain aperture and order.
 
-		These type of coronagraphs suppress all light for a flat wavefront. The incoming complex
-		amplitude :math:`A` is modified as follows (following [Cavarroc2006]_):
+	These type of coronagraphs suppress all light for a flat wavefront. The incoming complex
+	amplitude :math:`A` is modified as follows (following [Cavarroc2006]_):
 
-		.. math::
-			\overline{A} = A - \Pi \sqrt{S}
+	.. math::
+		\overline{A} = A - \Pi \sqrt{S}
 
-		where :math:`\overline{A}` is the resulting complex ampliutude, :math:`\Pi` is the telescope
-		pupil, and :math:`S` is the Strehl ratio of the incoming wavefront.
+	where :math:`\overline{A}` is the resulting complex ampliutude, :math:`\Pi` is the telescope
+	pupil, and :math:`S` is the Strehl ratio of the incoming wavefront.
 
-		Higher orders are added by fitting higher-order electric field modes to the incoming
-		wavefront and subtracting those, following [Guyon2006]_.
+	Higher orders are added by fitting higher-order electric field modes to the incoming
+	wavefront and subtracting those, following [Guyon2006]_.
 
-		.. [Cavarroc2006] Celine Cavarroc et al. "Fundamental limitations on Earth-like planet detection with
-			extremely large telescopes." Astronomy & Astrophysics 447.1 (2006): 397-403
+	.. [Cavarroc2006] Celine Cavarroc et al. "Fundamental limitations on Earth-like planet detection with
+		extremely large telescopes." Astronomy & Astrophysics 447.1 (2006): 397-403
 
-		.. [Guyon2006] Olivier Guyon et al. "Theoretical limits on extrasolar terrestrial planet detection
-			with coronagraphs." The Astrophysical Journal Supplement Series 167.1 (2006): 81
+	.. [Guyon2006] Olivier Guyon et al. "Theoretical limits on extrasolar terrestrial planet detection
+		with coronagraphs." The Astrophysical Journal Supplement Series 167.1 (2006): 81
 
-		Parameters
-		----------
-		aperture : Field
-			The reference aperture. The perfect coronagraph is designed for this aperture.
-		order : integer
-			The order of the perfect coronagraph. This must be even.
-		coeffs : list or ndarray or None
-			The coefficients that are used for subtraction. This allows for partial suppression of certain
-			modes, which can be used to design perfect coronagraphs that are insensitive to stellar
-			radius [Guyon2006]_. If it is None, all modes are completely suppressed.
-		'''
+	Parameters
+	----------
+	aperture : Field
+		The reference aperture. The perfect coronagraph is designed for this aperture.
+	order : integer
+		The order of the perfect coronagraph. This must be even.
+	coeffs : list or ndarray or None
+		The coefficients that are used for subtraction. This allows for partial suppression of certain
+		modes, which can be used to design perfect coronagraphs that are insensitive to stellar
+		radius [Guyon2006]_. If it is None, all modes are completely suppressed.
+	'''
 	def __init__(self, aperture, order=2, coeffs=None):
 		self.pupil_grid = aperture.grid
 		modes = []
@@ -69,7 +69,12 @@ class PerfectCoronagraph(OpticalElement):
 		'''
 		wf = wavefront.copy()
 
-		correction = self.transformation.dot(self.coeffs * self.transformation_inverse.dot(wf.electric_field))
+		# Project the wavefront onto the pupil modes and attenuate by coeffs, then transform back to the pupil.
+		# This is done for each polarization separately.
+		correction = np.einsum('kj,j,ji,...i->...k',
+			self.transformation, self.coeffs, self.transformation_inverse, wf.electric_field, optimize='optimal')
+
+		# Then subtract this from the original wavefront to compute the post-coronagraphic field.
 		wf.electric_field -= correction
 
 		return wf

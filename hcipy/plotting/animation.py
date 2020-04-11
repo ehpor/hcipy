@@ -110,7 +110,7 @@ class GifWriter(object):
 		# Open all frames to convert
 		frames = []
 		for image_file in files:
-			frames.append(Image.open(image_file))
+			frames.append(Image.open(image_file).copy())
 
 		# Convert to GIF
 		# https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html?highlight=duration#saving

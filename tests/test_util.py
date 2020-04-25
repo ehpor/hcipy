@@ -8,7 +8,7 @@ def test_grid_io():
 	grid3 = grid1.as_('polar')
 
 	grids = [grid1, grid2, grid3]
-	formats = ['asdf', 'fits', 'fits.gz']
+	formats = ['asdf', 'fits', 'fits.gz', 'pkl', 'pickle']
 	filenames = ['grid_test.' + fmt for fmt in formats]
 
 	for g in grids:
@@ -24,7 +24,7 @@ def test_field_io():
 	grid = make_pupil_grid(128)
 	field = circular_aperture(1)(grid)
 
-	formats = ['asdf', 'fits', 'fits.gz']
+	formats = ['asdf', 'fits', 'fits.gz', 'pkl', 'pickle']
 	filenames = ['field_test.' + fmt for fmt in formats]
 
 	for fname in filenames:
@@ -43,7 +43,7 @@ def test_mode_basis_io():
 		make_xinetics_influence_functions(grid, 8, 1 / 8)
 	]
 
-	formats = ['asdf', 'fits', 'fits.gz']
+	formats = ['asdf', 'fits', 'fits.gz', 'pkl', 'pickle']
 	filenames = ['mode_basis_test.' + fmt for fmt in formats]
 
 	for mode_basis in mode_bases:

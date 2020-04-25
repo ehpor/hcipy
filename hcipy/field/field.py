@@ -63,6 +63,42 @@ class Field(np.ndarray):
 
 		return tree
 
+	def __getstate__(self):
+		'''Get the internal state for pickling.
+
+		Returns
+		-------
+		tuple
+			The state of the Field.
+		'''
+		data_state = super().__reduce__(self)[2]
+		return data_state + (self.grid,)
+
+	def __setstate__(self, state):
+		'''Set the internal state for pickling.
+
+		Parameters
+		----------
+		state : tuple
+			The state coming from a __getstate__().
+		'''
+		_, shp, typ, isf, raw, grid = state
+
+		super().__setstate__((shp, typ, isf, raw))
+		self.grid = grid
+
+	def __reduce__(self):
+		'''Return a 3-tuple for pickling the Field.
+
+		Returns
+		-------
+		tuple
+			The reduced version of the Field.
+		'''
+		return (_field_reconstruct,
+			(self.__class__, np.ndarray, (0,), 'b',),
+			self.__getstate__())
+
 	@property
 	def tensor_order(self):
 		'''The order of the tensor of the field.
@@ -126,3 +162,27 @@ class Field(np.ndarray):
 		'''
 		i = self.grid.closest_to(p)
 		return self[..., i]
+
+def _field_reconstruct(subtype, baseclass, baseshape, basetype):
+	'''Internal function for building a new Field object for pickling.
+
+	Parameters
+	----------
+	subtype
+		The class of Field.
+	baseclass
+		The array class that was used for the Field.
+	baseshape
+		The shape of the Field.
+	basetype
+		The data type of the Field.
+
+	Returns
+	-------
+	Field
+		The built Field object.
+	'''
+	data = np.ndarray.__new__(baseclass, baseshape, basetype)
+	grid = None
+
+	return subtype.__new__(subtype, data, grid)

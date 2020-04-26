@@ -66,6 +66,8 @@ def _guess_file_format(filename):
 		return 'asdf'
 	elif filename.endswith('fits') or filename.endswith('fits.gz'):
 		return 'fits'
+	elif filename.endswith('pkl') or filename.endswith('pickle'):
+		return 'pickle'
 	else:
 		return None
 
@@ -136,6 +138,11 @@ def read_grid(filename, fmt=None):
 		f.close()
 
 		return grid
+	elif fmt == 'pickle':
+		import pickle
+
+		with open(filename, 'rb') as f:
+			return pickle.load(f)
 	else:
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
@@ -180,6 +187,11 @@ def write_grid(grid, filename, fmt=None, overwrite=True):
 
 		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
 		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
+	elif fmt == 'pickle':
+		import pickle
+
+		with open(filename, 'wb') as f:
+			pickle.dump(grid, f)
 	else:
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
@@ -237,6 +249,11 @@ def read_field(filename, fmt=None):
 		f.close()
 
 		return field
+	elif fmt == 'pickle':
+		import pickle
+
+		with open(filename, 'rb') as f:
+			return pickle.load(f)
 	else:
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
@@ -296,6 +313,11 @@ def write_field(field, filename, fmt=None, overwrite=True):
 
 		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
 		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
+	elif fmt == 'pickle':
+		import pickle
+
+		with open(filename, 'wb') as f:
+			pickle.dump(field, f)
 	else:
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
@@ -356,6 +378,11 @@ def read_mode_basis(filename, fmt=None):
 		f.close()
 
 		return mode_basis
+	elif fmt == 'pickle':
+		import pickle
+
+		with open(filename, 'rb') as f:
+			return pickle.load(f)
 	else:
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 
@@ -418,5 +445,10 @@ def write_mode_basis(mode_basis, filename, fmt=None, overwrite=True):
 
 		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
 		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
+	elif fmt == 'pickle':
+		import pickle
+
+		with open(filename, 'wb') as f:
+			pickle.dump(mode_basis, f)
 	else:
 		raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)

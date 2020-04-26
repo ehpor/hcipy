@@ -715,6 +715,26 @@ class AgnosticOpticalElement(OpticalElement):
 			return getattr(instance_data, name)
 		return attribute
 
+	def __getstate__(self):
+		'''Get the state of the optical element for pickle.
+
+		Returns
+		-------
+		dict
+			All contained variables.
+		'''
+		return self.__dict__
+
+	def __setstate__(self, state):
+		'''Set the state of the optical element for pickle.
+
+		Parameters
+		----------
+		state : dict
+			The state of an optical element returned by a __getstate__().
+		'''
+		self.__dict__ = state
+
 def make_agnostic_forward(forward):
 	'''A decorator for a forward function on an AgnosticOpticalElement.
 

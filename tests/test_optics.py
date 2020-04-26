@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from hcipy import *
 import pytest
+import os
 
 def test_agnostic_apodizer():
 	wavelength = 0.2
@@ -553,3 +554,30 @@ def test_magnifier():
 		wf_forward = magnifier.forward(wf)
 		assert np.abs(wf_forward.total_power - 1) < 1e-12
 		assert hash(wf_forward.electric_field.grid) == hash(magnifier.get_output_grid(wf.electric_field.grid, 1))
+
+def test_pickle_optical_element():
+	import dill as pickle
+
+	fname = 'optical_element.pkl'
+
+	pupil_grid = make_pupil_grid(512)
+	focal_grid = make_focal_grid(4, 16)
+
+	elem1 = FraunhoferPropagator(pupil_grid, focal_grid)
+	elem2 = SurfaceApodizer(pupil_grid.ones(), lambda wvl: 1.5 + wvl)
+	elems = [elem1, elem2]
+
+	for elem in elems:
+		wf = Wavefront(pupil_grid.zeros())
+		img_saved = elem(wf)
+
+		with open(fname, 'wb') as f:
+			pickle.dump(elem, f)
+
+		with open(fname, 'rb') as f:
+			elem_loaded = pickle.load(f)
+			img_loaded = elem_loaded(wf)
+
+			assert np.allclose(img_saved.electric_field, img_loaded.electric_field)
+
+		os.remove(fname)

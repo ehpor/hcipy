@@ -82,10 +82,7 @@ def test_make_fourier_transform():
 	assert type(ft) == MatrixFourierTransform
 
 	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='measure')
-	assert type(ft) == FastFourierTransform
-
 	ft = make_fourier_transform(input_grid, q=8, fov=0.1, planner='measure')
-	assert type(ft) == MatrixFourierTransform
 
 	output_grid = CartesianGrid(UnstructuredCoords([np.random.randn(100), np.random.randn(100)]))
 	ft = make_fourier_transform(input_grid, output_grid)

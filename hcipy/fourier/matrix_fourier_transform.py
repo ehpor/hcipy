@@ -23,8 +23,27 @@ class MatrixFourierTransform(FourierTransform):
 
 		self.ndim = input_grid.ndim
 
-		self.weights_input = input_grid.weights
-		self.weights_output = output_grid.weights / (2 * np.pi)**self.ndim
+		self._dtype = None
+
+	def _compute_matrices(self, dtype):
+		if dtype == 'float32':
+			complex_dtype = 'complex64'
+			float_dtype = 'float32'
+		elif dtype == 'float64':
+			complex_dtype = 'complex128'
+			float_dtype = 'float64'
+		elif dtype == 'complex64':
+			complex_dtype = 'complex64'
+			float_dtype = 'float32'
+		else:
+			complex_dtype = 'complex128'
+			float_dtype = 'float64'
+
+		if self._dtype == complex_dtype:
+			return
+
+		self.weights_input = (self.input_grid.weights).astype(float_dtype)
+		self.weights_output = (self.output_grid.weights / (2 * np.pi)**self.ndim).astype(float_dtype)
 
 		# If all input weights are all the same, use a scalar instead.
 		if np.all(self.weights_input == self.weights_input[0]):
@@ -35,25 +54,34 @@ class MatrixFourierTransform(FourierTransform):
 			self.weights_output = self.weights_output[0]
 
 		if self.ndim == 1:
-			self.M = np.exp(-1j * np.outer(output_grid.x, input_grid.x))
+			self.M = np.exp(-1j * np.outer(self.output_grid.x, self.input_grid.x)).astype(dtype)
 		elif self.ndim == 2:
-			self.M1 = np.exp(-1j * np.outer(output_grid.coords.separated_coords[1], input_grid.separated_coords[1]))
-			self.M2 = np.exp(-1j * np.outer(input_grid.coords.separated_coords[0], output_grid.separated_coords[0]))
+			self.M1 = np.exp(-1j * np.outer(self.output_grid.coords.separated_coords[1], self.input_grid.separated_coords[1])).astype(complex_dtype)
+			self.M2 = np.exp(-1j * np.outer(self.input_grid.coords.separated_coords[0], self.output_grid.separated_coords[0])).astype(complex_dtype)
+
+		self._dtype = complex_dtype
 
 	@multiplex_for_tensor_fields
 	def forward(self, field):
+		self._compute_matrices(field.dtype)
+		field = field.astype(self._dtype, copy=False)
+
 		if self.ndim == 1:
 			f = field * self.weights_input
 			res = np.dot(self.M, f)
 		elif self.ndim == 2:
 			if np.isscalar(self.weights_input):
 				f = field.reshape(self.shape_input)
-				if np.dtype('complex128') == field.dtype:
+				if field.dtype in [np.dtype('complex64'), np.dtype('complex128')]:
 					# Use handcoded BLAS call. BLAS is better when all inputs are Fortran ordered,
 					# so we apply matrix multiplications on the transpose of each of the arrays
 					# (which are C ordered). Weights are included in the call as that multiplication
 					# happens anyway (and it saves an array copy).
-					res = blas.zgemm(self.weights_input, blas.zgemm(1, self.M2.T, f.T), self.M1.T).T.reshape(-1)
+					if field.dtype == 'complex64':
+						gemm = blas.cgemm
+					else:
+						gemm = blas.zgemm
+					res = gemm(self.weights_input, gemm(1, self.M2.T, f.T), self.M1.T).T.reshape(-1)
 				elif self.input_grid.size > self.output_grid.size:
 					# Apply weights to the output as that array is smaller than the input.
 					res = np.dot(np.dot(self.M1, f), self.M2).reshape(-1) * self.weights_input
@@ -65,27 +93,36 @@ class MatrixFourierTransform(FourierTransform):
 				f = (field * self.weights_input).reshape(self.shape_input)
 				res = np.dot(np.dot(self.M1, f), self.M2).reshape(-1)
 
-		return Field(res, self.output_grid).astype(field.dtype)
+		return Field(res, self.output_grid)
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
+		self._compute_matrices(field.dtype)
+		field = field.astype(self._dtype, copy=False)
+
 		if self.ndim == 1:
 			f = field * self.weights_output
 			res = np.dot(self.M.conj().T, f)
 		elif self.ndim == 2:
-			if np.dtype('complex128') == field.dtype:
+			if field.dtype in [np.dtype('complex64'), np.dtype('complex128')]:
+				if field.dtype == 'complex64':
+					gemm = blas.cgemm
+				else:
+					gemm = blas.zgemm
+
 				if np.isscalar(self.weights_output):
 					# Use handcoded BLAS call. BLAS is better when all inputs are Fortran ordered,
 					# so we apply matrix multiplications on the transpose of each of the arrays
 					# (which are C ordered). Weights are included in the call as that multiplication
 					# happens anyway (and it saves an array copy). Adjoint is handled by GEMM, which
 					# avoids an array copy for these array as well.
+
 					f = field.reshape(self.shape_output)
-					res = blas.zgemm(1, blas.zgemm(self.weights_output, self.M2.T, f.T, trans_a=2), self.M1.T, trans_b=2).T.reshape(-1)
+					res = gemm(1, gemm(self.weights_output, self.M2.T, f.T, trans_a=2), self.M1.T, trans_b=2).T.reshape(-1)
 				else:
 					# Fallback in case the weights is not a scalar.
 					f = (field * self.weights_output).reshape(self.shape_output)
-					res = blas.zgemm(1, blas.zgemm(1, self.M2.T, f.T, trans_a=2), self.M1.T, trans_b=2).T.reshape(-1)
+					res = gemm(1, gemm(1, self.M2.T, f.T, trans_a=2), self.M1.T, trans_b=2).T.reshape(-1)
 			else:
 				if np.isscalar(self.weights_output) and self.input_grid.size < self.output_grid.size:
 					# Apply weights in the output, as that array is smaller than the input.
@@ -97,4 +134,4 @@ class MatrixFourierTransform(FourierTransform):
 					f = (field * self.weights_output).reshape(self.shape_output)
 					res = np.dot(np.dot(self.M1.conj().T, f), self.M2.conj().T).reshape(-1)
 
-		return Field(res, self.input_grid).astype(field.dtype)
+		return Field(res, self.input_grid)

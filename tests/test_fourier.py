@@ -39,7 +39,7 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 					assert abs(energy_ratio - 1) < 1e-14
 				else:
 					assert pattern_match < 1e-6
-					assert abs(energy_ratio - 1) < 1e-7
+					assert abs(energy_ratio - 1) < 1e-6
 
 			energy_ratios.append(energy_ratio)
 			patterns_match.append(pattern_match)

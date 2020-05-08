@@ -65,7 +65,7 @@ class MatrixFourierTransform(FourierTransform):
 				f = (field * self.weights_input).reshape(self.shape_input)
 				res = np.dot(np.dot(self.M1, f), self.M2).reshape(-1)
 
-		return Field(res, self.output_grid)
+		return Field(res, self.output_grid).astype(field.dtype)
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
@@ -97,4 +97,4 @@ class MatrixFourierTransform(FourierTransform):
 					f = (field * self.weights_output).reshape(self.shape_output)
 					res = np.dot(np.dot(self.M1.conj().T, f), self.M2.conj().T).reshape(-1)
 
-		return Field(res, self.input_grid)
+		return Field(res, self.input_grid).astype(field.dtype)

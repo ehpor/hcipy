@@ -39,17 +39,17 @@ class NaiveFourierTransform(FourierTransform):
 	def forward(self, field):
 		if self.cache_matrices:
 			res = self.T_forward.dot(field.ravel())
-			return Field(res, self.output_grid)
+			return Field(res, self.output_grid).astype(field.dtype)
 		else:
 			res = np.array([(field * self.input_grid.weights).dot(np.exp(-1j * np.dot(p, self.coords_in))) for p in self.coords_out.T])
-			return Field(res, self.output_grid)
+			return Field(res, self.output_grid).astype(field.dtype)
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
 		if self.cache_matrices:
 			res = self.T_backward.dot(field.ravel())
-			return Field(res, self.input_grid)
+			return Field(res, self.input_grid).astype(field.dtype)
 		else:
 			res = np.array([(field * self.output_grid.weights).dot(np.exp(1j * np.dot(p, self.coords_out))) for p in self.coords_in.T])
 			res /= (2*np.pi)**self.input_grid.ndim
-			return Field(res, self.input_grid)
+			return Field(res, self.input_grid).astype(field.dtype)

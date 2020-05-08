@@ -71,7 +71,7 @@ class FastFourierTransform(FourierTransform):
 		res = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(f)))
 		res = res[tuple(self.cutout_output)].ravel() * self.shift_input
 
-		return Field(res, self.output_grid)
+		return Field(res, self.output_grid).astype(field.dtype)
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
@@ -82,4 +82,4 @@ class FastFourierTransform(FourierTransform):
 		res = np.fft.fftshift(np.fft.ifftn(np.fft.ifftshift(f)))
 		res = res[tuple(self.cutout_input)].ravel() / self.weights / self.shift_output
 
-		return Field(res, self.input_grid)
+		return Field(res, self.input_grid).astype(field.dtype)

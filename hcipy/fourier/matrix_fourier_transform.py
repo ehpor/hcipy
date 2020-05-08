@@ -23,11 +23,14 @@ class MatrixFourierTransform(FourierTransform):
 
 		self.ndim = input_grid.ndim
 
-		self.weights_input = input_grid.weights.ravel()
+		self.weights_input = input_grid.weights
+		self.weights_output = output_grid.weights / (2 * np.pi)**self.ndim
+
+		# If all input weights are all the same, use a scalar instead.
 		if np.all(self.weights_input == self.weights_input[0]):
 			self.weights_input = self.weights_input[0]
 
-		self.weights_output = output_grid.weights.ravel()
+		# If all output weights are all the same, use a scalar instead.
 		if np.all(self.weights_output == self.weights_output[0]):
 			self.weights_output = self.weights_output[0]
 
@@ -46,12 +49,19 @@ class MatrixFourierTransform(FourierTransform):
 			if np.isscalar(self.weights_input):
 				f = field.reshape(self.shape_input)
 				if np.dtype('complex128') == field.dtype:
-					res = blas.zgemm(self.weights_input, blas.zgemm(1, self.M2.T, f.T), self.M1.T)
+					# Use handcoded BLAS call. BLAS is better when all inputs are Fortran ordered,
+					# so we apply matrix multiplications on the transpose of each of the arrays
+					# (which are C ordered). Weights are included in the call as that multiplication
+					# happens anyway (and it saves an array copy).
+					res = blas.zgemm(self.weights_input, blas.zgemm(1, self.M2.T, f.T), self.M1.T).T.reshape(-1)
 				elif self.input_grid.size > self.output_grid.size:
+					# Apply weights to the output as that array is smaller than the input.
 					res = np.dot(np.dot(self.M1, f), self.M2).reshape(-1) * self.weights_input
 				else:
+					# Apply weights to the input as that array is smaller than the output.
 					res = np.dot(np.dot(self.M1, f * self.weights_input), self.M2).reshape(-1)
 			else:
+				# Fallback in case the weights is not a scalar.
 				f = (field * self.weights_input).reshape(self.shape_input)
 				res = np.dot(np.dot(self.M1, f), self.M2).reshape(-1)
 
@@ -61,22 +71,29 @@ class MatrixFourierTransform(FourierTransform):
 	def backward(self, field):
 		if self.ndim == 1:
 			f = field * self.weights_output
-			res = np.dot(self.M.conj().T, f) / (2 * np.pi)
+			res = np.dot(self.M.conj().T, f)
 		elif self.ndim == 2:
 			if np.dtype('complex128') == field.dtype:
 				if np.isscalar(self.weights_output):
+					# Use handcoded BLAS call. BLAS is better when all inputs are Fortran ordered,
+					# so we apply matrix multiplications on the transpose of each of the arrays
+					# (which are C ordered). Weights are included in the call as that multiplication
+					# happens anyway (and it saves an array copy). Adjoint is handled by GEMM, which
+					# avoids an array copy for these array as well.
 					f = field.reshape(self.shape_output)
-					w = self.weights_output / (2 * np.pi)**2
-					res = blas.zgemm(1, blas.zgemm(w, self.M2.T, f.T, trans_a=2), self.M1.T, trans_b=2).T.reshape(-1)
+					res = blas.zgemm(1, blas.zgemm(self.weights_output, self.M2.T, f.T, trans_a=2), self.M1.T, trans_b=2).T.reshape(-1)
 				else:
+					# Fallback in case the weights is not a scalar.
 					f = (field * self.weights_output).reshape(self.shape_output)
-					w = 1 / (2 * np.pi)**2
-					res = blas.zgemm(1, blas.zgemm(w, self.M2.T, f.T, trans_a=2), self.M1.T, trans_b=2).T.reshape(-1)
+					res = blas.zgemm(1, blas.zgemm(1, self.M2.T, f.T, trans_a=2), self.M1.T, trans_b=2).T.reshape(-1)
 			else:
 				if np.isscalar(self.weights_output) and self.input_grid.size < self.output_grid.size:
+					# Apply weights in the output, as that array is smaller than the input.
 					f = field.reshape(self.shape_output)
 					res = np.dot(np.dot(self.M1.conj().T, f), self.M2.conj().T).reshape(-1) * self.weights_output
 				else:
+					# Apply weights in the input, as that array is smaller than the output or if the
+					# weights is not a scalar.
 					f = (field * self.weights_output).reshape(self.shape_output)
 					res = np.dot(np.dot(self.M1.conj().T, f), self.M2.conj().T).reshape(-1)
 

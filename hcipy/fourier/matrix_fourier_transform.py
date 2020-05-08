@@ -1,5 +1,6 @@
 import numpy as np
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
+from ..field import Field
 
 class MatrixFourierTransform(FourierTransform):
 	def __init__(self, input_grid, output_grid):
@@ -14,13 +15,18 @@ class MatrixFourierTransform(FourierTransform):
 			raise ValueError('The input_grid must have the same dimensions as the output_grid.')
 
 		self.input_grid = input_grid
+		self.output_grid = output_grid
 
 		self.shape = input_grid.shape
-		self.weights = input_grid.weights.ravel()
-		self.output_grid = output_grid
 		self.ndim = input_grid.ndim
 
-		self.output_grid = output_grid
+		self.weights_input = input_grid.weights.ravel()
+		if np.allclose(self.weights_input, self.weights_input[0]):
+			self.weights_input = self.weights_input[0]
+
+		self.weights_output = output_grid.weights.ravel()
+		if np.all(self.weights_output == self.weights_output[0]):
+			self.weights_output = self.weights_output[0]
 
 		if self.ndim == 1:
 			self.M = np.exp(-1j * np.dot(output_grid.x[:,np.newaxis], input_grid.x[np.newaxis,:]))
@@ -30,27 +36,23 @@ class MatrixFourierTransform(FourierTransform):
 
 	@multiplex_for_tensor_fields
 	def forward(self, field):
-		from ..field import Field
-
 		if self.ndim == 1:
-			f = field.ravel() * self.weights
+			f = field * self.weights_input
 			res = np.dot(self.M, f)
 		elif self.ndim == 2:
-			f = (field.ravel() * self.weights).reshape(self.shape)
-			res = np.dot(np.dot(self.M1, f), self.M2).ravel()
+			f = (field * self.weights_input).reshape(self.shape)
+			res = np.dot(np.dot(self.M1, f), self.M2).reshape(-1)
 
 		return Field(res, self.output_grid)
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
-		from ..field import Field
-
 		if self.ndim == 1:
-			f = field.ravel() * self.output_grid.weights
+			f = field * self.weights_output
 			res = np.dot(self.M.conj().T, f)
 		elif self.ndim == 2:
-			f = (field.ravel() * self.output_grid.weights).reshape(self.output_grid.shape)
-			res = np.dot(np.dot(self.M1.conj().T, f), self.M2.conj().T).ravel()
+			f = (field * self.weights_output).reshape(self.output_grid.shape)
+			res = np.dot(np.dot(self.M1.conj().T, f), self.M2.conj().T).reshape(-1)
 
 		res /= (2 * np.pi)**self.ndim
 		return Field(res, self.input_grid)

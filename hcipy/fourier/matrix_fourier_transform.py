@@ -26,13 +26,7 @@ class MatrixFourierTransform(FourierTransform):
 		self._dtype = None
 
 	def _compute_matrices(self, dtype):
-		if dtype == 'float32':
-			complex_dtype = 'complex64'
-			float_dtype = 'float32'
-		elif dtype == 'float64':
-			complex_dtype = 'complex128'
-			float_dtype = 'float64'
-		elif dtype == 'complex64':
+		if dtype == 'float32' or dtype == 'complex64':
 			complex_dtype = 'complex64'
 			float_dtype = 'float32'
 		else:
@@ -59,6 +53,9 @@ class MatrixFourierTransform(FourierTransform):
 			self.M1 = np.exp(-1j * np.outer(self.output_grid.coords.separated_coords[1], self.input_grid.separated_coords[1])).astype(complex_dtype)
 			self.M2 = np.exp(-1j * np.outer(self.input_grid.coords.separated_coords[0], self.output_grid.separated_coords[0])).astype(complex_dtype)
 
+		if self.ndim == 2:
+			self.intermediate_array = np.empty((self.M1.shape[0], self.input_grid.shape[1]), dtype=complex_dtype)
+
 		self._dtype = complex_dtype
 
 	@multiplex_for_tensor_fields
@@ -81,17 +78,21 @@ class MatrixFourierTransform(FourierTransform):
 						gemm = blas.cgemm
 					else:
 						gemm = blas.zgemm
-					res = gemm(self.weights_input, gemm(1, self.M2.T, f.T), self.M1.T).T.reshape(-1)
+					gemm(1, f.T, self.M1.T, c=self.intermediate_array.T, overwrite_c=True)
+					res = gemm(self.weights_input, self.M2.T, self.intermediate_array.T).T.reshape(-1)
 				elif self.input_grid.size > self.output_grid.size:
 					# Apply weights to the output as that array is smaller than the input.
-					res = np.dot(np.dot(self.M1, f), self.M2).reshape(-1) * self.weights_input
+					np.dot(self.M1, f, out=self.intermediate_array)
+					res = np.dot(self.intermediate_array, self.M2).reshape(-1) * self.weights_input
 				else:
 					# Apply weights to the input as that array is smaller than the output.
-					res = np.dot(np.dot(self.M1, f * self.weights_input), self.M2).reshape(-1)
+					np.dot(self.M1, f * self.weights_input, out=self.intermediate_array)
+					res = np.dot(self.intermediate_array, self.M2).reshape(-1)
 			else:
 				# Fallback in case the weights is not a scalar.
 				f = (field * self.weights_input).reshape(self.shape_input)
-				res = np.dot(np.dot(self.M1, f), self.M2).reshape(-1)
+				np.dot(self.M1, f, out=self.intermediate_array)
+				res = np.dot(self.intermediate_array, self.M2).reshape(-1)
 
 		return Field(res, self.output_grid)
 
@@ -118,20 +119,24 @@ class MatrixFourierTransform(FourierTransform):
 					# avoids an array copy for these array as well.
 
 					f = field.reshape(self.shape_output)
-					res = gemm(1, gemm(self.weights_output, self.M2.T, f.T, trans_a=2), self.M1.T, trans_b=2).T.reshape(-1)
+					gemm(1, self.M2.T, f.T, trans_a=2, c=self.intermediate_array.T, overwrite_c=True)
+					res = gemm(self.weights_output, self.intermediate_array.T, self.M1.T, trans_b=2).T.reshape(-1)
 				else:
 					# Fallback in case the weights is not a scalar.
 					f = (field * self.weights_output).reshape(self.shape_output)
-					res = gemm(1, gemm(1, self.M2.T, f.T, trans_a=2), self.M1.T, trans_b=2).T.reshape(-1)
+					gemm(1, M2.T, f.T, trans_a=2, c=self.intermediate_array.T, overwrite_c=True)
+					res = gemm(1, self.intermediate_array.T, self.M1.T, trans_b=2).T.reshape(-1)
 			else:
 				if np.isscalar(self.weights_output) and self.input_grid.size < self.output_grid.size:
 					# Apply weights in the output, as that array is smaller than the input.
 					f = field.reshape(self.shape_output)
-					res = np.dot(np.dot(self.M1.conj().T, f), self.M2.conj().T).reshape(-1) * self.weights_output
+					np.dot(f, self.M2.conj().T, out=self.intermediate_array)
+					res = np.dot(self.M1.conj().T, self.intermediate_array).reshape(-1) * self.weights_output
 				else:
 					# Apply weights in the input, as that array is smaller than the output or if the
 					# weights is not a scalar.
 					f = (field * self.weights_output).reshape(self.shape_output)
-					res = np.dot(np.dot(self.M1.conj().T, f), self.M2.conj().T).reshape(-1)
+					np.dot(f, self.M2.conj().T, out=self.intermediate_array)
+					res = np.dot(self.M1.conj().T, self.intermediate_array).reshape(-1)
 
 		return Field(res, self.input_grid)

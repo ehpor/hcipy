@@ -4,6 +4,18 @@ import numpy as np
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
 from ..field import Field, CartesianGrid, RegularCoords
 
+from decorator import decorator
+from line_profiler import LineProfiler
+
+@decorator
+def profile_each_line(func, *args, **kwargs):
+    profiler = LineProfiler()
+    profiled_func = profiler(func)
+    try:
+        profiled_func(*args, **kwargs)
+    finally:
+        profiler.print_stats()
+
 def make_fft_grid(input_grid, q=1, fov=1):
 	q = np.ones(input_grid.ndim, dtype='float') * q
 	fov = np.ones(input_grid.ndim, dtype='float') * fov
@@ -36,6 +48,7 @@ class FastFourierTransform(FourierTransform):
 		self.ndim = input_grid.ndim
 
 		self.output_grid = make_fft_grid(input_grid, q, fov).shifted(shift)
+		self.internal_grid = make_fft_grid(input_grid, q, 1)
 
 		self.shape_out = self.output_grid.shape
 		self.internal_shape = (self.shape_in * q).astype('int')
@@ -55,54 +68,75 @@ class FastFourierTransform(FourierTransform):
 			cutout_end = cutout_start + self.shape_out
 			self.cutout_output = tuple([slice(start, end) for start, end in zip(cutout_start, cutout_end)])
 
-		center = input_grid.zero + input_grid.delta * (np.array(input_grid.dims) // 2) - input_grid.delta * (self.internal_shape // 2)
-
+		center = input_grid.zero + input_grid.delta * (np.array(input_grid.dims) // 2)# + input_grid.delta * (np.array(-self.internal_shape[::-1]) // 2)
 		self.shift_input = np.exp(-1j * np.dot(center, self.output_grid.coords))
 		self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0] # No piston shift (remove central shift phase)
-		if np.allclose(self.shift_input, 1):
-			self.shift_input = None
 
-		shift = np.ones(self.input_grid.ndim) * (shift - self.output_grid.delta * (np.array(self.output_grid.dims) // 2))
-		self.shift_output = np.exp(-1j * np.dot(shift, self.input_grid.coords)).reshape(self.shape_in)
-		if np.allclose(self.shift_output, 1):
-			self.shift_output = None
+		fftshift = input_grid.delta * (np.array(self.internal_shape[::-1] // 2))
+		fftshift = np.exp(1j * (np.dot(fftshift, self.internal_grid.coords))).reshape(self.internal_shape)
+
+		#if self.cutout_output:
+		#	self.shift_input *= fftshift[self.cutout_output].ravel()
+		#else:
+		#	self.shift_input *= fftshift.ravel()
+
+		self.shift_input *= self.weights
+
+		shift = np.ones(self.input_grid.ndim) * shift
+		self.shift_output = np.exp(-1j * np.dot(shift, self.input_grid.coords))
+
+		fftshift = self.input_grid.delta * (np.array(self.internal_shape[::-1] // 2))
+		fftshift = np.exp(1j * (np.dot(fftshift, self.internal_grid.coords) - np.dot(fftshift, self.internal_grid.zero))).reshape(self.internal_shape)
+
+		#if self.cutout_input:
+		#	self.shift_output *= fftshift[self.cutout_input].ravel()
+		#else:
+		#	self.shift_output *= fftshift.ravel()
 
 	@multiplex_for_tensor_fields
+	#@profile_each_line
 	def forward(self, field):
 		if self.cutout_input is None:
-			if self.shift_output is None:
-				f = field.reshape(self.shape_in)
-			else:
-				self.internal_array[:] = field.reshape(self.shape_in)
-				self.internal_array *= self.shift_output
-
-				f = self.internal_array
+			self.internal_array[:] = field.reshape(self.shape_in)
+			self.internal_array *= self.shift_output.reshape(self.shape_in)
 		else:
+			self.internal_array[:] = 0
 			self.internal_array[self.cutout_input] = field.reshape(self.shape_in)
-			if self.shift_output is not None:
-				self.internal_array[self.cutout_input] *= self.shift_output.reshape(self.shape_in)
+			self.internal_array[self.cutout_input] *= self.shift_output.reshape(self.shape_in)
 
-			f = self.internal_array
-
-		fft_array = np.fft.fftn(f)
+		self.internal_array = np.fft.ifftshift(self.internal_array)
+		fft_array = np.fft.fftn(self.internal_array)
+		fft_array = np.fft.fftshift(fft_array)
 
 		if self.cutout_output is None:
 			res = fft_array.ravel()
 		else:
 			res = fft_array[self.cutout_output].ravel()
 
-		if self.shift_input is not None:
-			res *= self.shift_input
-
-		res *= self.weights
+		res *= self.shift_input
 
 		return Field(res, self.output_grid).astype(field.dtype, copy=False)
 
 	@multiplex_for_tensor_fields
+	#@profile_each_line
 	def backward(self, field):
-		f = np.zeros(self.internal_shape, dtype='complex')
-		f[self.cutout_output] = (field.ravel() / self.shift_input).reshape(self.shape_out)
-		res = np.fft.fftshift(np.fft.ifftn(np.fft.ifftshift(f)))
-		res = res[self.cutout_input].ravel() / self.weights / self.shift_output
+		if self.cutout_output is None:
+			self.internal_array[:] = field.reshape(self.shape_out)
+			self.internal_array /= self.shift_input.reshape(self.shape_out)
+		else:
+			self.internal_array[:] = 0
+			self.internal_array[self.cutout_output] = field.reshape(self.shape_out)
+			self.internal_array[self.cutout_output] /= self.shift_input.reshape(self.shape_out)
 
-		return Field(res, self.input_grid).astype(field.dtype)
+		self.internal_array = np.fft.ifftshift(self.internal_array)
+		fft_array = np.fft.ifftn(self.internal_array)
+		fft_array = np.fft.fftshift(fft_array)
+
+		if self.cutout_input is None:
+			res = fft_array.ravel()
+		else:
+			res = fft_array[self.cutout_input].ravel()
+
+		res /= self.shift_output
+
+		return Field(res, self.input_grid).astype(field.dtype, copy=False)

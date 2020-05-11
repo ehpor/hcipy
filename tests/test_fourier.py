@@ -34,8 +34,11 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 				# for all fourier transform combinations.
 				# Set different accuracy constraints depending on bit depth.
 
+				print(dtype, shift_input, scale, shift_output, q, fov, dims)
+				print(ft1.__class__.__name__, ft2.__class__.__name__)
+
 				if np.dtype(dtype) == np.dtype('complex128'):
-					assert pattern_match < 1e-14
+					assert pattern_match < 1e-13
 					assert abs(energy_ratio - 1) < 1e-14
 				else:
 					assert pattern_match < 1e-6
@@ -47,6 +50,9 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 	energy_ratios = np.array(energy_ratios).reshape((len(fourier_transforms), len(fourier_transforms)))
 	patterns_match = np.array(patterns_match).reshape((len(fourier_transforms), len(fourier_transforms)))
 
+	print(energy_ratios - 1)
+	print(patterns_match)
+
 	# If the full fov is not retained, the pattern and energy loss should be the same
 	# for all fourier transform combinations.
 	if fov != 1:
@@ -56,7 +62,7 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 def test_fourier_energy_conservation_1d():
 	np.random.seed(0)
 
-	for dtype in ['complex64', 'complex128']:
+	for dtype in ['complex128', 'complex64']:
 		for shift_input in [0,0.1]:
 			for scale in [1,2]:
 				for shift_output in [0,0.1]:
@@ -68,7 +74,7 @@ def test_fourier_energy_conservation_1d():
 def test_fourier_energy_conservation_2d():
 	np.random.seed(0)
 
-	for dtype in ['complex64', 'complex128']:
+	for dtype in ['complex128', 'complex64']:
 		for shift_input in [[0,0],[0.1]]:
 			for scale in [1,2]:
 				for shift_output in [[0,0], [0.1]]:

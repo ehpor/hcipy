@@ -4,18 +4,6 @@ import numpy as np
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
 from ..field import Field, CartesianGrid, RegularCoords
 
-from decorator import decorator
-from line_profiler import LineProfiler
-
-@decorator
-def profile_each_line(func, *args, **kwargs):
-    profiler = LineProfiler()
-    profiled_func = profiler(func)
-    try:
-        profiled_func(*args, **kwargs)
-    finally:
-        profiler.print_stats()
-
 def make_fft_grid(input_grid, q=1, fov=1):
 	q = np.ones(input_grid.ndim, dtype='float') * q
 	fov = np.ones(input_grid.ndim, dtype='float') * fov
@@ -33,7 +21,7 @@ def make_fft_grid(input_grid, q=1, fov=1):
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 
 class FastFourierTransform(FourierTransform):
-	def __init__(self, input_grid, q=1, fov=1, shift=0):
+	def __init__(self, input_grid, q=1, fov=1, shift=0, high_accuracy=False):
 		# Check assumptions
 		if not input_grid.is_regular:
 			raise ValueError('The input_grid must be regular.')
@@ -46,6 +34,7 @@ class FastFourierTransform(FourierTransform):
 		self.weights = input_grid.weights[0]
 		self.size = input_grid.size
 		self.ndim = input_grid.ndim
+		self.high_accuracy = high_accuracy
 
 		self.output_grid = make_fft_grid(input_grid, q, fov).shifted(shift)
 		self.internal_grid = make_fft_grid(input_grid, q, 1)
@@ -68,33 +57,34 @@ class FastFourierTransform(FourierTransform):
 			cutout_end = cutout_start + self.shape_out
 			self.cutout_output = tuple([slice(start, end) for start, end in zip(cutout_start, cutout_end)])
 
-		center = input_grid.zero + input_grid.delta * (np.array(input_grid.dims) // 2)# + input_grid.delta * (np.array(-self.internal_shape[::-1]) // 2)
+		center = input_grid.zero + input_grid.delta * (np.array(input_grid.dims) // 2)
 		self.shift_input = np.exp(-1j * np.dot(center, self.output_grid.coords))
 		self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0] # No piston shift (remove central shift phase)
 
-		fftshift = input_grid.delta * (np.array(self.internal_shape[::-1] // 2))
-		fftshift = np.exp(1j * (np.dot(fftshift, self.internal_grid.coords))).reshape(self.internal_shape)
+		if not high_accuracy:
+			fftshift = input_grid.delta * (np.array(self.internal_shape[::-1] // 2))
+			fftshift = np.exp(1j * (np.dot(fftshift, self.internal_grid.coords))).reshape(self.internal_shape)
 
-		#if self.cutout_output:
-		#	self.shift_input *= fftshift[self.cutout_output].ravel()
-		#else:
-		#	self.shift_input *= fftshift.ravel()
+			if self.cutout_output:
+				self.shift_input *= fftshift[self.cutout_output].ravel()
+			else:
+				self.shift_input *= fftshift.ravel()
 
 		self.shift_input *= self.weights
 
 		shift = np.ones(self.input_grid.ndim) * shift
 		self.shift_output = np.exp(-1j * np.dot(shift, self.input_grid.coords))
 
-		fftshift = self.input_grid.delta * (np.array(self.internal_shape[::-1] // 2))
-		fftshift = np.exp(1j * (np.dot(fftshift, self.internal_grid.coords) - np.dot(fftshift, self.internal_grid.zero))).reshape(self.internal_shape)
+		if not high_accuracy:
+			fftshift = self.input_grid.delta * (np.array(self.internal_shape[::-1] // 2))
+			fftshift = np.exp(1j * (np.dot(fftshift, self.internal_grid.coords) - np.dot(fftshift, self.internal_grid.zero))).reshape(self.internal_shape)
 
-		#if self.cutout_input:
-		#	self.shift_output *= fftshift[self.cutout_input].ravel()
-		#else:
-		#	self.shift_output *= fftshift.ravel()
+			if self.cutout_input:
+				self.shift_output *= fftshift[self.cutout_input].ravel()
+			else:
+				self.shift_output *= fftshift.ravel()
 
 	@multiplex_for_tensor_fields
-	#@profile_each_line
 	def forward(self, field):
 		if self.cutout_input is None:
 			self.internal_array[:] = field.reshape(self.shape_in)
@@ -104,9 +94,13 @@ class FastFourierTransform(FourierTransform):
 			self.internal_array[self.cutout_input] = field.reshape(self.shape_in)
 			self.internal_array[self.cutout_input] *= self.shift_output.reshape(self.shape_in)
 
-		self.internal_array = np.fft.ifftshift(self.internal_array)
+		if self.high_accuracy:
+			self.internal_array = np.fft.ifftshift(self.internal_array)
+
 		fft_array = np.fft.fftn(self.internal_array)
-		fft_array = np.fft.fftshift(fft_array)
+
+		if self.high_accuracy:
+			fft_array = np.fft.fftshift(fft_array)
 
 		if self.cutout_output is None:
 			res = fft_array.ravel()
@@ -118,7 +112,6 @@ class FastFourierTransform(FourierTransform):
 		return Field(res, self.output_grid).astype(field.dtype, copy=False)
 
 	@multiplex_for_tensor_fields
-	#@profile_each_line
 	def backward(self, field):
 		if self.cutout_output is None:
 			self.internal_array[:] = field.reshape(self.shape_out)
@@ -128,9 +121,13 @@ class FastFourierTransform(FourierTransform):
 			self.internal_array[self.cutout_output] = field.reshape(self.shape_out)
 			self.internal_array[self.cutout_output] /= self.shift_input.reshape(self.shape_out)
 
-		self.internal_array = np.fft.ifftshift(self.internal_array)
+		if self.high_accuracy:
+			self.internal_array = np.fft.ifftshift(self.internal_array)
+
 		fft_array = np.fft.ifftn(self.internal_array)
-		fft_array = np.fft.fftshift(fft_array)
+
+		if self.high_accuracy:
+			fft_array = np.fft.fftshift(fft_array)
 
 		if self.cutout_input is None:
 			res = fft_array.ravel()

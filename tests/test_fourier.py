@@ -7,12 +7,13 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 
 	energy_in = np.sum(np.abs(f_in)**2 * f_in.grid.weights)
 
-	fft = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output)
+	fft = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output, high_accuracy=True)
+	fft_low = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output, high_accuracy=False)
 	mft = MatrixFourierTransform(grid, fft.output_grid)
 	nft = NaiveFourierTransform(grid, fft.output_grid, True)
 	nft2 = NaiveFourierTransform(grid, fft.output_grid, False)
 
-	fourier_transforms = [fft, mft, nft, nft2]
+	fourier_transforms = [fft, fft_low, mft, nft, nft2]
 
 	energy_ratios = []
 	patterns_match = []
@@ -29,33 +30,25 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 
 			pattern_match = np.std(np.abs(f_out - f_in)) / np.abs(f_in).mean()
 
-			if fov == 1:
-				# If the full fov is retained, energy and pattern should be conserved
-				# for all fourier transform combinations.
-				# Set different accuracy constraints depending on bit depth.
-
-				print(dtype, shift_input, scale, shift_output, q, fov, dims)
-				print(ft1.__class__.__name__, ft2.__class__.__name__)
-
-				if np.dtype(dtype) == np.dtype('complex128'):
-					assert pattern_match < 1e-13
-					assert abs(energy_ratio - 1) < 1e-14
-				else:
-					assert pattern_match < 1e-6
-					assert abs(energy_ratio - 1) < 1e-6
-
 			energy_ratios.append(energy_ratio)
 			patterns_match.append(pattern_match)
 
 	energy_ratios = np.array(energy_ratios).reshape((len(fourier_transforms), len(fourier_transforms)))
 	patterns_match = np.array(patterns_match).reshape((len(fourier_transforms), len(fourier_transforms)))
 
-	print(energy_ratios - 1)
-	print(patterns_match)
-
-	# If the full fov is not retained, the pattern and energy loss should be the same
-	# for all fourier transform combinations.
-	if fov != 1:
+	if fov == 1:
+		# When the full fov is retained, the pattern should be the same and energy should
+		# be conserved. We use different accuracy limits based on bit depth.
+		#print(np.max(patterns_match))
+		if np.dtype(dtype) == np.dtype('complex128'):
+			assert np.all(patterns_match < 1e-13)
+			assert np.all(np.abs(energy_ratios - 1) < 1e-14)
+		else:
+			assert np.all(patterns_match < 1e-6)
+			assert np.all(np.abs(energy_ratios - 1) < 1e-6)
+	else:
+		# If the full fov is not retained, the pattern and energy loss should be the same
+		# for all fourier transform combinations.
 		assert np.allclose(energy_ratios, energy_ratios[0, 0])
 		assert np.allclose(patterns_match, patterns_match[0, 0])
 

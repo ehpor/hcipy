@@ -37,7 +37,7 @@ class VortexCoronagraph(OpticalElement):
 		grid_fill_fraction = pupil_diameter / grid_size
 
 		num_airy_outer = input_grid.shape[0] / 2 * grid_fill_fraction
-		q_outer = max(2, max(grid_size / pupil_diameter))
+		q_outer = max(2, max(2/grid_fill_fraction))
 
 		focal_grids = []
 		self.focal_masks = []
@@ -158,10 +158,6 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 		AgnosticOpticalElement.__init__(self)
 
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
-		#q_outer = 2
-		#num_airy_outer = input_grid.shape[0] / 2
-		#pupil_diameter = input_grid.shape * input_grid.delta
-
 		grid_size = input_grid.shape * input_grid.delta 
 		if self.pupil_diameter is None:
 			pupil_diameter = input_grid.shape * input_grid.delta
@@ -169,7 +165,7 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 		grid_fill_fraction = pupil_diameter / grid_size
 
 		num_airy_outer = input_grid.shape[0] / 2 * grid_fill_fraction
-		q_outer = max(2, max(grid_size / pupil_diameter))
+		q_outer = max(2, max(2/grid_fill_fraction))
 
 		focal_grids = []
 		jones_matrices = []

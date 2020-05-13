@@ -2,56 +2,64 @@ from hcipy import *
 import numpy as np
 
 def test_vortex_coronagraph():
-	pupil_grid = make_pupil_grid(256)
-	focal_grid = make_focal_grid(4, 32)
-	prop = FraunhoferPropagator(pupil_grid, focal_grid)
+	pupil_grid = make_pupil_grid(512)
+	
+	aperture_sizes = [0.5, 1]
+	for aperture_size in aperture_sizes:
+		focal_grid = make_focal_grid(4, 32, spatial_resolution=1/aperture_size)
+		prop = FraunhoferPropagator(pupil_grid, focal_grid)
 
-	aperture = circular_aperture(1)
-	aperture = evaluate_supersampled(aperture, pupil_grid, 8)
+		aperture = circular_aperture(aperture_size)
+		aperture = evaluate_supersampled(aperture, pupil_grid, 16)
 
-	lyot = circular_aperture(0.99)
-	lyot = evaluate_supersampled(lyot, pupil_grid, 8) > 1 - 1e-5
+		lyot = circular_aperture(0.99 * aperture_size)
+		lyot = evaluate_supersampled(lyot, pupil_grid, 8) > 1 - 1e-5
 
-	for charge in [2, 4, 6, 8]:
-		vortex = VortexCoronagraph(pupil_grid, charge, levels=6)
+		for charge in [2, 4, 6, 8]:
+			vortex = VortexCoronagraph(pupil_grid, charge, levels=6)
 
-		wf = Wavefront(aperture)
-		wf.total_power = 1
+			wf = Wavefront(aperture)
+			wf.total_power = 1
 
-		img_ref = prop(wf)
+			img_ref = prop(wf)
 
-		wf = vortex(wf)
-		wf.electric_field *= lyot
-		img = prop(wf)
-
-		assert img.total_power < 1e-6
-		assert img.intensity.max() / img_ref.intensity.max() < 1e-8
+			wf = vortex(wf)
+			wf.electric_field *= lyot
+			img = prop(wf)
+			
+			assert img.total_power < 1e-6
+			assert img.intensity.max() / img_ref.intensity.max() < 1e-8
 
 def test_vector_vortex_coronagraph():
-	pupil_grid = make_pupil_grid(256)
-	focal_grid = make_focal_grid(4, 32)
-	prop = FraunhoferPropagator(pupil_grid, focal_grid)
+	pupil_grid = make_pupil_grid(512)
+	
+	aperture_sizes = [0.5, 1]
+	for aperture_size in aperture_sizes:
+		focal_grid = make_focal_grid(4, 32, spatial_resolution=1/aperture_size)
+		prop = FraunhoferPropagator(pupil_grid, focal_grid)
 
-	aperture = circular_aperture(1)
-	aperture = evaluate_supersampled(aperture, pupil_grid, 8)
+		aperture = circular_aperture(aperture_size)
+		aperture = evaluate_supersampled(aperture, pupil_grid, 8)
 
-	lyot = circular_aperture(0.99)
-	lyot = evaluate_supersampled(lyot, pupil_grid, 8) > 1 - 1e-5
+		lyot = circular_aperture(0.99 * aperture_size)
+		lyot = evaluate_supersampled(lyot, pupil_grid, 8) > 1 - 1e-5
 
-	for charge in [2, 4, 6, 8]:
-		vortex = VectorVortexCoronagraph(charge, levels=6)
+		for charge in [2, 4, 6, 8]:
+			vortex = VectorVortexCoronagraph(charge, levels=6)
 
-		wf = Wavefront(aperture)
-		wf.total_power = 1
+			wf = Wavefront(aperture)
+			wf.total_power = 1
 
-		img_ref = prop(wf)
+			img_ref = prop(wf)
 
-		wf = vortex(wf)
-		wf.electric_field *= lyot
-		img = prop(wf)
+			wf = vortex(wf)
+			wf.electric_field *= lyot
+			img = prop(wf)
 
-		assert img.total_power < 1e-6
-		assert img.intensity.max() / img_ref.intensity.max() < 1e-8
+			assert img.total_power < 1e-6
+			assert img.intensity.max() / img_ref.intensity.max() < 1e-8
+
+test_vector_vortex_coronagraph()
 
 def test_ravc():
 	pupil_grid = make_pupil_grid(256)

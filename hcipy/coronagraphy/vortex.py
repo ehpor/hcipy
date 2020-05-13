@@ -24,13 +24,20 @@ class VortexCoronagraph(OpticalElement):
 		The number of levels in the multi-scale sampling.
 	scaling_factor : scalar
 		The fractional increase in spatial frequency sampling per level.
+	pupil_diameter : scalar
+		The diameter of the input pupil. Default assumes pupil size is grid diameter.
 	'''
-	def __init__(self, input_grid, charge=2, levels=4, scaling_factor=4):
+	def __init__(self, input_grid, charge=2, levels=4, scaling_factor=4, pupil_diameter=None):
 		self.input_grid = input_grid
 
-		q_outer = 2
-		num_airy_outer = input_grid.shape[0] / 2
-		pupil_diameter = input_grid.shape * input_grid.delta
+		grid_size = input_grid.shape * input_grid.delta 
+		if pupil_diameter is None:
+			pupil_diameter = input_grid.shape * input_grid.delta
+		
+		grid_fill_fraction = pupil_diameter / grid_size
+
+		num_airy_outer = input_grid.shape[0] / 2 * grid_fill_fraction
+		q_outer = max(2, max(grid_size / pupil_diameter))
 
 		focal_grids = []
 		self.focal_masks = []
@@ -41,9 +48,9 @@ class VortexCoronagraph(OpticalElement):
 			if i == 0:
 				num_airy = num_airy_outer
 			else:
-				num_airy = 32.0 / (q_outer * scaling_factor**(i-1))
+				num_airy = min(min(num_airy_outer), 32) / (q_outer * scaling_factor**(i-1))
 
-			focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
+			focal_grid = make_focal_grid(q, num_airy, spatial_resolution=1/pupil_diameter)
 			focal_mask = Field(np.exp(1j * charge * focal_grid.as_('polar').theta), focal_grid)
 
 			focal_mask *= 1 - circular_aperture(1e-9)(focal_grid)
@@ -138,19 +145,31 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 		The number of levels in the multi-scale sampling.
 	scaling_factor : scalar
 		The fractional increase in spatial frequency sampling per level.
+	pupil_diameter : scalar
+		The diameter of the input pupil. Default assumes pupil size is grid diameter.
 	'''
-	def __init__(self, charge=2, phase_retardation=np.pi, levels=4, scaling_factor=4):
+	def __init__(self, charge=2, phase_retardation=np.pi, levels=4, scaling_factor=4, pupil_diameter=None):
 		self.charge = charge
 		self.phase_retardation = phase_retardation
 		self.levels = levels
 		self.scaling_factor = scaling_factor
+		self.pupil_diameter = pupil_diameter
 
 		AgnosticOpticalElement.__init__(self)
 
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
-		q_outer = 2
-		num_airy_outer = input_grid.shape[0] / 2
-		pupil_diameter = input_grid.shape * input_grid.delta
+		#q_outer = 2
+		#num_airy_outer = input_grid.shape[0] / 2
+		#pupil_diameter = input_grid.shape * input_grid.delta
+
+		grid_size = input_grid.shape * input_grid.delta 
+		if self.pupil_diameter is None:
+			pupil_diameter = input_grid.shape * input_grid.delta
+		
+		grid_fill_fraction = pupil_diameter / grid_size
+
+		num_airy_outer = input_grid.shape[0] / 2 * grid_fill_fraction
+		q_outer = max(2, max(grid_size / pupil_diameter))
 
 		focal_grids = []
 		jones_matrices = []
@@ -163,9 +182,9 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 			if i == 0:
 				num_airy = num_airy_outer
 			else:
-				num_airy = 32.0 / (q_outer * self.scaling_factor**(i - 1))
+				num_airy = min(min(num_airy_outer), 32) / (q_outer * self.scaling_factor**(i - 1))
 
-			focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
+			focal_grid = make_focal_grid(q, num_airy, spatial_resolution=1/pupil_diameter)
 
 			fast_axis_orientation = Field(self.charge / 2 * focal_grid.as_('polar').theta, focal_grid)
 			retardance = self.evaluate_parameter(self.phase_retardation, input_grid, output_grid, wavelength)

@@ -8,6 +8,8 @@ def test_fraunhofer_propagation_circular():
 		pupil_grid = make_pupil_grid(num_pix)
 		focal_grid = make_focal_grid(16, 8)
 
+		ind = focal_grid.closest_to((0, 0))
+
 		for diameter in [1, 0.7]:
 			aperture = evaluate_supersampled(circular_aperture(diameter), pupil_grid, 8)
 
@@ -20,8 +22,9 @@ def test_fraunhofer_propagation_circular():
 					img /= img[np.argmax(np.abs(img))]
 
 					x = focal_grid.as_('polar').r * np.pi / wavelength * diameter / focal_length
+					x[ind] = 1
 					reference = 2 * scipy.special.jv(1, x) / x
-					reference[focal_grid.closest_to((0, 0))] = 1
+					reference[ind] = 1
 
 					if num_pix == 512:
 						assert np.abs(img - reference).max() < 3e-5

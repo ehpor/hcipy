@@ -2,9 +2,10 @@ import numpy as np
 from scipy.linalg import blas
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
 from ..field import Field
+from ..config import Configuration
 
 class MatrixFourierTransform(FourierTransform):
-	def __init__(self, input_grid, output_grid):
+	def __init__(self, input_grid, output_grid, precompute_matrices=None, allocate_intermediate=None):
 		# Check input grid assumptions
 		if not input_grid.is_separated or not input_grid.is_('cartesian'):
 			raise ValueError('The input_grid must be separable in cartesian coordinates.')
@@ -23,7 +24,17 @@ class MatrixFourierTransform(FourierTransform):
 
 		self.ndim = input_grid.ndim
 
-		self._dtype = None
+		if precompute_matrices is None:
+			precompute_matrices = Configuration().fourier.mft.precompute_matrices
+		self.precompute_matrices = precompute_matrices
+
+		if allocate_intermediate is None:
+			allocate_intermediate = Configuration().fourier.mft.allocate_intermediate
+		self.allocate_intermediate = allocate_intermediate
+
+		self.matrices_dtype = None
+		self.intermediate_dtype = None
+		self._remove_matrices()
 
 	def _compute_matrices(self, dtype):
 		if dtype == 'float32' or dtype == 'complex64':
@@ -33,35 +44,52 @@ class MatrixFourierTransform(FourierTransform):
 			complex_dtype = 'complex128'
 			float_dtype = 'float64'
 
-		if self._dtype == complex_dtype:
-			return
+		if self.matrices_dtype != complex_dtype:
+			self.weights_input = (self.input_grid.weights).astype(float_dtype)
+			self.weights_output = (self.output_grid.weights / (2 * np.pi)**self.ndim).astype(float_dtype)
 
-		self.weights_input = (self.input_grid.weights).astype(float_dtype)
-		self.weights_output = (self.output_grid.weights / (2 * np.pi)**self.ndim).astype(float_dtype)
+			# If all input weights are all the same, use a scalar instead.
+			if np.all(self.weights_input == self.weights_input[0]):
+				self.weights_input = self.weights_input[0]
 
-		# If all input weights are all the same, use a scalar instead.
-		if np.all(self.weights_input == self.weights_input[0]):
-			self.weights_input = self.weights_input[0]
+			# If all output weights are all the same, use a scalar instead.
+			if np.all(self.weights_output == self.weights_output[0]):
+				self.weights_output = self.weights_output[0]
 
-		# If all output weights are all the same, use a scalar instead.
-		if np.all(self.weights_output == self.weights_output[0]):
-			self.weights_output = self.weights_output[0]
+			if self.ndim == 1:
+				self.M = np.exp(-1j * np.outer(self.output_grid.x, self.input_grid.x)).astype(complex_dtype)
+			elif self.ndim == 2:
+				self.M1 = np.exp(-1j * np.outer(self.output_grid.coords.separated_coords[1], self.input_grid.separated_coords[1])).astype(complex_dtype)
+				self.M2 = np.exp(-1j * np.outer(self.input_grid.coords.separated_coords[0], self.output_grid.separated_coords[0])).astype(complex_dtype)
 
-		if self.ndim == 1:
-			self.M = np.exp(-1j * np.outer(self.output_grid.x, self.input_grid.x)).astype(dtype)
-		elif self.ndim == 2:
-			self.M1 = np.exp(-1j * np.outer(self.output_grid.coords.separated_coords[1], self.input_grid.separated_coords[1])).astype(complex_dtype)
-			self.M2 = np.exp(-1j * np.outer(self.input_grid.coords.separated_coords[0], self.output_grid.separated_coords[0])).astype(complex_dtype)
+			self.matrices_dtype = complex_dtype
 
-		if self.ndim == 2:
-			self.intermediate_array = np.empty((self.M1.shape[0], self.input_grid.shape[1]), dtype=complex_dtype)
+		if self.intermediate_dtype != complex_dtype:
+			if self.ndim == 2:
+				self.intermediate_array = np.empty((self.M1.shape[0], self.input_grid.shape[1]), dtype=complex_dtype)
 
-		self._dtype = complex_dtype
+				self.intermediate_dtype = complex_dtype
+
+	def _remove_matrices(self):
+		if not self.precompute_matrices:
+			if self.ndim == 1:
+				self.M = None
+			elif self.ndim == 2:
+				self.M1 = None
+				self.M2 = None
+
+			self.matrices_dtype = None
+
+		if not self.allocate_intermediate:
+			if self.ndim == 2:
+				self.intermediate_array = None
+
+				self.intermediate_dtype = None
 
 	@multiplex_for_tensor_fields
 	def forward(self, field):
 		self._compute_matrices(field.dtype)
-		field = field.astype(self._dtype, copy=False)
+		field = field.astype(self.matrices_dtype, copy=False)
 
 		if self.ndim == 1:
 			f = field * self.weights_input
@@ -94,12 +122,14 @@ class MatrixFourierTransform(FourierTransform):
 				np.dot(self.M1, f, out=self.intermediate_array)
 				res = np.dot(self.intermediate_array, self.M2).reshape(-1)
 
+		self._remove_matrices()
+
 		return Field(res, self.output_grid)
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
 		self._compute_matrices(field.dtype)
-		field = field.astype(self._dtype, copy=False)
+		field = field.astype(self.matrices_dtype, copy=False)
 
 		if self.ndim == 1:
 			f = field * self.weights_output
@@ -138,5 +168,7 @@ class MatrixFourierTransform(FourierTransform):
 					f = (field * self.weights_output).reshape(self.shape_output)
 					np.dot(f, self.M2.conj().T, out=self.intermediate_array)
 					res = np.dot(self.M1.conj().T, self.intermediate_array).reshape(-1)
+
+		self._remove_matrices()
 
 		return Field(res, self.input_grid)

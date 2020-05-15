@@ -2,18 +2,21 @@ from hcipy import *
 import numpy as np
 
 def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims):
-	grid = make_uniform_grid(dims, 1).shifted(shift_input).scaled(scale)
+	grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
 	f_in = Field(np.random.randn(grid.size), grid).astype(dtype)
 
 	energy_in = np.sum(np.abs(f_in)**2 * f_in.grid.weights)
 
-	fft = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output, high_accuracy=True)
-	fft_low = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output, high_accuracy=False)
-	mft = MatrixFourierTransform(grid, fft.output_grid)
-	nft = NaiveFourierTransform(grid, fft.output_grid, True)
-	nft2 = NaiveFourierTransform(grid, fft.output_grid, False)
+	fft1 = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output, emulate_fftshifts=True)
+	fft2 = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output, emulate_fftshifts=False)
+	mft1 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=True, allocate_intermediate=True)
+	mft2 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=True, allocate_intermediate=False)
+	mft3 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=True)
+	mft4 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=False)
+	nft1 = NaiveFourierTransform(grid, fft1.output_grid, precompute_matrices=True)
+	nft2 = NaiveFourierTransform(grid, fft1.output_grid, precompute_matrices=False)
 
-	fourier_transforms = [fft, fft_low, mft, nft, nft2]
+	fourier_transforms = [fft1, fft2, mft1, mft2, mft3, mft4, nft1, nft2]
 
 	energy_ratios = []
 	patterns_match = []
@@ -101,3 +104,18 @@ def test_make_fourier_transform():
 	output_grid = CartesianGrid(UnstructuredCoords([np.random.randn(100), np.random.randn(100)]))
 	ft = make_fourier_transform(input_grid, output_grid)
 	assert type(ft) == NaiveFourierTransform
+
+def test_mft_precomputations():
+	input_grid = make_pupil_grid(128)
+	output_grid = make_fft_grid(input_grid, 1, 0.25)
+
+	for precompute_matrices in [True, False]:
+		for allocate_intermediate in [True, False]:
+			mft = MatrixFourierTransform(input_grid, output_grid,
+				precompute_matrices=precompute_matrices, allocate_intermediate=allocate_intermediate)
+
+			mft.forward(input_grid.zeros())
+			mft.forward(input_grid.ones())
+
+			assert (mft.M1 is not None) == precompute_matrices
+			assert (mft.intermediate_array is not None) == allocate_intermediate

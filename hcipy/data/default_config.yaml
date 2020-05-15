@@ -10,7 +10,12 @@ fourier:
 
     # Whether to reserve memory for intermediate results.
     # This provides a 10% speedup, in exchange for higher memory usage.
-    allocate_intermediate_array: true
+    allocate_intermediate: true
+
+  nft:
+    # Whether to precompute the matrices used in the NFT.
+    # This provides a speedup, in exchange for higher memory usage.
+    precompute_matrices: false
 
 plotting:
   # The directory of the ffmpeg binary. If this is empty, ffmpeg has be available from PATH.

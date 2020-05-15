@@ -3,6 +3,7 @@ from __future__ import division
 import numpy as np
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
 from ..field import Field, CartesianGrid, RegularCoords
+from ..config import Configuration
 
 def make_fft_grid(input_grid, q=1, fov=1):
 	q = np.ones(input_grid.ndim, dtype='float') * q
@@ -21,7 +22,7 @@ def make_fft_grid(input_grid, q=1, fov=1):
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 
 class FastFourierTransform(FourierTransform):
-	def __init__(self, input_grid, q=1, fov=1, shift=0, high_accuracy=False):
+	def __init__(self, input_grid, q=1, fov=1, shift=0, emulate_fftshifts=None):
 		# Check assumptions
 		if not input_grid.is_regular:
 			raise ValueError('The input_grid must be regular.')
@@ -34,7 +35,10 @@ class FastFourierTransform(FourierTransform):
 		self.weights = input_grid.weights[0]
 		self.size = input_grid.size
 		self.ndim = input_grid.ndim
-		self.high_accuracy = high_accuracy
+
+		if emulate_fftshifts is None:
+			emulate_fftshifts = Configuration().fourier.fft.emulate_fftshifts
+		self.emulate_fftshifts = emulate_fftshifts
 
 		self.output_grid = make_fft_grid(input_grid, q, fov).shifted(shift)
 		self.internal_grid = make_fft_grid(input_grid, q, 1)
@@ -61,7 +65,7 @@ class FastFourierTransform(FourierTransform):
 		self.shift_input = np.exp(-1j * np.dot(center, self.output_grid.coords))
 		self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0] # No piston shift (remove central shift phase)
 
-		if not high_accuracy:
+		if emulate_fftshifts:
 			fftshift = input_grid.delta * (np.array(self.internal_shape[::-1] // 2))
 			fftshift = np.exp(1j * (np.dot(fftshift, self.internal_grid.coords))).reshape(self.internal_shape)
 
@@ -75,7 +79,7 @@ class FastFourierTransform(FourierTransform):
 		shift = np.ones(self.input_grid.ndim) * shift
 		self.shift_output = np.exp(-1j * np.dot(shift, self.input_grid.coords))
 
-		if not high_accuracy:
+		if emulate_fftshifts:
 			fftshift = self.input_grid.delta * (np.array(self.internal_shape[::-1] // 2))
 			fftshift = np.exp(1j * (np.dot(fftshift, self.internal_grid.coords) - np.dot(fftshift, self.internal_grid.zero))).reshape(self.internal_shape)
 
@@ -84,22 +88,27 @@ class FastFourierTransform(FourierTransform):
 			else:
 				self.shift_output *= fftshift.ravel()
 
+		if np.allclose(self.shift_output, 1):
+			self.shift_output = None
+
 	@multiplex_for_tensor_fields
 	def forward(self, field):
 		if self.cutout_input is None:
 			self.internal_array[:] = field.reshape(self.shape_in)
-			self.internal_array *= self.shift_output.reshape(self.shape_in)
+			if self.shift_output is not None:
+				self.internal_array *= self.shift_output.reshape(self.shape_in)
 		else:
 			self.internal_array[:] = 0
 			self.internal_array[self.cutout_input] = field.reshape(self.shape_in)
-			self.internal_array[self.cutout_input] *= self.shift_output.reshape(self.shape_in)
+			if self.shift_output is not None:
+				self.internal_array[self.cutout_input] *= self.shift_output.reshape(self.shape_in)
 
-		if self.high_accuracy:
+		if not self.emulate_fftshifts:
 			self.internal_array = np.fft.ifftshift(self.internal_array)
 
 		fft_array = np.fft.fftn(self.internal_array)
 
-		if self.high_accuracy:
+		if not self.emulate_fftshifts:
 			fft_array = np.fft.fftshift(fft_array)
 
 		if self.cutout_output is None:
@@ -121,12 +130,12 @@ class FastFourierTransform(FourierTransform):
 			self.internal_array[self.cutout_output] = field.reshape(self.shape_out)
 			self.internal_array[self.cutout_output] /= self.shift_input.reshape(self.shape_out)
 
-		if self.high_accuracy:
+		if not self.emulate_fftshifts:
 			self.internal_array = np.fft.ifftshift(self.internal_array)
 
 		fft_array = np.fft.ifftn(self.internal_array)
 
-		if self.high_accuracy:
+		if not self.emulate_fftshifts:
 			fft_array = np.fft.fftshift(fft_array)
 
 		if self.cutout_input is None:
@@ -134,6 +143,7 @@ class FastFourierTransform(FourierTransform):
 		else:
 			res = fft_array[self.cutout_input].ravel()
 
-		res /= self.shift_output
+		if self.shift_output is not None:
+				res /= self.shift_output
 
 		return Field(res, self.input_grid).astype(field.dtype, copy=False)

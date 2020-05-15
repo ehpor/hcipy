@@ -2,22 +2,26 @@ import numpy as np
 
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
 from ..field import Field
+from ..config import Configuration
 
 class NaiveFourierTransform(FourierTransform):
-	def __init__(self, input_grid, output_grid, cache_matrices=True):
+	def __init__(self, input_grid, output_grid, precompute_matrices=None):
 		self.input_grid = input_grid
 		self.output_grid = output_grid
 
 		self._T_forward = None
 		self._T_backward = None
-		self.cache_matrices = cache_matrices
+
+		if precompute_matrices is None:
+			precompute_matrices = Configuration().fourier.nft.precompute_matrices
+		self.precompute_matrices = precompute_matrices
 
 		self.coords_in = np.array(self.input_grid.as_('cartesian').coords)
 		self.coords_out = np.array(self.output_grid.as_('cartesian').coords)
 
 	@property
 	def T_forward(self):
-		if not self.cache_matrices:
+		if not self.precompute_matrices:
 			return self.get_transformation_matrix_forward()
 
 		if self._T_forward is None:
@@ -27,7 +31,7 @@ class NaiveFourierTransform(FourierTransform):
 
 	@property
 	def T_backward(self):
-		if not self.cache_matrices:
+		if not self.precompute_matrices:
 			self.get_transformation_matrix_backward()
 
 		if self._T_backward is None:
@@ -37,7 +41,7 @@ class NaiveFourierTransform(FourierTransform):
 
 	@multiplex_for_tensor_fields
 	def forward(self, field):
-		if self.cache_matrices:
+		if self.precompute_matrices:
 			res = self.T_forward.dot(field.ravel())
 			return Field(res, self.output_grid).astype(field.dtype)
 		else:
@@ -46,7 +50,7 @@ class NaiveFourierTransform(FourierTransform):
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
-		if self.cache_matrices:
+		if self.precompute_matrices:
 			res = self.T_backward.dot(field.ravel())
 			return Field(res, self.input_grid).astype(field.dtype)
 		else:

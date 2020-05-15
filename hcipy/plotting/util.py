@@ -1,5 +1,6 @@
 from .field import imshow_field
 from ..field import Field
+from ..config import Configuration
 
 import numpy as np
 
@@ -71,6 +72,9 @@ def imshow_psf(psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',
 		psf_norm = 1
 	else:
 		psf_norm = normalization
+
+	if cmap is None:
+		cmap = Configuration().plotting.psf_colormap
 
 	img = psf / psf_norm
 
@@ -192,7 +196,7 @@ def imshow_pupil_phase(pupil_phase, grid=None, phase_limits=None, vmin=None, vma
 		vmax = phase_limits
 
 	if cmap is None:
-		cmap = 'RdBu'
+		cmap = Configuration().plotting.pupil_phase_colormap
 
 	im = imshow_field(phase, ax=ax, cmap=cmap, mask=mask, vmin=vmin, vmax=vmax, **kwargs)
 

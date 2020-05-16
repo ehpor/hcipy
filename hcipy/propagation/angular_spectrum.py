@@ -1,9 +1,8 @@
 import numpy as np
 
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
-from ..field import Field
-from ..fourier import FastFourierTransform
-from ..field import evaluate_supersampled, make_pupil_grid
+from ..field import Field, evaluate_supersampled
+from ..fourier import FastFourierTransform, make_fft_grid, FourierFilter
 
 class AngularSpectrumPropagator(AgnosticOpticalElement):
 	'''The monochromatic angular spectrum propagator for scalar fields.
@@ -47,31 +46,35 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
 		if not input_grid.is_regular or not input_grid.is_('cartesian'):
 			raise ValueError('The input grid must be a regular, Cartesian grid.')
 
-		instance_data.fft = FastFourierTransform(input_grid, q=2)
-
 		k = 2 * np.pi / wavelength * self.evaluate_parameter(self.refractive_index, input_grid, output_grid, wavelength)
 		L_max = np.max(input_grid.dims * input_grid.delta)
 
 		if np.any(input_grid.delta < wavelength * self.distance / L_max):
-			enlarged_input_grid = make_pupil_grid(2 * input_grid.dims, 2 * input_grid.delta * (input_grid.dims - 1))
-			fft_up_scale = FastFourierTransform(enlarged_input_grid)
+			def transfer_function(fourier_grid):
+				enlarged_grid = make_fft_grid(fourier_grid)
+				fft_upscale = FastFourierTransform(enlarged_grid)
 
-			def impulse_response_generator(grid):
-				r_squared = grid.x**2 + grid.y**2 + self.distance**2
-				r = np.sqrt(r_squared)
-				cos_theta = self.distance / r
-				return Field(cos_theta / (2 * np.pi) * np.exp(1j * k * r) * (1 / r_squared - 1j * k / r), grid)
+				def impulse_response(grid):
+					r_squared = grid.x**2 + grid.y**2 + self.distance**2
+					r = np.sqrt(r_squared)
+					cos_theta = self.distance / r
 
-			impulse_response = evaluate_supersampled(impulse_response_generator, enlarged_input_grid, self.num_oversampling)
+					return Field(cos_theta / (2 * np.pi) * np.exp(1j * k * r) * (1 / r_squared - 1j * k / r), grid)
 
-			instance_data.transfer_function = fft_up_scale.forward(impulse_response)
+				impulse_response = evaluate_supersampled(impulse_response, enlarged_grid, self.num_oversampling)
+
+				return fft_upscale.forward(impulse_response)
 		else:
-			def transfer_function_generator(grid):
-				k_squared = grid.as_('polar').r**2
+			def transfer_function_native(fourier_grid):
+				k_squared = fourier_grid.as_('polar').r**2
 				k_z = np.sqrt(k**2 - k_squared + 0j)
-				return Field(np.exp(1j * k_z * self.distance), grid)
 
-			instance_data.transfer_function = evaluate_supersampled(transfer_function_generator, instance_data.fft.output_grid, self.num_oversampling)
+				return Field(np.exp(1j * k_z * self.distance), fourier_grid)
+
+			def transfer_function(fourier_grid):
+				return evaluate_supersampled(transfer_function_native, fourier_grid, self.num_oversampling)
+
+		instance_data.fourier_filter = FourierFilter(input_grid, transfer_function, q=2)
 
 	@property
 	def distance(self):
@@ -123,10 +126,9 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		ft = instance_data.fft.forward(wavefront.electric_field)
-		ft *= instance_data.transfer_function
+		filtered = instance_data.fourier_filter.forward(wavefront.electric_field)
 
-		return Wavefront(instance_data.fft.backward(ft), wavefront.wavelength, wavefront.input_stokes_vector)
+		return Wavefront(filtered, wavefront.wavelength, wavefront.input_stokes_vector)
 
 	@make_agnostic_backward
 	def backward(self, instance_data, wavefront):
@@ -142,7 +144,6 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		ft = instance_data.fft.forward(wavefront.electric_field)
-		ft *= np.conj(instance_data.transfer_function)
+		filtered = instance_data.fourier_filter.backward(wavefront.electric_field)
 
-		return Wavefront(instance_data.fft.backward(ft), wavefront.wavelength, wavefront.input_stokes_vector)
+		return Wavefront(filtered, wavefront.wavelength, wavefront.input_stokes_vector)

@@ -1,9 +1,8 @@
 import numpy as np
 
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
-from ..field import Field
+from ..field import Field, evaluate_supersampled
 from ..fourier import FastFourierTransform, make_fft_grid, FourierFilter
-from ..field import evaluate_supersampled, make_pupil_grid
 
 class FresnelPropagator(AgnosticOpticalElement):
 	'''The monochromatic Fresnel propagator for scalar fields.
@@ -119,12 +118,8 @@ class FresnelPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		#ft = instance_data.fft.forward(wavefront.electric_field)
-		#ft *= instance_data.transfer_function
-
-		#return Wavefront(instance_data.fft.backward(ft), wavefront.wavelength, wavefront.input_stokes_vector)
-
 		filtered = instance_data.fourier_filter.forward(wavefront.electric_field)
+
 		return Wavefront(filtered, wavefront.wavelength, wavefront.input_stokes_vector)
 
 	@make_agnostic_backward
@@ -141,10 +136,6 @@ class FresnelPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		#ft = instance_data.fft.forward(wavefront.electric_field)
-		#ft *= np.conj(instance_data.transfer_function)
-
-		#return Wavefront(instance_data.fft.backward(ft), wavefront.wavelength, wavefront.input_stokes_vector)
-
 		filtered = instance_data.fourier_filter.backward(wavefront.electric_field)
+
 		return Wavefront(filtered, wavefront.wavelength, wavefront.input_stokes_vector)

@@ -41,8 +41,6 @@ class _ConfigurationItem(object):
 	def update(self, b):
 		for key in b.keys():
 			if key in self:
-				a = self[key]
-
 				if isinstance(b[key], dict) and isinstance(self._val[key], dict):
 					self[key].update(b[key])
 				else:

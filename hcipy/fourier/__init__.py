@@ -3,10 +3,7 @@ __all__ = [
     'FourierTransform',
     'make_fft_grid',
     'FastFourierTransform',
-    'ConvolveFFT',
-    'ShearFFT',
-    'RotateFFT',
-    'FilterFFT',
+    'FourierFilter',
     'MatrixFourierTransform',
     'NaiveFourierTransform'
 ]

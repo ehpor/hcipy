@@ -101,8 +101,14 @@ class Grid(object):
 			indices = criterium(self) != 0
 		else:
 			indices = criterium
+
 		new_coords = [c[indices] for c in self.coords]
-		new_weights = self.weights[indices]
+
+		if np.isscalar(self.weights):
+			new_weights = self.weights
+		else:
+			new_weights = self.weights[indices]
+
 		return self.__class__(UnstructuredCoords(new_coords), new_weights)
 
 	@property
@@ -213,10 +219,7 @@ class Grid(object):
 				self._weights = 1
 				warnings.warn('No automatic weights could be calculated for this grid.', stacklevel=2)
 
-		if np.isscalar(self._weights):
-			return np.ones(self.size) * self._weights
-		else:
-			return self._weights
+		return self._weights
 
 	@weights.setter
 	def weights(self, weights):

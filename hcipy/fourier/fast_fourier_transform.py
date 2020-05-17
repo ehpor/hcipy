@@ -4,6 +4,7 @@ import numpy as np
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
 from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration
+import numexpr as ne
 
 def make_fft_grid(input_grid, q=1, fov=1):
 	q = np.ones(input_grid.ndim, dtype='float') * q
@@ -21,6 +22,38 @@ def make_fft_grid(input_grid, q=1, fov=1):
 
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 
+def _numexpr_grid_shift(shift, grid, out=None):
+	'''Fast evaluation of np.exp(1j * np.dot(shift, grid.coords)) using NumExpr.
+
+	Parameters
+	---
+	shift : array_like
+		The coordinates of the shift.
+	grid : Grid
+		The grid on which to calculate the shift.
+	out : array_like
+		An existing array where the outcome is going to be stored. This must
+		have the correct shape and dtype. No checking will be performed. If
+		this is None, a new array will be allocated and returned.
+
+	Returns
+	---
+	array_like
+		The calculated complex shift array.
+	'''
+	variables = {}
+	command = []
+	coords = grid.coords
+
+	for i in range(grid.ndim):
+		variables['a%d' % i] = shift[i]
+		variables['b%d' % i] = coords[i]
+
+		command.append('a%d * b%d' % (i,i))
+
+	command = 'exp(1j * (' + '+'.join(command) + '))'
+	return ne.evaluate(command, local_dict=variables, out=out)
+
 class FastFourierTransform(FourierTransform):
 	def __init__(self, input_grid, q=1, fov=1, shift=0, emulate_fftshifts=None):
 		# Check assumptions
@@ -32,7 +65,7 @@ class FastFourierTransform(FourierTransform):
 		self.input_grid = input_grid
 
 		self.shape_in = input_grid.shape
-		self.weights = input_grid.weights[0]
+		self.weights = input_grid.weights
 		self.size = input_grid.size
 		self.ndim = input_grid.ndim
 
@@ -62,33 +95,40 @@ class FastFourierTransform(FourierTransform):
 			self.cutout_output = tuple([slice(start, end) for start, end in zip(cutout_start, cutout_end)])
 
 		center = input_grid.zero + input_grid.delta * (np.array(input_grid.dims) // 2)
-		self.shift_input = np.exp(-1j * np.dot(center, self.output_grid.coords))
-		self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0] # No piston shift (remove central shift phase)
+		self.shift_input = _numexpr_grid_shift(-center, self.output_grid)
+
+		# Remove piston shift (remove central shift phase)
+		self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0]
 
 		if emulate_fftshifts:
-			fftshift = input_grid.delta * (np.array(self.internal_shape[::-1] // 2))
-			fftshift = np.exp(1j * (np.dot(fftshift, self.internal_grid.coords))).reshape(self.internal_shape)
+			f_shift = input_grid.delta * np.array(self.internal_shape[::-1] // 2)
+			fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
 
 			if self.cutout_output:
-				self.shift_input *= fftshift[self.cutout_output].ravel()
+				self.shift_input *= fftshift.reshape(self.internal_shape)[self.cutout_output].ravel()
 			else:
-				self.shift_input *= fftshift.ravel()
+				self.shift_input *= fftshift
 
 		self.shift_input *= self.weights
 
 		shift = np.ones(self.input_grid.ndim) * shift
-		self.shift_output = np.exp(-1j * np.dot(shift, self.input_grid.coords))
+		if np.allclose(shift, 0):
+			self.shift_output = 1
+		else:
+			self.shift_output = _numexpr_grid_shift(-shift, self.input_grid)
 
 		if emulate_fftshifts:
-			fftshift = self.input_grid.delta * (np.array(self.internal_shape[::-1] // 2))
-			fftshift = np.exp(1j * (np.dot(fftshift, self.internal_grid.coords) - np.dot(fftshift, self.internal_grid.zero))).reshape(self.internal_shape)
+			f_shift = self.input_grid.delta * np.array(self.internal_shape[::-1] // 2)
+			fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
+
+			fftshift *= np.exp(-1j * np.dot(f_shift, self.internal_grid.zero))
 
 			if self.cutout_input:
-				self.shift_output *= fftshift[self.cutout_input].ravel()
+				self.shift_output *= fftshift.reshape(self.internal_shape)[self.cutout_input].ravel()
 			else:
-				self.shift_output *= fftshift.ravel()
+				self.shift_output *= fftshift
 
-		if np.allclose(self.shift_output, 1):
+		if np.isscalar(self.shift_output) and np.allclose(self.shift_output, 1):
 			self.shift_output = None
 
 	@multiplex_for_tensor_fields

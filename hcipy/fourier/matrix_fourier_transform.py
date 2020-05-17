@@ -3,6 +3,7 @@ from scipy.linalg import blas
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
 from ..field import Field
 from ..config import Configuration
+import numexpr as ne
 
 class MatrixFourierTransform(FourierTransform):
 	def __init__(self, input_grid, output_grid, precompute_matrices=None, allocate_intermediate=None):
@@ -45,22 +46,29 @@ class MatrixFourierTransform(FourierTransform):
 			float_dtype = 'float64'
 
 		if self.matrices_dtype != complex_dtype:
-			self.weights_input = (self.input_grid.weights).astype(float_dtype)
-			self.weights_output = (self.output_grid.weights / (2 * np.pi)**self.ndim).astype(float_dtype)
+			self.weights_input = (self.input_grid.weights).astype(float_dtype, copy=False)
+			self.weights_output = (self.output_grid.weights / (2 * np.pi)**self.ndim).astype(float_dtype, copy=False)
 
 			# If all input weights are all the same, use a scalar instead.
-			if np.all(self.weights_input == self.weights_input[0]):
+			if not np.isscalar(self.weights_input) and np.all(self.weights_input == self.weights_input[0]):
 				self.weights_input = self.weights_input[0]
 
 			# If all output weights are all the same, use a scalar instead.
-			if np.all(self.weights_output == self.weights_output[0]):
+			if not np.isscalar(self.weights_output) and np.all(self.weights_output == self.weights_output[0]):
 				self.weights_output = self.weights_output[0]
 
 			if self.ndim == 1:
-				self.M = np.exp(-1j * np.outer(self.output_grid.x, self.input_grid.x)).astype(complex_dtype)
+				xu = np.outer(self.output_grid.x, self.input_grid.x)
+				self.M = ne.evaluate('exp(-1j * xu)').astype(complex_dtype, copy=False)
 			elif self.ndim == 2:
-				self.M1 = np.exp(-1j * np.outer(self.output_grid.coords.separated_coords[1], self.input_grid.separated_coords[1])).astype(complex_dtype)
-				self.M2 = np.exp(-1j * np.outer(self.input_grid.coords.separated_coords[0], self.output_grid.separated_coords[0])).astype(complex_dtype)
+				x, y = self.input_grid.coords.separated_coords
+				u, v = self.output_grid.coords.separated_coords
+
+				vy = np.outer(v, y)
+				xu = np.outer(x, u)
+
+				self.M1 = ne.evaluate('exp(-1j * vy)').astype(complex_dtype, copy=False)
+				self.M2 = ne.evaluate('exp(-1j * xu)').astype(complex_dtype, copy=False)
 
 			self.matrices_dtype = complex_dtype
 

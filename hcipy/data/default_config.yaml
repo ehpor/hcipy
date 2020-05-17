@@ -1,6 +1,7 @@
 fourier:
   fft:
-    # Whether to default to high-speed FFTs. This degrades accuracy of the resulting Fourier transform.
+    # Whether to emulate FFTshifts in the FFT using field multiplications.
+    # This provides a 3x speedup, in exchange for a 10x reduction in accuracy.
     emulate_fftshifts: true
 
   mft:
@@ -9,12 +10,12 @@ fourier:
     precompute_matrices: true
 
     # Whether to reserve memory for intermediate results.
-    # This provides a 10% speedup, in exchange for higher memory usage.
+    # This provides a 5-10% speedup, in exchange for higher memory usage.
     allocate_intermediate: true
 
   nft:
     # Whether to precompute the matrices used in the NFT.
-    # This provides a speedup, in exchange for higher memory usage.
+    # Enabling this is not recommended, as it requires vast amounts of memory.
     precompute_matrices: false
 
 plotting:

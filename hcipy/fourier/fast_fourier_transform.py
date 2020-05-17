@@ -7,6 +7,22 @@ from ..config import Configuration
 import numexpr as ne
 
 def make_fft_grid(input_grid, q=1, fov=1):
+	'''Calculate the grid returned by a Fast Fourier Transform.
+
+	Parameters
+	----------
+	input_grid : Grid
+		The grid defining the sampling in the real domain..
+	q : scalar
+		The amount of zeropadding to perform. A value of 1 denotes no zeropadding.
+	fov : scalar
+		The amount of cropping to perform in the Fourier domain.
+
+	Returns
+	-------
+	Grid
+		The grid defining the sampling in the Fourier domain.
+	'''
 	q = np.ones(input_grid.ndim, dtype='float') * q
 	fov = np.ones(input_grid.ndim, dtype='float') * fov
 
@@ -16,9 +32,9 @@ def make_fft_grid(input_grid, q=1, fov=1):
 	if not input_grid.is_('cartesian'):
 		raise ValueError('The input_grid must be cartesian.')
 
-	delta = (2*np.pi / (input_grid.delta * input_grid.dims)) / q
+	delta = (2 * np.pi / (input_grid.delta * input_grid.dims)) / q
 	dims = (input_grid.dims * fov * q).astype('int')
-	zero = delta * (-dims/2 + np.mod(dims, 2) * 0.5)
+	zero = delta * (-dims / 2 + np.mod(dims, 2) * 0.5)
 
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 
@@ -26,7 +42,7 @@ def _numexpr_grid_shift(shift, grid, out=None):
 	'''Fast evaluation of np.exp(1j * np.dot(shift, grid.coords)) using NumExpr.
 
 	Parameters
-	---
+	----------
 	shift : array_like
 		The coordinates of the shift.
 	grid : Grid
@@ -37,7 +53,7 @@ def _numexpr_grid_shift(shift, grid, out=None):
 		this is None, a new array will be allocated and returned.
 
 	Returns
-	---
+	-------
 	array_like
 		The calculated complex shift array.
 	'''
@@ -55,12 +71,39 @@ def _numexpr_grid_shift(shift, grid, out=None):
 	return ne.evaluate(command, local_dict=variables, out=out)
 
 class FastFourierTransform(FourierTransform):
+	'''A Fast Fourier Transform (FFT) object.
+
+	This Fourier transform calculates FFTs with zeropadding and cropping. This
+	Fourier transform requires the input grid to be regular in Cartesian coordinates. Every
+	number of dimensions is allowed.
+
+	Parameters
+	----------
+	input_grid : Grid
+		The grid that is expected for the input field.
+	q : scalar
+		The amount of zeropadding to perform. A value of 1 denotes no zeropadding.
+	fov : scalar
+		The amount of cropping to perform in the Fourier domain.
+	shift : array_like or scalar
+		The amount by which to shift the output grid.
+	emulate_fftshifts : boolean or None
+		Whether to emulate FFTshifts normally used in the FFT by multiplications in the
+		opposite domain. Enabling this increases performance by 3x, but degrades accuracy of
+		the FFT by 10x. If this is None, the choice will be determined by the configuration
+		file.
+
+	Raises
+	------
+	ValueError
+		If the input grid is not regular or Cartesian.
+	'''
 	def __init__(self, input_grid, q=1, fov=1, shift=0, emulate_fftshifts=None):
 		# Check assumptions
 		if not input_grid.is_regular:
 			raise ValueError('The input_grid must be regular.')
 		if not input_grid.is_('cartesian'):
-			raise ValueError('The input_grid must be cartesian.')
+			raise ValueError('The input_grid must be Cartesian.')
 
 		self.input_grid = input_grid
 
@@ -69,6 +112,7 @@ class FastFourierTransform(FourierTransform):
 		self.size = input_grid.size
 		self.ndim = input_grid.ndim
 
+		# Get the value from the configuration file if left at the default.
 		if emulate_fftshifts is None:
 			emulate_fftshifts = Configuration().fourier.fft.emulate_fftshifts
 		self.emulate_fftshifts = emulate_fftshifts
@@ -80,6 +124,7 @@ class FastFourierTransform(FourierTransform):
 		self.internal_shape = (self.shape_in * q).astype('int')
 		self.internal_array = np.zeros(self.internal_shape, 'complex')
 
+		# Calculate the part of the array in which to insert the input field (for zeropadding).
 		if np.allclose(self.internal_shape, self.shape_in):
 			self.cutout_input = None
 		else:
@@ -87,6 +132,7 @@ class FastFourierTransform(FourierTransform):
 			cutout_end = cutout_start + self.shape_in
 			self.cutout_input = tuple([slice(start, end) for start, end in zip(cutout_start, cutout_end)])
 
+		# Calculate the part of the array to extract the output field (for cropping).
 		if np.allclose(self.internal_shape, self.shape_out):
 			self.cutout_output = None
 		else:
@@ -94,12 +140,15 @@ class FastFourierTransform(FourierTransform):
 			cutout_end = cutout_start + self.shape_out
 			self.cutout_output = tuple([slice(start, end) for start, end in zip(cutout_start, cutout_end)])
 
+		# Calculate the shift array when the input grid was shifted compared to the native shift
+		# expected by the numpy FFT implementation.
 		center = input_grid.zero + input_grid.delta * (np.array(input_grid.dims) // 2)
 		self.shift_input = _numexpr_grid_shift(-center, self.output_grid)
 
 		# Remove piston shift (remove central shift phase)
 		self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0]
 
+		# Calculate the multiplication for emulating the FFTshift (if requested).
 		if emulate_fftshifts:
 			f_shift = input_grid.delta * np.array(self.internal_shape[::-1] // 2)
 			fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
@@ -109,14 +158,18 @@ class FastFourierTransform(FourierTransform):
 			else:
 				self.shift_input *= fftshift
 
+		# Apply weights for Fourier normalization.
 		self.shift_input *= self.weights
 
+		# Calculate the shift array when the output grid was shifted compared to the native shift
+		# expcted by the numpy FFT implementation.
 		shift = np.ones(self.input_grid.ndim) * shift
 		if np.allclose(shift, 0):
 			self.shift_output = 1
 		else:
 			self.shift_output = _numexpr_grid_shift(-shift, self.input_grid)
 
+		# Calculate the multiplication for emulating the FFTshift (if requested).
 		if emulate_fftshifts:
 			f_shift = self.input_grid.delta * np.array(self.internal_shape[::-1] // 2)
 			fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
@@ -128,18 +181,33 @@ class FastFourierTransform(FourierTransform):
 			else:
 				self.shift_output *= fftshift
 
+		# Detect if we don't need to shift in the output plane (to avoid a multiplication in the operation).
 		if np.isscalar(self.shift_output) and np.allclose(self.shift_output, 1):
 			self.shift_output = None
 
 	@multiplex_for_tensor_fields
 	def forward(self, field):
+		'''Returns the forward Fourier transform of the :class:`Field` field.
+
+		Parameters
+		----------
+		field : Field
+			The field to Fourier transform.
+
+		Returns
+		-------
+		Field
+			The Fourier transform of the field.
+		'''
 		if self.cutout_input is None:
 			self.internal_array[:] = field.reshape(self.shape_in)
+
 			if self.shift_output is not None:
 				self.internal_array *= self.shift_output.reshape(self.shape_in)
 		else:
 			self.internal_array[:] = 0
 			self.internal_array[self.cutout_input] = field.reshape(self.shape_in)
+
 			if self.shift_output is not None:
 				self.internal_array[self.cutout_input] *= self.shift_output.reshape(self.shape_in)
 
@@ -162,6 +230,18 @@ class FastFourierTransform(FourierTransform):
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
+		'''Returns the inverse Fourier transform of the :class:`Field` field.
+
+		Parameters
+		----------
+		field : Field
+			The field to inverse Fourier transform.
+
+		Returns
+		-------
+		Field
+			The inverse Fourier transform of the field.
+		'''
 		if self.cutout_output is None:
 			self.internal_array[:] = field.reshape(self.shape_out)
 			self.internal_array /= self.shift_input.reshape(self.shape_out)

@@ -38,7 +38,7 @@ class MatrixFourierTransform(FourierTransform):
 		self._remove_matrices()
 
 	def _compute_matrices(self, dtype):
-		if dtype == 'float32' or dtype == 'complex64':
+		if dtype == np.dtype('float32') or dtype == np.dtype('complex64'):
 			complex_dtype = 'complex64'
 			float_dtype = 'float32'
 		else:
@@ -74,7 +74,7 @@ class MatrixFourierTransform(FourierTransform):
 
 		if self.intermediate_dtype != complex_dtype:
 			if self.ndim == 2:
-				self.intermediate_array = np.empty((self.M1.shape[0], self.input_grid.shape[1]), dtype=complex_dtype)
+				self.intermediate_array = np.empty((self.input_grid.shape[0], self.M2.shape[1]), dtype=complex_dtype)
 
 				self.intermediate_dtype = complex_dtype
 
@@ -103,32 +103,26 @@ class MatrixFourierTransform(FourierTransform):
 			f = field * self.weights_input
 			res = np.dot(self.M, f)
 		elif self.ndim == 2:
+			# Use handcoded BLAS call. BLAS is better when all inputs are Fortran ordered,
+			# so we apply matrix multiplications on the transpose of each of the arrays
+			# (which are C ordered).
+			if field.dtype == 'complex64':
+				gemm = blas.cgemm
+			else:
+				gemm = blas.zgemm
+
 			if np.isscalar(self.weights_input):
+				# Weights can be included in the gemm call as that multiplication
+				# happens anyway (and it saves an array copy).
 				f = field.reshape(self.shape_input)
-				if field.dtype in [np.dtype('complex64'), np.dtype('complex128')]:
-					# Use handcoded BLAS call. BLAS is better when all inputs are Fortran ordered,
-					# so we apply matrix multiplications on the transpose of each of the arrays
-					# (which are C ordered). Weights are included in the call as that multiplication
-					# happens anyway (and it saves an array copy).
-					if field.dtype == 'complex64':
-						gemm = blas.cgemm
-					else:
-						gemm = blas.zgemm
-					gemm(1, f.T, self.M1.T, c=self.intermediate_array.T, overwrite_c=True)
-					res = gemm(self.weights_input, self.M2.T, self.intermediate_array.T).T.reshape(-1)
-				elif self.input_grid.size > self.output_grid.size:
-					# Apply weights to the output as that array is smaller than the input.
-					np.dot(self.M1, f, out=self.intermediate_array)
-					res = np.dot(self.intermediate_array, self.M2).reshape(-1) * self.weights_input
-				else:
-					# Apply weights to the input as that array is smaller than the output.
-					np.dot(self.M1, f * self.weights_input, out=self.intermediate_array)
-					res = np.dot(self.intermediate_array, self.M2).reshape(-1)
+				alpha = self.weights_input
 			else:
 				# Fallback in case the weights is not a scalar.
 				f = (field * self.weights_input).reshape(self.shape_input)
-				np.dot(self.M1, f, out=self.intermediate_array)
-				res = np.dot(self.intermediate_array, self.M2).reshape(-1)
+				alpha = 1
+
+			gemm(1, self.M2.T, f.T, c=self.intermediate_array.T, overwrite_c=True)
+			res = gemm(alpha, self.intermediate_array.T, self.M1.T).T.reshape(-1)
 
 		self._remove_matrices()
 
@@ -143,39 +137,27 @@ class MatrixFourierTransform(FourierTransform):
 			f = field * self.weights_output
 			res = np.dot(self.M.conj().T, f)
 		elif self.ndim == 2:
-			if field.dtype in [np.dtype('complex64'), np.dtype('complex128')]:
-				if field.dtype == 'complex64':
-					gemm = blas.cgemm
-				else:
-					gemm = blas.zgemm
-
-				if np.isscalar(self.weights_output):
-					# Use handcoded BLAS call. BLAS is better when all inputs are Fortran ordered,
-					# so we apply matrix multiplications on the transpose of each of the arrays
-					# (which are C ordered). Weights are included in the call as that multiplication
-					# happens anyway (and it saves an array copy). Adjoint is handled by GEMM, which
-					# avoids an array copy for these array as well.
-
-					f = field.reshape(self.shape_output)
-					gemm(1, self.M2.T, f.T, trans_a=2, c=self.intermediate_array.T, overwrite_c=True)
-					res = gemm(self.weights_output, self.intermediate_array.T, self.M1.T, trans_b=2).T.reshape(-1)
-				else:
-					# Fallback in case the weights is not a scalar.
-					f = (field * self.weights_output).reshape(self.shape_output)
-					gemm(1, M2.T, f.T, trans_a=2, c=self.intermediate_array.T, overwrite_c=True)
-					res = gemm(1, self.intermediate_array.T, self.M1.T, trans_b=2).T.reshape(-1)
+			# Use handcoded BLAS call. BLAS is better when all inputs are Fortran ordered,
+			# so we apply matrix multiplications on the transpose of each of the arrays
+			# (which are C ordered). Adjoint is handled by GEMM, which avoids an array
+			# copy for these array as well.
+			if field.dtype == 'complex64':
+				gemm = blas.cgemm
 			else:
-				if np.isscalar(self.weights_output) and self.input_grid.size < self.output_grid.size:
-					# Apply weights in the output, as that array is smaller than the input.
-					f = field.reshape(self.shape_output)
-					np.dot(f, self.M2.conj().T, out=self.intermediate_array)
-					res = np.dot(self.M1.conj().T, self.intermediate_array).reshape(-1) * self.weights_output
-				else:
-					# Apply weights in the input, as that array is smaller than the output or if the
-					# weights is not a scalar.
-					f = (field * self.weights_output).reshape(self.shape_output)
-					np.dot(f, self.M2.conj().T, out=self.intermediate_array)
-					res = np.dot(self.M1.conj().T, self.intermediate_array).reshape(-1)
+				gemm = blas.zgemm
+
+			if np.isscalar(self.weights_output):
+				# Weights can be included in the gemm call as that multiplication
+				# happens anyway (and it saves an array copy).
+				f = field.reshape(self.shape_output)
+				alpha = self.weights_output
+			else:
+				# Fallback in case the weights is not a scalar.
+				f = (field * self.weights_output).reshape(self.shape_output)
+				alpha = 1
+
+			gemm(1, f.T, self.M1.T, trans_b=2, c=self.intermediate_array.T, overwrite_c=True)
+			res = gemm(alpha, self.M2.T, self.intermediate_array.T, trans_a=2).T.reshape(-1)
 
 		self._remove_matrices()
 

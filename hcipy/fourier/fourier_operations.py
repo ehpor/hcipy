@@ -1,7 +1,6 @@
 import numpy as np
 
 from .fast_fourier_transform import FastFourierTransform
-from .fourier_transform import multiplex_for_tensor_fields
 from ..field import Field, field_dot, field_conjugate_transpose
 
 class FourierFilter(object):
@@ -39,9 +38,9 @@ class FourierFilter(object):
 
 	def _compute_functions(self, field):
 		if self._transfer_function is None or self._transfer_function.dtype != field.dtype:
-			try:
+			if hasattr(self._transfer_function, '__call__'):
 				tf = self.transfer_function(self.internal_grid)
-			except:
+			else:
 				tf = self.transfer_function.copy()
 
 			tf = np.fft.ifftshift(tf.shaped, axes=tuple(range(-self.input_grid.ndim, 0)))

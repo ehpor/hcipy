@@ -13,7 +13,7 @@ def test_vortex_coronagraph():
 	lyot = evaluate_supersampled(lyot, pupil_grid, 8) > 1 - 1e-5
 
 	for charge in [2, 4, 6, 8]:
-		vortex = VortexCoronagraph(pupil_grid, charge, levels=6)
+		vortex = VortexCoronagraph(pupil_grid, charge)
 
 		wf = Wavefront(aperture)
 		wf.total_power = 1
@@ -39,7 +39,7 @@ def test_vector_vortex_coronagraph():
 	lyot = evaluate_supersampled(lyot, pupil_grid, 8) > 1 - 1e-5
 
 	for charge in [2, 4, 6, 8]:
-		vortex = VectorVortexCoronagraph(charge, levels=6)
+		vortex = VectorVortexCoronagraph(charge)
 
 		wf = Wavefront(aperture)
 		wf.total_power = 1
@@ -70,7 +70,7 @@ def test_ravc():
 			pupil = evaluate_supersampled(pupil, pupil_grid, 4)
 			lyot = evaluate_supersampled(lyot, pupil_grid, 4)
 
-			vortex = VortexCoronagraph(pupil_grid, charge, levels=6)
+			vortex = VortexCoronagraph(pupil_grid, charge)
 
 			wf = Wavefront(aper)
 			wf.total_power = 1

@@ -1,10 +1,11 @@
 import numpy as np
+from scipy.signal import windows
 
-from ..optics import OpticalElement, LinearRetarder, JonesMatrixOpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
+from ..optics import OpticalElement, LinearRetarder, Apodizer, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward, Wavefront
 from ..propagation import FraunhoferPropagator
-from ..field import make_focal_grid, Field
+from ..field import make_focal_grid, Field, field_dot
 from ..aperture import circular_aperture
-from ..fourier import FastFourierTransform, MatrixFourierTransform
+from ..fourier import FastFourierTransform, MatrixFourierTransform, FourierFilter
 
 class VortexCoronagraph(OpticalElement):
 	'''An optical vortex coronagraph.
@@ -20,33 +21,61 @@ class VortexCoronagraph(OpticalElement):
 		The grid on which the incoming wavefront is defined.
 	charge : integer
 		The charge of the vortex.
-	levels : integer
-		The number of levels in the multi-scale sampling.
+	lyot_stop : Field or OpticalElement
+		The Lyot stop for the coronagraph. If it's a Field, it is converted to an
+		OpticalElement for convenience. If this is None (default), then no Lyot stop is used.
+	q : scalar
+		The minimum number of pixels per lambda/D. The number of levels in the multi-scale
+		Fourier transforms will be chosen to reach at least this number of samples. The required
+		q for a high-accuracy vortex coronagraph depends on the charge of the vortex. For charge 2,
+		this can be as low as 32, but for charge 8 you need ~1024. Lower values give higher performance
+		as a smaller number of levels is needed, but increases the sampling errors near the singularity.
+		Charges not divisible by four require a much lower q. The default (q=1024) is conservative in
+		most cases.
 	scaling_factor : scalar
-		The fractional increase in spatial frequency sampling per level.
+		The fractional increase in spatial frequency sampling per level. Larger scaling factors
+		require a smaller number of levels, but each level requires a slower Fourier transform.
+		Factors of 2 or 4 usually perform the best.
+	window_size : integer
+		The size of the next level in the number of pixels on the current layer. Lowering this
+		increases performance in exchange for accuracy. Values smaller than 4-8 are not recommended.
 	'''
-	def __init__(self, input_grid, charge=2, levels=4, scaling_factor=4):
+	def __init__(self, input_grid, charge, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
 		self.input_grid = input_grid
-
-		q_outer = 2
-		num_airy_outer = input_grid.shape[0] / 2
 		pupil_diameter = input_grid.shape * input_grid.delta
+
+		if hasattr(lyot_stop, 'forward') or lyot_stop is None:
+			self.lyot_stop = lyot_stop
+		else:
+			self.lyot_stop = Apodizer(lyot_stop)
+
+		levels = int(np.ceil(np.log(q / 2) / np.log(scaling_factor))) + 1
+		qs = [2 * scaling_factor**i for i in range(levels)]
+		num_airys = [input_grid.shape / 2]
 
 		focal_grids = []
 		self.focal_masks = []
 		self.props = []
 
+		for i in range(1, levels):
+			num_airys.append(num_airys[i - 1] * window_size / (2 * qs[i - 1] * num_airys[i - 1]))
+
 		for i in range(levels):
-			q = q_outer * scaling_factor**i
-			if i == 0:
-				num_airy = num_airy_outer
-			else:
-				num_airy = 32.0 / (q_outer * scaling_factor**(i-1))
+			q = qs[i]
+			num_airy = num_airys[i]
 
 			focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
 			focal_mask = Field(np.exp(1j * charge * focal_grid.as_('polar').theta), focal_grid)
 
 			focal_mask *= 1 - circular_aperture(1e-9)(focal_grid)
+
+			if i != levels - 1:
+				wx = windows.tukey(window_size, 1, False)
+				wy = windows.tukey(window_size, 1, False)
+				w = np.outer(wy, wx)
+
+				w = np.pad(w, (focal_grid.shape - w.shape) // 2, 'constant').ravel()
+				focal_mask *= 1 - w
 
 			for j in range(i):
 				fft = FastFourierTransform(focal_grids[j])
@@ -54,7 +83,10 @@ class VortexCoronagraph(OpticalElement):
 
 				focal_mask -= mft.backward(fft.forward(self.focal_masks[j]))
 
-			prop = FraunhoferPropagator(input_grid, focal_grid)
+			if i == 0:
+				prop = FourierFilter(input_grid, focal_mask, q)
+			else:
+				prop = FraunhoferPropagator(input_grid, focal_grid)
 
 			focal_grids.append(focal_grid)
 			self.focal_masks.append(focal_mask)
@@ -78,14 +110,19 @@ class VortexCoronagraph(OpticalElement):
 		wavefront.wavelength = 1
 
 		for i, (mask, prop) in enumerate(zip(self.focal_masks, self.props)):
-			focal = prop(wavefront)
-			focal.electric_field *= mask
 			if i == 0:
-				lyot = prop.backward(focal)
+				lyot = Wavefront(prop.forward(wavefront.electric_field), input_stokes_vector=wavefront.input_stokes_vector)
 			else:
+				focal = prop(wavefront)
+				focal.electric_field *= mask
 				lyot.electric_field += prop.backward(focal).electric_field
 
 		lyot.wavelength = wavelength
+		wavefront.wavelength = wavelength
+
+		if self.lyot_stop is not None:
+			lyot = self.lyot_stop.forward(lyot)
+
 		return lyot
 
 	def backward(self, wavefront):
@@ -104,18 +141,23 @@ class VortexCoronagraph(OpticalElement):
 		Wavefront
 			The pupil-plane wavefront.
 		'''
+		if self.lyot_stop is not None:
+			wavefront = self.lyot_stop.backward(wavefront)
+
 		wavelength = wavefront.wavelength
 		wavefront.wavelength = 1
 
 		for i, (mask, prop) in enumerate(zip(self.focal_masks, self.props)):
-			focal = prop(wavefront)
-			focal.electric_field *= mask.conj()
 			if i == 0:
-				pup = prop.backward(focal)
+				pup = Wavefront(prop.backward(wavefront.electric_field), input_stokes_vector=wavefront.input_stokes_vector)
 			else:
+				focal = prop(wavefront)
+				focal.electric_field *= mask.conj()
 				pup.electric_field += prop.backward(focal).electric_field
 
 		pup.wavelength = wavelength
+		wavefront.wavelength = wavelength
+
 		return pup
 
 class VectorVortexCoronagraph(AgnosticOpticalElement):
@@ -130,40 +172,62 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 	----------
 	charge : integer
 		The charge of the vortex.
+	lyot_stop : Field or OpticalElement
+		The Lyot stop for the coronagraph. If it's a Field, it is converted to an
+		OpticalElement for convenience. If this is None (default), then no Lyot stop is used.
 	phase_retardation : scalar or function
 		The phase retardation of the vector vortex plate, potentially as a
 		function of wavelength. Changes of the phase retardation as a function
 		of spatial position is not yet supported.
-	levels : integer
-		The number of levels in the multi-scale sampling.
+	q : scalar
+		The minimum number of pixels per lambda/D. The number of levels in the multi-scale
+		Fourier transforms will be chosen to reach at least this number of samples. The required
+		q for a high-accuracy vortex coronagraph depends on the charge of the vortex. For charge 2,
+		this can be as low as 32, but for charge 8 you need ~1024. Lower values give higher performance
+		as a smaller number of levels is needed, but increases the sampling errors near the singularity.
+		Charges not divisible by four require a much lower q. The default (q=1024) is conservative in
+		most cases.
 	scaling_factor : scalar
-		The fractional increase in spatial frequency sampling per level.
+		The fractional increase in spatial frequency sampling per level. Larger scaling factors
+		require a smaller number of levels, but each level requires a slower Fourier transform.
+		Factors of 2 or 4 usually perform the best.
+	window_size : integer
+		The size of the next level in the number of pixels on the current layer. Lowering this
+		increases performance in exchange for accuracy. Values smaller than 4-8 are not recommended.
 	'''
-	def __init__(self, charge=2, phase_retardation=np.pi, levels=4, scaling_factor=4):
+	def __init__(self, charge, lyot_stop=None, phase_retardation=np.pi, q=1024, scaling_factor=4, window_size=32):
 		self.charge = charge
+
+		if hasattr(lyot_stop, 'forward') or lyot_stop is None:
+			self.lyot_stop = lyot_stop
+		else:
+			self.lyot_stop = Apodizer(lyot_stop)
+
 		self.phase_retardation = phase_retardation
-		self.levels = levels
+
+		self.q = q
 		self.scaling_factor = scaling_factor
+		self.window_size = window_size
 
 		AgnosticOpticalElement.__init__(self)
 
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
-		q_outer = 2
-		num_airy_outer = input_grid.shape[0] / 2
 		pupil_diameter = input_grid.shape * input_grid.delta
 
+		levels = int(np.ceil(np.log(self.q / 2) / np.log(self.scaling_factor))) + 1
+		qs = [2 * self.scaling_factor**i for i in range(levels)]
+		num_airys = [input_grid.shape / 2]
+
 		focal_grids = []
-		jones_matrices = []
 		instance_data.props = []
-		instance_data.focal_masks = []
+		instance_data.jones_matrices = []
 
-		for i in range(self.levels):
-			q = q_outer * self.scaling_factor**i
+		for i in range(1, levels):
+			num_airys.append(num_airys[i - 1] * self.window_size / (2 * qs[i - 1] * num_airys[i - 1]))
 
-			if i == 0:
-				num_airy = num_airy_outer
-			else:
-				num_airy = 32.0 / (q_outer * self.scaling_factor**(i - 1))
+		for i in range(levels):
+			q = qs[i]
+			num_airy = num_airys[i]
 
 			focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
 
@@ -172,26 +236,30 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 
 			focal_mask_raw = LinearRetarder(retardance, fast_axis_orientation)
 			jones_matrix = focal_mask_raw.jones_matrix
+
 			jones_matrix *= 1 - circular_aperture(1e-9)(focal_grid)
 
-			def eval_jones(jones_matrix, jones_matrices, focal_grids):
-				mat = jones_matrix.copy()
+			if i != levels - 1:
+				wx = windows.tukey(self.window_size, 1, False)
+				wy = windows.tukey(self.window_size, 1, False)
+				w = np.outer(wy, wx)
 
-				for j in range(i):
-					fft = FastFourierTransform(focal_grids[j])
-					mft = MatrixFourierTransform(focal_grid, fft.output_grid)
+				w = np.pad(w, (focal_grid.shape - w.shape) // 2, 'constant').ravel()
+				jones_matrix *= 1 - w
 
-					mat -= mft.backward(fft.forward(jones_matrices[j]))
+			for j in range(i):
+				fft = FastFourierTransform(focal_grids[j])
+				mft = MatrixFourierTransform(focal_grid, fft.output_grid)
 
-				return mat
+				jones_matrix -= mft.backward(fft.forward(instance_data.jones_matrices[j]))
 
-			jones_matrices.append(focal_mask_raw.construct_function(eval_jones, jones_matrix, jones_matrices, focal_grids))
-			focal_mask = JonesMatrixOpticalElement(jones_matrices[-1])
-
-			prop = FraunhoferPropagator(input_grid, focal_grid)
+			if i == 0:
+				prop = FourierFilter(input_grid, jones_matrix, q)
+			else:
+				prop = FraunhoferPropagator(input_grid, focal_grid)
 
 			focal_grids.append(focal_grid)
-			instance_data.focal_masks.append(focal_mask)
+			instance_data.jones_matrices.append(jones_matrix)
 			instance_data.props.append(prop)
 
 	def get_input_grid(self, output_grid, wavelength):
@@ -252,19 +320,32 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 		wavelength = wavefront.wavelength
 		wavefront.wavelength = 1
 
-		for i, (mask, prop) in enumerate(zip(instance_data.focal_masks, instance_data.props)):
-			focal = prop(wavefront)
-
-			focal.wavelength = wavelength
-			focal = mask.forward(focal)
-			focal.wavelength = 1
-
+		for i, (jones_matrix, prop) in enumerate(zip(instance_data.jones_matrices, instance_data.props)):
 			if i == 0:
-				lyot = prop.backward(focal)
+				if not wavefront.is_polarized:
+					wf = Wavefront(wavefront.electric_field, input_stokes_vector=(1, 0, 0, 0))
+				else:
+					wf = wavefront
+
+				lyot = Wavefront(prop.forward(wf.electric_field), input_stokes_vector=wf.input_stokes_vector)
 			else:
-				lyot.electric_field += prop.backward(focal).electric_field
+				focal = prop(wavefront)
+
+				if not focal.is_polarized:
+					focal = Wavefront(focal.electric_field, input_stokes_vector=(1, 0, 0, 0))
+
+				focal.electric_field = field_dot(jones_matrix, focal.electric_field)
+				if i == 0:
+					lyot = prop.backward(focal)
+				else:
+					lyot.electric_field += prop.backward(focal).electric_field
 
 		lyot.wavelength = wavelength
+		wavefront.wavelength = wavelength
+
+		if self.lyot_stop is not None:
+			lyot = self.lyot_stop.forward(lyot)
+
 		return lyot
 
 	@make_agnostic_backward
@@ -284,23 +365,24 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 		Wavefront
 			The pupil-plane wavefront.
 		'''
+		if self.lyot_stop is not None:
+			wavefront = self.lyot_stop.backward(wavefront)
+
 		wavelength = wavefront.wavelength
 		wavefront.wavelength = 1
 
-		for i, (mask, prop) in enumerate(zip(instance_data.focal_masks, instance_data.props)):
-			focal = prop(wavefront)
-
-			focal.wavelength = wavelength
-			focal = mask.backward(focal)
-			focal.wavelength = 1
-
+		for i, (jones_matrix, prop) in enumerate(zip(instance_data.jones_matrices, instance_data.props)):
 			if i == 0:
-				pup = prop.backward(focal)
+				pup = Wavefront(prop.backward(wavefront.electric_field))
 			else:
+				focal = prop(wavefront)
+				focal.electric_field = field_dot(jones_matrix.conj(), focal.electric_field)
 				pup.electric_field += prop.backward(focal).electric_field
 
-			pup.wavelength = wavelength
-			return pup
+		pup.wavelength = wavelength
+		wavefront.wavelength = wavelength
+
+		return pup
 
 def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_undersize=0):
 	'''Make field generators for the pupil and Lyot-stop masks for a

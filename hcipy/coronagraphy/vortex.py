@@ -30,13 +30,15 @@ class VortexCoronagraph(OpticalElement):
 		q for a high-accuracy vortex coronagraph depends on the charge of the vortex. For charge 2,
 		this can be as low as 32, but for charge 8 you need ~1024. Lower values give higher performance
 		as a smaller number of levels is needed, but increases the sampling errors near the singularity.
+		Charges not divisible by four require a much lower q. The default (q=1024) is conservative in
+		most cases.
 	scaling_factor : scalar
 		The fractional increase in spatial frequency sampling per level. Larger scaling factors
 		require a smaller number of levels, but each level requires a slower Fourier transform.
 		Factors of 2 or 4 usually perform the best.
 	window_size : integer
 		The size of the next level in the number of pixels on the current layer. Lowering this
-		increases performance in exchange for accuracy.
+		increases performance in exchange for accuracy. Values smaller than 4-8 are not recommended.
 	'''
 	def __init__(self, input_grid, charge, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
 		self.input_grid = input_grid
@@ -183,13 +185,15 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 		q for a high-accuracy vortex coronagraph depends on the charge of the vortex. For charge 2,
 		this can be as low as 32, but for charge 8 you need ~1024. Lower values give higher performance
 		as a smaller number of levels is needed, but increases the sampling errors near the singularity.
+		Charges not divisible by four require a much lower q. The default (q=1024) is conservative in
+		most cases.
 	scaling_factor : scalar
 		The fractional increase in spatial frequency sampling per level. Larger scaling factors
 		require a smaller number of levels, but each level requires a slower Fourier transform.
 		Factors of 2 or 4 usually perform the best.
 	window_size : integer
 		The size of the next level in the number of pixels on the current layer. Lowering this
-		increases performance in exchange for accuracy.
+		increases performance in exchange for accuracy. Values smaller than 4-8 are not recommended.
 	'''
 	def __init__(self, charge, lyot_stop=None, phase_retardation=np.pi, q=1024, scaling_factor=4, window_size=32):
 		self.charge = charge

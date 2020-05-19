@@ -119,3 +119,41 @@ def test_mft_precomputations():
 
 			assert (mft.M1 is not None) == precompute_matrices
 			assert (mft.intermediate_array is not None) == allocate_intermediate
+
+def test_fourier_filter():
+	for n in [16, 17, [16, 17]]:
+		for q in [1, 2, 3]:
+			for tensor_shape in [(), (3,), (3,3)]:
+				for scale in [1, 2]:
+					input_grid = make_pupil_grid(n, scale)
+
+					fft = FastFourierTransform(input_grid, q)
+
+					tf_shape = tensor_shape + (fft.output_grid.size,)
+					transfer_function = np.random.randn(*tf_shape) + 1j * np.random.randn(*tf_shape)
+					transfer_function = Field(transfer_function, fft.output_grid)
+
+					fourier_filter = FourierFilter(input_grid, transfer_function, q)
+
+					f_shape = tensor_shape + (input_grid.size,)
+					if len(tensor_shape) == 2:
+						f_shape = f_shape[1:]
+					f_in = Field(np.random.randn(*f_shape) + 1j * np.random.randn(*f_shape), input_grid)
+
+					f_out_ff = fourier_filter.forward(f_in)
+					f_in_ff = fourier_filter.backward(f_out_ff)
+
+					if len(tensor_shape) == 2:
+						ft = fft.forward(f_in)
+						ft = field_dot(transfer_function, ft)
+						f_out_fft = fft.backward(ft)
+
+						ft = fft.forward(f_out_fft)
+						ft = field_dot(field_conjugate_transpose(transfer_function), ft)
+						f_in_fft = fft.backward(ft)
+					else:
+						f_out_fft = fft.backward(fft.forward(f_in) * transfer_function)
+						f_in_fft = fft.backward(fft.forward(f_out_fft) * transfer_function.conj())
+
+					assert np.allclose(f_out_fft, f_out_ff)
+					assert np.allclose(f_in_fft, f_in_ff)

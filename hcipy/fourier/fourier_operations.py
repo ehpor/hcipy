@@ -103,7 +103,7 @@ class FourierFilter(object):
 		self._compute_functions(field)
 
 		if self.cutout is None:
-			f = field.reshape(self.shape_in)
+			f = field.shaped
 		else:
 			f = self.internal_array
 			f[:] = 0

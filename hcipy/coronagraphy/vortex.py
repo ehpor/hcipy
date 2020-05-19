@@ -109,7 +109,7 @@ class VortexCoronagraph(OpticalElement):
 
 		for i, (mask, prop) in enumerate(zip(self.focal_masks, self.props)):
 			if i == 0:
-				lyot = Wavefront(prop.forward(wavefront.electric_field))
+				lyot = Wavefront(prop.forward(wavefront.electric_field), input_stokes_vector=wavefront.input_stokes_vector)
 			else:
 				focal = prop(wavefront)
 				focal.electric_field *= mask
@@ -147,7 +147,7 @@ class VortexCoronagraph(OpticalElement):
 
 		for i, (mask, prop) in enumerate(zip(self.focal_masks, self.props)):
 			if i == 0:
-				pup = Wavefront(prop.backward(wavefront.electric_field))
+				pup = Wavefront(prop.backward(wavefront.electric_field), input_stokes_vector=wavefront.input_stokes_vector)
 			else:
 				focal = prop(wavefront)
 				focal.electric_field *= mask.conj()

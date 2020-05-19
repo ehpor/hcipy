@@ -38,7 +38,7 @@ class FourierFilter(object):
 
 	def _compute_functions(self, field):
 		if self._transfer_function is None or self._transfer_function.dtype != field.dtype:
-			if hasattr(self._transfer_function, '__call__'):
+			if hasattr(self.transfer_function, '__call__'):
 				tf = self.transfer_function(self.internal_grid)
 			else:
 				tf = self.transfer_function.copy()

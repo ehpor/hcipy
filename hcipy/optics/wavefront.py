@@ -49,13 +49,13 @@ class Wavefront(object):
 				raise ValueError('When supplying a Stokes vector, the electric field must be either a scalar or 2-tensor field.')
 
 			if electric_field.is_scalar_field:
-				self._electric_field = electric_field[np.newaxis, np.newaxis, :].astype('complex') * np.eye(2)[..., np.newaxis]
+				self._electric_field = electric_field[np.newaxis, np.newaxis, :].astype('complex128') * np.eye(2)[..., np.newaxis]
 			else:
-				self._electric_field = electric_field.astype('complex')
+				self._electric_field = electric_field.astype('complex128')
 
 			self._input_stokes_vector = np.array(input_stokes_vector)
 		else:
-			self._electric_field = electric_field.astype('complex')
+			self._electric_field = electric_field.astype('complex128')
 			self._input_stokes_vector = None
 
 			if electric_field.tensor_order == 2:
@@ -77,10 +77,10 @@ class Wavefront(object):
 	@electric_field.setter
 	def electric_field(self, U):
 		if hasattr(U, 'grid'):
-			self._electric_field = U.astype('complex')
+			self._electric_field = U.astype('complex128')
 		else:
 			if len(U) == 2:
-				self._electric_field = Field(U[0].astype('complex'), U[1])
+				self._electric_field = Field(U[0].astype('complex128'), U[1])
 			else:
 				raise ValueError("Electric field requires an accompanying grid.")
 

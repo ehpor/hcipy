@@ -70,7 +70,9 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 			The wavefront after the propagation.
 		'''
 		U_new = instance_data.fourier_transform.forward(wavefront.electric_field) * instance_data.norm_factor
-		return Wavefront(Field(U_new, instance_data.output_grid), wavefront.wavelength, wavefront.input_stokes_vector)
+		U_new.grid = instance_data.output_grid
+
+		return Wavefront(U_new, wavefront.wavelength, wavefront.input_stokes_vector)
 
 	@make_agnostic_backward
 	def backward(self, instance_data, wavefront):
@@ -87,4 +89,6 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 			The wavefront after the propagation.
 		'''
 		U_new = instance_data.fourier_transform.backward(wavefront.electric_field) / instance_data.norm_factor
-		return Wavefront(Field(U_new, instance_data.input_grid), wavefront.wavelength, wavefront.input_stokes_vector)
+		U_new.grid = instance_data.input_grid
+
+		return Wavefront(U_new, wavefront.wavelength, wavefront.input_stokes_vector)

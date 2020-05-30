@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse
 
-from ..field import Field, Grid
+from ..field import Field, NumpyField, TensorFlowField, Grid
 
 class ModeBasis(object):
 	'''A linear basis of modes.
@@ -51,6 +51,8 @@ class ModeBasis(object):
 			self.grid = transformation_matrix[0].grid
 		else:
 			self.grid = None
+
+		self._tf_transformation_matrix = None
 
 	@classmethod
 	def from_dict(cls, tree):
@@ -194,6 +196,18 @@ class ModeBasis(object):
 	def transformation_matrix(self, transformation_matrix):
 		self._transformation_matrix = transformation_matrix
 
+	@property
+	def tf_transformation_matrix(self):
+		import tensorflow as tf
+
+		if self._tf_transformation_matrix is None:
+			if self.is_sparse:
+				self._tf_transformation_matrix = tf.convert_to_tensor(self.transformation_matrix.todense())
+			else:
+				self._tf_transformation_matrix = tf.convert_to_tensor(self.transformation_matrix)
+
+		return self._tf_transformation_matrix
+
 	def coefficients_for(self, b, dampening_factor=0):
 		r'''Calculate the coefficients on this mode basis in a least squares fashion.
 
@@ -241,12 +255,24 @@ class ModeBasis(object):
 		array_like or Field
 			The calculated linear combination.
 		'''
-		y = self._transformation_matrix.dot(coefficients)
+		if isinstance(coefficients, np.ndarray):
+			y = self._transformation_matrix.dot(coefficients)
 
-		if self.grid is None:
-			return y
+			if self.grid is None:
+				return y
+			else:
+				return NumpyField(y, self.grid)
+		elif 'tensorflow' in coefficients.__class__.__module__:
+			import tensorflow as tf
+
+			y = tf.linalg.matvec(self.tf_transformation_matrix, coefficients)
+
+			if self.grid is None:
+				return y
+			else:
+				return TensorFlowField(y, self.grid)
 		else:
-			return Field(y, self.grid)
+			raise ValueError('A mode basis does not support this backend.')
 
 	@property
 	def orthogonalized(self):

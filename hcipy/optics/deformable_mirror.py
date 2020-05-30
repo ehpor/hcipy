@@ -149,6 +149,8 @@ class DeformableMirror(OpticalElement):
 		self.input_grid = influence_functions.grid
 		self._surface = self.input_grid.zeros()
 
+		self._tf_actuators = None
+
 	@property
 	def num_actuators(self):
 		return self._actuators.size
@@ -160,6 +162,15 @@ class DeformableMirror(OpticalElement):
 	@actuators.setter
 	def actuators(self, actuators):
 		self._actuators = actuators
+
+	@property
+	def tf_actuators(self):
+		import tensorflow as tf
+
+		if self._tf_actuators is None:
+			self._tf_actuators = tf.Variable(tf.convert_to_tensor(self.actuators))
+
+		return self._tf_actuators
 
 	def forward(self, wavefront):
 		'''Propagate a wavefront through the deformable mirror.
@@ -175,7 +186,16 @@ class DeformableMirror(OpticalElement):
 			The reflected wavefront.
 		'''
 		wf = wavefront.copy()
-		wf.electric_field *= np.exp(2j * self.surface * wavefront.wavenumber)
+
+		if wavefront.electric_field.backend == 'numpy':
+			wf.electric_field *= np.exp(2j * self.surface * wavefront.wavenumber)
+		elif wavefront.electric_field.backend == 'tensorflow':
+			import tensorflow as tf
+
+			wf.electric_field *= tf.exp(2j * self.tf_surface.astype('complex128').arr * wavefront.wavenumber)
+		else:
+			raise ValueError('This optical element does not support this backend.')
+
 		return wf
 
 	def backward(self, wavefront):
@@ -192,7 +212,16 @@ class DeformableMirror(OpticalElement):
 			The reflected wavefront.
 		'''
 		wf = wavefront.copy()
-		wf.electric_field *= np.exp(-2j * self.surface * wavefront.wavenumber)
+
+		if wavefront.electric_field.backend == 'numpy':
+			wf.electric_field *= np.exp(-2j * self.surface * wavefront.wavenumber)
+		elif wavefront.electric_field.backend == 'tensorflow':
+			import tensorflow as tf
+
+			wf.electric_field *= tf.exp(-2j * self.tf_surface.astype('complex128').arr * wavefront.wavenumber)
+		else:
+			raise ValueError('This optical element does not support this backend.')
+
 		return wf
 
 	@property
@@ -218,6 +247,12 @@ class DeformableMirror(OpticalElement):
 		self._actuators_for_cached_surface = self.actuators.copy()
 
 		return self._surface
+
+	@property
+	def tf_surface(self):
+		import tensorflow as tf
+
+		return self.influence_functions.linear_combination(self.tf_actuators)
 
 	@property
 	def opd(self):

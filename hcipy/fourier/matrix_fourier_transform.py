@@ -200,7 +200,7 @@ class MatrixFourierTransform(FourierTransform):
 			if self.ndim == 1:
 				res = tf.matmul(self.tf_M, f)
 			elif self.ndim == 2:
-				res = tf.matmul(self.M1, tf.matmul(f, self.M2))
+				res = tf.matmul(self.tf_M1, tf.matmul(f, self.tf_M2))
 
 			res = TensorFlowField(tf.reshape(res, (-1,)), self.output_grid)
 		else:

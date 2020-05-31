@@ -202,7 +202,11 @@ class ModeBasis(object):
 
 		if self._tf_transformation_matrix is None:
 			if self.is_sparse:
-				self._tf_transformation_matrix = tf.convert_to_tensor(self.transformation_matrix.todense())
+				coo = self.transformation_matrix.tocsr().tocoo()
+				rows = tf.reshape(tf.convert_to_tensor(coo.row.astype('int32')), (-1, 1))
+				cols = tf.convert_to_tensor(coo.col.astype('int32'))
+				data = tf.convert_to_tensor(coo.data)
+				self._tf_transformation_matrix = (rows, cols, data)
 			else:
 				self._tf_transformation_matrix = tf.convert_to_tensor(self.transformation_matrix)
 
@@ -265,7 +269,12 @@ class ModeBasis(object):
 		elif 'tensorflow' in coefficients.__class__.__module__:
 			import tensorflow as tf
 
-			y = tf.linalg.matvec(self.tf_transformation_matrix, coefficients)
+			if self.is_sparse:
+				rows, cols, data = self.tf_transformation_matrix
+				vals = tf.gather(coefficients, cols)
+				y = tf.scatter_nd(rows, vals, [self._transformation_matrix.shape[0]])
+			else:
+				y = tf.linalg.matvec(self.tf_transformation_matrix, coefficients)
 
 			if self.grid is None:
 				return y

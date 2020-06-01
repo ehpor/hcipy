@@ -38,7 +38,7 @@ def make_actuator_positions(num_actuators_across_pupil, actuator_spacing, x_tilt
 	grid = grid.rotated(z_tilt)
 	return grid
 
-def make_gaussian_influence_functions(pupil_grid, num_actuators_across_pupil, actuator_spacing, crosstalk=0.15, cutoff=3, x_tilt=0, y_tilt=0, z_tilt=0):
+def make_gaussian_influence_functions(pupil_grid, num_actuators_across_pupil, actuator_spacing, crosstalk=0.15, cutoff=3, x_tilt=0, y_tilt=0, z_tilt=0, oversampling=None):
 	'''Create influence functions with a Gaussian profile.
 
 	The default value for the crosstalk is representative for Boston Micromachines DMs.
@@ -63,6 +63,8 @@ def make_gaussian_influence_functions(pupil_grid, num_actuators_across_pupil, ac
 		The tilt of the deformable mirror around the y-axis in radians.
 	z_tilt : scalar
 		The tilt of the deformable mirror around the z-axis in radians.
+	oversampling : integer or None
+		The oversamping factor when creating the Gaussian. If None the Gaussian will be evaluated at grid resolution.
 
 	Returns
 	-------
@@ -72,12 +74,16 @@ def make_gaussian_influence_functions(pupil_grid, num_actuators_across_pupil, ac
 	actuator_positions = make_actuator_positions(num_actuators_across_pupil, actuator_spacing)
 
 	# Stretch and rotate pupil_grid to correct for tilted DM
-	evaluated_grid = pupil_grid.scaled(1 / np.cos([y_tilt, x_tilt])).rotated(-z_tilt)
+	epsilon = 1e-14
+	if z_tilt > epsilon:
+		evaluated_grid = pupil_grid.scaled(1 / np.cos([y_tilt, x_tilt])).rotated(-z_tilt)
+	else:
+		evaluated_grid = pupil_grid.scaled(1 / np.cos([y_tilt, x_tilt]))
 
 	sigma = actuator_spacing / (np.sqrt((-2 * np.log(crosstalk))))
 	cutoff = actuator_spacing / sigma * cutoff
 
-	pokes = make_gaussian_pokes(evaluated_grid, actuator_positions, sigma, cutoff)
+	pokes = make_gaussian_pokes(evaluated_grid, actuator_positions, sigma, cutoff, oversampling)
 	pokes.transformation_matrix /= np.cos(x_tilt) * np.cos(y_tilt)
 	pokes.grid = pupil_grid
 

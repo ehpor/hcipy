@@ -105,6 +105,31 @@ def test_statistics_noisy_detector():
 
 			assert np.isclose(expected_std, std_measurement, rtol=2e-02, atol=1e-05)
 
+	# testing the subsampling function 
+	aperture = circular_aperture(1)(grid)
+
+	# the subsampling factors that we will test 
+	subsampling_factors = [1, 2, 4, 8]
+
+	for subsampling_factor in subsampling_factors:
+		# the subsampled grid 
+		grid_subsampled = make_subsampled_grid(pupil_grid, subsampling_factor)
+
+		# the subsampled aperture 
+		aperture_subsampled = subsample_field(aperture, subsampling_factor, pupil_grid_subsampled)
+
+		# the detector with the new subsampling factor 
+		detector = NoisyDetector(grid_subsampled, include_photon_noise=False, subsampling=subsampling_factor)
+
+		# integrating the detector 
+		detector.integrate(aperture, dt=1)
+
+		# reading the image from the detectort 
+		detector_aperture = detector.read_out()
+
+		# testing if the image from the detector matches the subsampled aperture 
+		assert np.isclose(aperture_subsampled, detector_aperture, rtol=2e-02, atol=1e-05)
+
 def test_glass_catalogue():
 	bk7 = get_refractive_index('N-BK7')
 	assert np.allclose(bk7(500e-9), 1.5214144761028994)

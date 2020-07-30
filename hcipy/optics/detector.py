@@ -1,5 +1,6 @@
 import numpy as np
 from ..util import large_poisson
+from ..field import subsample_field
 
 class Detector(object):
 	def integrate(self, wavefront, dt, weight=1):
@@ -103,6 +104,9 @@ class NoisyDetector(Detector):
 	array will be used, so it will NOT be a normal distributed flat field where every point in
 	array gives the standard deviation. This allows the user to load a specific flat field map.
 
+	The detector can also integrate supersampled wavefronts and subsample them to the correct
+	grid size. This allows for the averaging of the power over one detector pixel. 
+
 	Parameters
 	----------
 	input_grid : Grid
@@ -118,9 +122,20 @@ class NoisyDetector(Detector):
 		is standard deviation about 1) is generated that will be used.
 	include_photon_noise : boolean
 		Turns the photon noise on or off.
+	subsampling : integer or scalar or ndarray
+		The subsampling factor. If this is a scalar, it will be rounded to the
+		nearest integer. If this is an array, the subsampling factor will be
+		different for each dimension. 
+	statistic : string
+		The statistic to compute the subsampling (default is 'mean').
+		The following statistics are available:
+		* 'mean': compute the mean of values for points within each superpixel.
+		* 'sum': compute the sum of values for points within each superpixel. This is identical to a weighted histogram.
+		* 'min': compute the minimum of values for points within each superpixel.
+		* 'max': compute the maximum of values for point within each superpixel.
 
 	'''
-	def __init__(self, input_grid, dark_current_rate=0, read_noise=0, flat_field=0, include_photon_noise=True):
+	def __init__(self, input_grid, dark_current_rate=0, read_noise=0, flat_field=0, include_photon_noise=True, subsampling=1, statistic='mean'):
 		# Setting the start power.
 		self.power = 0
 
@@ -130,6 +145,8 @@ class NoisyDetector(Detector):
 		self.read_noise = read_noise
 		self.flat_field = flat_field
 		self.include_photon_noise = include_photon_noise
+		self.subsampling = subsampling
+		self.statistic = statistic
 
 	@property
 	def flat_field(self):
@@ -153,18 +170,19 @@ class NoisyDetector(Detector):
 		Parameters
 		----------
 		wavefront : Wavefront or array_like
-			The wavefront sets the amount of power generated per unit time.
+		    The wavefront sets the amount of power generated per unit time.
 		dt : scalar
-			The integration time in units of time.
+		    The integration time in units of time.
 		weight : scalar
-			Weight of every unit of integration time.
+		    Weight of every unit of integration time.
 
 		'''
 		#The power that the detector detects during the integration.
 		if hasattr(wavefront, 'power'):
-			self.power += wavefront.power * dt * weight
-		else:
-			self.power += wavefront * dt * weight
+		    self.power += subsample_field(wavefront.power, subsampling=self.subsampling, new_grid=self.input_grid, statistic=self.statistic) * dt * weight
+
+		else: 
+		    self.power += subsample_field(wavefront, subsampling=self.subsampling, new_grid=self.input_grid, statistic=self.statistic) * dt * weight
 
 		#Adding the generated dark current to the power.
 		self.power += self.dark_current_rate * dt * weight
@@ -179,7 +197,7 @@ class NoisyDetector(Detector):
 		Returns
 		----------
 		output_field : array_like
-			The final detector image.
+		    The final detector image.
 
 		'''
 		# Make sure not to overwrite output
@@ -187,7 +205,7 @@ class NoisyDetector(Detector):
 
 		# Adding photon noise.
 		if self.include_photon_noise:
-			output_field = large_poisson(output_field, thresh=1e6)
+		    output_field = large_poisson(output_field, thresh=1e6)
 
 		# Adding flat field errors.
 		output_field *= self.flat_field

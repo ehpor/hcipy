@@ -113,10 +113,10 @@ def test_statistics_noisy_detector():
 
 	for subsampling_factor in subsampling_factors:
 		# the subsampled grid 
-		grid_subsampled = make_subsampled_grid(pupil_grid, subsampling_factor)
+		grid_subsampled = make_subsampled_grid(grid, subsampling_factor)
 
 		# the subsampled aperture 
-		aperture_subsampled = subsample_field(aperture, subsampling_factor, pupil_grid_subsampled)
+		aperture_subsampled = subsample_field(aperture, subsampling_factor, grid_subsampled)
 
 		# the detector with the new subsampling factor 
 		detector = NoisyDetector(grid_subsampled, include_photon_noise=False, subsampling=subsampling_factor)

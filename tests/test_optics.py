@@ -128,7 +128,7 @@ def test_statistics_noisy_detector():
 		detector_aperture = detector.read_out()
 
 		# testing if the image from the detector matches the subsampled aperture 
-		assert np.isclose(aperture_subsampled, detector_aperture, rtol=2e-02, atol=1e-05)
+		assert np.allclose(aperture_subsampled, detector_aperture)
 
 def test_glass_catalogue():
 	bk7 = get_refractive_index('N-BK7')

@@ -57,7 +57,7 @@ def test_statistics_noisy_detector():
 	for dc in dark_currents:
 		for rn in read_noises:
 			#The test detector.
-			detector = NoisyDetector(input_grid=grid, include_photon_noise=photon_noise, flat_field=flat_field, dark_current_rate=dc, read_noise=rn)
+			detector = NoisyDetector(detector_grid=grid, include_photon_noise=photon_noise, flat_field=flat_field, dark_current_rate=dc, read_noise=rn)
 
 			#The integration times we will test.
 			integration_time = np.logspace(1,6,6)
@@ -85,7 +85,7 @@ def test_statistics_noisy_detector():
 
 	for ff in flat_fields:
 		#The test detector.
-		detector = NoisyDetector(input_grid=grid, include_photon_noise=photon_noise, flat_field=ff, dark_current_rate=dark_current, read_noise=read_noise)
+		detector = NoisyDetector(detector_grid=grid, include_photon_noise=photon_noise, flat_field=ff, dark_current_rate=dark_current, read_noise=read_noise)
 
 		#The integration times we will test.
 		integration_time = np.logspace(1, 6, 6)
@@ -119,7 +119,7 @@ def test_statistics_noisy_detector():
 		aperture_subsampled = subsample_field(aperture, subsampling_factor, grid_subsampled, statistic='sum')
 
 		# the detector with the new subsampling factor 
-		detector = NoisyDetector(grid_subsampled, include_photon_noise=False, subsampling=subsampling_factor)
+		detector = NoisyDetector(detector_grid=grid_subsampled, include_photon_noise=False, subsampling=subsampling_factor)
 
 		# integrating the detector 
 		detector.integrate(aperture, dt=1)

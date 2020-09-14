@@ -153,30 +153,30 @@ class NoisyDetector(Detector):
 			self._flat_field = flat_field
 
 	def integrate(self, wavefront, dt, weight=1):
-	'''Integrates the detector.
+		'''Integrates the detector.
 
-	The amount of power and dark current that the detector generates are calculated
-	for a given integration time and weight.
+		The amount of power and dark current that the detector generates are calculated
+		for a given integration time and weight.
 
-	Parameters
-	----------
-	wavefront : Wavefront or array_like
-		The wavefront sets the amount of power generated per unit time.
-	dt : scalar
-		The integration time in units of time.
-	weight : scalar
-		Weight of every unit of integration time.
+		Parameters
+		----------
+		wavefront : Wavefront or array_like
+			The wavefront sets the amount of power generated per unit time.
+		dt : scalar
+			The integration time in units of time.
+		weight : scalar
+			Weight of every unit of integration time.
 
-	'''
-	#The power that the detector detects during the integration.
-	if hasattr(wavefront, 'power'):
-		self.power += subsample_field(wavefront.power, subsampling=self.subsampling, new_grid=self.detector_grid, statistic='sum') * dt * weight
+		'''
+		#The power that the detector detects during the integration.
+		if hasattr(wavefront, 'power'):
+			self.power += subsample_field(wavefront.power, subsampling=self.subsampling, new_grid=self.detector_grid, statistic='sum') * dt * weight
 
-	else: 
-		self.power += subsample_field(wavefront, subsampling=self.subsampling, new_grid=self.detector_grid, statistic='sum') * dt * weight
+		else: 
+			self.power += subsample_field(wavefront, subsampling=self.subsampling, new_grid=self.detector_grid, statistic='sum') * dt * weight
 
-	#Adding the generated dark current to the power.
-	self.power += self.dark_current_rate * dt * weight
+		#Adding the generated dark current to the power.
+		self.power += self.dark_current_rate * dt * weight
 
 	def read_out(self):
 		'''Reads out the detector.

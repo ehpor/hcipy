@@ -15,7 +15,7 @@ def get_strehl_from_focal(img, ref_img):
 	scalar
 		The Strehl ratio.
 	'''
-	return img(np.argmax(ref_img)) / ref_img.max()
+	return img[np.argmax(ref_img)] / ref_img.max()
 
 def get_strehl_from_pupil(aperture, ref_aperture):
 	'''Get the Strehl ratio from a pupil-plane electric field.

@@ -84,17 +84,13 @@ def test_statistics_noisy_detector():
 	photon_noise = False
 
 	for ff in flat_fields:
-		#The test detector.
 		detector = NoisyDetector(detector_grid=grid, include_photon_noise=photon_noise, flat_field=ff, dark_current_rate=dark_current, read_noise=read_noise)
 
-		#The integration times we will test.
-		integration_time = np.logspace(1, 6, 6)
+		integration_times = np.logspace(1, 6, 6)
 
-		for t in integration_time:
-			# integration
+		for t in integration_times:
+			# integration and read out
 			detector.integrate(field, t)
-
-			# read out
 			measurement = detector.read_out()
 
 			# The std of the data by the detector.
@@ -105,30 +101,22 @@ def test_statistics_noisy_detector():
 
 			assert np.isclose(expected_std, std_measurement, rtol=2e-02, atol=1e-05)
 
-	# testing the subsampling function 
 	aperture = circular_aperture(1)(grid)
+	subsamplings = [1, 2, 4, 8]
 
-	# the subsampling factors that we will test 
-	subsampling_factors = [1, 2, 4, 8]
+	for subsampling in subsamplings:
+		grid_subsampled = make_subsampled_grid(grid, subsampling)
+		aperture_subsampled = subsample_field(aperture, subsampling, grid_subsampled, statistic='sum')
 
-	for subsampling_factor in subsampling_factors:
-		# the subsampled grid 
-		grid_subsampled = make_subsampled_grid(grid, subsampling_factor)
+		# the detector with the new subsampling factor
+		detector = NoisyDetector(detector_grid=grid_subsampled, include_photon_noise=False, subsampling=subsampling)
 
-		# the subsampled aperture 
-		aperture_subsampled = subsample_field(aperture, subsampling_factor, grid_subsampled, statistic='sum')
-
-		# the detector with the new subsampling factor 
-		detector = NoisyDetector(detector_grid=grid_subsampled, include_photon_noise=False, subsampling=subsampling_factor)
-
-		# integrating the detector 
+		# integrating and reading out
 		detector.integrate(aperture, dt=1)
+		detector_image = detector.read_out()
 
-		# reading the image from the detectort 
-		detector_aperture = detector.read_out()
-
-		# testing if the image from the detector matches the subsampled aperture 
-		assert np.allclose(aperture_subsampled, detector_aperture)
+		# testing if the image from the detector matches the subsampled aperture
+		assert np.allclose(aperture_subsampled, detector_image)
 
 def test_glass_catalogue():
 	bk7 = get_refractive_index('N-BK7')

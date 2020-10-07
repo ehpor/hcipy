@@ -1,8 +1,36 @@
 import numpy as np
 from ..util import large_poisson
-from ..field import subsample_field
+from ..field import subsample_field, make_supersampled_grid
 
 class Detector(object):
+	'''Base class for a detector.
+
+	Parameters
+	----------
+	detector_grid : Grid
+		The grid on which the detector returns its images. These indicate
+		the centers of the pixels.
+	subsamping : integer or scalar or ndarray
+		The number of subpixels per pixel along one axis. For example, a
+		value of 2 indicates that 2x2=4 subpixels are used per pixel. If
+		this is a scalar, it will be rounded to the nearest integer. If
+		this is an array, the subsampling factor will be different for
+		each dimension. Default: 1.
+
+	Attributes
+	----------
+	input_grid : Grid
+		The grid that is expected as input.
+	'''
+	def __init__(self, detector_grid, subsamping=1):
+		self.detector_grid = detector_grid
+		self.subsamping = subsamping
+
+		if subsamping > 1:
+			self.input_grid = make_supersampled_grid(detector_grid, subsamping)
+		else:
+			self.input_grid = detector_grid
+
 	def integrate(self, wavefront, dt, weight=1):
 		'''Integrates the detector.
 
@@ -24,7 +52,7 @@ class Detector(object):
 
 		Returns
 		----------
-		output_field : array_like
+		Field
 			The final detector image.
 		'''
 		raise NotImplementedError()
@@ -46,7 +74,7 @@ class Detector(object):
 
 		Returns
 		----------
-		output_field : array_like
+		Field
 			The final detector image.
 		'''
 		self.integrate(wavefront, dt, weight)
@@ -57,9 +85,23 @@ class NoiselessDetector(Detector):
 
 	This detector includes no noise effects at all. This can be used as a
 	theoretically perfect detector.
+
+	Parameters
+	----------
+	detector_grid : Grid
+		The grid on which the detector returns its images. These indicate
+		the centers of the pixels.
+	subsamping : integer or scalar or ndarray
+		The number of subpixels per pixel along one axis. For example, a
+		value of 2 indicates that 2x2=4 subpixels are used per pixel. If
+		this is a scalar, it will be rounded to the nearest integer. If
+		this is an array, the subsampling factor will be different for
+		each dimension. Default: 1.
 	'''
-	def __init__(self):
-		self.intensity = 0
+	def __init__(self, detector_grid, subsamping=1):
+		Detector.__init__(self, detector_grid, subsamping)
+
+		self.accumulated_charge = 0
 
 	def integrate(self, wavefront, dt, weight=1):
 		'''Integrates the detector.
@@ -73,7 +115,12 @@ class NoiselessDetector(Detector):
 		weight : scalar
 			Weight of every unit of integration time.
 		'''
-		self.intensity += wavefront.power * dt * weight
+		if hasattr(wavefront, 'power'):
+			power = wavefront.power
+		else:
+			power = wavefront
+
+		self.accumulated_charge += power * dt * weight
 
 	def read_out(self):
 		'''Reads out the detector.
@@ -82,14 +129,14 @@ class NoiselessDetector(Detector):
 
 		Returns
 		----------
-		output_field : array_like
+		Field
 			The final detector image.
 		'''
 		# Make sure not to overwrite output
-		output_field = self.intensity.copy()
+		output_field = self.accumulated_charge.copy()
 
 		# Reset detector
-		self.intensity = 0
+		self.accumulated_charge = 0
 
 		return output_field
 
@@ -105,7 +152,7 @@ class NoisyDetector(Detector):
 	array gives the standard deviation. This allows the user to load a specific flat field map.
 
 	The detector can also integrate supersampled wavefronts and subsample them to the correct
-	grid size. This allows for the averaging of the power over one detector pixel. 
+	grid size. This allows for the averaging of the power over one detector pixel.
 
 	Parameters
 	----------
@@ -121,23 +168,25 @@ class NoisyDetector(Detector):
 		grid. If a scalar is given, a random normal distributed flat field map (given scalar
 		is standard deviation about 1) is generated that will be used.
 	include_photon_noise : boolean
-		Turns the photon noise on or off.
+		Turns the photon noise on or off. Default: True.
 	subsampling : integer or scalar or ndarray
-		The subsampling factor. If this is a scalar, it will be rounded to the
-		nearest integer. If this is an array, the subsampling factor will be
-		different for each dimension. 
+		The number of subpixels per pixel along one axis. For example, a
+		value of 2 indicates that 2x2=4 subpixels are used per pixel. If
+		this is a scalar, it will be rounded to the nearest integer. If
+		this is an array, the subsampling factor will be different for
+		each dimension. Default: 1.
 	'''
 	def __init__(self, detector_grid, dark_current_rate=0, read_noise=0, flat_field=0, include_photon_noise=True, subsampling=1):
-		# Setting the start power.
-		self.power = 0
+		Detector.__init__(self, detector_grid, subsampling)
+
+		# Setting the start charge level.
+		self.accumulated_charge = 0
 
 		# The parameters.
-		self.detector_grid = detector_grid
 		self.dark_current_rate = dark_current_rate
 		self.read_noise = read_noise
 		self.flat_field = flat_field
 		self.include_photon_noise = include_photon_noise
-		self.subsampling = subsampling
 
 	@property
 	def flat_field(self):
@@ -166,17 +215,17 @@ class NoisyDetector(Detector):
 			The integration time in units of time.
 		weight : scalar
 			Weight of every unit of integration time.
-
 		'''
-		#The power that the detector detects during the integration.
+		# The power that the detector detects during the integration.
 		if hasattr(wavefront, 'power'):
-			self.power += subsample_field(wavefront.power, subsampling=self.subsampling, new_grid=self.detector_grid, statistic='sum') * dt * weight
+			power = wavefront.power
+		else:
+			power = wavefront
 
-		else: 
-			self.power += subsample_field(wavefront, subsampling=self.subsampling, new_grid=self.detector_grid, statistic='sum') * dt * weight
+		self.accumulated_charge += subsample_field(power, subsampling=self.subsamping, new_grid=self.detector_grid, statistic='sum') * dt * weight
 
-		#Adding the generated dark current to the power.
-		self.power += self.dark_current_rate * dt * weight
+		# Adding the generated dark current.
+		self.accumulated_charge += self.dark_current_rate * dt * weight
 
 	def read_out(self):
 		'''Reads out the detector.
@@ -187,12 +236,11 @@ class NoisyDetector(Detector):
 
 		Returns
 		----------
-		output_field : array_like
+		Field
 			The final detector image.
-
 		'''
 		# Make sure not to overwrite output
-		output_field = self.power.copy()
+		output_field = self.accumulated_charge.copy()
 
 		# Adding photon noise.
 		if self.include_photon_noise:
@@ -205,7 +253,7 @@ class NoisyDetector(Detector):
 		output_field += np.random.normal(loc=0, scale=self.read_noise, size=output_field.size)
 
 		# Reset detector
-		self.power = 0
+		self.accumulated_charge = 0
 
 		return output_field
 

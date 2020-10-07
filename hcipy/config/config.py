@@ -117,7 +117,7 @@ class Configuration(object):
 		'''Update the configuration with the configuration `b`, as a dictionary.
 
 		Parameters
-		---
+		----------
 		b : dict
 			A dictionary containing the values to update in the configuration.
 		'''

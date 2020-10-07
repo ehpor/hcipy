@@ -107,7 +107,7 @@ class MatrixFourierTransform(FourierTransform):
 
 			if self.ndim == 1:
 				xu = np.outer(self.output_grid.x, self.input_grid.x)
-				self.M = ne.evaluate('exp(-1j * xu)').astype(complex_dtype, copy=False)
+				self.M = ne.evaluate('exp(-1j * xu)', local_dict={'xu': xu}).astype(complex_dtype, copy=False)
 			elif self.ndim == 2:
 				x, y = self.input_grid.coords.separated_coords
 				u, v = self.output_grid.coords.separated_coords
@@ -115,8 +115,8 @@ class MatrixFourierTransform(FourierTransform):
 				vy = np.outer(v, y)
 				xu = np.outer(x, u)
 
-				self.M1 = ne.evaluate('exp(-1j * vy)').astype(complex_dtype, copy=False)
-				self.M2 = ne.evaluate('exp(-1j * xu)').astype(complex_dtype, copy=False)
+				self.M1 = ne.evaluate('exp(-1j * vy)', local_dict={'vy': vy}).astype(complex_dtype, copy=False)
+				self.M2 = ne.evaluate('exp(-1j * xu)', local_dict={'xu': xu}).astype(complex_dtype, copy=False)
 
 			self.matrices_dtype = complex_dtype
 

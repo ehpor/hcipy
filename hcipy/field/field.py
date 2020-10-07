@@ -282,6 +282,10 @@ class TensorFlowField(FieldBase):
 	def __repr__(self):
 		return self.arr.__repr__()
 
+	@property
+	def ndim(self):
+		return len(self.shape)
+
 	@classmethod
 	def _from_numpy(cls, field):
 		import tensorflow as tf

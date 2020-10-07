@@ -17,7 +17,7 @@ class MatrixFourierTransform(FourierTransform):
 		coronagraph propagation".
 
 	Parameters
-	---
+	----------
 	input_grid : Grid
 		The grid that is expected for the input field.
 	output_grid : Grid

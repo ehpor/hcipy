@@ -4,6 +4,7 @@ nbsphinx
 jupyter_client
 ipykernel
 poppy
+nbclient
 nbformat
 nbconvert
 sphinx-automodapi

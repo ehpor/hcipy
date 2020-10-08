@@ -1,5 +1,5 @@
 [![PyPI Status](https://img.shields.io/pypi/v/hcipy.svg)](https://pypi.org/project/hcipy/)
-[![Build Status](https://img.shields.io/travis/ehpor/hcipy/master.svg?logo=travis)](https://travis-ci.org/ehpor/hcipy)
+[![Build Status](https://img.shields.io/travis/com/ehpor/hcipy/master.svg?logo=travis)](https://travis-ci.com/ehpor/hcipy)
 [![Build status](https://img.shields.io/appveyor/ci/ehpor/hcipy/master.svg?logo=appveyor)](https://ci.appveyor.com/project/ehpor/hcipy/branch/master)
 [![Coverage Status](https://img.shields.io/codecov/c/gh/ehpor/hcipy)](https://codecov.io/gh/ehpor/hcipy)
 [![Documentation Status](https://img.shields.io/badge/docs-latest%20build-brightgreen)](https://docs.hcipy.org/dev)

@@ -66,8 +66,8 @@ class FourierFilter(object):
 	def forward(self, field):
 		'''Return the forward filtering of the input field.
 
-		Parmeters
-		---------
+		Parameters
+		----------
 		field : Field
 			The field to filter.
 
@@ -81,8 +81,8 @@ class FourierFilter(object):
 	def backward(self, field):
 		'''Return the backward (adjoint) filtering of the input field.
 
-		Parmeters
-		---------
+		Parameters
+		----------
 		field : Field
 			The field to filter.
 

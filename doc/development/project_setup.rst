@@ -8,7 +8,7 @@ Folder structure and files
 
 This section explains the content of the repository:
 
-* **hcipy**. This folder contains all of the code for the HCIPy package. 
+* **hcipy**. This folder contains all of the code for the HCIPy package.
 * **doc**. This folder contains the full documentation.
 * **tests**. This folder contains the unit tests, separated by submodule.
 * **examples**. This folder contains old examples. These examples should be rewritten into tutorials for the documentation. Do not add new examples here.
@@ -53,12 +53,12 @@ We adhere mostly to `PEP8 <https://www.python.org/dev/peps/pep-0008/>`__, the of
 Continuous integration and test suite
 -------------------------------------
 
-HCIPy currently supports Python 3.5+ on Linux, MacOS and Windows. To make sure that it keeps working as expected on all these configurations, we have set up automatic testing on each of these. `Travis-CI <https://travis-ci.org/ehpor/hcipy/>`__ automatically tests on Linux and MacOS for all versions of Python, while `Appveyor <https://ci.appveyor.com/project/ehpor/hcipy>`__ performs the tests on Windows systems. Configuration files for these services are **.travis.yml** and **appveyor.yml**, which show the CI service how to install HCIPy and its dependencies, and on which operating systems and with which Python versions to test HCIPy. The testing itself is done via the `pytest <https://docs.pytest.org/en/latest/>`__ library.
+HCIPy currently supports Python 3.5+ on Linux, MacOS and Windows. To make sure that it keeps working as expected on all these configurations, we have set up automatic testing on each of these. `Travis-CI <https://travis-ci.com/ehpor/hcipy/>`__ automatically tests on Linux and MacOS for all versions of Python, while `Appveyor <https://ci.appveyor.com/project/ehpor/hcipy>`__ performs the tests on Windows systems. Configuration files for these services are **.travis.yml** and **appveyor.yml**, which show the CI service how to install HCIPy and its dependencies, and on which operating systems and with which Python versions to test HCIPy. The testing itself is done via the `pytest <https://docs.pytest.org/en/latest/>`__ library.
 
 The test suite tests all major features of HCIPy. In the name of efficiency, HCIPy does not contain much so-called unit tests, but rather tests high-level behaviour, which implicitly tests low-level functions as well. For example, for the atmospheric model, we test whether then variance of the outcoming wavefront conforms to analytic formula, and whether the variance projection on a certain Zernike mode conforms to analytic formula, rather than testing the smallest possible unit of the atmospheric model. Tests are located in **tests/test_[submodule_name].py**, separated by submodule. All tests can be run with:
 
 .. code-block:: shell
-    
+
     pytest ./tests
 
 As the free services of Travis and Appveyor limit the time for the tests to less than one hour of computation time with limited computer memory, we have separated the tests into fast and slow tests. The slow tests are not run on the CI services, but can be run manually on your own machine by passing the flag ``--runslow`` to the pytest script:
@@ -98,7 +98,7 @@ While most files are normal reStructuredText (``rst``) files, tutorials are comp
 
 During compilation, the notebook is executed and scraped for the title, description, level and thumbnail figure. The first cell in the notebook must start with ``# [title]``, which will be taken as the title of the tutorial. The next non-empty line is taken as the description of the tutorial. The level and thumbnail figure are taken from the metadata of the notebook, which can be edited with ``Edit->Edit Notebook Metadata`` menu option in the Jupyter Notebook Viewer. The ``level`` property should be one of ``("beginner", "intermediate", "advanced", "expert")``. The thumbnail is a rescaled and cropped version of the last figure in the notebook, unless the ``thumbnail_figure_index`` property is in the notebook metadata. This property indicates the index in the list of figures from the notebook, using Python indexing conventions (ie. 0 is the first figure, -2 is the second-to-last figure, etc...).
 
-All tutorials are compiled to reStructuredText files in the **doc/tutorials** folder. This also includes **doc/tutorials/index.rst**. 
+All tutorials are compiled to reStructuredText files in the **doc/tutorials** folder. This also includes **doc/tutorials/index.rst**.
 
 API Documentation
 ~~~~~~~~~~~~~~~~~

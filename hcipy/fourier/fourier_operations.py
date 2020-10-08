@@ -58,7 +58,7 @@ class FourierFilter(object):
 		recompute_internal_array = self.internal_array is None
 		recompute_internal_array = recompute_internal_array or (self.internal_array.ndim != (field.grid.ndim + field.tensor_order))
 		recompute_internal_array = recompute_internal_array or (self.internal_array.dtype != complex_dtype)
-		recompute_internal_array = recompute_internal_array or np.all(self.internal_array.shape[:field.tensor_order] == field.tensor_shape)
+		recompute_internal_array = recompute_internal_array or not np.all(tuple(self.internal_array.shape[:field.tensor_order]) == tuple(field.tensor_shape))
 
 		if recompute_internal_array:
 			self.internal_array = self.internal_grid.zeros(field.tensor_shape, complex_dtype).shaped

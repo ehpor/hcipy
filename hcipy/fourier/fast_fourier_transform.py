@@ -2,7 +2,7 @@ from __future__ import division
 
 import numpy as np
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
-from ..field import Field, CartesianGrid, RegularCoords
+from ..field import Field, TensorFlowField, CartesianGrid, RegularCoords
 from ..config import Configuration
 import numexpr as ne
 
@@ -185,6 +185,10 @@ class FastFourierTransform(FourierTransform):
 		if np.isscalar(self.shift_output) and np.allclose(self.shift_output, 1):
 			self.shift_output = None
 
+		self.complex_dtype = 'complex128'
+		self._tf_shift_input = None
+		self._tf_shift_output = None
+
 	@multiplex_for_tensor_fields
 	def forward(self, field):
 		'''Returns the forward Fourier transform of the :class:`Field` field.
@@ -199,34 +203,72 @@ class FastFourierTransform(FourierTransform):
 		Field
 			The Fourier transform of the field.
 		'''
-		if self.cutout_input is None:
-			self.internal_array[:] = field.reshape(self.shape_in)
+		if field.backend == 'numpy':
+			if self.cutout_input is None:
+				self.internal_array[:] = field.reshape(self.shape_in)
+
+				if self.shift_output is not None:
+					self.internal_array *= self.shift_output.reshape(self.shape_in)
+			else:
+				self.internal_array[:] = 0
+				self.internal_array[self.cutout_input] = field.reshape(self.shape_in)
+
+				if self.shift_output is not None:
+					self.internal_array[self.cutout_input] *= self.shift_output.reshape(self.shape_in)
+
+			if not self.emulate_fftshifts:
+				self.internal_array = np.fft.ifftshift(self.internal_array)
+
+			fft_array = np.fft.fftn(self.internal_array)
+
+			if not self.emulate_fftshifts:
+				fft_array = np.fft.fftshift(fft_array)
+
+			if self.cutout_output is None:
+				res = fft_array.ravel()
+			else:
+				res = fft_array[self.cutout_output].ravel()
+
+			res *= self.shift_input
+
+			return Field(res, self.output_grid).astype(field.dtype, copy=False)
+		elif field.backend == 'tensorflow':
+			import tensorflow as tf
+
+			f = tf.cast(tf.reshape(field.arr, self.shape_in), self.complex_dtype)
 
 			if self.shift_output is not None:
-				self.internal_array *= self.shift_output.reshape(self.shape_in)
+				f *= tf.reshape(self.tf_shift_output, self.shape_in)
+
+			if self.cutout_input is not None:
+				paddings = np.array([np.array([self.cutout_input[i].start, self.internal_shape[i] - self.cutout_input[i].stop]) for i in range(self.ndim)])
+				f = tf.pad(f, paddings)
+
+			if not self.emulate_fftshifts:
+				f = tf.sigal.fftshift(f)
+
+			if self.ndim == 1:
+				f = tf.signal.fft(f)
+			elif self.ndim == 2:
+				f = tf.signal.fft2d(f)
+			elif self.ndim == 3:
+				f = tf.signal.fft3d(f)
+			else:
+				raise ValueError('FourierTransforms with >3 dimensions are not supported with this backend.')
+
+			if not self.emulate_fftshifts:
+				f = tf.signal.ifftshift(f)
+
+			if self.cutout_output is None:
+				f = tf.reshape(f, (-1,))
+			else:
+				f = tf.reshape(f[self.cutout_output], (-1,))
+
+			f *= self.tf_shift_input
+
+			return TensorFlowField(f, self.output_grid)
 		else:
-			self.internal_array[:] = 0
-			self.internal_array[self.cutout_input] = field.reshape(self.shape_in)
-
-			if self.shift_output is not None:
-				self.internal_array[self.cutout_input] *= self.shift_output.reshape(self.shape_in)
-
-		if not self.emulate_fftshifts:
-			self.internal_array = np.fft.ifftshift(self.internal_array)
-
-		fft_array = np.fft.fftn(self.internal_array)
-
-		if not self.emulate_fftshifts:
-			fft_array = np.fft.fftshift(fft_array)
-
-		if self.cutout_output is None:
-			res = fft_array.ravel()
-		else:
-			res = fft_array[self.cutout_output].ravel()
-
-		res *= self.shift_input
-
-		return Field(res, self.output_grid).astype(field.dtype, copy=False)
+			raise ValueError('Fields with this backend are not supported.')
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
@@ -242,28 +284,81 @@ class FastFourierTransform(FourierTransform):
 		Field
 			The inverse Fourier transform of the field.
 		'''
-		if self.cutout_output is None:
-			self.internal_array[:] = field.reshape(self.shape_out)
-			self.internal_array /= self.shift_input.reshape(self.shape_out)
+		if field.backend == 'numpy':
+			if self.cutout_output is None:
+				self.internal_array[:] = field.reshape(self.shape_out)
+				self.internal_array /= self.shift_input.reshape(self.shape_out)
+			else:
+				self.internal_array[:] = 0
+				self.internal_array[self.cutout_output] = field.reshape(self.shape_out)
+				self.internal_array[self.cutout_output] /= self.shift_input.reshape(self.shape_out)
+
+			if not self.emulate_fftshifts:
+				self.internal_array = np.fft.ifftshift(self.internal_array)
+
+			fft_array = np.fft.ifftn(self.internal_array)
+
+			if not self.emulate_fftshifts:
+				fft_array = np.fft.fftshift(fft_array)
+
+			if self.cutout_input is None:
+				res = fft_array.ravel()
+			else:
+				res = fft_array[self.cutout_input].ravel()
+
+			if self.shift_output is not None:
+					res /= self.shift_output
+
+			return Field(res, self.input_grid).astype(field.dtype, copy=False)
+		elif field.backend == 'tensorflow':
+			import tensorflow as tf
+
+			f = tf.cast(tf.reshape(field.arr, self.shape_out), self.complex_dtype)
+			f /= tf.reshape(self.shift_input, self.shape_out)
+
+			if self.cutout_output is not None:
+				paddings = np.array([np.array([self.cutout_output[i].start, self.internal_shape[i] - self.cutout_output[i].stop]) for i in range(self.ndim)])
+				f = tf.pad(f, paddings)
+
+			if not self.emulate_fftshifts:
+				f = tf.signal.fftshift(f)
+
+			if self.ndim == 1:
+				f = tf.signal.ifft(f)
+			elif self.ndim == 2:
+				f = tf.signal.ifft2d(f)
+			elif self.ndim == 3:
+				f = tf.signal.ifft3d(f)
+			else:
+				raise ValueError('FourierTransforms with >3 dimensions are not supported by this backend.')
+
+			if not self.emulate_fftshifts:
+				f = tf.signal.ifftshift(f)
+
+			if self.cutout_input is None:
+				f = tf.reshape(f, (-1,))
+			else:
+				f = tf.reshape(f[self.cutout_input], (-1,))
+
+			if self.shift_output is not None:
+				f /= self.tf_shift_output
+
+			return TensorFlowField(f, self.output_grid)
 		else:
-			self.internal_array[:] = 0
-			self.internal_array[self.cutout_output] = field.reshape(self.shape_out)
-			self.internal_array[self.cutout_output] /= self.shift_input.reshape(self.shape_out)
+			raise ValueError('Fields with this backend are not supported.')
 
-		if not self.emulate_fftshifts:
-			self.internal_array = np.fft.ifftshift(self.internal_array)
+	@property
+	def tf_shift_input(self):
+		import tensorflow as tf
 
-		fft_array = np.fft.ifftn(self.internal_array)
+		if self._tf_shift_input is None:
+			self._tf_shift_input = tf.convert_to_tensor(self.shift_input)
+		return self._tf_shift_input
 
-		if not self.emulate_fftshifts:
-			fft_array = np.fft.fftshift(fft_array)
+	@property
+	def tf_shift_output(self):
+		import tensorflow as tf
 
-		if self.cutout_input is None:
-			res = fft_array.ravel()
-		else:
-			res = fft_array[self.cutout_input].ravel()
-
-		if self.shift_output is not None:
-				res /= self.shift_output
-
-		return Field(res, self.input_grid).astype(field.dtype, copy=False)
+		if self._tf_shift_output is None:
+			self._tf_shift_output = tf.convert_to_tensor(self.shift_output)
+		return self._tf_shift_output

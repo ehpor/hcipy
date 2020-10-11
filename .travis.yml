@@ -61,7 +61,7 @@ install:
     fi
 
   - pip install .
-  
+
   - if [ "$RUN_TESTS" = true ]; then
       pip install ".[dev]";
     fi
@@ -82,13 +82,14 @@ script:
   - if [ "$RUN_TESTS" = true ] && [ "$TEST_COVERAGE" = true ]; then
       $PYTHON_CMD -m coverage run -m pytest ./tests || travis_terminate 1;
     fi
-  
+
   - if [ "$RUN_TESTS" = true ] && [ "$TEST_COVERAGE" = false ]; then
       $PYTHON_CMD -m pytest ./tests || travis_terminate 1;
     fi
-  
+
   - if [ "$MAKE_DOCS" = true ]; then
       cd doc;
+      python compile_tutorials.py;
       make html || travis_terminate 1;
       cd ..;
     fi

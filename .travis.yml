@@ -9,6 +9,11 @@ env:
 
 matrix:
   include:
+  - name: "Make documentation"
+    os: linux
+    python: "3.7"
+    language: python
+    env: RUN_TESTS=false MAKE_DOCS=true
   - name: "Tests for Python 3.5 on Linux"
     os: linux
     python: "3.5"
@@ -34,11 +39,6 @@ matrix:
     os: osx
     language: generic
     env: PYTHON_VERSION=3.7.5
-  - name: "Make documentation"
-    os: linux
-    python: "3.7"
-    language: python
-    env: RUN_TESTS=false MAKE_DOCS=true
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
@@ -89,7 +89,6 @@ script:
 
   - if [ "$MAKE_DOCS" = true ]; then
       cd doc;
-      python compile_tutorials.py;
       make html || travis_terminate 1;
       cd ..;
     fi

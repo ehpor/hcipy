@@ -105,7 +105,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 
 		time_taken = end - start
 		if time_taken > 60:
-			print('  Execution took %dm%02d.' % (time_taken / 60, time_taken % 60))
+			print('  Execution took %dm%02ds.' % (time_taken / 60, time_taken % 60))
 		else:
 			print('  Execution took %ds.' % time_taken)
 	else:

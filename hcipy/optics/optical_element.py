@@ -318,11 +318,11 @@ class AgnosticOpticalElement(OpticalElement):
 				if output_grid is None:
 					raise ValueError('Grid dependent, but no grids are given for lookup.')
 
-				key_parts.append([(None, output_grid)])
+				key_parts.append([(None, hash(output_grid))])
 			elif output_grid is None:
-				key_parts.append([(input_grid, None)])
+				key_parts.append([(hash(input_grid), None)])
 			else:
-				key_parts.append([(input_grid, output_grid), (input_grid, None), (None, output_grid)])
+				key_parts.append([(hash(input_grid), hash(output_grid)), (hash(input_grid), None), (None, hash(output_grid))])
 		else:
 			key_parts.append([(None, None)])
 
@@ -1007,7 +1007,7 @@ class OpticalSystem(OpticalElement):
 		Wavefront
 			The propagated wavefront.
 		'''
-		wf = wavefront.copy()
+		wf = wavefront
 
 		for optical_element in self.optical_elements:
 			wf = optical_element.forward(wf)
@@ -1029,7 +1029,7 @@ class OpticalSystem(OpticalElement):
 		Wavefront
 			The propagated wavefront.
 		'''
-		wf = wavefront.copy()
+		wf = wavefront
 
 		for optical_element in reversed(self.optical_elements):
 			wf = optical_element.backward(wf)

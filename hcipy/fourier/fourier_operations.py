@@ -178,7 +178,7 @@ class FourierFilter(object):
 					h = self._transfer_function
 			elif field.backend == 'tensorflow':
 				if adjoint:
-					h = tf.conj(self._tf_transfer_function)
+					h = tf.math.conj(self._tf_transfer_function)
 				else:
 					h = self._tf_transfer_function
 

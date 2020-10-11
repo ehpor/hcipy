@@ -11,7 +11,7 @@ import nbformat
 from PIL import Image, ImageChops
 
 def compile_tutorial(tutorial_name, force_recompile=False):
-	print('- Compiling tutorial ' + tutorial_name + '...')
+	print('- Tutorial "' + tutorial_name + '"')
 
 	notebook_path = 'tutorial_notebooks/' + tutorial_name + '/' + tutorial_name + '.ipynb'
 	export_path = 'tutorials/' + tutorial_name + '/' + tutorial_name
@@ -21,6 +21,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 		os.makedirs(os.path.dirname(export_path))
 
 	# Read in notebook
+	print('  Reading notebook...')
 	notebook = nbformat.read(notebook_path, 4)
 
 	# Scrape title, description and thumbnail
@@ -51,13 +52,13 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	else:
 		level = 'Unknown'
 
-	# Check if the tutorial was already compiled.
+	# Check if the tutorial was already executed.
 	if os.path.exists(export_path + '.rst'):
 		if os.path.getmtime(export_path + '.rst') > os.path.getmtime(notebook_path):
 			if force_recompile:
 				print('  Already compiled. Recompiling anyway...')
 			else:
-				print('  Already compiled. Skipping...')
+				print('  Already compiled. Skipping compilation...')
 				return title, level, description, thumb_dest.split('/', 1)[-1]
 
 	# Execute notebook if not already executed
@@ -66,6 +67,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	resources = {'metadata': {'path': os.path.dirname(notebook_path)}}
 
 	if not already_executed:
+		print('  Executing...')
 		start = time.time()
 
 		additional_cell_1 = {
@@ -88,7 +90,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 		notebook.cells.insert(1, nbformat.from_dict(additional_cell_1))
 		notebook.cells.insert(2, nbformat.from_dict(additional_cell_2))
 
-		client = NotebookClient(nb=notebook, resources=resources, timeout=600, kernel_name='python3')
+		client = NotebookClient(nb=notebook, resources=resources, timeout=585, kernel_name='python3')
 
 		try:
 			client.execute()
@@ -100,10 +102,16 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 		notebook.cells.pop(1)
 
 		end = time.time()
-		print('  Compilation took %d seconds.' % (end - start))
+
+		time_taken = end - start
+		if time_taken > 60:
+			print('  Execution took %dm%02d.' % (time_taken / 60, time_taken % 60))
+		else:
+			print('  Execution took %ds.' % time_taken)
 	else:
 		print('  Notebook was already executed.')
 
+	print('  Rendering tutorial...')
 	exporter = RSTExporter()
 	output, resources = exporter.from_notebook_node(notebook, resources)
 
@@ -202,7 +210,7 @@ These tutorials do not have their level of difficulty rated.
 level_preambles = [beginner_preamble, intermediate_preamble, advanced_preamble, expert_preamble, unknown_preamble]
 
 def compile_all_tutorials():
-	print('Compling all tutorials...')
+	print('Compiling all tutorials...')
 
 	tutorials = {}
 	tutorial_names = sorted(os.listdir('tutorial_notebooks/'))
@@ -240,3 +248,13 @@ def compile_all_tutorials():
 			f.write(entry_template.format(thumbnail_file=thumb, title=title, level=level, description=desc, name=name))
 
 	f.close()
+
+if __name__ == '__main__':
+	# Compile all tutorials
+	import os
+	os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+	import sys
+	sys.path.insert(0, '.')
+
+	compile_all_tutorials()

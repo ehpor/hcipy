@@ -194,15 +194,16 @@ class MatrixFourierTransform(FourierTransform):
 		elif field.backend == 'tensorflow':
 			import tensorflow as tf
 
-			f = tf.cast(tf.reshape(field.arr, self.shape_input), self.matrices_dtype)
-			f *= self.weights_input
+			with tf.name_scope('MatrixFourierTransform.forward'):
+				f = tf.cast(tf.reshape(field.arr, self.shape_input), self.matrices_dtype)
+				f *= self.weights_input
 
-			if self.ndim == 1:
-				res = tf.matmul(self.tf_M, f)
-			elif self.ndim == 2:
-				res = tf.matmul(self.tf_M1, tf.matmul(f, self.tf_M2))
+				if self.ndim == 1:
+					res = tf.matmul(self.tf_M, f)
+				elif self.ndim == 2:
+					res = tf.matmul(self.tf_M1, tf.matmul(f, self.tf_M2))
 
-			res = TensorFlowField(tf.reshape(res, (-1,)), self.output_grid)
+				res = TensorFlowField(tf.reshape(res, (-1,)), self.output_grid)
 		else:
 			raise ValueError('Fields with this backend are not supported.')
 
@@ -260,15 +261,16 @@ class MatrixFourierTransform(FourierTransform):
 		elif field.backend == 'tensorflow':
 			import tensorflow as tf
 
-			f = tf.cast(tf.reshape(field.arr, self.shape_output), self.matrices_dtype)
-			f *= self.weights_output
+			with tf.name_scope('MatrixFourierTransform.backward'):
+				f = tf.cast(tf.reshape(field.arr, self.shape_output), self.matrices_dtype)
+				f *= self.weights_output
 
-			if self.ndim == 1:
-				res = tf.matmul(self.tf_M, f, adjoint_a=True)
-			elif self.ndim == 2:
-				res = tf.matmul(self.tf_M1, tf.matmul(f, self.tf_M2, adjoint_b=True), adjoint_a=True)
+				if self.ndim == 1:
+					res = tf.matmul(self.tf_M, f, adjoint_a=True)
+				elif self.ndim == 2:
+					res = tf.matmul(self.tf_M1, tf.matmul(f, self.tf_M2, adjoint_b=True), adjoint_a=True)
 
-			res = TensorFlowField(tf.reshape(res, (-1,)), self.input_grid)
+				res = TensorFlowField(tf.reshape(res, (-1,)), self.input_grid)
 		else:
 			raise ValueError('Fields with this backend are not supported.')
 

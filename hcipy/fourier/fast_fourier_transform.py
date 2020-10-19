@@ -235,38 +235,39 @@ class FastFourierTransform(FourierTransform):
 		elif field.backend == 'tensorflow':
 			import tensorflow as tf
 
-			f = tf.cast(tf.reshape(field.arr, self.shape_in), self.complex_dtype)
+			with tf.name_scope('FastFourierTransform.forward'):
+				f = tf.cast(tf.reshape(field.arr, self.shape_in), self.complex_dtype)
 
-			if self.shift_output is not None:
-				f *= tf.reshape(self.tf_shift_output, self.shape_in)
+				if self.shift_output is not None:
+					f *= tf.reshape(self.tf_shift_output, self.shape_in)
 
-			if self.cutout_input is not None:
-				paddings = np.array([np.array([self.cutout_input[i].start, self.internal_shape[i] - self.cutout_input[i].stop]) for i in range(self.ndim)])
-				f = tf.pad(f, paddings)
+				if self.cutout_input is not None:
+					paddings = np.array([np.array([self.cutout_input[i].start, self.internal_shape[i] - self.cutout_input[i].stop]) for i in range(self.ndim)])
+					f = tf.pad(f, paddings)
 
-			if not self.emulate_fftshifts:
-				f = tf.sigal.fftshift(f)
+				if not self.emulate_fftshifts:
+					f = tf.sigal.fftshift(f)
 
-			if self.ndim == 1:
-				f = tf.signal.fft(f)
-			elif self.ndim == 2:
-				f = tf.signal.fft2d(f)
-			elif self.ndim == 3:
-				f = tf.signal.fft3d(f)
-			else:
-				raise ValueError('FourierTransforms with >3 dimensions are not supported with this backend.')
+				if self.ndim == 1:
+					f = tf.signal.fft(f)
+				elif self.ndim == 2:
+					f = tf.signal.fft2d(f)
+				elif self.ndim == 3:
+					f = tf.signal.fft3d(f)
+				else:
+					raise ValueError('FourierTransforms with >3 dimensions are not supported with this backend.')
 
-			if not self.emulate_fftshifts:
-				f = tf.signal.ifftshift(f)
+				if not self.emulate_fftshifts:
+					f = tf.signal.ifftshift(f)
 
-			if self.cutout_output is None:
-				f = tf.reshape(f, (-1,))
-			else:
-				f = tf.reshape(f[self.cutout_output], (-1,))
+				if self.cutout_output is None:
+					f = tf.reshape(f, (-1,))
+				else:
+					f = tf.reshape(f[self.cutout_output], (-1,))
 
-			f *= self.tf_shift_input
+				f *= self.tf_shift_input
 
-			return TensorFlowField(f, self.output_grid)
+				return TensorFlowField(f, self.output_grid)
 		else:
 			raise ValueError('Fields with this backend are not supported.')
 
@@ -313,37 +314,38 @@ class FastFourierTransform(FourierTransform):
 		elif field.backend == 'tensorflow':
 			import tensorflow as tf
 
-			f = tf.cast(tf.reshape(field.arr, self.shape_out), self.complex_dtype)
-			f /= tf.reshape(self.shift_input, self.shape_out)
+			with tf.name_scope('FastFourierTransform.backward'):
+				f = tf.cast(tf.reshape(field.arr, self.shape_out), self.complex_dtype)
+				f /= tf.reshape(self.shift_input, self.shape_out)
 
-			if self.cutout_output is not None:
-				paddings = np.array([np.array([self.cutout_output[i].start, self.internal_shape[i] - self.cutout_output[i].stop]) for i in range(self.ndim)])
-				f = tf.pad(f, paddings)
+				if self.cutout_output is not None:
+					paddings = np.array([np.array([self.cutout_output[i].start, self.internal_shape[i] - self.cutout_output[i].stop]) for i in range(self.ndim)])
+					f = tf.pad(f, paddings)
 
-			if not self.emulate_fftshifts:
-				f = tf.signal.fftshift(f)
+				if not self.emulate_fftshifts:
+					f = tf.signal.fftshift(f)
 
-			if self.ndim == 1:
-				f = tf.signal.ifft(f)
-			elif self.ndim == 2:
-				f = tf.signal.ifft2d(f)
-			elif self.ndim == 3:
-				f = tf.signal.ifft3d(f)
-			else:
-				raise ValueError('FourierTransforms with >3 dimensions are not supported by this backend.')
+				if self.ndim == 1:
+					f = tf.signal.ifft(f)
+				elif self.ndim == 2:
+					f = tf.signal.ifft2d(f)
+				elif self.ndim == 3:
+					f = tf.signal.ifft3d(f)
+				else:
+					raise ValueError('FourierTransforms with >3 dimensions are not supported by this backend.')
 
-			if not self.emulate_fftshifts:
-				f = tf.signal.ifftshift(f)
+				if not self.emulate_fftshifts:
+					f = tf.signal.ifftshift(f)
 
-			if self.cutout_input is None:
-				f = tf.reshape(f, (-1,))
-			else:
-				f = tf.reshape(f[self.cutout_input], (-1,))
+				if self.cutout_input is None:
+					f = tf.reshape(f, (-1,))
+				else:
+					f = tf.reshape(f[self.cutout_input], (-1,))
 
-			if self.shift_output is not None:
-				f /= self.tf_shift_output
+				if self.shift_output is not None:
+					f /= self.tf_shift_output
 
-			return TensorFlowField(f, self.output_grid)
+				return TensorFlowField(f, self.output_grid)
 		else:
 			raise ValueError('Fields with this backend are not supported.')
 

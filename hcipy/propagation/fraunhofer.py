@@ -1,4 +1,5 @@
 import numpy as np
+import contextlib
 
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..field import Field
@@ -69,10 +70,17 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		U_new = instance_data.fourier_transform.forward(wavefront.electric_field) * instance_data.norm_factor
-		U_new.grid = instance_data.output_grid
+		if wavefront.electric_field.backend == 'tensorflow':
+			import tensorflow as tf
+			context = tf.name_scope('FraunhoferPropagator.forward')
+		else:
+			context = contextlib.nullcontext()
 
-		return Wavefront(U_new, wavefront.wavelength, wavefront.input_stokes_vector)
+		with context:
+			U_new = instance_data.fourier_transform.forward(wavefront.electric_field) * instance_data.norm_factor
+			U_new.grid = instance_data.output_grid
+
+			return Wavefront(U_new, wavefront.wavelength, wavefront.input_stokes_vector)
 
 	@make_agnostic_backward
 	def backward(self, instance_data, wavefront):
@@ -88,7 +96,14 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		U_new = instance_data.fourier_transform.backward(wavefront.electric_field) / instance_data.norm_factor
-		U_new.grid = instance_data.input_grid
+		if wavefront.electric_field.backend == 'tensorflow':
+			import tensorflow as tf
+			context = tf.name_scope('FraunhoferPropagator.backward')
+		else:
+			context = contextlib.nullcontext()
 
-		return Wavefront(U_new, wavefront.wavelength, wavefront.input_stokes_vector)
+		with context:
+			U_new = instance_data.fourier_transform.backward(wavefront.electric_field) / instance_data.norm_factor
+			U_new.grid = instance_data.input_grid
+
+			return Wavefront(U_new, wavefront.wavelength, wavefront.input_stokes_vector)

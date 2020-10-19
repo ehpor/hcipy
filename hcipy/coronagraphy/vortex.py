@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.signal import windows
+import contextlib
 
 from ..optics import OpticalElement, LinearRetarder, Apodizer, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward, Wavefront
 from ..propagation import FraunhoferPropagator
@@ -92,6 +93,8 @@ class VortexCoronagraph(OpticalElement):
 			self.focal_masks.append(focal_mask)
 			self.props.append(prop)
 
+		self._tf_focal_masks = None
+
 	def forward(self, wavefront):
 		'''Propagate a wavefront through the vortex coronagraph.
 
@@ -106,24 +109,38 @@ class VortexCoronagraph(OpticalElement):
 		Wavefront
 			The Lyot plane wavefront.
 		'''
-		wavelength = wavefront.wavelength
-		wavefront.wavelength = 1
+		if wavefront.electric_field.backend == 'tensorflow':
+			import tensorflow as tf
+			context = tf.name_scope('VortexCoronagraph.forward')
+		else:
+			context = contextlib.nullcontext()
 
-		for i, (mask, prop) in enumerate(zip(self.focal_masks, self.props)):
-			if i == 0:
-				lyot = Wavefront(prop.forward(wavefront.electric_field), input_stokes_vector=wavefront.input_stokes_vector)
+		with context:
+			wavelength = wavefront.wavelength
+			wavefront.wavelength = 1
+
+			if wavefront.electric_field.backend == 'tensorflow':
+				masks = self.tf_focal_masks
+			elif wavefront.electric_field.backend == 'numpy':
+				masks = self.focal_masks
 			else:
-				focal = prop(wavefront)
-				focal.electric_field *= mask
-				lyot.electric_field += prop.backward(focal).electric_field
+				raise ValueError('The vortex coronagraph does not support this backend.')
 
-		lyot.wavelength = wavelength
-		wavefront.wavelength = wavelength
+			for i, (mask, prop) in enumerate(zip(masks, self.props)):
+				if i == 0:
+					lyot = Wavefront(prop.forward(wavefront.electric_field), input_stokes_vector=wavefront.input_stokes_vector)
+				else:
+					focal = prop(wavefront)
+					focal.electric_field *= mask
+					lyot.electric_field += prop.backward(focal).electric_field
 
-		if self.lyot_stop is not None:
-			lyot = self.lyot_stop.forward(lyot)
+			lyot.wavelength = wavelength
+			wavefront.wavelength = wavelength
 
-		return lyot
+			if self.lyot_stop is not None:
+				lyot = self.lyot_stop.forward(lyot)
+
+			return lyot
 
 	def backward(self, wavefront):
 		'''Propagate backwards through the vortex coronagraph.
@@ -141,24 +158,40 @@ class VortexCoronagraph(OpticalElement):
 		Wavefront
 			The pupil-plane wavefront.
 		'''
-		if self.lyot_stop is not None:
-			wavefront = self.lyot_stop.backward(wavefront)
+		if wavefront.electric_field.backend == 'tensorflow':
+			import tensorflow as tf
+			context = tf.name_scope('VortexCoronagraph.backward')
+		else:
+			context = contextlib.nullcontext()
 
-		wavelength = wavefront.wavelength
-		wavefront.wavelength = 1
+		with context:
+			if self.lyot_stop is not None:
+				wavefront = self.lyot_stop.backward(wavefront)
 
-		for i, (mask, prop) in enumerate(zip(self.focal_masks, self.props)):
-			if i == 0:
-				pup = Wavefront(prop.backward(wavefront.electric_field), input_stokes_vector=wavefront.input_stokes_vector)
-			else:
-				focal = prop(wavefront)
-				focal.electric_field *= mask.conj()
-				pup.electric_field += prop.backward(focal).electric_field
+			wavelength = wavefront.wavelength
+			wavefront.wavelength = 1
 
-		pup.wavelength = wavelength
-		wavefront.wavelength = wavelength
+			for i, (mask, prop) in enumerate(zip(self.focal_masks, self.props)):
+				if i == 0:
+					pup = Wavefront(prop.backward(wavefront.electric_field), input_stokes_vector=wavefront.input_stokes_vector)
+				else:
+					focal = prop(wavefront)
+					focal.electric_field *= mask.conj()
+					pup.electric_field += prop.backward(focal).electric_field
 
-		return pup
+			pup.wavelength = wavelength
+			wavefront.wavelength = wavelength
+
+			return pup
+
+	@property
+	def tf_focal_masks(self):
+		import tensorflow as tf
+
+		if self._tf_focal_masks is None:
+			self._tf_focal_masks = [tf.convert_to_tensor(mask) for mask in self.focal_masks]
+
+		return self._tf_focal_masks
 
 class VectorVortexCoronagraph(AgnosticOpticalElement):
 	'''An vector vortex coronagraph.

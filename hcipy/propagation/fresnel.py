@@ -1,4 +1,5 @@
 import numpy as np
+import contextlib
 
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..field import Field, evaluate_supersampled
@@ -118,9 +119,16 @@ class FresnelPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		filtered = instance_data.fourier_filter.forward(wavefront.electric_field)
+		if wavefront.electric_field.backend == 'tensorflow':
+			import tensorflow as tf
+			context = tf.name_scope('FresnelPropagation.forward')
+		else:
+			context = contextlib.nullcontext()
 
-		return Wavefront(filtered, wavefront.wavelength, wavefront.input_stokes_vector)
+		with context:
+			filtered = instance_data.fourier_filter.forward(wavefront.electric_field)
+
+			return Wavefront(filtered, wavefront.wavelength, wavefront.input_stokes_vector)
 
 	@make_agnostic_backward
 	def backward(self, instance_data, wavefront):
@@ -136,6 +144,13 @@ class FresnelPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		filtered = instance_data.fourier_filter.backward(wavefront.electric_field)
+		if wavefront.electric_field.backend == 'tensorflow':
+			import tensorflow as tf
+			context = tf.name_scope('FresnelPropagation.backward')
+		else:
+			context = contextlib.nullcontext()
 
-		return Wavefront(filtered, wavefront.wavelength, wavefront.input_stokes_vector)
+		with context:
+			filtered = instance_data.fourier_filter.backward(wavefront.electric_field)
+
+			return Wavefront(filtered, wavefront.wavelength, wavefront.input_stokes_vector)

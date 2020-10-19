@@ -82,6 +82,12 @@ class FieldBase(object):
 
 		return _field_backends[backend]._from_numpy(self._to_numpy())
 
+	def numpy(self):
+		return self.as_backend('numpy')
+
+	def tensorflow(self):
+		return self.as_backend('tensorflow')
+
 @field_backend('numpy')
 class NumpyField(np.ndarray, FieldBase):
 	'''The value of some physical quantity for each point in some coordinate system.

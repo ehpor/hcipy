@@ -1,4 +1,4 @@
-from .field import Field
+from .field_base import Field
 import numpy as np
 import string
 

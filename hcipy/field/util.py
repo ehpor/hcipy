@@ -2,7 +2,7 @@ from __future__ import division
 
 import numpy as np
 from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
-from .field import Field
+from .field_base import Field
 from .cartesian_grid import CartesianGrid
 from .grid import Grid
 

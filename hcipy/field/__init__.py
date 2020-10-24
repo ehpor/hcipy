@@ -1,5 +1,6 @@
 __all__ = [
     'Grid',
+    'FieldBase',
     'Field',
     'NumpyField',
     'TensorFlowField',
@@ -43,5 +44,7 @@ from .cartesian_grid import *
 from .operations import *
 from .polar_grid import *
 from .spherical_grid import *
-from .field import *
+from .field_base import *
+from .field_numpy import *
+from .field_tensorflow import *
 from .util import *

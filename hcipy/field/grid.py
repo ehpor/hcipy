@@ -493,7 +493,7 @@ class Grid(object):
 		Field
 			A zeros field.
 		'''
-		from .field import Field
+		from .field_base import Field
 
 		if tensor_shape is None:
 			shape = [self.size]
@@ -518,7 +518,7 @@ class Grid(object):
 		Field
 			A ones field.
 		'''
-		from .field import Field
+		from .field_base import Field
 
 		if tensor_shape is None:
 			shape = [self.size]
@@ -543,7 +543,7 @@ class Grid(object):
 		Field
 			A empty field.
 		'''
-		from .field import Field
+		from .field_base import Field
 
 		if tensor_shape is None:
 			shape = [self.size]

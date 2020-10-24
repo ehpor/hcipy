@@ -64,14 +64,18 @@ def imshow_psf(psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',
 	if grid is not None:
 		psf = Field(psf, grid)
 
-	if normalization.lower() == 'peak':
-		psf_norm = psf.max()
-	elif normalization.lower() == 'total':
-		psf_norm = np.sum(psf * psf.grid.weights)
-	elif normalization.lower() == 'none':
-		psf_norm = 1
-	else:
+	try:
+		normalization = normalization.lower()
+
+		if normalization == 'peak':
+			psf_norm = psf.max()
+		elif normalization == 'total':
+			psf_norm = np.sum(psf * psf.grid.weights)
+		elif normalization == 'none':
+			psf_norm = 1
+	except:
 		psf_norm = normalization
+		normalization = 'scalar'
 
 	if cmap is None:
 		cmap = Configuration().plotting.psf_colormap

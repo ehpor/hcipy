@@ -1,7 +1,7 @@
 from copy import copy
 import numpy as np
 
-from ..field import Field
+from ..field import Field, FieldBase
 
 def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None,
 		non_linear_axes=False, cmap=None, mask=None, mask_color='k', grid_units=1, *args, **kwargs):
@@ -68,6 +68,9 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		ax = plt.gca()
 
 	ax.set_aspect(aspect)
+
+	if isinstance(field, FieldBase):
+		field = field.numpy()
 
 	# Set/Find the correct grid and scale according to received grid units.
 	if grid is None:

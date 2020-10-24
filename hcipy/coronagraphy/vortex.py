@@ -1,12 +1,12 @@
 import numpy as np
 from scipy.signal import windows
-import contextlib
 
 from ..optics import OpticalElement, LinearRetarder, Apodizer, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward, Wavefront
 from ..propagation import FraunhoferPropagator
 from ..field import make_focal_grid, Field, field_dot
 from ..aperture import circular_aperture
 from ..fourier import FastFourierTransform, MatrixFourierTransform, FourierFilter
+from ..util import tf_name_scope
 
 class VortexCoronagraph(OpticalElement):
 	'''An optical vortex coronagraph.
@@ -109,13 +109,7 @@ class VortexCoronagraph(OpticalElement):
 		Wavefront
 			The Lyot plane wavefront.
 		'''
-		if wavefront.electric_field.backend == 'tensorflow':
-			import tensorflow as tf
-			context = tf.name_scope('VortexCoronagraph.forward')
-		else:
-			context = contextlib.nullcontext()
-
-		with context:
+		with tf_name_scope(wavefront.electric_field, 'VortexCoronagraph.forward'):
 			wavelength = wavefront.wavelength
 			wavefront.wavelength = 1
 
@@ -158,13 +152,7 @@ class VortexCoronagraph(OpticalElement):
 		Wavefront
 			The pupil-plane wavefront.
 		'''
-		if wavefront.electric_field.backend == 'tensorflow':
-			import tensorflow as tf
-			context = tf.name_scope('VortexCoronagraph.backward')
-		else:
-			context = contextlib.nullcontext()
-
-		with context:
+		with tf_name_scope(wavefront.electric_field, 'VortexCoronagraph.backward'):
 			if self.lyot_stop is not None:
 				wavefront = self.lyot_stop.backward(wavefront)
 

@@ -1,8 +1,8 @@
 import numpy as np
-import contextlib
 
 from .fast_fourier_transform import FastFourierTransform
 from ..field import Field, TensorFlowField, field_dot, field_conjugate_transpose
+from ..util import tf_name_scope
 
 class FourierFilter(object):
 	'''A filter in the Fourier domain.
@@ -77,13 +77,7 @@ class FourierFilter(object):
 		Field
 			The filtered field.
 		'''
-		if field.backend == 'tensorflow':
-			import tensorflow as tf
-			context = tf.name_scope('FourierFilter.forward')
-		else:
-			context = contextlib.nullcontext()
-
-		with context:
+		with tf_name_scope(field, 'FourierFilter.backward'):
 			return self._operation(field, adjoint=False)
 
 	def backward(self, field):
@@ -99,13 +93,7 @@ class FourierFilter(object):
 		Field
 			The adjoint filtered field.
 		'''
-		if field.backend == 'tensorflow':
-			import tensorflow as tf
-			context = tf.name_scope('FourierFilter.backward')
-		else:
-			context = contextlib.nullcontext()
-
-		with context:
+		with tf_name_scope(field, 'FourierFilter.backward'):
 			return self._operation(field, adjoint=True)
 
 	def _operation(self, field, adjoint):

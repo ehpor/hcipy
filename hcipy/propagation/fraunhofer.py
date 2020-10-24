@@ -1,9 +1,9 @@
 import numpy as np
-import contextlib
 
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..field import Field
 from ..fourier import make_fourier_transform
+from ..util import tf_name_scope
 
 class FraunhoferPropagator(AgnosticOpticalElement):
 	'''A monochromatic perfect lens propagator.
@@ -70,13 +70,7 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		if wavefront.electric_field.backend == 'tensorflow':
-			import tensorflow as tf
-			context = tf.name_scope('FraunhoferPropagator.forward')
-		else:
-			context = contextlib.nullcontext()
-
-		with context:
+		with tf_name_scope(wavefront.electric_field, 'FraunhoferPropagator.forward'):
 			U_new = instance_data.fourier_transform.forward(wavefront.electric_field) * instance_data.norm_factor
 			U_new.grid = instance_data.output_grid
 
@@ -96,13 +90,7 @@ class FraunhoferPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		if wavefront.electric_field.backend == 'tensorflow':
-			import tensorflow as tf
-			context = tf.name_scope('FraunhoferPropagator.backward')
-		else:
-			context = contextlib.nullcontext()
-
-		with context:
+		with tf_name_scope(wavefront.electric_field, 'FraunhoferPropagator.backward'):
 			U_new = instance_data.fourier_transform.backward(wavefront.electric_field) / instance_data.norm_factor
 			U_new.grid = instance_data.input_grid
 

@@ -1,9 +1,9 @@
 import numpy as np
-import contextlib
 
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..field import Field, evaluate_supersampled
 from ..fourier import FastFourierTransform, make_fft_grid, FourierFilter
+from ..util import tf_name_scope
 
 class AngularSpectrumPropagator(AgnosticOpticalElement):
 	'''The monochromatic angular spectrum propagator for scalar fields.
@@ -127,13 +127,7 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		if wavefront.electric_field.backend == 'tensorflow':
-			import tensorflow as tf
-			context = tf.name_scope('AngularSpectrumPropagator.forward')
-		else:
-			context = contextlib.nullcontext()
-
-		with context:
+		with tf_name_scope(wavefront.electric_field, 'AngularSpectrumPropagator.forward'):
 			filtered = instance_data.fourier_filter.forward(wavefront.electric_field)
 
 			return Wavefront(filtered, wavefront.wavelength, wavefront.input_stokes_vector)
@@ -152,13 +146,7 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
 		Wavefront
 			The wavefront after the propagation.
 		'''
-		if wavefront.electric_field.backend == 'tensorflow':
-			import tensorflow as tf
-			context = tf.name_scope('AngularSpectrumPropagator.backward')
-		else:
-			context = contextlib.nullcontext()
-
-		with context:
+		with tf_name_scope(wavefront.electric_field, 'AngularSpectrumPropagator.backward'):
 			filtered = instance_data.fourier_filter.backward(wavefront.electric_field)
 
 			return Wavefront(filtered, wavefront.wavelength, wavefront.input_stokes_vector)

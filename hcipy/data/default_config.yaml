@@ -1,3 +1,7 @@
+field:
+  # The default backend to use when a Field are constructed with explicitly specified backend.
+  default_backend: 'numpy'
+
 fourier:
   fft:
     # Whether to emulate FFTshifts in the FFT using field multiplications.

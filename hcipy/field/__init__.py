@@ -2,6 +2,7 @@ __all__ = [
     'Grid',
     'FieldBase',
     'Field',
+    'is_field',
     'NumpyField',
     'TensorFlowField',
     'CartesianGrid',

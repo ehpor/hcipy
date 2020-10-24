@@ -217,7 +217,7 @@ def read_field(filename, fmt=None):
 	NotImplementedError
 		If the file format was not yet implemented.
 	'''
-	from ..field import Field
+	from ..field import NumpyField
 
 	if fmt is None:
 		fmt = _guess_file_format(filename)
@@ -229,7 +229,7 @@ def read_field(filename, fmt=None):
 		import asdf
 
 		f = asdf.open(filename)
-		field = Field.from_dict(f.tree['field'])
+		field = NumpyField.from_dict(f.tree['field'])
 		f.close()
 
 		return field
@@ -245,7 +245,7 @@ def read_field(filename, fmt=None):
 			new_shape = np.concatenate((tree['values'].shape[:-grid.ndim], [grid.size])).astype('int')
 			tree['values'] = tree['values'].reshape(new_shape)
 
-		field = Field.from_dict(tree).reshape(new_shape)
+		field = NumpyField.from_dict(tree).reshape(new_shape)
 		f.close()
 
 		return field

@@ -279,6 +279,12 @@ class TensorFlowField(FieldBase, numpy.lib.mixins.NDArrayOperatorsMixin):
 
 		return _tf_handled_functions[name](*args, **kwargs)
 
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self.arr)
+
+	def __str__(self):
+		return '%s(%s)' % (self.__class__.__name__, self.arr)
+
 	@property
 	def T(self):
 		return np.tranpose(self)

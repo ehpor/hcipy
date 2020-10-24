@@ -83,12 +83,6 @@ class FieldBase(object):
 
 		return _field_backends[backend]._from_numpy(self._to_numpy())
 
-	def __repr__(self):
-		return '%s(%r)' % (self.__class__.__name__, self.arr)
-
-	def __str__(self):
-		return '%s(%s)' % (self.__class__.__name__, self.arr)
-
 	'''
 	def numpy(self):
 		return self.as_backend('numpy')

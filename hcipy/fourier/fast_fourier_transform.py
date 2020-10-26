@@ -246,7 +246,7 @@ class FastFourierTransform(FourierTransform):
 					f = tf.pad(f, paddings)
 
 				if not self.emulate_fftshifts:
-					f = tf.sigal.fftshift(f)
+					f = tf.signal.fftshift(f)
 
 				if self.ndim == 1:
 					f = tf.signal.fft(f)

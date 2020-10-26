@@ -102,13 +102,6 @@ class NumpyField(FieldBase, np.ndarray):
 			(self.__class__, np.ndarray, (0,), 'b',),
 			self.__getstate__())
 
-	@classmethod
-	def _from_numpy(cls, field):
-		return field
-
-	def _to_numpy(self):
-		return self
-
 def _field_reconstruct(subtype, baseclass, baseshape, basetype):
 	'''Internal function for building a new Field object for pickling.
 

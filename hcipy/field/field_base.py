@@ -83,7 +83,7 @@ class FieldBase(object):
 		if self.backend == backend:
 			return self
 
-		return _field_backends[backend]._from_numpy(self._to_numpy())
+		return _field_backends[backend](self, self.grid)
 
 def Field(arr, grid):
 	backend = Configuration().field.default_backend

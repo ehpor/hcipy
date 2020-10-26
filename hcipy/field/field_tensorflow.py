@@ -18,31 +18,40 @@ def _implements_function(numpy_function):
 		return func
 	return decorator
 
+def _cast(a, dtype):
+	import tensorflow as tf
+
+	tf_dtype = tf.as_dtype(dtype)
+
+	if np.isscalar(a):
+		return tf.cast(a, tf_dtype)
+
+	if a.dtype != dtype:
+		return tf.cast(a, tf_dtype)
+	else:
+		return a
+
 def _unwrap_and_dtype_cast(*inputs):
 	import tensorflow as tf
 
 	grid = None
-	new_inputs = []
 	dtypes = []
 
 	for a in inputs:
 		if hasattr(a, 'arr'):
 			grid = a.grid
-			new_inputs.append(a.arr)
 
 			if tf.is_tensor(a.arr):
 				dtypes.append(a.arr.dtype.as_numpy_dtype)
 			else:
 				dtypes.append(a)
 		elif tf.is_tensor(a):
-			new_inputs.append(a)
 			dtypes.append(a.dtype.as_numpy_dtype)
 		else:
-			new_inputs.append(a)
 			dtypes.append(a)
 
 	result_type = np.result_type(*dtypes)
-	new_inputs = tuple(tf.cast(a, result_type) for a in new_inputs)
+	new_inputs = tuple(_cast(a, result_type) for a in inputs)
 
 	return new_inputs, grid
 
@@ -79,6 +88,19 @@ def _sequence_function(tf_function):
 		return TensorFlowField(tf_function(sequence, axis=axis), grid)
 	return func
 
+def _tensorflowfield_to_tensor(value, dtype=None, name=None, as_ref=False):
+	import tensorflow as tf
+
+	if as_ref:
+		return NotImplemented
+
+	res = value.arr
+
+	if dtype is not None:
+		res = tf.cast(res, dtype)
+
+	return res
+
 def _initialize_functions_and_ufuncs():
 	import tensorflow as tf
 
@@ -108,7 +130,6 @@ def _initialize_functions_and_ufuncs():
 		('log10', lambda a: tf.math.log(a) / np.log(10)),
 		('log2', lambda a: tf.math.log(a) / np.log(2)),
 		('log1p', tf.math.log1p),
-		('angle', tf.math.angle),
 		('conj', tf.math.conj),
 		('conjugate', tf.math.conj),
 		('cbrt', lambda a: tf.pow(a, 1 / 3)),
@@ -120,7 +141,9 @@ def _initialize_functions_and_ufuncs():
 		('positive', lambda a: a),
 		('negative', tf.negative),
 		('floor', tf.floor),
-		('ceil', tf.math.ceil)
+		('ceil', tf.math.ceil),
+		('logical_not', tf.logical_not),
+		('sqrt', tf.sqrt)
 	]
 
 	ufuncs_binary = [
@@ -137,23 +160,28 @@ def _initialize_functions_and_ufuncs():
 		('greater', tf.greater),
 		('greater_equal', tf.greater_equal),
 		('equal', tf.equal),
-		('not_equal', tf.not_equal)
+		('not_equal', tf.not_equal),
+		('logical_and', tf.logical_and),
+		('logical_or', tf.logical_or),
+		('logical_xor', tf.math.logical_xor)
 	]
 
 	functions_reduce = [
+		('all', tf.reduce_all),
+		('any', tf.reduce_any),
 		('var', tf.math.reduce_variance),
-		('sum', tf.math.reduce_sum),
+		('sum', tf.reduce_sum),
 		('std', tf.math.reduce_std),
-		('prod', tf.math.reduce_prod),
-		('min', tf.math.reduce_min),
-		('max', tf.math.reduce_max),
-		('mean', tf.math.reduce_mean),
-		('amax', tf.math.reduce_max),
-		('amin', tf.math.reduce_min),
-		('argmax', tf.math.argmax),
-		('argmin', tf.math.argmin),
-		('cumsum', tf.math.cumsum),
-		('cumprod', tf.math.cumprod)
+		('prod', tf.reduce_prod),
+		('min', tf.reduce_min),
+		('max', tf.reduce_max),
+		('mean', tf.reduce_mean),
+		('amax', tf.reduce_max),
+		('amin', tf.reduce_min),
+		('argmax', tf.argmax),
+		('argmin', tf.argmin),
+		('cumsum', tf.cumsum),
+		('cumprod', tf.math.cumprod),
 	]
 
 	functions_sequence = [
@@ -163,7 +191,8 @@ def _initialize_functions_and_ufuncs():
 
 	functions_complex = [
 		('real', tf.math.real),
-		('imag', tf.math.imag)
+		('imag', tf.math.imag),
+		('angle', tf.math.angle)
 	]
 
 	for ufunc, tf_func in ufuncs_unary:
@@ -181,6 +210,8 @@ def _initialize_functions_and_ufuncs():
 	for func, tf_func in functions_complex:
 		_implements_function(func)(_unary_op(tf_func))
 
+	tf.register_tensor_conversion_function(TensorFlowField, _tensorflowfield_to_tensor)
+
 @_implements_function('dot')
 def _tf_dot(a, b):
 	import tensorflow as tf
@@ -194,7 +225,7 @@ def _tf_dot(a, b):
 		return tf.math.reduce_sum(tf.multiply(a, b))
 
 	if a.ndim > 1 and b.ndim == 1:
-		return TensorFlowField(tf.matvec(a, b), grid)
+		return TensorFlowField(tf.linalg.matvec(a, b), grid)
 
 	return TensorFlowField(tf.matmul(a, b), grid)
 
@@ -236,8 +267,34 @@ def _tf_clip(a, a_min, a_max):
 
 	return TensorFlowField(tf.clip_by_value(a, a_min, a_max), grid)
 
+@_implements_function('allclose')
+def _tf_allclose(x, y, rtol=1e-5, atol=1e-8, equal_nan=False):
+	import tensorflow as tf
+
+	if equal_nan:
+		raise ValueError('Equal nans is not implemented.')
+	(x, y), _ = _unwrap_and_dtype_cast(x, y)
+
+	return tf.reduce_all(tf.abs(x - y) <= (tf.abs(y) * rtol + atol))
+
 @field_backend('tensorflow')
 class TensorFlowField(FieldBase, numpy.lib.mixins.NDArrayOperatorsMixin):
+	'''The value of some physical quantity for each point in some coordinate system.
+
+	Parameters
+	----------
+	arr : array_like or tensorflow tensor_like
+		An array of values or tensors for each point in the :class:`Grid`.
+	grid : Grid
+		The corresponding :class:`Grid` on which the values are set.
+
+	Attributes
+	----------
+	arr : tf.Tensor
+		The raw TensorFlow tensor object.
+	grid : Grid
+		The grid on which the values are defined.
+	'''
 	_initialized_class = False
 
 	def __init__(self, arr, grid):
@@ -257,6 +314,28 @@ class TensorFlowField(FieldBase, numpy.lib.mixins.NDArrayOperatorsMixin):
 		self.grid = grid
 
 	def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+		'''Overloading of all handled universal Numpy functions.
+
+		..  note::
+			Do not call this function directly. It will be called automatically
+			by Numpy universal functions.
+
+		Parameters
+		----------
+		ufunc : function
+			The universal function that is called.
+		method : string
+			The type of call to perform.
+		inputs : tuple of objects
+			The inputs of the universal function.
+		kwargs : dict
+			The keyword arguments to the universal function.
+
+		Returns
+		-------
+		tf.Tensor or TensorFlowField
+			The result of the universal function.
+		'''
 		print('__array_ufunc__', ufunc, method)
 
 		if method != '__call__':
@@ -278,6 +357,14 @@ class TensorFlowField(FieldBase, numpy.lib.mixins.NDArrayOperatorsMixin):
 			return NotImplemented
 
 		return _tf_handled_functions[name](*args, **kwargs)
+
+	def __array__(self, dtype=None):
+		res = self.arr.numpy()
+
+		if dtype is None:
+			return res
+
+		return res.astype(dtype, copy=False)
 
 	def __repr__(self):
 		return '%s(%r)' % (self.__class__.__name__, self.arr)
@@ -317,18 +404,6 @@ class TensorFlowField(FieldBase, numpy.lib.mixins.NDArrayOperatorsMixin):
 		import tensorflow as tf
 
 		return self.__class__(tf.cast(self.arr, tf.as_dtype(np.dtype(dtype))), self.grid)
-
-	@classmethod
-	def _from_numpy(cls, field):
-		import tensorflow as tf
-
-		return cls(tf.convert_to_tensor(field), field.grid)
-
-	def _to_numpy(self):
-		import tensorflow as tf
-		from .field_numpy import NumpyField
-
-		return NumpyField(self.arr.numpy(), self.grid)
 
 	all = np.all
 	any = np.any

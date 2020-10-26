@@ -206,6 +206,9 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
 	import matplotlib as mpl
 	import matplotlib.pyplot as plt
 
+	if is_field(field):
+		field = field.numpy()
+
 	if grid is None:
 		grid = field.grid
 	else:
@@ -261,6 +264,9 @@ def contour_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 	import matplotlib.pyplot as plt
 	if ax is None:
 		ax = plt.gca()
+
+	if is_field(field):
+		field = field.numpy()
 
 	# Set/Find the correct grid and scale according to received grid units.
 	if grid is None:
@@ -321,6 +327,9 @@ def contourf_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 	import matplotlib.pyplot as plt
 	if ax is None:
 		ax = plt.gca()
+
+	if is_field(field):
+		field = field.numpy()
 
 	# Set/Find the correct grid and scale according to received grid units.
 	if grid is None:

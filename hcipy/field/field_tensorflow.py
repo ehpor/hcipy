@@ -154,7 +154,7 @@ def _initialize_functions_and_ufuncs():
 		('true_divide', tf.truediv),
 		('floor_divide', tf.math.floordiv),
 		('power', tf.pow),
-		('hypot', lambda a, b: tf.sqrt(a**2 + b**2)),
+		('hypot', lambda a, b: tf.sqrt(tf.square(a) + tf.square(b))),
 		('less', tf.less),
 		('less_equal', tf.less_equal),
 		('greater', tf.greater),
@@ -336,7 +336,7 @@ class TensorFlowField(FieldBase, numpy.lib.mixins.NDArrayOperatorsMixin):
 		tf.Tensor or TensorFlowField
 			The result of the universal function.
 		'''
-		print('__array_ufunc__', ufunc, method)
+		#print('__array_ufunc__', ufunc, method)
 
 		if method != '__call__':
 			return NotImplemented
@@ -349,7 +349,7 @@ class TensorFlowField(FieldBase, numpy.lib.mixins.NDArrayOperatorsMixin):
 		return _tf_handled_ufuncs[name](*inputs, **kwargs)
 
 	def __array_function__(self, func, types, args, kwargs):
-		print('__array_function__', func)
+		#print('__array_function__', func)
 
 		name = '.'.join(func.__module__.split('.')[1:] + [func.__name__])
 

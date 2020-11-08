@@ -97,7 +97,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 		'''
 
 		M = instance_data.fiber_modes.transformation_matrix
-		mode_coefficients = np.einsum('...i, i, ij->...j', wavefront.electric_field, wavefront.grid.weights, M.conj())
+		mode_coefficients = np.einsum('...i, ij->...j', wavefront.electric_field * wavefront.grid.weights, M.conj())
 		return mode_coefficients
 
 	@make_agnostic_forward
@@ -116,8 +116,8 @@ class StepIndexFiber(AgnosticOpticalElement):
 		'''
 
 		M = instance_data.fiber_modes.transformation_matrix
-		mode_coefficients = np.einsum('...i, i, ij->...j', wavefront.electric_field, wavefront.grid.weights, M.conj())
-		output_electric_field = np.einsum('...i, i, ij->...j', mode_coefficients, np.exp(1j * instance_data.beta * self.fiber_length), M.T.conj())
+		mode_coefficients = np.einsum('...i, ij->...j', wavefront.electric_field * wavefront.grid.weights, M.conj())
+		output_electric_field = np.einsum('...i, ij->...j', mode_coefficients * np.exp(1j * instance_data.beta * self.fiber_length), M.T.conj())
 		output_electric_field = Field(output_electric_field, wavefront.grid)
 
 		return Wavefront(output_electric_field, wavefront.wavelength)
@@ -137,8 +137,8 @@ class StepIndexFiber(AgnosticOpticalElement):
 			The wavefront that exits the fiber.
 		'''
 		M = instance_data.fiber_modes.transformation_matrix
-		mode_coefficients = np.einsum('...i, i, ij->...j', wavefront.electric_field, wavefront.grid.weights, M.conj())
-		output_electric_field = np.einsum('...i, i, ij->...j', mode_coefficients, np.exp(-1j * instance_data.beta * self.fiber_length), M.T.conj())
+		mode_coefficients = np.einsum('...i, ij->...j', wavefront.electric_field * wavefront.grid.weights, M.conj())
+		output_electric_field = np.einsum('...i, ij->...j', mode_coefficients * np.exp(-1j * instance_data.beta * self.fiber_length), M.T.conj())
 		output_electric_field = Field(output_electric_field, wavefront.grid)
 
 		return Wavefront(output_electric_field, wavefront.wavelength)

@@ -76,7 +76,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 			"metadata": {},
 			"outputs": [],
 			"source": r"%matplotlib inline" + '\n' +
-				r"%config InlineBackend.print_figure_kwargs = {'bbox_inches': None, 'figsize': (8, 6)}"
+				r"%config InlineBackend.print_figure_kwargs = {'bbox_inches': None}"
 			}
 
 		additional_cell_2 = {

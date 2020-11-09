@@ -46,7 +46,7 @@ matrix:
   - name: "Tests for Python 3.8 on MacOS"
     os: osx
     language: generic
-    env: PYTHON_VERSION=3.8.5
+    env: PYTHON_VERSION=3.8.0
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" == "osx" ]; then

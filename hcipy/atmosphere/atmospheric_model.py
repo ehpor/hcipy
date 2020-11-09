@@ -331,9 +331,9 @@ def phase_covariance_von_karman(r0, L0):
 	Parameters
 	----------
 	r0 : scalar
-		The Fried parameter.
+		The Fried parameter in meters.
 	L0 : scalar
-		The outer scale.
+		The outer scale in meters.
 
 	Returns
 	-------
@@ -358,9 +358,9 @@ def phase_structure_function_von_karman(r0, L0):
 	Parameters
 	----------
 	r0 : scalar
-		The Fried parameter.
+		The Fried parameter in meters.
 	L0 : scalar
-		The outer scale.
+		The outer scale in meters.
 
 	Returns
 	-------
@@ -386,9 +386,9 @@ def power_spectral_density_von_karman(r0, L0):
 	Parameters
 	----------
 	r0 : scalar
-		The Fried parameter.
+		The Fried parameter in meters.
 	L0 : scalar
-		The outer scale.
+		The outer scale in meters.
 
 	Returns
 	-------
@@ -405,15 +405,15 @@ def power_spectral_density_von_karman(r0, L0):
 		return Field(res, grid)
 	return func
 
-def Cn_squared_from_fried_parameter(r0, wavelength):
+def Cn_squared_from_fried_parameter(r0, wavelength=500e-9):
 	'''Calculate the integrated Cn^2 for a certain Fried parameter.
 
 	Parameters
 	----------
 	r0 : scalar
-		The Fried parameter.
+		The Fried parameter in meters.
 	wavelength : scalar
-		The wavelength at which the Fried parameter is measured.
+		The wavelength in meters at which the Fried parameter is measured (default: 500nm).
 
 	Returns
 	-------
@@ -423,7 +423,7 @@ def Cn_squared_from_fried_parameter(r0, wavelength):
 	k = 2 * np.pi / wavelength
 	return r0**(-5. / 3) / (0.423 * k**2)
 
-def fried_parameter_from_Cn_squared(Cn_squared, wavelength):
+def fried_parameter_from_Cn_squared(Cn_squared, wavelength=500e-9):
 	'''Calculate the Fried parameter from the integrated Cn^2.
 
 	Parameters
@@ -431,46 +431,54 @@ def fried_parameter_from_Cn_squared(Cn_squared, wavelength):
 	r0 : scalar
 		The integrated Cn^2 value for the atmosphere.
 	wavelength : scalar
-		The wavelength at which to calculate the Fried parameter.
+		The wavelength in meters at which to calculate the Fried parameter (default: 500nm).
 
 	Returns
 	-------
 	scalar
-		The Fried parameter.
+		The Fried parameter in meters.
 	'''
 	k = 2 * np.pi / wavelength
 	return (0.423 * Cn_squared * k**2)**(-3. / 5)
 
-def seeing_to_fried_parameter(seeing, wavelength):
-	'''Calculate the Fried parameter from the seeing FWHM.
+def seeing_to_fried_parameter(seeing, wavelength=500e-9):
+	r'''Calculate the Fried parameter from the seeing FWHM.
+
+	This uses :math:`\theta = 0.98 \lambda / r_0`, where :math:`\theta`
+	is the FWHM of the seeing, :math:`\lambda` is the wavelength and
+	:math:`r_0` is the Fried parameter.
 
 	Parameters
 	----------
 	seeing : scalar
-		The FWHM of the seeing.
+		The FWHM of the seeing in arcsec.
 	wavelength : scalar
-		The wavelength at which the seeing is measured.
+		The wavelength in meters at which the seeing is measured (default: 500nm).
 
 	Returns
 	-------
 	scalar
-		The Fried parameter at wavelength `wavelength`.
+		The Fried parameter in meters at the specified wavelength.
 	'''
-	return 0.98 * wavelength / seeing
+	return 0.98 * wavelength / np.radians(seeing / 3600)
 
-def fried_parameter_to_seeing(r0, wavelength):
-	'''Calculate the FWHM of the seeing from the Fried parameter.
+def fried_parameter_to_seeing(r0, wavelength=500e-9):
+	r'''Calculate the FWHM of the seeing from the Fried parameter.
+
+	This uses :math:`\theta = 0.98 \lambda / r_0`, where :math:`\theta`
+	is the FWHM of the seeing, :math:`\lambda` is the wavelength and
+	:math:`r_0` is the Fried parameter.
 
 	Parameters
 	----------
-	scalar
-		The Fried parameter.
+	r0 : scalar
+		The Fried parameter in meters.
 	wavelength : scalar
-		The wavelength at which the Fried parameter is measured.
+		The wavelength in meters at which the Fried parameter is measured (default: 500nm).
 
 	Returns
 	-------
 	scalar
-		The FWHM of the seeing.
+		The FWHM of the seeing in arcsec at the specified wavelength.
 	'''
-	return 0.98 * wavelength / r0
+	return np.degrees(0.98 * wavelength / r0) * 3600

@@ -17,7 +17,7 @@ wavelength = 1e-6
 N = 256
 D = 0.01
 pupil_grid = make_pupil_grid(N, D)
-focal_grid = make_focal_grid(pupil_grid, 8, 20, wavelength)
+focal_grid = make_focal_grid_from_pupil_grid(pupil_grid, 8, 20, wavelength)
 prop = FraunhoferPropagator(pupil_grid, focal_grid)
 aperture = circular_aperture(D)
 #aperture = rectangular_aperture(1,1)
@@ -39,19 +39,25 @@ zernike_freeform = DeformableMirror(dm_modes)
 
 plt.ion()
 for i in range(num_modes):
-	## Extract the centers of the lenslets
-	act_levels = np.zeros(num_modes)
-	act_levels[i] = 1e-7
-	zernike_freeform.actuators = act_levels
-	dm_wf = zernike_freeform(wf)
-	sh_wf = shwfs(dm_wf)
-	sh_img = sh_wf.intensity
-	lenslet_centers = shwfse.estimate([sh_img])
-
-	plt.clf()
-	imshow_field(sh_img)
-	plt.plot(lenslet_centers[0,:], lenslet_centers[1,:], 'r,')
-	plt.colorbar()
-	plt.draw()
-	plt.pause(0.00001)
+    ## Extract the centers of the lenslets
+    act_levels = np.zeros(num_modes)
+    act_levels[i] = 1e-7
+    zernike_freeform.actuators = act_levels
+    dm_wf = zernike_freeform(wf)
+    sh_wf = shwfs(dm_wf)
+    sh_img = sh_wf.intensity
+    lenslet_centers = shwfse.estimate([sh_img])
+    # the spot centers returned by shwfse are relative to the center of the microlens
+    # We have to add the center of the microlens back on to get absolute positions.
+    lenslet_centers[0,:] += shwfs.mla_grid.subset(shwfse.estimation_subapertures).x
+    lenslet_centers[1,:] += shwfs.mla_grid.subset(shwfse.estimation_subapertures).y
+    
+    plt.clf()
+    imshow_field(sh_img)
+    plt.plot(lenslet_centers[0,:], lenslet_centers[1,:], 'r+')
+    plt.colorbar()
+    plt.draw()
+    plt.pause(0.00001)
 plt.ioff()
+
+

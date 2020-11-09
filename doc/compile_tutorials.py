@@ -67,7 +67,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 	resources = {'metadata': {'path': os.path.dirname(notebook_path)}}
 
 	if not already_executed:
-		print('  Executing...')
+		print('  Executing', end='')
 		start = time.time()
 
 		additional_cell_1 = {
@@ -93,10 +93,18 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 		client = NotebookClient(nb=notebook, resources=resources, timeout=585, kernel_name='python3')
 
 		try:
-			client.execute()
+			with client.setup_kernel():
+				for i, cell in enumerate(notebook.cells):
+					print('.', end='')
+
+					client.execute_cell(cell, i)
+
+			client.set_widgets_metadata()
 		except CellExecutionError as err:
 			print('  Error while processing notebook:')
 			print('  ', err)
+
+		print('')
 
 		notebook.cells.pop(2)
 		notebook.cells.pop(1)

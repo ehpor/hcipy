@@ -632,5 +632,5 @@ def test_step_index_fiber():
 		forward_wf = fiber.forward(img)
 		backward_wf = fiber.backward(img)
 
-		assert forward_wf.total_power <= img.total_power
-		assert backward_wf.total_power <= forward_wf.total_power
+		assert forward_wf.total_power <= img.total_power * (1 + 1e-4)
+		assert backward_wf.total_power <= forward_wf.total_power * (1 + 1e-4)

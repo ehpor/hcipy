@@ -167,14 +167,3 @@ texinfo_documents = [
      author, 'HCIPy', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-# Compile tutorials
-import os
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-import sys
-sys.path.insert(0, '.')
-
-import compile_tutorials
-compile_tutorials.compile_all_tutorials()

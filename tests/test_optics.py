@@ -594,3 +594,43 @@ def test_pickle_optical_element():
 			assert np.allclose(img_saved.electric_field, img_loaded.electric_field)
 
 		os.remove(fname)
+
+def test_step_index_fiber():
+	core_radius_multimode = 25e-6 # m
+	core_radius_singlemode = 2e-6 # m
+	fiber_na = 0.13
+	fiber_length = 10 # m
+	D_pupil = 1 # m
+	wavelength = 1e-6 # m
+
+	multimode_fiber = StepIndexFiber(core_radius_multimode, fiber_na, fiber_length)
+	singlemode_fiber = StepIndexFiber(core_radius_singlemode, fiber_na, fiber_length)
+
+	assert np.allclose(multimode_fiber.num_modes(wavelength), 208.4953929730128)
+	assert np.allclose(singlemode_fiber.num_modes(wavelength), 1.3343705150272818)
+
+	assert np.allclose(multimode_fiber.V(wavelength), 20.42035224833366)
+	assert np.allclose(singlemode_fiber.V(wavelength), 1.6336281798666927)
+
+	assert np.allclose(multimode_fiber.mode_field_radius(wavelength), 1.6688624611223803e-05)
+	assert np.allclose(singlemode_fiber.mode_field_radius(wavelength), 3.153705704872073e-06)
+
+	core_radii = [core_radius_singlemode, core_radius_multimode]
+	fibers = [singlemode_fiber, multimode_fiber]
+
+	for fiber, core_radius in zip(fibers, core_radii):
+		pupil_grid = make_pupil_grid(128)
+		focal_grid = make_pupil_grid(128, 4 * core_radius)
+		focal_length = D_pupil / (2 * fiber_na)
+
+		prop = FraunhoferPropagator(pupil_grid, focal_grid, focal_length=focal_length)
+
+		wf = Wavefront(circular_aperture(D_pupil)(pupil_grid), wavelength)
+		wf.total_power = 1
+		img = prop(wf)
+
+		forward_wf = fiber.forward(img)
+		backward_wf = fiber.backward(img)
+
+		assert forward_wf.total_power <= img.total_power * (1 + 1e-4)
+		assert backward_wf.total_power <= forward_wf.total_power * (1 + 1e-4)

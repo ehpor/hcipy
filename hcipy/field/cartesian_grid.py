@@ -2,6 +2,12 @@ import numpy as np
 from .grid import Grid
 from .coordinates import UnstructuredCoords
 
+from functools import reduce
+import operator
+
+def _prod(iterable):
+	return reduce(operator.mul, iterable, 1)
+
 def _get_rotation_matrix(ndim, angle, axis=None):
 	if ndim == 1:
 		raise ValueError('Rotation of a one-dimensional grid is not possible.')
@@ -147,6 +153,6 @@ class CartesianGrid(Grid):
 				w = np.concatenate(([x[1] - x[0]], w, [x[-1] - x[-2]]))
 				weights.append(w)
 
-			return np.multiply.reduce(np.ix_(*weights[::-1])).ravel()
+			return _prod(np.ix_(*weights[::-1])).ravel()
 
 Grid._add_coordinate_system('cartesian', CartesianGrid)

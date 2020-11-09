@@ -164,10 +164,10 @@ class SpectralNoiseMultiscale(SpectralNoise):
 
 	def shift(self, shift):
 		S_1 = [shift[i] * self.coords_1[i] for i in range(len(self.coords_1))]
-		S_1 = np.add.reduce(np.ix_(*S_1))
+		S_1 = sum(np.ix_(*S_1))
 
 		S_2 = [shift[i] * self.coords_2[i] for i in range(len(self.coords_2))]
-		S_2 = np.add.reduce(np.ix_(*S_2))
+		S_2 = sum(np.ix_(*S_2))
 
 		self.C_1 *= np.exp(-1j * S_1.ravel())
 		self.C_2 *= np.exp(-1j * S_2.ravel())

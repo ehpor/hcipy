@@ -208,7 +208,7 @@ def test_multi_layer_atmosphere():
 
 def test_fried_parameter_seeing():
 	for i in range(10):
-		seeing = np.random.uniform(0.5, 2) * np.pi / 648000 # radians
+		seeing = np.random.uniform(0.5, 2) # arcsec
 		wavelength = np.random.uniform(500e-9, 800e-9)
 
 		fried_parameter = seeing_to_fried_parameter(seeing, wavelength)

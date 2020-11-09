@@ -294,4 +294,4 @@ def label_actuator_centroid_positions(influence_functions, label_format='{:d}', 
 		y_pos = (act * y).sum() / act.sum()
 		pos = (x_pos, y_pos)
 
-		plt.annotate(s=label_format.format(i), xy=pos, **kwargs)
+		plt.annotate(label_format.format(i), xy=pos, **kwargs)

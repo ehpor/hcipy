@@ -9,6 +9,11 @@ env:
 
 matrix:
   include:
+  - name: "Make documentation"
+    os: linux
+    python: "3.7"
+    language: python
+    env: RUN_TESTS=false MAKE_DOCS=true
   - name: "Tests for Python 3.5 on Linux"
     os: linux
     python: "3.5"
@@ -34,11 +39,6 @@ matrix:
     os: osx
     language: generic
     env: PYTHON_VERSION=3.7.5
-  - name: "Make documentation"
-    os: linux
-    python: "3.7"
-    language: python
-    env: RUN_TESTS=false MAKE_DOCS=true
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
@@ -61,7 +61,7 @@ install:
     fi
 
   - pip install .
-  
+
   - if [ "$RUN_TESTS" = true ]; then
       pip install ".[dev]";
     fi
@@ -82,11 +82,11 @@ script:
   - if [ "$RUN_TESTS" = true ] && [ "$TEST_COVERAGE" = true ]; then
       $PYTHON_CMD -m coverage run -m pytest ./tests || travis_terminate 1;
     fi
-  
+
   - if [ "$RUN_TESTS" = true ] && [ "$TEST_COVERAGE" = false ]; then
       $PYTHON_CMD -m pytest ./tests || travis_terminate 1;
     fi
-  
+
   - if [ "$MAKE_DOCS" = true ]; then
       cd doc;
       make html || travis_terminate 1;

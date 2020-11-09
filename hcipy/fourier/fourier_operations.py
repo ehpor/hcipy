@@ -3,6 +3,11 @@ import numpy as np
 from .fast_fourier_transform import FastFourierTransform
 from ..field import Field, field_dot, field_conjugate_transpose
 
+try:
+	import mkl_fft._numpy_fft as _fft_module
+except ImportError:
+	_fft_module = np.fft
+
 class FourierFilter(object):
 	'''A filter in the Fourier domain.
 
@@ -109,7 +114,7 @@ class FourierFilter(object):
 			c = tuple([slice(None)] * field.tensor_order) + self.cutout
 			f[c] = field.shaped
 
-		f = np.fft.fftn(f, axes=tuple(range(-self.input_grid.ndim, 0)))
+		f = _fft_module.fftn(f, axes=tuple(range(-self.input_grid.ndim, 0)))
 
 		if (self._transfer_function.ndim - self.internal_grid.ndim) == 2:
 			# The transfer function is a matrix field.
@@ -132,7 +137,7 @@ class FourierFilter(object):
 
 			f *= tf
 
-		f = np.fft.ifftn(f, axes=tuple(range(-self.input_grid.ndim, 0)))
+		f = _fft_module.ifftn(f, axes=tuple(range(-self.input_grid.ndim, 0)))
 
 		s = f.shape[:-self.internal_grid.ndim] + (-1,)
 		if self.cutout is None:

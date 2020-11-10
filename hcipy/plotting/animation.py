@@ -258,7 +258,10 @@ class FFMpegWriter(object):
 			if fig is None:
 				fig = matplotlib.pyplot.gcf()
 
-			fig.savefig(self.p.stdin, format='png', transparent=False, dpi=dpi)
+			facecolor = list(fig.get_facecolor())
+			facecolor[3] = 1
+
+			fig.savefig(self.p.stdin, format='png', transparent=False, dpi=dpi, facecolor=facecolor)
 		else:
 			if cmap is not None:
 				data = matplotlib.cm.get_cmap(cmap)(data, bytes=True)

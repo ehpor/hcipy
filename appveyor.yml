@@ -1,5 +1,7 @@
 build: false
 
+image: Visual Studio 2019
+
 environment:
   matrix:
     - PYTHON_VERSION: 3.5
@@ -8,6 +10,8 @@ environment:
       MINICONDA: C:\Miniconda36-x64
     - PYTHON_VERSION: 3.7
       MINICONDA: C:\Miniconda37-x64
+    - PYTHON_VERSION: 3.8
+      MINICONDA: C:\Miniconda38-x64
 
 init:
   - "ECHO %PYTHON_VERSION% %MINICONDA%"

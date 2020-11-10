@@ -185,14 +185,14 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		if t is None:
 			self.reset()
 			return
-	
+
 		# Get the old and new center positions
 		old_center = np.round(self.center / self.input_grid.delta).astype('int')
 		self.center = self.center + self.velocity * (t - self._t)
 		new_pixel_center = np.round(self.center / self.input_grid.delta).astype('int')
-		
+
 		self._t = t
-		
+
 		# Measure the number of full pixel shifts
 		delta = new_pixel_center - old_center
 		# Measure the sub-pixel shift
@@ -215,8 +215,11 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			# This is to avoid sudden shifts by discrete pixels.
 			ps = self._achromatic_screen.shaped
 			with warnings.catch_warnings():
-				warnings.filterwarnings('ignore',
-					message='The behaviour of affine_transform with a one-dimensional array supplied for the matrix parameter has changed in scipy 0.18.0.')
+				# Suppress warnings about the changed behaviour in affine_transform for 1D arrays.
+				# We know about this and are expecting the behaviour as is.
+				warnings.filterwarnings('ignore', message='The behaviour of affine_transform')
+				warnings.filterwarnings('ignore', message='The behavior of affine_transform')
+
 				screen = affine_transform(ps, np.array([1,1]), (sub_delta / self.input_grid.delta)[::-1], mode='nearest', order=5)
 				self._shifted_achromatic_screen = Field(screen.ravel(), self._achromatic_screen.grid)
 		else:

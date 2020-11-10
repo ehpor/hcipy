@@ -6,6 +6,11 @@ from ..field import Field, TensorFlowField, CartesianGrid, RegularCoords
 from ..config import Configuration
 import numexpr as ne
 
+try:
+	import mkl_fft._numpy_fft as _fft_module
+except ImportError:
+	_fft_module = np.fft
+
 def make_fft_grid(input_grid, q=1, fov=1):
 	'''Calculate the grid returned by a Fast Fourier Transform.
 
@@ -219,7 +224,7 @@ class FastFourierTransform(FourierTransform):
 			if not self.emulate_fftshifts:
 				self.internal_array = np.fft.ifftshift(self.internal_array)
 
-			fft_array = np.fft.fftn(self.internal_array)
+			fft_array = _fft_module.fftn(self.internal_array)
 
 			if not self.emulate_fftshifts:
 				fft_array = np.fft.fftshift(fft_array)
@@ -297,7 +302,7 @@ class FastFourierTransform(FourierTransform):
 			if not self.emulate_fftshifts:
 				self.internal_array = np.fft.ifftshift(self.internal_array)
 
-			fft_array = np.fft.ifftn(self.internal_array)
+			fft_array = _fft_module.ifftn(self.internal_array)
 
 			if not self.emulate_fftshifts:
 				fft_array = np.fft.fftshift(fft_array)

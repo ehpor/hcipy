@@ -141,19 +141,43 @@ class DeformableMirror(OpticalElement):
 		The influence function for each of the actuators.
 	'''
 	def __init__(self, influence_functions):
-		self.influence_functions = influence_functions
+		self._backend = 'numpy'
 
-		self.actuators = np.zeros(len(influence_functions))
+		self.influence_functions = influence_functions
+		self._num_actuators = len(influence_functions)
+
+		self._actuators = np.zeros(len(influence_functions))
 		self._actuators_for_cached_surface = None
 
 		self.input_grid = influence_functions.grid
-		self._surface = self.input_grid.zeros()
+		self.output_grid = self.input_grid
 
-		self._tf_actuators = None
+	@property
+	def backend(self):
+		return self._backend
+
+	@backend.setter
+	def backend(self, backend):
+		if self._backend == backend:
+			return
+
+		if backend == 'numpy':
+			if self._backend == 'tensorflow':
+				self._actuators = self._actuators.numpy()
+			else:
+				self._actuators = np.array(self._actuators)
+		elif backend == 'tensorflow':
+			import tensorflow as tf
+
+			self._actuators = tf.Variable(tf.convert_to_tensor(np.array(self._actuators)))
+		else:
+			raise ValueError('Backend %s not recognized.' % backend)
+
+		self._backend = backend
 
 	@property
 	def num_actuators(self):
-		return self._actuators.size
+		return self._num_actuators
 
 	@property
 	def actuators(self):
@@ -161,16 +185,12 @@ class DeformableMirror(OpticalElement):
 
 	@actuators.setter
 	def actuators(self, actuators):
-		self._actuators = actuators
-
-	@property
-	def tf_actuators(self):
-		import tensorflow as tf
-
-		if self._tf_actuators is None:
-			self._tf_actuators = tf.Variable(tf.convert_to_tensor(self.actuators))
-
-		return self._tf_actuators
+		if self.backend == 'numpy':
+			self._actuators = actuators
+		elif self.backend == 'tensorflow':
+			self._actuators.assign(actuators)
+		else:
+			raise ValueError('This is not supported on the backend %s.' % self.backend)
 
 	def forward(self, wavefront):
 		'''Propagate a wavefront through the deformable mirror.
@@ -187,12 +207,10 @@ class DeformableMirror(OpticalElement):
 		'''
 		wf = wavefront.copy()
 
-		if wavefront.electric_field.backend == 'numpy':
-			wf.electric_field *= np.exp(2j * self.surface * wavefront.wavenumber)
-		elif wavefront.electric_field.backend == 'tensorflow':
-			import tensorflow as tf
+		self.backend = wavefront.electric_field.backend
 
-			wf.electric_field *= tf.exp(2j * self.tf_surface.astype('complex128').arr * wavefront.wavenumber)
+		if wavefront.electric_field.backend in ['numpy', 'tensorflow']:
+			wf.electric_field *= np.exp(2j * self.surface * wavefront.wavenumber)
 		else:
 			raise ValueError('This optical element does not support this backend.')
 
@@ -213,12 +231,10 @@ class DeformableMirror(OpticalElement):
 		'''
 		wf = wavefront.copy()
 
-		if wavefront.electric_field.backend == 'numpy':
-			wf.electric_field *= np.exp(-2j * self.surface * wavefront.wavenumber)
-		elif wavefront.electric_field.backend == 'tensorflow':
-			import tensorflow as tf
+		self.backend = wavefront.electric_field.backend
 
-			wf.electric_field *= tf.exp(-2j * self.tf_surface.astype('complex128').arr * wavefront.wavenumber)
+		if wavefront.electric_field.backend in ['numpy', 'tensorflow']:
+			wf.electric_field *= np.exp(-2j * self.surface * wavefront.wavenumber)
 		else:
 			raise ValueError('This optical element does not support this backend.')
 
@@ -239,20 +255,19 @@ class DeformableMirror(OpticalElement):
 	def surface(self):
 		'''The surface of the deformable mirror in meters.
 		'''
-		if self._actuators_for_cached_surface is not None:
-			if np.all(self.actuators == self._actuators_for_cached_surface):
-				return self._surface
+		if self.backend == 'numpy':
+			if self._actuators_for_cached_surface is not None:
+				if np.all(self.actuators == self._actuators_for_cached_surface):
+					return self._surface
 
-		self._surface = self.influence_functions.linear_combination(self.actuators)
-		self._actuators_for_cached_surface = self.actuators.copy()
+			self._surface = self.influence_functions.linear_combination(self.actuators)
+			self._actuators_for_cached_surface = self.actuators.copy()
 
-		return self._surface
-
-	@property
-	def tf_surface(self):
-		import tensorflow as tf
-
-		return self.influence_functions.linear_combination(self.tf_actuators)
+			return self._surface
+		elif self.backend == 'tensorflow':
+			return self.influence_functions.linear_combination(self.actuators)
+		else:
+			raise ValueError('Backend %s not supported.')
 
 	@property
 	def opd(self):
@@ -269,7 +284,7 @@ class DeformableMirror(OpticalElement):
 		rms : scalar
 			The dm surface rms.
 		'''
-		self._actuators = np.random.randn(self._actuators.size) * rms
+		self.actuators = np.random.randn(self.num_actuators) * rms
 
 	def phase_for(self, wavelength):
 		'''Get the phase in radians that is added to a wavefront with a specified wavelength.
@@ -284,12 +299,12 @@ class DeformableMirror(OpticalElement):
 		Field
 			The calculated phase deformation.
 		'''
-		return 2 * self.surface * 2*np.pi / wavelength
+		return 2 * self.surface * 2 * np.pi / wavelength
 
 	def flatten(self):
 		'''Flatten the DM by setting all actuators to zero.
 		'''
-		self._actuators = np.zeros(len(self.influence_functions))
+		self.actuators = np.zeros(self.num_actuators)
 
 def label_actuator_centroid_positions(influence_functions, label_format='{:d}', **text_kwargs):
 	'''Display centroid positions for a set of influence functions.

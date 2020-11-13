@@ -271,7 +271,7 @@ class ModeBasis(object):
 
 			if self.is_sparse:
 				rows, cols, data = self.tf_transformation_matrix
-				vals = tf.gather(coefficients, cols)
+				vals = tf.gather(coefficients, cols) * data
 				y = tf.scatter_nd(rows, vals, [self._transformation_matrix.shape[0]])
 			else:
 				y = tf.linalg.matvec(self.tf_transformation_matrix, coefficients)

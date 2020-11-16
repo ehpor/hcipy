@@ -1,7 +1,7 @@
 import numpy as np
 from math import pi
 
-def binned_profile(y, x, bins=20):
+def binned_profile(y, x, bins=20, method='mean'):
 	'''Create a profile of y(x) in the specified bins.
 
 	Parameters
@@ -45,7 +45,13 @@ def binned_profile(y, x, bins=20):
 	num_per_bin = np.histogram(x, bins)[0]
 	which_bin = np.digitize(x, bins)
 
-	profile = np.array([np.nanmean(y[which_bin == b]) for b in range(1, num_bins + 1)])
+	if method == 'mean':
+		profile = np.array([np.nanmean(y[which_bin == b]) for b in range(1, num_bins + 1)])
+	elif method == 'median':
+		profile = np.array([np.nanmedian(y[which_bin == b]) for b in range(1, num_bins + 1)])
+	else:
+		pass
+	
 	std_profile = np.array([np.nanstd(y[which_bin == b]) for b in range(1, num_bins + 1)])
 
 	return bin_centers, profile, std_profile, num_per_bin
@@ -77,7 +83,7 @@ def azimutal_profile(image, num_bins):
 
 	return binned_profile(image.flat, theta.flat, bins)
 
-def radial_profile(image, bin_size):
+def radial_profile(image, bin_size, method='mean'):
 	'''Create a radial profile of the image around its center.
 
 	Parameters
@@ -105,4 +111,4 @@ def radial_profile(image, bin_size):
 	max_bin = n_bins * bin_size
 	bins = np.linspace(0, max_bin, n_bins + 1)
 
-	return binned_profile(image, r, bins)
+	return binned_profile(image, r, bins, method=method)

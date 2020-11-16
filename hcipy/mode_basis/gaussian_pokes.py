@@ -30,21 +30,23 @@ def make_gaussian_pokes(grid, mu, sigma, cutoff=5, oversampling=None):
 	sigma = np.ones(mu.size) * sigma
 
 	def poke(m, s):
-		if grid.is_('cartesian'):
-			r2 = (grid.x - m[0])**2 + (grid.y - m[1])**2
-		else:
-			r2 = grid.shifted(-m).as_('polar').r**2
+		def eval_func(func_grid):
+			if func_grid.is_('cartesian'):
+				r2 = (func_grid.x - m[0])**2 + (func_grid.y - m[1])**2
+			else:
+				r2 = func_grid.shifted(-m).as_('polar').r**2
 
-		res = np.exp(-0.5 * r2 / s**2)
+			res = np.exp(-0.5 * r2 / s**2)
 
-		if cutoff is not None:
-			res -= np.exp(-0.5 * cutoff**2)
-			res[r2 > (cutoff * s)**2] = 0
+			if cutoff is not None:
+				res -= np.exp(-0.5 * cutoff**2)
+				res[r2 > (cutoff * s)**2] = 0
 
-			res = csr_matrix(res)
-			res.eliminate_zeros()
+				res = csr_matrix(res)
+				res.eliminate_zeros()
 
-		return res
+			return res
+		return eval_func
 
 	if oversampling is not None:
 		pokes = [evaluate_supersampled(poke(m, s), grid, oversampling) for m, s in zip(mu.points, sigma)]

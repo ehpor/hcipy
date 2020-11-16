@@ -115,8 +115,9 @@ class Coords(object):
 		'''
 		raise NotImplementedError()
 
-	def _add_coordinate_type(coordinate_type, coordinate_class):
-		Coords._coordinate_types[coordinate_type] = coordinate_class
+	@classmethod
+	def _add_coordinate_type(cls, coordinate_type, coordinate_class):
+		cls._coordinate_types[coordinate_type] = coordinate_class
 
 class UnstructuredCoords(Coords):
 	'''An unstructured list of points.

@@ -12,6 +12,8 @@ def make_vlt_aperture(normalized=False, with_spiders=True, orientation=0):
 		diameter of the pupil will be 8.2 meters.
 	with_spiders: boolean
 		If this is False, the spiders will be left out.
+	orientation : scalar
+		The orientation of the aperture
 
 	Returns
 	-------

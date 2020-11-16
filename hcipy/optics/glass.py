@@ -105,7 +105,10 @@ def get_glasses_in_catalogue():
 def _build_glass_catalogue():
 	global _glass_catalogue
 
-	_glass_catalogue = {'IP_DIP': make_cauchy_glass([1.5273, 6.5456E-3, 2.5345E-4])}
+	_glass_catalogue = {
+		'IP_DIP': make_cauchy_glass([1.5273, 6.5456E-3, 2.5345E-4]),
+		'SILICA' : make_sellmeier_glass(1, [0.6961663, 0.4079426, 0.8974794], [0.0684043**2, 0.1162414**2, 9.896161**2])
+	}
 
 	_glass_catalogue.update(_parse_sellmeier_glass_catalogue(pkg_resources.resource_stream('hcipy', 'data/schott_glass_catalogue_2018_09.csv')))
 	_glass_catalogue.update(_parse_sellmeier_glass_catalogue(pkg_resources.resource_stream('hcipy', 'data/ohara_glass_catalogue_2019_08.csv')))

@@ -75,7 +75,7 @@ def make_gaussian_influence_functions(pupil_grid, num_actuators_across_pupil, ac
 
 	# Stretch and rotate pupil_grid to correct for tilted DM
 	epsilon = 1e-14
-	if z_tilt > epsilon:
+	if abs(z_tilt) > epsilon:
 		evaluated_grid = pupil_grid.scaled(1 / np.cos([y_tilt, x_tilt])).rotated(-z_tilt)
 	else:
 		evaluated_grid = pupil_grid.scaled(1 / np.cos([y_tilt, x_tilt]))

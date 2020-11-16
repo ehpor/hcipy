@@ -66,12 +66,19 @@ def single_propagation_test(propagator, number_of_pixels, wavelength, a, b, rela
 	threshold_distance = np.min(pupil_grid.delta * np.array([16 * a, 16 * b]) / wavelength)
 	distance = relative_distance * threshold_distance
 
-	prop = propagator(pupil_grid, distance, num_oversampling=2)
+	prop_pos = propagator(pupil_grid, distance, num_oversampling=2)
+	prop_neg = propagator(pupil_grid, -distance, num_oversampling=2)
 
 	aperture = evaluate_supersampled(rectangular_aperture([2 * a, 2 * b]), pupil_grid, 2)
 
-	img_forward = prop.forward(Wavefront(aperture, wavelength)).intensity
-	img_backward = prop.backward(Wavefront(aperture, wavelength)).intensity
+	img_forward = prop_pos.forward(Wavefront(aperture, wavelength)).intensity
+	img_backward = prop_pos.backward(Wavefront(aperture, wavelength)).intensity
+
+	img_forward_neg = prop_neg.forward(Wavefront(aperture, wavelength)).intensity
+	img_backward_neg = prop_neg.forward(Wavefront(aperture, wavelength)).intensity
+
+	assert np.allclose(img_forward, img_backward_neg)
+	assert np.allclose(img_backward, img_forward_neg)
 
 	def generate_reference_field(reference_grid):
 		w_x1 = np.sqrt(2 / (distance * wavelength)) * (reference_grid.x - a)

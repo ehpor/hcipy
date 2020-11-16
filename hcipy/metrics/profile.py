@@ -67,7 +67,7 @@ def binned_profile(y, x, bins=20, statistic='mean'):
 
 	return bin_centers, profile, std_profile, num_per_bin
 
-def azimutal_profile(image, num_bins):
+def azimutal_profile(image, num_bins, statistic='mean'):
 	'''Create an azimuthal profile of the image around its center.
 
 	Parameters
@@ -77,6 +77,13 @@ def azimutal_profile(image, num_bins):
 		two-dimensional.
 	num_bins : int
 		The number of bins in theta. Bins will be equally distributed in theta.
+	statistic : string
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		* 'mean': compute the mean of values for points within the bin edges.
+		* 'sum': compute the sum of values for points within the bin edges.
+		* 'min': compute the minimum of values for points within the bin edges.
+		* 'max': compute the maximum of values for point within the bin edges.
 
 	Returns
 	-------
@@ -92,9 +99,9 @@ def azimutal_profile(image, num_bins):
 	theta = image.grid.as_('polar').theta
 	bins = np.linspace(-pi, pi, num_bins + 1)
 
-	return binned_profile(image.flat, theta.flat, bins)
+	return binned_profile(image.flat, theta.flat, bins, statistic=statistic)
 
-def radial_profile(image, bin_size, method='mean'):
+def radial_profile(image, bin_size, statistic='mean'):
 	'''Create a radial profile of the image around its center.
 
 	Parameters
@@ -104,6 +111,13 @@ def radial_profile(image, bin_size, method='mean'):
 		two-dimensional.
 	bin_size : scalar
 		The extent of each bin. Each bin will be a ring from r to r+`bin_size`.
+	statistic : string
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		* 'mean': compute the mean of values for points within the bin edges.
+		* 'sum': compute the sum of values for points within the bin edges.
+		* 'min': compute the minimum of values for points within the bin edges.
+		* 'max': compute the maximum of values for point within the bin edges.
 
 	Returns
 	-------
@@ -122,4 +136,4 @@ def radial_profile(image, bin_size, method='mean'):
 	max_bin = n_bins * bin_size
 	bins = np.linspace(0, max_bin, n_bins + 1)
 
-	return binned_profile(image, r, bins, method=method)
+	return binned_profile(image, r, bins, statistic=statistic)

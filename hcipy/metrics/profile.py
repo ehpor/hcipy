@@ -11,7 +11,7 @@ def binned_profile(y, x, bins=20, statistic='mean'):
 	x : array_like
 		The x-coordinates of the data points. This should be 1-dimensional
 		and the same size as `y`.
-	bins : array_like or int
+	bins : array_like or integer
 		The bin edges of the profile. If this is an integer, `bins` is the
 		number of bins that will be equally distributed along the whole range
 		of `x`.
@@ -38,6 +38,8 @@ def binned_profile(y, x, bins=20, statistic='mean'):
 	------
 	RuntimeError
 		If the number of bins are negative or zero.
+	ValueError
+		If the statistic is not implemented.
 	'''
 	if np.isscalar(bins):
 		if bins <= 0:
@@ -52,17 +54,14 @@ def binned_profile(y, x, bins=20, statistic='mean'):
 	num_per_bin = np.histogram(x, bins)[0]
 	which_bin = np.digitize(x, bins)
 
-	if statistic == 'mean':
-		profile = np.array([np.nanmean(y[which_bin == b]) for b in range(1, num_bins + 1)])
-	elif statistic == 'median':
-		profile = np.array([np.nanmedian(y[which_bin == b]) for b in range(1, num_bins + 1)])
-	elif statistic == 'max':
-		profile = np.array([np.nanmax(y[which_bin == b]) for b in range(1, num_bins + 1)])
-	elif statistic == 'min':
-		profile = np.array([np.nanmin(y[which_bin == b]) for b in range(1, num_bins + 1)])
-	else:
-		pass
-	
+	statistics = {'mean': np.nanmean, 'median': np.nanmedian, 'max': np.nanmax, 'min': np.nanmin}
+
+	if statistic not in statistics:
+		raise ValueError('Statistic %s not implemented.' % statistic)
+
+	func = statistics[statistic]
+
+	profile = np.array([func(y[which_bin == b]) for b in range(1, num_bins + 1)])
 	std_profile = np.array([np.nanstd(y[which_bin == b]) for b in range(1, num_bins + 1)])
 
 	return bin_centers, profile, std_profile, num_per_bin
@@ -75,7 +74,7 @@ def azimutal_profile(image, num_bins, statistic='mean'):
 	image : Field
 		The image that we want an azimuthal profile from. This image must be
 		two-dimensional.
-	num_bins : int
+	num_bins : integer
 		The number of bins in theta. Bins will be equally distributed in theta.
 	statistic : string
 		The statistic to compute (default is 'mean').
@@ -95,11 +94,18 @@ def azimutal_profile(image, num_bins, statistic='mean'):
 		The standard deviation within each bin.
 	num_per_bin : array_like
 		The number of samples per bin.
+
+	Raises
+	------
+	RuntimeError
+		If the number of bins are negative or zero.
+	ValueError
+		If the statistic is not implemented.
 	'''
 	theta = image.grid.as_('polar').theta
 	bins = np.linspace(-pi, pi, num_bins + 1)
 
-	return binned_profile(image.flat, theta.flat, bins, statistic=statistic)
+	return binned_profile(image, theta, bins, statistic=statistic)
 
 def radial_profile(image, bin_size, statistic='mean'):
 	'''Create a radial profile of the image around its center.
@@ -129,6 +135,11 @@ def radial_profile(image, bin_size, statistic='mean'):
 		The standard deviation within each bin.
 	num_per_bin : array_like
 		The number of samples per bin.
+
+	Raises
+	------
+	ValueError
+		If the statistic is not implemented.
 	'''
 	r = image.grid.as_('polar').r
 

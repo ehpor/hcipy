@@ -1,7 +1,7 @@
 import numpy as np
 from math import pi
 
-def binned_profile(y, x, bins=20, method='mean'):
+def binned_profile(y, x, bins=20, statistic='mean'):
 	'''Create a profile of y(x) in the specified bins.
 
 	Parameters
@@ -15,6 +15,13 @@ def binned_profile(y, x, bins=20, method='mean'):
 		The bin edges of the profile. If this is an integer, `bins` is the
 		number of bins that will be equally distributed along the whole range
 		of `x`.
+	statistic : string
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		* 'mean': compute the mean of values for points within the bin edges.
+		* 'sum': compute the sum of values for points within the bin edges.
+		* 'min': compute the minimum of values for points within the bin edges.
+		* 'max': compute the maximum of values for point within the bin edges.
 
 	Returns
 	-------
@@ -45,10 +52,14 @@ def binned_profile(y, x, bins=20, method='mean'):
 	num_per_bin = np.histogram(x, bins)[0]
 	which_bin = np.digitize(x, bins)
 
-	if method == 'mean':
+	if statistic == 'mean':
 		profile = np.array([np.nanmean(y[which_bin == b]) for b in range(1, num_bins + 1)])
-	elif method == 'median':
+	elif statistic == 'median':
 		profile = np.array([np.nanmedian(y[which_bin == b]) for b in range(1, num_bins + 1)])
+	elif statistic == 'max':
+		profile = np.array([np.nanmax(y[which_bin == b]) for b in range(1, num_bins + 1)])
+	elif statistic == 'min':
+		profile = np.array([np.nanmin(y[which_bin == b]) for b in range(1, num_bins + 1)])
 	else:
 		pass
 	

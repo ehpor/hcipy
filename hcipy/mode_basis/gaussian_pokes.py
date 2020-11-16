@@ -3,13 +3,14 @@ from ..field import evaluate_supersampled
 import numpy as np
 from scipy.sparse import csr_matrix
 
-def make_gaussian_pokes(grid, mu, sigma, cutoff=5, oversampling=None):
+def make_gaussian_pokes(grid, mu, sigma, cutoff=5):
 	'''Make a basis of Gaussians.
 
 	Parameters
 	----------
-	grid : Grid
-		The grid on which to calculate the mode basis.
+	grid : Grid or None
+		The grid on which to calculate the mode basis. If this is None, a list of Field
+		generators will be returned instead of a mode basis.
 	mu : Grid
 		The centers for each of the Gaussians.
 	sigma : ndarray or scalar
@@ -19,12 +20,10 @@ def make_gaussian_pokes(grid, mu, sigma, cutoff=5, oversampling=None):
 		The factor of sigma beyond which the Gaussian will be set to zero. The ModeBasis will
 		be sparse to reduce memory usage. If the cutoff is None, there will be no cutoff, and
 		the returned ModeBasis will be dense.
-	oversampling : integer or None
-		The oversamping factor when creating the Gaussian. If None the Gaussian will be evaluated at grid resolution.
 
 	Returns
 	-------
-	ModeBasis
+	ModeBasis or list of Field generators.
 		The sparse mode basis. If cutoff is None, a dense mode basis will be returned.
 	'''
 	sigma = np.ones(mu.size) * sigma
@@ -48,9 +47,9 @@ def make_gaussian_pokes(grid, mu, sigma, cutoff=5, oversampling=None):
 			return res
 		return eval_func
 
-	if oversampling is not None:
-		pokes = [evaluate_supersampled(poke(m, s), grid, oversampling) for m, s in zip(mu.points, sigma)]
-	else:
-		pokes = [poke(m, s)(grid) for m, s in zip(mu.points, sigma)]
+	pokes = [poke(m, s) for m, s in zip(mu.points, sigma)]
 
-	return ModeBasis(pokes, grid)
+	if grid is None:
+		return pokes
+	else:
+		return evaluate_supersampled(pokes, grid, 1, make_sparse=True)

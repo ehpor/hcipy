@@ -44,7 +44,7 @@ class FresnelPropagator(AgnosticOpticalElement):
 		k = 2 * np.pi / wavelength * self.evaluate_parameter(self.refractive_index, input_grid, output_grid, wavelength)
 		L_max = np.max(input_grid.dims * input_grid.delta)
 
-		if np.any(input_grid.delta < wavelength * self.distance / L_max):
+		if np.any(input_grid.delta < wavelength * abs(self.distance) / L_max):
 			def transfer_function(fourier_grid):
 				enlarged_grid = make_fft_grid(fourier_grid)
 				fft_upscale = FastFourierTransform(enlarged_grid)

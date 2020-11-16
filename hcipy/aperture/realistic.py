@@ -9,21 +9,21 @@ def make_vlt_aperture(normalized=False, with_spiders=True, orientation=0):
 	----------
 	normalized : boolean
 		If this is True, the outer diameter will be scaled to 1. Otherwise, the
-		diameter of the pupil will be 8.2 meters.
-	with_spiders: boolean
+		diameter of the pupil will be 8.1196 meters.
+	with_spiders : boolean
 		If this is False, the spiders will be left out.
 	orientation : scalar
-		The orientation of the aperture
+		The orientation of the aperture in radians.
 
 	Returns
 	-------
 	Field generator
 		The VLT aperture.
 	'''
-	pupil_diameter = 8.1196 #m
-	spider_width = 0.040 #m
+	pupil_diameter = 8.1196 # meter
+	spider_width = 0.040 # meter
 	central_obscuration_ratio = 0.16
-	spider_offset = 0.4045
+	spider_offset = 0.4045 # meter
 
 	if normalized:
 		spider_width /= pupil_diameter
@@ -35,20 +35,20 @@ def make_vlt_aperture(normalized=False, with_spiders=True, orientation=0):
 	if not with_spiders:
 		return obstructed_aperture
 
-	angle_between_spiders = 101
-	spider_offset_a = np.radians(90+(angle_between_spiders-90)/2.)
-	
-	spider_start_1 = spider_offset * np.array([np.cos(spider_offset_a),-np.sin(spider_offset_a)])
-	spider_end_1 = pupil_diameter/2 * np.array([np.cos(np.pi), np.sin(np.pi)])
+	angle_between_spiders = 101 # degrees
+	spider_offset_a = np.radians(90 + (angle_between_spiders - 90) / 2)
 
-	spider_start_2 = spider_offset * np.array([-np.cos(spider_offset_a-np.pi/2.),-np.sin(spider_offset_a-np.pi/2.)])
-	spider_end_2 = pupil_diameter/2 * np.array([np.cos(-np.pi/2), np.sin(-np.pi/2)])
+	spider_start_1 = spider_offset * np.array([np.cos(spider_offset_a), -np.sin(spider_offset_a)])
+	spider_end_1 = pupil_diameter / 2 * np.array([np.cos(np.pi), np.sin(np.pi)])
 
-	spider_start_3 = spider_offset * np.array([np.cos(spider_offset_a-np.pi),-np.sin(spider_offset_a-np.pi)])
-	spider_end_3 = pupil_diameter/2 * np.array([np.cos(0), np.sin(0)])
+	spider_start_2 = spider_offset * np.array([-np.cos(spider_offset_a - np.pi / 2), -np.sin(spider_offset_a - np.pi / 2)])
+	spider_end_2 = pupil_diameter / 2 * np.array([np.cos(-np.pi / 2), np.sin(-np.pi / 2)])
 
-	spider_start_4 = spider_offset * np.array([np.cos(spider_offset_a-np.pi/2.),-np.sin(spider_offset_a-np.pi/2.)])
-	spider_end_4 = pupil_diameter/2 * np.array([np.cos(np.pi/2), np.sin(np.pi/2)])
+	spider_start_3 = spider_offset * np.array([np.cos(spider_offset_a - np.pi), -np.sin(spider_offset_a - np.pi)])
+	spider_end_3 = pupil_diameter / 2 * np.array([np.cos(0), np.sin(0)])
+
+	spider_start_4 = spider_offset * np.array([np.cos(spider_offset_a - np.pi / 2), -np.sin(spider_offset_a - np.pi / 2)])
+	spider_end_4 = pupil_diameter / 2 * np.array([np.cos(np.pi / 2), np.sin(np.pi / 2)])
 
 	spider1 = make_spider(spider_start_1, spider_end_1, spider_width)
 	spider2 = make_spider(spider_start_2, spider_end_2, spider_width)
@@ -56,10 +56,9 @@ def make_vlt_aperture(normalized=False, with_spiders=True, orientation=0):
 	spider4 = make_spider(spider_start_4, spider_end_4, spider_width)
 
 	def func(grid):
-		rot_grid = grid.rotated(np.deg2rad(90.0/2) + orientation)
+		rot_grid = grid.rotated(np.radians(45) - orientation)
 		return Field(obstructed_aperture(rot_grid) * spider1(rot_grid) * spider2(rot_grid) * spider3(rot_grid) * spider4(rot_grid), grid)
 	return func
-
 
 def make_subaru_aperture():
 	pass
@@ -83,11 +82,11 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 	Field generator
 		The Magellan aperture.
 	'''
-	pupil_diameter = 6.5 #m
-	spider_width1 = 0.75 * 0.0254 #m
-	spider_width2 = 1.5 * 0.0254 #m
+	pupil_diameter = 6.5 # meter
+	spider_width1 = 0.75 * 0.0254 # meter
+	spider_width2 = 1.5 * 0.0254 # meter
 	central_obscuration_ratio = 0.29
-	spider_offset = [0,0.34] #m
+	spider_offset = [0, 0.34] # meter
 
 	if normalized:
 		spider_width1 /= pupil_diameter

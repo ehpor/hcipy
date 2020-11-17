@@ -7,6 +7,8 @@ __all__ = [
     'make_spider',
     'make_spider_infinite',
     'make_obstructed_circular_aperture',
+    'make_obstruction',
+    'make_rotated_aperture',
     'make_segmented_aperture',
     'make_magellan_aperture',
     'make_luvoir_a_aperture',

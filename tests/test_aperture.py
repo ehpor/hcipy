@@ -74,7 +74,7 @@ def test_vlt_aperture():
 	options = {
 		'normalized': [(False, ''), (True, '_normalized')],
 		'with_spiders': [(True, ''), (False, '_without_spiders')],
-		'orientation': [(0, ''), (25, '_rotated')]
+		'with_M3_cover': [(False, ''), (True, '_with_M3_cover')]
 	}
 
 	check_aperture_against_reference(make_vlt_aperture, 'vlt', 8.1196, options)

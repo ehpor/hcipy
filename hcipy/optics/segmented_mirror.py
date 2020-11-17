@@ -18,8 +18,8 @@ class SegmentedDeformableMirror(DeformableMirror):
 	'''
 	def __init__(self, segments):
 		self.segments = segments
-		self.actuators = np.zeros(len(segments) * 3)
-		self.input_grid = segments.grid
+
+		super().__init__(self.influence_functions)
 
 	@property
 	def segments(self):

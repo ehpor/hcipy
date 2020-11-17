@@ -74,9 +74,11 @@ def _binary_op(tf_ufunc):
 
 def _reduce_function(tf_function):
 	def func(a, **kwargs):
+		import tensorflow as tf
+
 		res = tf_function(a.arr, **kwargs)
 
-		if res.ndim == 0:
+		if len(res.shape) == 0:
 			return res
 		return TensorFlowField(res, a.grid)
 	return func

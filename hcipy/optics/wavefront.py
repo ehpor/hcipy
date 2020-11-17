@@ -66,7 +66,7 @@ class Wavefront(object):
 	def copy(self):
 		'''Make a copy of the wavefront.
 		'''
-		return copy.deepcopy(self)
+		return Wavefront(self.electric_field, self.wavelength, self.input_stokes_vector)
 
 	@property
 	def electric_field(self):

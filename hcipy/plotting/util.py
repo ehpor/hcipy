@@ -44,6 +44,8 @@ def imshow_psf(psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',
 		This will be the size of a unit cell on the axes.
 	ax : matplotlib axes
 		The axes which to draw on. If it is not given, the current axes will be used.
+	ticks : array_like
+		The ticks on the added colorbar.
 	kwargs : dictionary
 		Any keyword arguments will be sent to `imshow_field()`.
 

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 def test_optical_differentiation_wavefront_sensor():
 	pupil_grid = make_pupil_grid(128, 1)
 	wfs_grid = make_pupil_grid(256, 2)
-	amplitude_filter = create_polarization_odwfs_amplitude_filter(0.0)
+	amplitude_filter = make_polarization_odwfs_amplitude_filter(0.0)
 
 	odwfs = OpticalDifferentiationWavefrontSensorOptics(amplitude_filter, pupil_grid, wfs_grid)
 

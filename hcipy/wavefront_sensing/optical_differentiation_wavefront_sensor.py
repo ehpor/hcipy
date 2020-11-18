@@ -1,47 +1,25 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
 from ..optics import MultiplexedComplexSurfaceApodizer
-from ..field import make_pupil_grid, make_focal_grid, Field
+from ..field import make_pupil_grid, Field
 
 import numpy as np
 
-
-def heaviside_function(x, epsilon=1e-14):
-	'''
-	The Heaviside function using the half-maximum convention.
-	
-	Parameters
-	----------
-	x : array_like
-		The values for which the heaviside function needs to be evaluated.
-	epsilon : scalar
-		The range that is considered zero. The default value is 1e-14.
-
-	Returns
-	-------
-	h
-		The evaluated heaviside function
-
-	'''
-	h = np.array(x > 0).astype(np.float)
-	h[abs(x)<epsilon] = 0.5
-	return h
-
-def create_polarization_odwfs_amplitude_filter(beta):
+def make_polarization_odwfs_amplitude_filter(beta):
 	'''
 	The OD-wfs amplitude filter based on polarization optics following [Haffert 2016].
-		
-	.. [Haffert 2016] S. Y. Haffert, 2016, "Generalised optical differentiation wavefront sensor: 
+
+	.. [Haffert 2016] S. Y. Haffert, 2016, "Generalised optical differentiation wavefront sensor:
 		a sensitive high dynamic range wavefront sensor," Opt. Express 24, 18986-19007 (2016).
 
 	Parameters
 	----------
 	beta : scalar
-		
+
 	Returns
 	-------
-	amplitude_filter
-		The lambda function that generates the amplitude profile.
+	function
+		A function that generates the amplitude profile.
 
 	Raises
 	------
@@ -51,24 +29,23 @@ def create_polarization_odwfs_amplitude_filter(beta):
 	if beta < 0 or beta > 1:
 		raise ValueError('Beta should be between 0 and 1.')
 
-	amplitude_filter = lambda x: np.sin( np.pi/2 * (beta * heaviside_function(x) + (1-beta) * (1+x)/2) )
-	return amplitude_filter
+	return lambda x: np.sin(np.pi / 2 * (beta * np.heaviside(x, 0.5) + (1 - beta) * (1 + x) / 2))
 
-def create_odwfs_amplitude_filter(beta):
+def make_odwfs_amplitude_filter(beta):
 	'''
-	The OD-wfs amplitude filter following [Haffert 2016].
-		
-	.. [Haffert 2016] S. Y. Haffert, 2016, "Generalised optical differentiation wavefront sensor: 
+	The OD-wfs amplitude filter following [Haffert2016].
+
+	.. [Haffert2016] S. Y. Haffert, 2016, "Generalised optical differentiation wavefront sensor:
 		a sensitive high dynamic range wavefront sensor," Opt. Express 24, 18986-19007 (2016).
 
 	Parameters
 	----------
 	beta : scalar
-		
+
 	Returns
 	-------
-	amplitude_filter
-		The lambda function that generates the amplitude profile.
+	function
+		A function that generates the amplitude profile.
 
 	Raises
 	------
@@ -78,9 +55,7 @@ def create_odwfs_amplitude_filter(beta):
 	if beta < 0 or beta > 1:
 		raise ValueError('Beta should be between 0 and 1.')
 
-	amplitude_filter = lambda x: (beta * heaviside_function(x) + (1-beta) * (1+x)/2) / np.sqrt(2)
-	return amplitude_filter
-
+	return lambda x: (beta * np.heaviside(x, 0.5) + (1 - beta) * (1 + x) / 2) / np.sqrt(2)
 
 def optical_differentiation_surface(filter_size, amplitude_filter, separation, wavelength_0, refractive_index, orientation=0):
 	'''A generator function for the complex multiplexed surface of the ODWFS.
@@ -101,26 +76,26 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 		The orientation of the amplitude filters. The default value is 0 radian.
 	Returns
 	----------
-	func : function
+	function
 		The returned function acts on a grid to create the amplitude filters for that grid.
-
 	'''
 	def func(grid):
 		surface_grid = grid.rotated(orientation)
-		
-		surface_tilt = 1/2 * separation / (refractive_index(wavelength_0) - 1)
+
+		surface_tilt = 0.5 * separation / (refractive_index(wavelength_0) - 1)
+
 		# The surfaces which tilt the beam
 		surf1 = -surface_tilt * surface_grid.x
 		surf2 = -surface_tilt * -surface_grid.x
 		surf3 = -surface_tilt * surface_grid.y
 		surf4 = -surface_tilt * -surface_grid.y
-		
+
 		surf = (Field(surf1, surface_grid), Field(surf2, surface_grid), Field(surf3, surface_grid), Field(surf4, surface_grid))
 
 		# The physical boundaries of the mask
 		filter_mask = (np.abs(grid.x) < filter_size) * (np.abs(grid.y) < filter_size)
 
-		# NOTE : be careful with the plus and minus signs of the filters
+		# Note: be careful with the plus and minus signs of the filters.
 		# For energy conservation the squared sum of the filters should be <= 1
 		# For electric field conservation the second filter has to have opposite sign.
 		filter_1 = amplitude_filter(surface_grid.x / filter_size)
@@ -128,9 +103,11 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 
 		filter_2 = -amplitude_filter(-surface_grid.x / filter_size)
 		filter_2 *= filter_mask
-		
+
 		filter_3 = amplitude_filter(surface_grid.y / filter_size)
 		filter_3 *= filter_mask
+		for f in filter_3:
+			print(f)
 
 		filter_4 = -amplitude_filter(-surface_grid.y / filter_size)
 		filter_4 *= filter_mask
@@ -174,7 +151,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 
 		if D is None:
 			D = np.max(input_grid.delta * (input_grid.shape - 1))
-		
+
 		if separation is None:
 			separation = D
 
@@ -182,10 +159,10 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 		# Oversampling necessary to see all frequencies in the output wavefront sensor plane
 		qmin = np.ceil(max(output_grid.x.ptp() / input_grid.x.ptp(), 2))
 		if q is None:
-			q = qmin 
+			q = qmin
 		elif q < qmin:
 			raise ValueError('The requested focal plane sampling is too low to sufficiently sample the wavefront sensor output.')
-		
+
 		if num_airy is None:
 			self.num_airy = np.max(input_grid.shape - 1) / 2
 		else:
@@ -208,13 +185,13 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 		'''Propagates a wavefront through the wavefront sensor.
 
 		Parameters
-		----------		
+		----------
 		wavefront : Wavefront
 			The input wavefront that will propagate through the system.
 
 		Returns
 		-------
-		wf : Wavefront
+		Wavefront
 			The output wavefront.
 		'''
 		wf = self.pupil_to_focal.forward(wavefront)
@@ -223,18 +200,17 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 
 		return wf
 
-	
 	def backward(self, wavefront):
 		'''Propagates a wavefront backwards through the wavefront sensor.
 
 		Parameters
-		----------		
+		----------
 		wavefront : Wavefront
 			The input wavefront that will propagate through the system.
 
 		Returns
 		-------
-		wf : Wavefront
+		Wavefront
 			The output wavefront.
 		'''
 		wf = self.pupil_to_focal.backward(wavefront)
@@ -271,13 +247,13 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 
 		Parameters
 		----------
-		images - list
+		images : list
 			A list of scalar intensity fields containing pyramid wavefront sensor images.
 
 		Returns
 		-------
-		res - Field
-			A field with wavefront sensor slopes.
+		array_like
+			The wavefront sensor slopes.
 		'''
 		import warnings
 		warnings.warn("This function does not work as expected and will be changed in a future update.", RuntimeWarning)

@@ -8,7 +8,7 @@ def imshow_psf(psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',
 		cmap=None, title=None, normalization='none',
 		crosshairs=False, mark_centroid=False, colorbar=True,
 		colorbar_orientation='vertical', spatial_resolution=1,
-		ax=None, **kwargs):
+		ax=None, ticks=None, **kwargs):
 	'''Display a PSF in a nice, consistent format.
 
 	Parameters
@@ -44,6 +44,8 @@ def imshow_psf(psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',
 		This will be the size of a unit cell on the axes.
 	ax : matplotlib axes
 		The axes which to draw on. If it is not given, the current axes will be used.
+	ticks : array_like
+		The ticks on the added colorbar.
 	kwargs : dictionary
 		Any keyword arguments will be sent to `imshow_field()`.
 
@@ -99,11 +101,12 @@ def imshow_psf(psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',
 		cb = plt.colorbar(im, ax=ax, orientation=colorbar_orientation)
 
 		if scale.lower() in ['log', 'logarithmic']:
-			ticks = np.logspace(np.log10(vmin), np.log10(vmax), int(np.round(np.log10(vmax / vmin) + 1)))
+			if ticks is None:
+				ticks = np.logspace(np.log10(vmin), np.log10(vmax), int(np.round(np.log10(vmax / vmin) + 1)))
 
-			if colorbar_orientation == 'horizontal' and vmax == 1e-1 and vmin == 1e-8:
-				# Use better looking ticks
-				ticks = [1e-8, 1e-6, 1e-4, 1e-2, 1e-1]
+				if colorbar_orientation == 'horizontal' and vmax == 1e-1 and vmin == 1e-8:
+					# Use better looking ticks
+					ticks = [1e-8, 1e-6, 1e-4, 1e-2, 1e-1]
 
 			cb.set_ticks(ticks)
 			cb.set_ticklabels(ticks)

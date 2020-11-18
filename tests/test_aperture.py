@@ -70,6 +70,15 @@ def test_obstructed_circular_aperture():
 
 	check_aperture_against_reference(functools.partial(make_obstructed_circular_aperture, pupil_diameter=1), 'obstructed_circular', 1, options)
 
+def test_vlt_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_spiders': [(True, ''), (False, '_without_spiders')],
+		'with_M3_cover': [(False, ''), (True, '_with_M3_cover')]
+	}
+
+	check_aperture_against_reference(make_vlt_aperture, 'vlt', 8.1196, options)
+
 def test_magellan_aperture():
 	options = {
 		'normalized': [(False, ''), (True, '_normalized')],

@@ -1,7 +1,7 @@
 import numpy as np
 from math import pi
 
-def binned_profile(y, x, bins=20):
+def binned_profile(y, x, bins=20, statistic='mean'):
 	'''Create a profile of y(x) in the specified bins.
 
 	Parameters
@@ -11,10 +11,17 @@ def binned_profile(y, x, bins=20):
 	x : array_like
 		The x-coordinates of the data points. This should be 1-dimensional
 		and the same size as `y`.
-	bins : array_like or int
+	bins : array_like or integer
 		The bin edges of the profile. If this is an integer, `bins` is the
 		number of bins that will be equally distributed along the whole range
 		of `x`.
+	statistic : string
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		* 'mean': compute the mean of values for points within the bin edges.
+		* 'sum': compute the sum of values for points within the bin edges.
+		* 'min': compute the minimum of values for points within the bin edges.
+		* 'max': compute the maximum of values for point within the bin edges.
 
 	Returns
 	-------
@@ -31,6 +38,8 @@ def binned_profile(y, x, bins=20):
 	------
 	RuntimeError
 		If the number of bins are negative or zero.
+	ValueError
+		If the statistic is not implemented.
 	'''
 	if np.isscalar(bins):
 		if bins <= 0:
@@ -45,12 +54,19 @@ def binned_profile(y, x, bins=20):
 	num_per_bin = np.histogram(x, bins)[0]
 	which_bin = np.digitize(x, bins)
 
-	profile = np.array([np.nanmean(y[which_bin == b]) for b in range(1, num_bins + 1)])
+	statistics = {'mean': np.nanmean, 'median': np.nanmedian, 'max': np.nanmax, 'min': np.nanmin}
+
+	if statistic not in statistics:
+		raise ValueError('Statistic %s not implemented.' % statistic)
+
+	func = statistics[statistic]
+
+	profile = np.array([func(y[which_bin == b]) for b in range(1, num_bins + 1)])
 	std_profile = np.array([np.nanstd(y[which_bin == b]) for b in range(1, num_bins + 1)])
 
 	return bin_centers, profile, std_profile, num_per_bin
 
-def azimutal_profile(image, num_bins):
+def azimutal_profile(image, num_bins, statistic='mean'):
 	'''Create an azimuthal profile of the image around its center.
 
 	Parameters
@@ -58,8 +74,15 @@ def azimutal_profile(image, num_bins):
 	image : Field
 		The image that we want an azimuthal profile from. This image must be
 		two-dimensional.
-	num_bins : int
+	num_bins : integer
 		The number of bins in theta. Bins will be equally distributed in theta.
+	statistic : string
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		* 'mean': compute the mean of values for points within the bin edges.
+		* 'sum': compute the sum of values for points within the bin edges.
+		* 'min': compute the minimum of values for points within the bin edges.
+		* 'max': compute the maximum of values for point within the bin edges.
 
 	Returns
 	-------
@@ -71,13 +94,20 @@ def azimutal_profile(image, num_bins):
 		The standard deviation within each bin.
 	num_per_bin : array_like
 		The number of samples per bin.
+
+	Raises
+	------
+	RuntimeError
+		If the number of bins are negative or zero.
+	ValueError
+		If the statistic is not implemented.
 	'''
 	theta = image.grid.as_('polar').theta
 	bins = np.linspace(-pi, pi, num_bins + 1)
 
-	return binned_profile(image.flat, theta.flat, bins)
+	return binned_profile(image, theta, bins, statistic=statistic)
 
-def radial_profile(image, bin_size):
+def radial_profile(image, bin_size, statistic='mean'):
 	'''Create a radial profile of the image around its center.
 
 	Parameters
@@ -87,6 +117,13 @@ def radial_profile(image, bin_size):
 		two-dimensional.
 	bin_size : scalar
 		The extent of each bin. Each bin will be a ring from r to r+`bin_size`.
+	statistic : string
+		The statistic to compute (default is 'mean').
+		The following statistics are available:
+		* 'mean': compute the mean of values for points within the bin edges.
+		* 'sum': compute the sum of values for points within the bin edges.
+		* 'min': compute the minimum of values for points within the bin edges.
+		* 'max': compute the maximum of values for point within the bin edges.
 
 	Returns
 	-------
@@ -98,6 +135,11 @@ def radial_profile(image, bin_size):
 		The standard deviation within each bin.
 	num_per_bin : array_like
 		The number of samples per bin.
+
+	Raises
+	------
+	ValueError
+		If the statistic is not implemented.
 	'''
 	r = image.grid.as_('polar').r
 
@@ -105,4 +147,4 @@ def radial_profile(image, bin_size):
 	max_bin = n_bins * bin_size
 	bins = np.linspace(0, max_bin, n_bins + 1)
 
-	return binned_profile(image, r, bins)
+	return binned_profile(image, r, bins, statistic=statistic)

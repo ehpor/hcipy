@@ -30,6 +30,7 @@ __all__ = [
     'MicroLensArray',
     'closest_points',
     'OpticalElement',
+	'EmptyOpticalElement',
     'AgnosticOpticalElement',
     'make_agnostic_forward',
     'make_agnostic_backward',

@@ -345,6 +345,23 @@ def make_obstruction(aperture):
 	'''
 	return lambda grid: 1 - aperture(grid)
 
+def make_rotated_aperture(aperture, angle):
+	'''Create a rotated version of `aperture`.
+
+	Parameters
+	----------
+	aperture : Field generator
+		The aperture to rotate.
+	angle : scalar
+		The angle in radians by which to rotate the aperture.
+
+	Returns
+	-------
+	Field generator
+		The rotated aperture.
+	'''
+	return lambda grid: Field(aperture(grid.rotated(-angle)), grid)
+
 def make_segmented_aperture(segment_shape, segment_positions, segment_transmissions=1, return_segments=False):
 	'''Create a segmented aperture.
 

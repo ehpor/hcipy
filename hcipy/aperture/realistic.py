@@ -1,9 +1,83 @@
 import numpy as np
 from ..field import make_hexagonal_grid, Field
-from .generic import make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture
+from .generic import make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction
 
-def make_vlt_aperture():
-	pass
+def make_vlt_aperture(normalized=False, with_spiders=True, with_M3_cover=False):
+	'''Make the VLT aperture.
+
+	This aperture is based on the ERIS pupil documentation: VLT-SPE-AES-11310-0006.
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 8.1196 meters.
+	with_spiders : boolean
+		If this is False, the spiders will be left out. Default: True.
+	with_M3_cover : boolean
+		If this is True, a cover will be created for the M3 in stowed position. Default: False.
+
+	Returns
+	-------
+	Field generator
+		The VLT aperture.
+	'''
+	pupil_diameter = 8.1196 # meter
+	spider_width = 0.040 # meter
+	central_obscuration_ratio = 0.6465 * 2 / 8.1196
+	spider_offset = 0.4045 # meter
+	spider_outer_radius = 4.2197 # meter
+	outer_diameter_M3_stow = 1.070 # meter
+	angle_between_spiders = 101 # degrees
+
+	if normalized:
+		spider_width /= pupil_diameter
+		spider_offset /= pupil_diameter
+		spider_outer_radius /= pupil_diameter
+		outer_diameter_M3_stow /= pupil_diameter
+		pupil_diameter = 1.0
+
+	obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio)
+
+	if with_spiders:
+		spider_inner_radius = spider_offset / np.cos(np.radians(45 - (angle_between_spiders - 90) / 2))
+
+		spider_start_1 = -spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
+		spider_end_1 = spider_outer_radius * np.array([np.cos(np.pi), np.sin(np.pi)])
+
+		spider_start_2 = -spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
+		spider_end_2 = spider_outer_radius * np.array([np.cos(-np.pi / 2), np.sin(-np.pi / 2)])
+
+		spider_start_3 = spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
+		spider_end_3 = spider_outer_radius * np.array([np.cos(0), np.sin(0)])
+
+		spider_start_4 = spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
+		spider_end_4 = spider_outer_radius * np.array([np.cos(np.pi / 2), np.sin(np.pi / 2)])
+
+		spider1 = make_spider(spider_start_1, spider_end_1, spider_width)
+		spider2 = make_spider(spider_start_2, spider_end_2, spider_width)
+		spider3 = make_spider(spider_start_3, spider_end_3, spider_width)
+		spider4 = make_spider(spider_start_4, spider_end_4, spider_width)
+
+	if with_M3_cover:
+		m3_cover = make_obstruction(rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))
+
+	if with_spiders:
+		if with_M3_cover:
+			def func(grid):
+				return Field(obstructed_aperture(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * m3_cover(grid), grid)
+		else:
+			def func(grid):
+				return Field(obstructed_aperture(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid), grid)
+	else:
+		if with_M3_cover:
+			def func(grid):
+				return Field(obstructed_aperture(grid) * m3_cover(grid), grid)
+		else:
+			def func(grid):
+				return Field(obstructed_aperture(grid), grid)
+
+	return func
 
 def make_subaru_aperture():
 	pass
@@ -27,11 +101,11 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 	Field generator
 		The Magellan aperture.
 	'''
-	pupil_diameter = 6.5 #m
-	spider_width1 = 0.75 * 0.0254 #m
-	spider_width2 = 1.5 * 0.0254 #m
+	pupil_diameter = 6.5 # meter
+	spider_width1 = 0.75 * 0.0254 # meter
+	spider_width2 = 1.5 * 0.0254 # meter
 	central_obscuration_ratio = 0.29
-	spider_offset = [0,0.34] #m
+	spider_offset = [0, 0.34] # meter
 
 	if normalized:
 		spider_width1 /= pupil_diameter

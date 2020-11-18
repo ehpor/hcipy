@@ -148,6 +148,7 @@ class DeformableMirror(OpticalElement):
 
 		self._actuators = np.zeros(len(influence_functions))
 		self._actuators_for_cached_surface = None
+		self._tf_actuators = None
 
 		self.input_grid = influence_functions.grid
 		self.output_grid = self.input_grid
@@ -169,7 +170,11 @@ class DeformableMirror(OpticalElement):
 		elif backend == 'tensorflow':
 			import tensorflow as tf
 
-			self._actuators = tf.Variable(tf.convert_to_tensor(np.array(self._actuators)))
+			if self._tf_actuators is None:
+				self._tf_actuators = tf.Variable(tf.convert_to_tensor(np.array(self._actuators)))
+			else:
+				self._tf_actuators.assign(self._actuators)
+			self._actuators = self._tf_actuators
 		else:
 			raise ValueError('Backend %s not recognized.' % backend)
 

@@ -5,8 +5,85 @@ from ..field import make_pupil_grid, make_focal_grid, Field
 
 import numpy as np
 
-def optical_differentiation_surface(filter_size, amplitude_filter, separation, wavelength_0, refractive_index):
-	'''Creates a function which can create the complex multiplexed surface for the ODWFS on a grid.
+
+def heaviside_function(x, epsilon=1e-14):
+	'''
+	The Heaviside function using the half-maximum convention.
+	
+	Parameters
+	----------
+	x : array_like
+		The values for which the heaviside function needs to be evaluated.
+	epsilon : scalar
+		The range that is considered zero. The default value is 1e-14.
+
+	Returns
+	-------
+	h
+		The evaluated heaviside function
+
+	'''
+	h = (x > 0).astype(np.float)
+	h[abs(x)<epsilon] = 0.5
+	return h
+
+def create_polarization_odwfs_amplitude_filter(beta):
+	'''
+	The OD-wfs amplitude filter following [Haffert 2016].
+		
+	.. [Haffert 2016] S. Y. Haffert, 2016, "Generalised optical differentiation wavefront sensor: 
+		a sensitive high dynamic range wavefront sensor," Opt. Express 24, 18986-19007 (2016).
+
+	Parameters
+	----------
+	beta : scalar
+		
+	Returns
+	-------
+	amplitude_filter
+		The lambda function that generates the amplitude profile.
+
+	Raises
+	------
+	ValueError
+		If beta is not between 0 and 1.
+	'''
+	if beta < 0 or beta > 1:
+		raise ValueError('Beta should be between 0 and 1.')
+
+	amplitude_filter = lambda x: np.sin( np.pi/2 * (beta * heaviside_function(x) + (1-beta) * (1+x)/2) )
+	return amplitude_filter
+
+def create_odwfs_amplitude_filter(beta):
+	'''
+	The OD-wfs amplitude filter following [Haffert 2016].
+		
+	.. [Haffert 2016] S. Y. Haffert, 2016, "Generalised optical differentiation wavefront sensor: 
+		a sensitive high dynamic range wavefront sensor," Opt. Express 24, 18986-19007 (2016).
+
+	Parameters
+	----------
+	beta : scalar
+		
+	Returns
+	-------
+	amplitude_filter
+		The lambda function that generates the amplitude profile.
+
+	Raises
+	------
+	ValueError
+		If beta is not between 0 and 1.
+	'''
+	if beta < 0 or beta > 1:
+		raise ValueError('Beta should be between 0 and 1.')
+
+	amplitude_filter = lambda x: (beta * heaviside_function(x) + (1-beta) * (1+x)/2) / np.sqrt(2)
+	return amplitude_filter
+
+
+def optical_differentiation_surface(filter_size, amplitude_filter, separation, wavelength_0, refractive_index, orientation=0):
+	'''A generator function for the complex multiplexed surface of the ODWFS.
 
 	Parameters
 	----------
@@ -20,7 +97,8 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 		The reference wavelength for the filter specifications.
 	refractive_index : lambda function
 		A lambda function for the refractive index which accepts a wavelength.
-
+	orientation : scalar
+		The orientation of the amplitude filters. The default value is 0 radian.
 	Returns
 	----------
 	func : function
@@ -28,119 +106,107 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 
 	'''
 	def func(grid):
+		surface_grid = grid.rotated(orientation)
 		# The surfaces which tilt the beam
-		# This positions the pupils
-		surf1 = -separation / (refractive_index(wavelength_0) - 1) * grid.x
-		surf2 = -separation / (refractive_index(wavelength_0) - 1) * -grid.x
-		surf3 = -separation / (refractive_index(wavelength_0) - 1) * grid.y
-		surf4 = -separation / (refractive_index(wavelength_0) - 1) * -grid.y
-
-		surf = (Field(surf1, grid), Field(surf2, grid), Field(surf3, grid), Field(surf4, grid))
+		surf1 = -separation / (refractive_index(wavelength_0) - 1) * surface_grid.x
+		surf2 = -separation / (refractive_index(wavelength_0) - 1) * -surface_grid.x
+		surf3 = -separation / (refractive_index(wavelength_0) - 1) * surface_grid.y
+		surf4 = -separation / (refractive_index(wavelength_0) - 1) * -surface_grid.y
+		
+		surf = (Field(surf1, surface_grid), Field(surf2, surface_grid), Field(surf3, surface_grid), Field(surf4, surface_grid))
 
 		# The physical boundaries of the mask
 		filter_mask = (np.abs(grid.x) < filter_size) * (np.abs(grid.y) < filter_size)
 
-		x_mask = np.abs(grid.x) < 1e-15
-		y_mask = np.abs(grid.y) < 1e-15
-
-		# NOTE : be carefull with the plus and minus signs of the filters
+		# NOTE : be careful with the plus and minus signs of the filters
 		# For energy conservation the squared sum of the filters should be <= 1
 		# For electric field conservation the second filter has to have opposite sign.
-		filter_1 = amplitude_filter(grid.x / filter_size)
-		filter_1[x_mask] = 1 / 2
+		filter_1 = amplitude_filter(surface_grid.x / filter_size)
 		filter_1 *= filter_mask
 
-		filter_2 = -amplitude_filter(-grid.x / filter_size)
-		filter_2[x_mask] = -1 / 2
+		filter_2 = -amplitude_filter(-surface_grid.x / filter_size)
 		filter_2 *= filter_mask
-
-		filter_3 = amplitude_filter(grid.y / filter_size)
-		filter_3[y_mask] = 1 / 2
+		
+		filter_3 = amplitude_filter(surface_grid.y / filter_size)
 		filter_3 *= filter_mask
 
-		filter_4 = -amplitude_filter(-grid.y / filter_size)
-		filter_4[y_mask] = -1 / 2
+		filter_4 = -amplitude_filter(-surface_grid.y / filter_size)
 		filter_4 *= filter_mask
 
-		amp = (Field(filter_1, grid), Field(filter_2, grid), Field(filter_3, grid), Field(filter_4, grid))
+		amp = (Field(filter_1, surface_grid), Field(filter_2, surface_grid), Field(filter_3, surface_grid), Field(filter_4, surface_grid))
 
 		return MultiplexedComplexSurfaceApodizer(amp, surf, refractive_index)
 	return func
 
 class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
-	'''The value of some physical quantity for each point in some coordinate system.
+	'''The optical elements for a optical-differentiation wavefront sensor.
 
 	Parameters
 	----------
-	filter_size : scalar
-		The physical size of the filter in lambda/D.
-	amplitude_filter : lambda function
-		A lambda function which acts on the focal plane grid to create a amplitude filter.
-	pupil_grid : Grid
-		The input pupil grid.
-	pupil_diameter : scalar
-		The size of the pupil.
-		If it is set to None the pupil_diameter will be the diameter of the pupil_grid.
-	pupil_separation : scalar
-		The separation distance between the pupils in pupil diameters.
-	num_pupil_pixels : int
-		The number of pixels that are used to sample the output pupil.
-	q : scalar
-		The focal plane oversampling coefficient.
-	wavelength_0 : scalar
-		The reference wavelength which determines the physical scales.
-	refractive_index : function
-		A function that returns the refractive index as function of wavelength.
-	num_airy : int
-		The size of the intermediate focal plane grid that is used in terms of lambda/D at the reference wavelength.
-
-	Attributes
-	----------
+	amplitude_filter : callable
+		The function that defines the amplitude filter in the focal plane.
+	input_grid : Grid
+		The grid on which the input wavefront is defined.
 	output_grid : Grid
-		The output grid of the wavefront sensor.
-	focal_grid : Grid
-		The intermediate focal plane grid where the focal plane is sampled.
-	pupil_to_focal : FraunhoferPropagator
-		A propagator for the input pupil plane to the intermediate focal plane.
-	focal_to_pupil : FraunhoferPropagator
-		A propagator for the intermediate focal plane to the output pupil plane.
-	focal_mask : MultiplexedComplexSurfaceApodizer
-		The filter that is applied in the focal plane.
+		The grid on which the output wavefront is defined.
+	separation : scalar
+		The separation between the pupils. The default takes the input grid extent as separation.
+	D : scalar
+		The size of the pupil. The default take sthe input grid extent as pupil size.
+	wavelength_0 : scalar
+		The reference wavelength that determines the physical scales.
+	q : scalar
+		The focal plane oversampling coefficient. The default uses the minimal required sampling.
+	num_airy : scalar
+		The radius of the focal plane spatial filter in units of lambda/D at the reference wavelength.
+	refractive_index : callable
+		A callable that returns the refractive index as function of wavelength.
+		The default is a refractive index of 1.5.
 	'''
-	def __init__(self, filter_size, amplitude_filter, pupil_grid, pupil_diameter, pupil_separation, num_pupil_pixels, q, wavelength_0, refractive_index, num_airy=None):
-		# Make mask
-		if pupil_diameter is None:
-			pupil_diameter = pupil_grid.x.ptp()
+	def __init__(self, amplitude_filter, input_grid, output_grid, separation=None, D=None, wavelength_0=1, q=None, num_airy=None, refractive_index=lambda x: 1.5):
+		if not input_grid.is_regular:
+			raise ValueError('The input grid must be a regular grid.')
 
-		# Multiply by 2 because we want to have two pupils next to each other
-		sep = 0.5 * pupil_separation * pupil_diameter * np.sqrt(2)
-		output_grid_size = (pupil_separation * np.sqrt(2) + 1) * pupil_diameter
-		output_grid_pixels = np.ceil(num_pupil_pixels * (pupil_separation + 1) * np.sqrt(2))
+		self.input_grid = input_grid
+		self.output_grid = output_grid
 
-		# Need at least two times over sampling in the focal plane because we want to separate two pupils completely
-		if q < 2 * pupil_separation * np.sqrt(2):
-			q = 2 * pupil_separation * np.sqrt(2)
+		if D is None:
+			D = np.max(input_grid.delta * (input_grid.shape - 1))
+		
+		if separation is None:
+			separation = D
 
-		# Create the intermediate and final grids
-		self.output_grid = make_pupil_grid(output_grid_pixels, output_grid_size)
-		self.focal_grid = make_focal_grid(pupil_grid, q=q, num_airy=num_airy, wavelength=wavelength_0)
-
-		if filter_size is None:
-			filter_size = self.focal_grid.x.max()
+		# Create the intermediate focal grid
+		# Oversampling necessary to see all frequencies in the output wavefront sensor plane
+		qmin = np.ceil(max(output_grid.x.ptp() / input_grid.x.ptp(), 2))
+		if q is None:
+			q = qmin 
+		elif q < qmin:
+			raise ValueError('The requested focal plane sampling is too low to sufficiently sample the wavefront sensor output.')
+		
+		if num_airy is None:
+			self.num_airy = np.max(input_grid.shape - 1) / 2
 		else:
-			filter_size = filter_size * wavelength_0 / pupil_diameter
+			self.num_airy = num_airy
+
+		num_pixels = 2 * int(self.num_airy * q)
+		spatial_resolution = wavelength_0 / D
+		self.focal_grid = make_pupil_grid(num_pixels, 2 * spatial_resolution * self.num_airy)
 
 		# Make all the optical elements
-		self.pupil_to_focal = FraunhoferPropagator(pupil_grid, self.focal_grid, wavelength_0=wavelength_0)
-		focal_plane_mask = optical_differentiation_surface(filter_size, amplitude_filter, sep, wavelength_0, refractive_index)
+		self.filter_size = self.num_airy * wavelength_0 / D
+		focal_plane_mask = optical_differentiation_surface(self.filter_size, amplitude_filter, separation/np.sqrt(2), wavelength_0, refractive_index, orientation=np.pi/4)
 		self.focal_mask = focal_plane_mask(self.focal_grid)
-		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.output_grid, wavelength_0=wavelength_0)
+
+		# Make the propagators
+		self.pupil_to_focal = FraunhoferPropagator(self.input_grid, self.focal_grid)
+		self.focal_to_pupil = FraunhoferPropagator(self.focal_grid, self.output_grid)
 
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the wavefront sensor.
 
 		Parameters
-		----------
+		----------		
 		wavefront : Wavefront
 			The input wavefront that will propagate through the system.
 
@@ -151,7 +217,27 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 		'''
 		wf = self.pupil_to_focal.forward(wavefront)
 		wf = self.focal_mask.forward(wf)
-		wf = self.focal_to_pupil(wf)
+		wf = self.focal_to_pupil.forward(wf)
+
+		return wf
+
+	
+	def backward(self, wavefront):
+		'''Propagates a wavefront backwards through the wavefront sensor.
+
+		Parameters
+		----------		
+		wavefront : Wavefront
+			The input wavefront that will propagate through the system.
+
+		Returns
+		-------
+		wf : Wavefront
+			The output wavefront.
+		'''
+		wf = self.pupil_to_focal.backward(wavefront)
+		wf = self.focal_mask.backward(wf)
+		wf = self.focal_to_pupil.backward(wf)
 
 		return wf
 

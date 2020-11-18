@@ -2,11 +2,8 @@ from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
 from ..optics import MultiplexedComplexSurfaceApodizer
 from ..field import make_pupil_grid, make_focal_grid, Field
-from ..fourier import FastFourierTransform
-from ..plotting import imshow_field
 
 import numpy as np
-from matplotlib import pyplot as plt
 
 
 def heaviside_function(x, epsilon=1e-14):

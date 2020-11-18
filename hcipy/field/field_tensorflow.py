@@ -279,6 +279,12 @@ def _tf_allclose(x, y, rtol=1e-5, atol=1e-8, equal_nan=False):
 
 	return tf.reduce_all(tf.abs(x - y) <= (tf.abs(y) * rtol + atol))
 
+@_implements_function('copy')
+def _tf_copy(x):
+	import tensorflow as tf
+
+	return TensorFlowField(tf.identity(x.arr), x.grid)
+
 @field_backend('tensorflow')
 class TensorFlowField(FieldBase, numpy.lib.mixins.NDArrayOperatorsMixin):
 	'''The value of some physical quantity for each point in some coordinate system.

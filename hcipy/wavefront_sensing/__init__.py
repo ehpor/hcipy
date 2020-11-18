@@ -1,11 +1,10 @@
 __all__ = [
     'WavefrontSensorOptics',
     'WavefrontSensorEstimator',
+	'create_odwfs_amplitude_filter',
+	'create_polarization_odwfs_amplitude_filter',
     'optical_differentiation_surface',
     'OpticalDifferentiationWavefrontSensorOptics',
-    'gODWavefrontSensorOptics',
-    'RooftopWavefrontSensorOptics',
-    'PolgODWavefrontSensorOptics',
     'OpticalDifferentiationWavefrontSensorEstimator',
     'ModulatedPyramidWavefrontSensorOptics',
     'PyramidWavefrontSensorOptics',

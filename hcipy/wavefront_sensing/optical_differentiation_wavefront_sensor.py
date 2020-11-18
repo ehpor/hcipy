@@ -2,8 +2,11 @@ from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
 from ..optics import MultiplexedComplexSurfaceApodizer
 from ..field import make_pupil_grid, make_focal_grid, Field
+from ..fourier import FastFourierTransform
+from ..plotting import imshow_field
 
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 def heaviside_function(x, epsilon=1e-14):
@@ -23,7 +26,7 @@ def heaviside_function(x, epsilon=1e-14):
 		The evaluated heaviside function
 
 	'''
-	h = (x > 0).astype(np.float)
+	h = np.array(x > 0).astype(np.float)
 	h[abs(x)<epsilon] = 0.5
 	return h
 
@@ -107,11 +110,13 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 	'''
 	def func(grid):
 		surface_grid = grid.rotated(orientation)
+		
+		surface_tilt = 1/2 * separation / (refractive_index(wavelength_0) - 1)
 		# The surfaces which tilt the beam
-		surf1 = -separation / (refractive_index(wavelength_0) - 1) * surface_grid.x
-		surf2 = -separation / (refractive_index(wavelength_0) - 1) * -surface_grid.x
-		surf3 = -separation / (refractive_index(wavelength_0) - 1) * surface_grid.y
-		surf4 = -separation / (refractive_index(wavelength_0) - 1) * -surface_grid.y
+		surf1 = -surface_tilt * surface_grid.x
+		surf2 = -surface_tilt * -surface_grid.x
+		surf3 = -surface_tilt * surface_grid.y
+		surf4 = -surface_tilt * -surface_grid.y
 		
 		surf = (Field(surf1, surface_grid), Field(surf2, surface_grid), Field(surf3, surface_grid), Field(surf4, surface_grid))
 
@@ -133,7 +138,7 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 		filter_4 = -amplitude_filter(-surface_grid.y / filter_size)
 		filter_4 *= filter_mask
 
-		amp = (Field(filter_1, surface_grid), Field(filter_2, surface_grid), Field(filter_3, surface_grid), Field(filter_4, surface_grid))
+		amp = (Field(filter_1, grid), Field(filter_2, grid), Field(filter_3, grid), Field(filter_4, grid))
 
 		return MultiplexedComplexSurfaceApodizer(amp, surf, refractive_index)
 	return func
@@ -195,7 +200,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 
 		# Make all the optical elements
 		self.filter_size = self.num_airy * wavelength_0 / D
-		focal_plane_mask = optical_differentiation_surface(self.filter_size, amplitude_filter, separation/np.sqrt(2), wavelength_0, refractive_index, orientation=np.pi/4)
+		focal_plane_mask = optical_differentiation_surface(self.filter_size, amplitude_filter, separation * np.sqrt(2), wavelength_0, refractive_index, orientation=np.pi/4)
 		self.focal_mask = focal_plane_mask(self.focal_grid)
 
 		# Make the propagators
@@ -242,14 +247,14 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 		return wf
 
 class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
-	'''Estimates the wavefront slopes from OD wavefront sensor images.
+	'''Estimates the wavefront slopes from pyramid wavefront sensor images.
 
 	Parameters
 	----------
 	aperture : function
 		A function which mask the pupils for the normalized differences.
 	output_grid : Grid
-		The grid on which the output of an OD wavefront sensor is sampled.
+		The grid on which the output of a pyramid wavefront sensor is sampled.
 
 	Attributes
 	----------
@@ -260,30 +265,28 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 	num_measurements : int
 		The number of pixels in the output vector.
 	'''
-
-	def __init__(self, aperture, output_grid):
-		self.measurement_grid = make_pupil_grid(output_grid.shape[0] / 2, output_grid.x.ptp() / 2)
-		self.pupil_mask = aperture(self.measurement_grid)
+	def __init__(self, slope_grid, aperture):
+		self.pupil_mask = aperture
 		self.num_measurements = 2 * int(np.sum(self.pupil_mask > 0))
 
 	def estimate(self, images):
-		'''A function which estimates the wavefront slope from a ODWFS image.
+		'''A function which estimates the wavefront slope from a pyramid image.
 
 		Parameters
 		----------
-		images : List
-			A list of scalar intensity fields containing OD wavefront sensor images.
+		images - list
+			A list of scalar intensity fields containing pyramid wavefront sensor images.
 
 		Returns
 		-------
-		res : Field
+		res - Field
 			A field with wavefront sensor slopes.
 		'''
 		import warnings
 		warnings.warn("This function does not work as expected and will be changed in a future update.", RuntimeWarning)
 
 		image = images.shaped
-		sub_shape = image.grid.shape // 2
+		sub_shape = np.array(image.grid.shape) // 2
 
 		# Subpupils
 		I_a = image[:sub_shape[0], :sub_shape[1]]
@@ -291,11 +294,11 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 		I_c = image[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
 		I_d = image[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
 
-		I_x = (I_d - I_a) / (I_a + I_d)
-		I_y = (I_c - I_b) / (I_c + I_b)
+		I_x = (I_a - I_c) / (I_a + I_c)
+		I_y = (I_b - I_d) / (I_b + I_d)
 
 		I_x = I_x.ravel()[self.pupil_mask>0]
 		I_y = I_y.ravel()[self.pupil_mask>0]
 
-		res = Field([I_x, I_y], self.pupil_mask.grid)
-		return res
+		slopes = np.vstack((I_x, I_y))
+		return slopes

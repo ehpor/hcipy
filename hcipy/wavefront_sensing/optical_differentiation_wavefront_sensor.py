@@ -29,7 +29,7 @@ def heaviside_function(x, epsilon=1e-14):
 
 def create_polarization_odwfs_amplitude_filter(beta):
 	'''
-	The OD-wfs amplitude filter following [Haffert 2016].
+	The OD-wfs amplitude filter based on polarization optics following [Haffert 2016].
 		
 	.. [Haffert 2016] S. Y. Haffert, 2016, "Generalised optical differentiation wavefront sensor: 
 		a sensitive high dynamic range wavefront sensor," Opt. Express 24, 18986-19007 (2016).

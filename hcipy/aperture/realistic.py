@@ -1,4 +1,5 @@
 import numpy as np
+import pkg_resources
 from ..field import make_hexagonal_grid, Field
 from .generic import make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction
 
@@ -550,4 +551,24 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter_fra
 		return func
 
 def make_elt_aperture():
-	pass
+	filename = pkg_resources.resource_stream('hcipy', 'data/eelt_segment_indices.txt')
+	segment_indices = np.loadtxt(filename, dtype=np.int)
+	
+	segment_size = 1.42
+	segment_gap = 0.004
+	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3)/2 + segment_gap, 17, pointy_top=True).subset(segment_indices)
+	segment_shape = hexagonal_aperture(segment_size, angle=np.pi/2 * 0)
+	
+	elt_segments = make_segmented_aperture(segment_shape, segment_positions)
+	
+	spiders = [make_spider_infinite([0,0], 60 * i, 0.4) for i in range(6)]
+	
+	def aper(grid):
+		aperture = elt_segments(grid)
+	
+		for spider in spiders:
+			aperture *= spider(grid)
+		
+		return aperture
+	
+	return aper

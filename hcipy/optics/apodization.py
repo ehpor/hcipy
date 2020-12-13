@@ -2,6 +2,12 @@ import numpy as np
 from .optical_element import OpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward, INPUT_GRID_DEPENDENT, OUTPUT_GRID_DEPENDENT, WAVELENGTH_DEPENDENT
 import types
 
+def _attach_property(instance, property_name, property_object):
+    class_name = instance.__class__.__name__ + 'Child'
+    child_class = type(class_name, (instance.__class__,), {property_name: property_object})
+
+    instance.__class__ = child_class
+
 class Apodizer(AgnosticOpticalElement):
 	'''A thin apodizer.
 
@@ -21,13 +27,22 @@ class Apodizer(AgnosticOpticalElement):
 		instance_data.apodization = self.evaluate_parameter(self.apodization, input_grid, output_grid, wavelength)
 		instance_data._tf_apodization = None
 
-		instance_data.backend = 'numpy'
-		def set_backend(self, backend):
+		if np.isscalar(instance_data.apodization):
+			instance_data._backend = 'numpy'
+		else:
+			instance_data._backend = instance_data.apodization.backend
+
+		@property
+		def backend(self):
+			return self._backend
+
+		@backend.setter
+		def backend(self, backend):
 			if self.backend == backend:
 				return
 
 			if backend == 'numpy':
-				self._apodization = NumpyField(self._tf_apodization.numpy(), self.input_grid)
+				self.apodization = NumpyField(self._tf_apodization.numpy(), self.input_grid)
 			elif backend == 'tensorflow':
 				import tensorflow as tf
 
@@ -35,11 +50,13 @@ class Apodizer(AgnosticOpticalElement):
 					self._tf_apodization = tf.Variable(tf.convert_to_tensor(np.array(self.apodization)))
 				else:
 					self._tf_apodization.assign(self.apodization)
-				self._apodization = self._tf_apodization
+				self.apodization = self._tf_apodization
 			else:
 				raise ValueError('Backend is not implemented.')
 
-		instance_data.set_backend = types.MethodType(set_backend, instance_data)
+			self._backend = backend
+
+		_attach_property(instance_data, 'backend', backend)
 
 	@property
 	def apodization(self):
@@ -66,7 +83,7 @@ class Apodizer(AgnosticOpticalElement):
 	def forward(self, instance_data, wavefront):
 		wf = wavefront.copy()
 
-		instance_data.set_backend(wf.electric_field.backend)
+		instance_data.backend = wf.electric_field.backend
 
 		wf.electric_field *= instance_data.apodization
 
@@ -76,7 +93,7 @@ class Apodizer(AgnosticOpticalElement):
 	def backward(self, instance_data, wavefront):
 		wf = wavefront.copy()
 
-		instance_data.set_backend(wf.electric_field.backend)
+		instance_data.backend = wf.electric_field.backend
 
 		wf.electric_field *= instance_data.apodization.conj()
 

@@ -136,6 +136,14 @@ def make_xinetics_influence_functions(pupil_grid, num_actuators_across_pupil, ac
 
 	return ModeBasis([poke(p) for p in actuator_positions.points], pupil_grid)
 
+def find_illuminated_actuators(basis, aperture, power_cutoff=0.1):
+	power = np.sum(abs(basis._transformation_matrix)**2, axis=0)
+	masked_power = np.sum( abs(basis._transformation_matrix[aperture>0])**2, axis=0)
+	illuminated_actuator_mask = masked_power >= power_cutoff * power
+	
+	return ModeBasis(basis._transformation_matrix[:, illuminated_actuator_mask], basis.grid)
+
+
 class DeformableMirror(OpticalElement):
 	'''A deformable mirror using influence functions.
 

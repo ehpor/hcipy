@@ -39,7 +39,7 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		self.output_grid = input_grid
 
 		# Make the phase dot
-		phase_dot_diameter *= pupil_diameter / reference_wavelength
+		phase_dot_diameter *= reference_wavelength / pupil_diameter
 		focal_grid = make_uniform_grid([num_pix, num_pix], phase_dot_diameter)
 		self.phase_dot = PhaseApodizer(circular_aperture(phase_dot_diameter)(focal_grid) * phase_step)
 
@@ -179,7 +179,7 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		self._phase_retardation = phase_retardation
 
 		# Make the vector-Zernike wavefront sensor mask
-		phase_dot_diameter *= pupil_diameter / reference_wavelength
+		phase_dot_diameter *= reference_wavelength / pupil_diameter
 		focal_grid = make_uniform_grid([num_pix, num_pix], phase_dot_diameter)
 		phase_dot = circular_aperture(phase_dot_diameter)(focal_grid) * phase_step
 

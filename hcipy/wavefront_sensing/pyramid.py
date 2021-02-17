@@ -62,17 +62,21 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 	----------
 	input_grid : Grid
 		The grid on which the input wavefront is defined.
+	output_grid : Grid
+		The grid on which the output wavefront is defined.
 	separation : scalar
 		The separation between the pupils. The default takes the input grid extent as separation.
+	D : scalar
+		The diameter of the aperture.
 	wavelength_0 : scalar
 		The reference wavelength that determines the physical scales.
 	q : scalar
 		The focal plane oversampling coefficient. The default uses the minimal required sampling.
+	num_airy : scalar
+		The radius of the focal plane spatial filter in units of lambda/D at the reference wavelength.
 	refractive_index : callable
 		A callable that returns the refractive index as function of wavelength.
 		The default is a refractive index of 1.5.
-	num_airy : scalar
-		The radius of the focal plane spatial filter in units of lambda/D at the reference wavelength.
 	'''
 	def __init__(self, input_grid, output_grid, separation=None, D=None, wavelength_0=1, q=None, num_airy=None, refractive_index=lambda x: 1.5):
 		if not input_grid.is_regular:
@@ -187,8 +191,8 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 		res - Field
 			A field with wavefront sensor slopes.
 		'''
-		#import warnings
-		#warnings.warn("This function does not work as expected and will be changed in a future update.", RuntimeWarning)
+		import warnings
+		warnings.warn("This function does not work as expected and will be changed in a future update.", RuntimeWarning)
 
 		image = images.shaped
 		sub_shape = image.grid.shape // 2
@@ -206,8 +210,8 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 		I_x = (I_a + I_b - I_c - I_d) * inv_norm
 		I_y = (I_a - I_b - I_c + I_d) * inv_norm
 
-		I_x = I_x.ravel() * self.pupil_mask #[self.pupil_mask>0]
-		I_y = I_y.ravel() * self.pupil_mask #[self.pupil_mask>0]
+		I_x = I_x.ravel()[self.pupil_mask>0]
+		I_y = I_y.ravel()[self.pupil_mask>0]
 
 		res = Field([I_x, I_y], self.pupil_mask.grid)
 		return res

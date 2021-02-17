@@ -132,3 +132,16 @@ def test_hicat_lyot_stop():
 	}
 
 	check_aperture_against_reference(make_hicat_lyot_stop, 'hicat_lyot', 19.9e-3, options)
+
+def test_elt_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_spiders': [(True, ''), (False, '_without_spiders')]
+	}
+
+	check_aperture_against_reference(make_elt_aperture, 'elt', 39.14634, options)
+	
+	check_segmentation(make_elt_aperture, options)
+
+#test_vlt_aperture()
+test_elt_aperture()

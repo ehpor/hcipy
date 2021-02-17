@@ -86,7 +86,7 @@ def make_subaru_aperture():
 def make_lbt_aperture():
 	pass
 
-def make_magellan_aperture(normalized=False, with_spiders=True):
+def make_magellan_aperture(normalized=False, with_spiders=True, oversize=1.0):
 	'''Make the Magellan aperture.
 
 	Parameters
@@ -550,25 +550,65 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter_fra
 	else:
 		return func
 
-def make_elt_aperture():
+def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False):
+	'''Make the European Extremely Large Telescope aperture.
+
+	This aperture is based on the pupil documentation in the E-ELT Construction Proposal: 
+		https://www.eso.org/sci/facilities/eelt/docs/index.html .
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 39.14634 meters.
+	with_spiders : boolean
+		If this is False, the spiders will be left out. Default: True.
+	return_segments : boolean
+		If this is True, the segments will also be returned as a list of Field generators.
+
+	Returns
+	-------
+	Field generator
+		The E-ELT aperture.
+	ELT_segments : list of Field generators
+		The segments. Only returned when `return_segments` is True.
+	'''
+
+	# The ELT aperture is generate by first creating a filled hexagonal grid.
+	# The datafile 'eelt_segment_indices.txt' contains the segment indices that will be used.
 	filename = pkg_resources.resource_stream('hcipy', 'data/eelt_segment_indices.txt')
 	segment_indices = np.loadtxt(filename, dtype=np.int)
 	
-	segment_size = 1.42
+	segment_size = 1.45
 	segment_gap = 0.004
+	
+	if normalized:
+		segment_size /= 39.14634
+		segment_gap /= 39.14634
+
 	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3)/2 + segment_gap, 17, pointy_top=True).subset(segment_indices)
 	segment_shape = hexagonal_aperture(segment_size, angle=np.pi/2 * 0)
 	
-	elt_segments = make_segmented_aperture(segment_shape, segment_positions)
+	if return_segments:
+		elt_aperture_function, elt_segments = make_segmented_aperture(segment_shape, segment_positions, return_segments=return_segments)
+	else:
+		elt_aperture_function = make_segmented_aperture(segment_shape, segment_positions)	
 	
-	spiders = [make_spider_infinite([0,0], 60 * i, 0.4) for i in range(6)]
+	if normalized:
+		spiders = [make_spider_infinite([0,0], 60 * i, 0.4 / 39.14634) for i in range(6)]
+	else:
+		spiders = [make_spider_infinite([0,0], 60 * i, 0.4) for i in range(6)]
 	
-	def aper(grid):
-		aperture = elt_segments(grid)
-	
-		for spider in spiders:
-			aperture *= spider(grid)
+	def elt_aperture_with_spiders(grid):
+		aperture = elt_aperture_function(grid)
 		
+		if with_spiders:
+			for spider in spiders:
+				aperture *= spider(grid)
+			
 		return aperture
 	
-	return aper
+	if return_segments:
+		return elt_aperture_with_spiders, elt_segments
+	else:
+		return elt_aperture_with_spiders

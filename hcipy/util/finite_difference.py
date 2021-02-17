@@ -11,7 +11,7 @@ def generate_convolution_matrix(grid, kernel):
 	Parameters
 	----------
 	grid : Grid
-		The :class:`Grid` on which to calculate the modes.
+		The :class:`Grid` for which the convolution matrix will be created.
 	kernel : array_like
 		The convolution kernel
 	
@@ -32,7 +32,17 @@ def generate_convolution_matrix(grid, kernel):
 
 
 def make_laplacian_matrix(grid):
-	'''Make Laplacian operator using the 5-point stencil approximation
+	'''Make the Laplacian operator using the 5-point stencil approximation
+	
+	Parameters
+	----------
+	grid : Grid
+		The grid for which the derivative matrix is calculated.
+	
+	Returns
+	-------
+	array_like
+		The convolution matrix.
 	'''
 	if grid.is_('cartesian') and grid.is_separated and grid.is_regular:
 		Nx = 3
@@ -52,7 +62,19 @@ def make_laplacian_matrix(grid):
 
 
 def make_derivative_matrix(grid, axis='x'):
-	'''Make Derivative operator using the 5-point stencil approximation
+	'''Make the derivative operator using the central difference approximation.
+
+	Parameters
+	----------
+	grid : Grid
+		The grid for which the derivative matrix is calculated.
+	axis : string
+		The axis for which the convolution kernel is calculated default is 'x'.
+
+	Returns
+	-------
+	array_like
+		The convolution matrix.
 	'''
 	if grid.is_('cartesian') and grid.is_separated and grid.is_regular:
 		Nx = 3
@@ -65,8 +87,10 @@ def make_derivative_matrix(grid, axis='x'):
 		elif axis == 'y':
 			kernel[0,1] = -1 / (2 * grid.delta[0])
 			kernel[2,1] = 1 / (2 * grid.delta[0])
-		kernel = kernel.ravel()
+		else:
+			raise NotImplementedError()
 
+		kernel = kernel.ravel()
 		return generate_convolution_matrix(grid, kernel)
 
 	else:

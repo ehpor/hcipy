@@ -14,7 +14,37 @@ def make_standard_atmospheric_layers(input_grid, L0=10):
 
 	return layers
 
-def make_lco_atmospheric_layers(input_grid, r0=0.16, L0=25):
+def make_lco_atmospheric_layers(input_grid, r0=0.16, L0=25, wavelength=550e-9):
+	'''Creates a multi-layer atmosphere for the Los Campanos Observatory site.
+	
+	The layer parameters are taken from [Males2019]_ who based it on site testing from [Prieto2010]_ and [Osip2011]_ .
+
+	.. [Prieto2010] G. Prieto et al., “Giant Magellan telescope site testing seeing and
+		turbulence statistics,” Proc. SPIE 7733, 77334O (2010).
+
+	.. [Osip2011] Joanna E. Thomas-Osip et al. "Giant Magellan Telescope Site Testing Summary."
+		arXiv:1101.2340 (2011).
+
+	.. [Males2019] Jared Males et al. "Ground-based adaptive optics coronagraphic performance
+		 under closed-loop predictive control", JATIS, Volume 4, id. 019001 (2018).
+	
+	Parameters
+	----------
+	input_grid : Grid
+		Th
+	r0 : scalar
+		The integrated Cn^2 value for the atmosphere.
+	L0 : scalar
+		The outer scale of the atmosphere
+	wavelength : scalar
+		The wavelength in meters at which to calculate the Fried parameter (default: 550nm).
+	
+	Returns
+	-------
+	list
+		A list of turbulence layers.
+	'''
+
 	heights = np.array([250, 500, 1000, 2000, 4000, 8000, 16000])
 	velocities = np.array([10, 10, 20, 20, 25, 30, 25])
 	

@@ -78,7 +78,7 @@ def LP_radial(m, u, w, r):
 		An array that contains the radial profile.
 	'''
 	# The scaling factor for the continuity condition
-	scaling_factor = jv(m,u) /kn(m, w)
+	scaling_factor = jv(m,u) / kn(m, w)
 
 	# Find the grid inside and outside the core radius
 	mask = r < 1
@@ -176,3 +176,5 @@ def make_LP_modes(grid, V_number, core_radius, return_betas=False):
 		return ModeBasis(modes, grid), np.array(betas)
 	else:
 		return ModeBasis(modes, grid)
+	
+	return modes

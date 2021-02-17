@@ -608,6 +608,19 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 			
 		return aperture
 	
+	if with_spiders and return_segments:
+		# Use function to return the lambda, to avoid incorrect binding of variables
+		def spider_func(grid):
+			spider_aperture = grid.ones()
+			for spider in spiders:
+				spider_aperture *= spider(grid)
+			return spider_aperture
+
+		def segment_with_spider(segment):
+			return lambda grid: segment(grid) * spider_func(grid)
+
+		elt_segments = [segment_with_spider(s) for s in elt_segments]
+
 	if return_segments:
 		return elt_aperture_with_spiders, elt_segments
 	else:

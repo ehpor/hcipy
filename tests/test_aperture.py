@@ -141,7 +141,4 @@ def test_elt_aperture():
 
 	check_aperture_against_reference(make_elt_aperture, 'elt', 39.14634, options)
 	
-	check_segmentation(make_elt_aperture, options)
-
-#test_vlt_aperture()
-test_elt_aperture()
+	check_segmentation(make_elt_aperture)

@@ -11,17 +11,19 @@ jobs:
         python.version: '3.7'
       Python38:
         python.version: '3.8'
+      Python39:
+        python.version: '3.9'
 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
     displayName: Add conda to PATH
-  
-  - bash:
+
+  - bash: |
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
       conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
-    displayName: Set up Anaconda
+    displayName: Set up Anaconda environment
 
   - bash: |
       source activate test-environment
@@ -31,8 +33,13 @@ jobs:
 
   - bash: |
       source activate test-environment
-      pytest ./tests
+      python -m pytest ./tests --junitxml=junit/unit-test.xml
     displayName: Run tests
+
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: 'junit/*.xml'
+    condition: succeededOrFailed()
 
 - job:
   displayName: MacOS
@@ -46,17 +53,22 @@ jobs:
         python.version: '3.7'
       Python38:
         python.version: '3.8'
+      Python39:
+        python.version: '3.9'
 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
     displayName: Add conda to PATH
-  
+
+  - bash: sudo chown -R $USER $CONDA
+    displayName: Take ownership of conda installation
+
   - bash: |
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
       conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
-    displayName: Set up Anaconda
+    displayName: Set up Anaconda environment
 
   - bash: |
       source activate test-environment
@@ -66,8 +78,13 @@ jobs:
 
   - bash: |
       source activate test-environment
-      pytest ./tests
+      pytest ./tests --junitxml=junit/unit-test.xml
     displayName: Run tests
+
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: 'junit/*.xml'
+    condition: succeededOrFailed()
 
 - job:
   displayName: Windows
@@ -81,6 +98,8 @@ jobs:
         python.version: '3.7'
       Python38:
         python.version: '3.8'
+      Python39:
+        python.version: '3.9'
 
   steps:
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
@@ -91,7 +110,7 @@ jobs:
       conda update -q conda
       conda info -a
       conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy
-    displayName: Set up Anaconda
+    displayName: Set up Anaconda environment
 
   - script: |
       call activate test-environment
@@ -100,6 +119,11 @@ jobs:
     displayName: Install HCIPy
 
   - script: |
-      call activate myEnvironment
-      pytest ./tests
+      call activate test-environment
+      pytest ./tests --junitxml=junit/unit-test.xml
     displayName: Run tests
+
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: 'junit/*.xml'
+    condition: succeededOrFailed()

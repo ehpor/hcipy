@@ -359,6 +359,8 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 		* 'sum': compute the sum of values for points within each superpixel. This is identical to a weighted histogram.
 		* 'min': compute the minimum of values for points within each superpixel.
 		* 'max': compute the maximum of values for point within each superpixel.
+		* 'median': compute the median of values for point within each superpixel.
+		* 'nanmedian': compute the median of values for point within each superpixel.
 
 	Returns
 	-------
@@ -387,7 +389,9 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 		'mean': np.mean,
 		'max': np.max,
 		'min': np.min,
-		'sum': np.sum
+		'sum': np.sum,
+		'median' : np.median,
+		'nanmedian' : np.nanmedian
 	}
 
 	if statistic not in available_statistics:
@@ -398,7 +402,7 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 		return Field(available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
 	else:
 		# Some weights will be different so calculate weighted mean instead.
-		if statistic in ['min', 'max', 'sum']:
+		if statistic in ['min', 'max', 'sum', 'median', 'nanmedian']:
 			f = available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes))
 			return Field(f.reshape(tuple(new_shape)), new_grid)
 		else:

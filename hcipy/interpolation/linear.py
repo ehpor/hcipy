@@ -65,7 +65,7 @@ def make_linear_interpolator_unstructured(field, grid=None, fill_value=np.nan):
 	interp = LinearNDInterpolator(grid.points, field, fill_value)
 
 	def interpolator(evaluated_grid):
-		res = interp(grid.points)
+		res = interp(evaluated_grid.points)
 		return Field(res, evaluated_grid)
 
 	return interpolator
@@ -93,6 +93,6 @@ def make_linear_interpolator(field, grid=None, fill_value=None):
 		grid = field.grid
 
 	if grid.is_unstructured:
-		return make_linear_interpolator_unstructured(field, grid)
+		return make_linear_interpolator_unstructured(field, grid, fill_value)
 	else:
-		return make_linear_interpolator_separated(field, grid)
+		return make_linear_interpolator_separated(field, grid, fill_value)

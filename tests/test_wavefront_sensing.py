@@ -17,8 +17,9 @@ def test_optical_differentiation_wavefront_sensor():
 
 def test_pyramid_wavefront_sensor():
 	pupil_grid = make_pupil_grid(128)
+	wfs_grid = make_pupil_grid(256, 2)
 
-	pywfs = PyramidWavefrontSensorOptics(pupil_grid, 1.2)
+	pywfs = PyramidWavefrontSensorOptics(pupil_grid, wfs_grid, 1.0)
 
 	zernike_modes = make_zernike_basis(20, 1, pupil_grid)
 	aberration = zernike_modes.linear_combination(np.random.randn(20)) * 0.1
@@ -28,8 +29,9 @@ def test_pyramid_wavefront_sensor():
 
 def test_modulated_pyramid_wavefront_sensor():
 	pupil_grid = make_pupil_grid(128)
+	wfs_grid = make_pupil_grid(256, 2)
 
-	pywfs = PyramidWavefrontSensorOptics(pupil_grid, 1.2)
+	pywfs = PyramidWavefrontSensorOptics(pupil_grid, wfs_grid, 1.0)
 	mpywfs = ModulatedPyramidWavefrontSensorOptics(pywfs, 2)
 
 	zernike_modes = make_zernike_basis(20, 1, pupil_grid)

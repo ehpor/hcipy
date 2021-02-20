@@ -11,6 +11,7 @@ __all__ = [
     'make_actuator_positions',
     'make_gaussian_influence_functions',
     'make_xinetics_influence_functions',
+	'find_illuminated_actuators',
     'DeformableMirror',
     'label_actuator_centroid_positions',
     'Detector',
@@ -55,7 +56,8 @@ __all__ = [
     'even_aspheric_surface_sag',
     'TipTiltMirror',
     'SimpleVibration',
-    'Wavefront'
+    'Wavefront',
+	'make_thin_lens'
 ]
 
 from .optical_element import *
@@ -71,6 +73,7 @@ from .gaussian_beam import *
 from .glass import *
 from .magnifier import *
 from .micro_lens_array import *
+from .optics import *
 from .periodic_optical_element import *
 from .polarization import *
 from .segmented_mirror import *

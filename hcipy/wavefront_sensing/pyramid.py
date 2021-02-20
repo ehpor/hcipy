@@ -62,30 +62,38 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 	----------
 	input_grid : Grid
 		The grid on which the input wavefront is defined.
+	output_grid : Grid
+		The grid on which the output wavefront is defined.
 	separation : scalar
 		The separation between the pupils. The default takes the input grid extent as separation.
+	D : scalar
+		The diameter of the aperture.
 	wavelength_0 : scalar
 		The reference wavelength that determines the physical scales.
 	q : scalar
 		The focal plane oversampling coefficient. The default uses the minimal required sampling.
+	num_airy : scalar
+		The radius of the focal plane spatial filter in units of lambda/D at the reference wavelength.
 	refractive_index : callable
 		A callable that returns the refractive index as function of wavelength.
 		The default is a refractive index of 1.5.
-	num_airy : scalar
-		The radius of the focal plane spatial filter in units of lambda/D at the reference wavelength.
 	'''
-	def __init__(self, input_grid, separation=None, wavelength_0=1, q=None, num_airy=None, refractive_index=lambda x: 1.5):
+	def __init__(self, input_grid, output_grid, separation=None, D=None, wavelength_0=1, q=None, num_airy=None, refractive_index=lambda x: 1.5):
 		if not input_grid.is_regular:
 			raise ValueError('The input grid must be a regular grid.')
 
 		self.input_grid = input_grid
-		D = np.max(input_grid.delta * (input_grid.shape - 1))
+		self.output_grid = output_grid
+
+		if D is None:
+			D = np.max(input_grid.delta * (input_grid.shape - 1))
 
 		if separation is None:
 			separation = D
 
+		# Create the intermediate focal grid
 		# Oversampling necessary to see all frequencies in the output wavefront sensor plane
-		qmin = max(2 * separation / D, 1)
+		qmin = np.ceil(max(output_grid.x.ptp() / input_grid.x.ptp(), 2))
 		if q is None:
 			q = qmin
 		elif q < qmin:
@@ -96,8 +104,9 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		else:
 			self.num_airy = num_airy
 
-		self.focal_grid = make_focal_grid(q, self.num_airy, reference_wavelength=wavelength_0, pupil_diameter=D, focal_length=1)
-		self.output_grid = make_pupil_grid(qmin * input_grid.dims, qmin * D)
+		num_pixels = 2 * int(self.num_airy * q)
+		spatial_resolution = wavelength_0 / D
+		self.focal_grid = make_pupil_grid(num_pixels, 2 * spatial_resolution * self.num_airy)
 
 		# Make all the optical elements
 		self.spatial_filter = Apodizer(circular_aperture(2 * self.num_airy * wavelength_0 / D)(self.focal_grid))
@@ -195,9 +204,11 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 		I_d = image[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
 
 		norm = I_a + I_b + I_c + I_d
+		inv_norm = np.zeros_like(norm)
+		inv_norm[norm != 0] = 1/norm[norm != 0]
 
-		I_x = (I_a + I_b - I_c - I_d) / norm
-		I_y = (I_a - I_b - I_c + I_d) / norm
+		I_x = (I_a + I_b - I_c - I_d) * inv_norm
+		I_y = (I_a - I_b - I_c + I_d) * inv_norm
 
 		I_x = I_x.ravel()[self.pupil_mask>0]
 		I_y = I_y.ravel()[self.pupil_mask>0]

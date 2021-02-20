@@ -13,6 +13,7 @@ jobs:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
+    maxParallel: 2
 
   steps:
   - bash: |
@@ -28,7 +29,7 @@ jobs:
 
   - bash: |
       source activate test-environment
-      pip install pytest pytest-azurepipelines coverage
+      pip install pytest pytest-azurepipelines
       pip install ".[dev]"
     displayName: Install HCIPy
 
@@ -43,7 +44,7 @@ jobs:
 
   - bash: |
       source activate test-environment
-      python -m coverage -m pytest ./tests --junitxml=junit/unit-test.xml
+      python -m coverage run -m pytest ./tests --junitxml=junit/unit-test.xml
     displayName: Run tests
 
   - bash: |
@@ -70,6 +71,7 @@ jobs:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
+    maxParallel: 2
 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
@@ -102,7 +104,7 @@ jobs:
 
   - bash: |
       source activate test-environment
-      coverage run pytest ./tests --junitxml=junit/unit-test.xml
+      coverage run -m pytest ./tests --junitxml=junit/unit-test.xml
     displayName: Run tests
 
   - bash: |
@@ -129,6 +131,7 @@ jobs:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
+    maxParallel: 2
 
   steps:
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
@@ -205,6 +208,7 @@ jobs:
     displayName: Print package versions
 
   - bash: |
+      source activate test-environment
       cd doc
       make html
     displayName: Build documentation

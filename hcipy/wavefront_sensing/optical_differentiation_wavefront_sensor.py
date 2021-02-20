@@ -7,9 +7,9 @@ import numpy as np
 
 def make_polarization_odwfs_amplitude_filter(beta):
 	'''
-	The OD-wfs amplitude filter based on polarization optics following [Haffert 2016].
+	The OD-wfs amplitude filter based on polarization optics following [Haffert2016]_.
 
-	.. [Haffert 2016] S. Y. Haffert, 2016, "Generalised optical differentiation wavefront sensor:
+	.. [Haffert2016] S. Y. Haffert, 2016, "Generalised optical differentiation wavefront sensor:
 		a sensitive high dynamic range wavefront sensor," Opt. Express 24, 18986-19007 (2016).
 
 	Parameters
@@ -33,7 +33,7 @@ def make_polarization_odwfs_amplitude_filter(beta):
 
 def make_odwfs_amplitude_filter(beta):
 	'''
-	The OD-wfs amplitude filter following [Haffert2016].
+	The OD-wfs amplitude filter following [Haffert2016]_.
 
 	.. [Haffert2016] S. Y. Haffert, 2016, "Generalised optical differentiation wavefront sensor:
 		a sensitive high dynamic range wavefront sensor," Opt. Express 24, 18986-19007 (2016).

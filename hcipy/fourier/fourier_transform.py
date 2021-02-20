@@ -192,3 +192,28 @@ def multiplex_for_tensor_fields(func):
 			return Field(np.array(res).reshape(new_shape), res[0].grid)
 
 	return inner
+
+def _get_float_and_complex_dtype(dtype):
+	'''Return the floating point and complex numpy data types with the same
+	bit depth per component.
+
+	Parameters
+	----------
+	dtype : numpy dtype
+		The dtype to convert to a floating point and complex dtype.
+
+	Returns
+	-------
+	float_dtype : numpy dtype
+		The floating point dtype.
+	complex_dtype : numpy dtype
+		The complex dtype.
+	'''
+	if dtype == np.dtype('float32') or dtype == np.dtype('complex64'):
+		complex_dtype = 'complex64'
+		float_dtype = 'float32'
+	else:
+		complex_dtype = 'complex128'
+		float_dtype = 'float64'
+
+	return float_dtype, complex_dtype

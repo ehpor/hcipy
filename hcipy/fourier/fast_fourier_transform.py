@@ -1,7 +1,7 @@
 from __future__ import division
 
 import numpy as np
-from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
+from .fourier_transform import FourierTransform, multiplex_for_tensor_fields, _get_float_and_complex_dtype
 from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration
 import numexpr as ne
@@ -231,7 +231,8 @@ class FastFourierTransform(FourierTransform):
 
 		res *= self.shift_input
 
-		return Field(res, self.output_grid).astype(field.dtype, copy=False)
+		float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
+		return Field(res, self.output_grid).astype(complex_dtype, copy=False)
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
@@ -271,4 +272,5 @@ class FastFourierTransform(FourierTransform):
 		if self.shift_output is not None:
 				res /= self.shift_output
 
-		return Field(res, self.input_grid).astype(field.dtype, copy=False)
+		float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
+		return Field(res, self.input_grid).astype(complex_dtype, copy=False)

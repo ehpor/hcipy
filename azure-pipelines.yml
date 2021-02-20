@@ -15,7 +15,8 @@ jobs:
         python.version: '3.9'
 
   steps:
-  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+  - bash: |
+      echo "##vso[task.prependpath]$CONDA/bin"
     displayName: Add conda to PATH
 
   - bash: |
@@ -27,7 +28,7 @@ jobs:
 
   - bash: |
       source activate test-environment
-      pip install pytest pytest-azurepipelines
+      pip install pytest pytest-azurepipelines coverage
       pip install ".[dev]"
     displayName: Install HCIPy
 
@@ -41,8 +42,13 @@ jobs:
 
   - bash: |
       source activate test-environment
-      python -m pytest ./tests --junitxml=junit/unit-test.xml
+      python -m coverage pytest ./tests --junitxml=junit/unit-test.xml
     displayName: Run tests
+
+  - bash: |
+      curl -s https://codecov.io/bash -o codecov.bash
+      ./codecov
+    displayName: Upload test results to codecov.io
 
   - task: PublishTestResults@2
     inputs:
@@ -94,8 +100,13 @@ jobs:
 
   - bash: |
       source activate test-environment
-      pytest ./tests --junitxml=junit/unit-test.xml
+      coverage run pytest ./tests --junitxml=junit/unit-test.xml
     displayName: Run tests
+
+  - bash: |
+      curl -s https://codecov.io/bash -o codecov.bash
+      ./codecov
+    displayName: Upload test results to codecov.io
 
   - task: PublishTestResults@2
     inputs:
@@ -144,8 +155,13 @@ jobs:
 
   - script: |
       call activate test-environment
-      pytest ./tests --junitxml=junit/unit-test.xml
+      coverage run pytest ./tests --junitxml=junit/unit-test.xml
     displayName: Run tests
+
+  - bash: |
+      curl -s https://codecov.io/bash -o codecov.bash
+      ./codecov
+    displayName: Upload test results to codecov.io
 
   - task: PublishTestResults@2
     inputs:

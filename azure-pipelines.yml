@@ -167,3 +167,49 @@ jobs:
     inputs:
       testResultsFiles: 'junit/*.xml'
     condition: succeededOrFailed()
+
+- job:
+  displayName: Documentation
+  pool:
+    vmImage: ubuntu-latest
+
+  steps:
+  - bash: |
+      echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+
+  - bash: |
+      conda config --set always_yes yes --set changeps1 no
+      conda update -q conda
+      conda info -a
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
+    displayName: Set up Anaconda environment
+
+  - bash: |
+      source activate test-environment
+      sudo apt-get -y install ffmpeg pandoc
+      pip install awscli
+      pip install ".[doc]"
+    displayName: Install HCIPy
+
+  - bash: |
+      python --version
+      python -c "import numpy; print('Numpy', numpy.__version__)"
+      python -c "import scipy; print('Scipy', scipy.__version__)"
+      python -c "import matplotlib; print('Matplotlib', matplotlib.__version__)"
+      python -c "import hcipy; print('HCIPy', hcipy.__version__)"
+    displayName: Print package versions
+
+  - bash:
+      cd doc
+      make html
+    displayName: Build documentation
+
+  - bash:
+      aws s3 sync --acl public-read --delete --cache-control max-age=86400,public ./doc/_build/html s3://docs.hcipy.org/dev
+    displayName: Upload documentation to website
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    env:
+      AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+      AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+      AWS_DEFAULT_REGION: $(AWS_DEFAULT_REGION)

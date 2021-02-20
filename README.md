@@ -1,13 +1,12 @@
-[![PyPI Status](https://img.shields.io/pypi/v/hcipy.svg)](https://pypi.org/project/hcipy/)
-[![Build Status](https://img.shields.io/travis/com/ehpor/hcipy/master.svg?logo=travis)](https://travis-ci.com/ehpor/hcipy)
-[![Build status](https://img.shields.io/appveyor/ci/ehpor/hcipy/master.svg?logo=appveyor)](https://ci.appveyor.com/project/ehpor/hcipy/branch/master)
-[![Coverage Status](https://img.shields.io/codecov/c/gh/ehpor/hcipy)](https://codecov.io/gh/ehpor/hcipy)
-[![Documentation Status](https://img.shields.io/badge/docs-latest%20build-brightgreen)](https://docs.hcipy.org/dev)
-[![License](https://img.shields.io/github/license/ehpor/hcipy.svg)](https://opensource.org/licenses/MIT)
+[![PyPI Status](https://img.shields.io/pypi/v/hcipy.svg?logo=pypi&logoColor=white)](https://pypi.org/project/hcipy/)
+[![Build Status](https://img.shields.io/azure-devops/build/ehpor/hcipy/1/master?logo=azure-pipelines)](https://dev.azure.com/ehpor/hcipy/_build?definitionId=1)
+[![Coverage Status](https://img.shields.io/codecov/c/gh/ehpor/hcipy?logo=codecov&logoColor=white)](https://codecov.io/gh/ehpor/hcipy)
+[![Documentation Status](https://img.shields.io/badge/docs-latest%20build-brightgreen?logo=read-the-docs&logoColor=white)](https://docs.hcipy.org/dev)
+[![License](https://img.shields.io/github/license/ehpor/hcipy.svg?logo=open-source-initiative&logoColor=white)](https://opensource.org/licenses/MIT)
 
 # HCIPy: High Contrast Imaging for Python
 
-![alt text](doc/hcipy_banner.png "HCIPy banner")
+![HCIPy banner](https://github.com/ehpor/hcipy/raw/master/doc/hcipy_banner.png "HCIPy banner")
 
 HCIPy is an open-source object-oriented framework written in Python for performing end-to-end simulations of high-contrast imaging instruments for astronomy.
 
@@ -15,7 +14,7 @@ The library defines wavefronts and optical elements for defining an optical syst
 
 By including simulation of both adaptive optics and coronagraphy into a single framework, HCIPy allows simulations including feedback from post-coronagraphic focal-plane wavefront sensors to the AO system.
 
-For documentation, see <https://docs.hcipy.org>. The main website is hosted at <https://hcipy.org>.
+The main website is hosted at <https://hcipy.org>. For documentation, see <https://docs.hcipy.org>.
 
 ## Team
 
@@ -29,4 +28,4 @@ If you use HCIPy for your own research, we ask you to cite the HCIPy proceeding 
 
 ## Contributions
 
-If you have something to add, or want something added to HCIPy, please let us know using a Github issue. We actively support external contributions to HCIPy, whether small or large. Please look at the [contributing guide](https://docs.hcipy.org/dev/development/contributing_guide.html) for more information.
+If you have something to add, or want something added to HCIPy, please let us know using a Github issue. We actively support external contributions to HCIPy, small and large. Please look at the [contributing guide](https://docs.hcipy.org/dev/development/contributing_guide.html) for more information.

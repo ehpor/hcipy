@@ -13,7 +13,6 @@ jobs:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
-    maxParallel: 2
 
   steps:
   - bash: |
@@ -48,8 +47,7 @@ jobs:
     displayName: Run tests
 
   - bash: |
-      curl -s https://codecov.io/bash -o codecov.bash
-      ./codecov.bash
+      curl -s https://codecov.io/bash | bash
     displayName: Upload test results to codecov.io
 
   - task: PublishTestResults@2
@@ -71,7 +69,6 @@ jobs:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
-    maxParallel: 2
 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
@@ -108,8 +105,7 @@ jobs:
     displayName: Run tests
 
   - bash: |
-      curl -s https://codecov.io/bash -o codecov.bash
-      ./codecov.bash
+      curl -s https://codecov.io/bash | bash
     displayName: Upload test results to codecov.io
 
   - task: PublishTestResults@2
@@ -131,7 +127,6 @@ jobs:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
-    maxParallel: 2
 
   steps:
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
@@ -165,8 +160,7 @@ jobs:
     displayName: Run tests
 
   - bash: |
-      curl -s https://codecov.io/bash -o codecov.bash
-      ./codecov.bash
+      curl -s https://codecov.io/bash | bash
     displayName: Upload test results to codecov.io
 
   - task: PublishTestResults@2

@@ -33,6 +33,7 @@ jobs:
     displayName: Install HCIPy
 
   - bash: |
+      source activate test-environment
       python --version
       python -c "import numpy; print('Numpy', numpy.__version__)"
       python -c "import scipy; print('Scipy', scipy.__version__)"
@@ -91,6 +92,7 @@ jobs:
     displayName: Install HCIPy
 
   - bash: |
+      source activate test-environment
       python --version
       python -c "import numpy; print('Numpy', numpy.__version__)"
       python -c "import scipy; print('Scipy', scipy.__version__)"
@@ -146,6 +148,7 @@ jobs:
     displayName: Install HCIPy
 
   - bash: |
+      call activate test-environment
       python --version
       python -c "import numpy; print('Numpy', numpy.__version__)"
       python -c "import scipy; print('Scipy', scipy.__version__)"
@@ -193,6 +196,7 @@ jobs:
     displayName: Install HCIPy
 
   - bash: |
+      source activate test-environment
       python --version
       python -c "import numpy; print('Numpy', numpy.__version__)"
       python -c "import scipy; print('Scipy', scipy.__version__)"

@@ -43,12 +43,12 @@ jobs:
 
   - bash: |
       source activate test-environment
-      python -m coverage pytest ./tests --junitxml=junit/unit-test.xml
+      python -m coverage -m pytest ./tests --junitxml=junit/unit-test.xml
     displayName: Run tests
 
   - bash: |
       curl -s https://codecov.io/bash -o codecov.bash
-      ./codecov
+      ./codecov.bash
     displayName: Upload test results to codecov.io
 
   - task: PublishTestResults@2
@@ -107,7 +107,7 @@ jobs:
 
   - bash: |
       curl -s https://codecov.io/bash -o codecov.bash
-      ./codecov
+      ./codecov.bash
     displayName: Upload test results to codecov.io
 
   - task: PublishTestResults@2
@@ -147,7 +147,7 @@ jobs:
       pip install ".[dev]"
     displayName: Install HCIPy
 
-  - bash: |
+  - script: |
       call activate test-environment
       python --version
       python -c "import numpy; print('Numpy', numpy.__version__)"
@@ -158,12 +158,12 @@ jobs:
 
   - script: |
       call activate test-environment
-      coverage run pytest ./tests --junitxml=junit/unit-test.xml
+      coverage run -m pytest ./tests --junitxml=junit/unit-test.xml
     displayName: Run tests
 
   - bash: |
       curl -s https://codecov.io/bash -o codecov.bash
-      ./codecov
+      ./codecov.bash
     displayName: Upload test results to codecov.io
 
   - task: PublishTestResults@2
@@ -204,7 +204,7 @@ jobs:
       python -c "import hcipy; print('HCIPy', hcipy.__version__)"
     displayName: Print package versions
 
-  - bash:
+  - bash: |
       cd doc
       make html
     displayName: Build documentation

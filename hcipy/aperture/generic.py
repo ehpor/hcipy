@@ -2,7 +2,7 @@ from __future__ import division
 import functools
 
 import numpy as np
-from ..field import Field, CartesianGrid, UnstructuredCoords
+from ..field import Field, CartesianGrid, UnstructuredCoords, make_hexagonal_grid
 
 def circular_aperture(diameter, center=None):
 	'''Makes a Field generator for a circular aperture.
@@ -405,3 +405,49 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 		return func, segments
 	else:
 		return func
+
+def make_hexagonal_segmented_aperture(num_rings, segment_flat_to_flat, gap_size, starting_ring=0, return_segments=False):
+	'''Create a hexagonal segmented aperture.
+
+	All segments have a flat-to-flat size of `segment_flat_to_flat`, which means that
+	the segment pitch (the distance between the centers of adjacent segments) is the sum
+	of the segment flat-to-flat size and the gap size.
+
+	Parameters
+	----------
+	num_rings : int
+		The number of rings of hexagons to include, not counting the central segment.
+		So 2 for a JWST-like aperture, 3 for a Keck-like aperture, and so on.
+	segment_flat_to_flat : scalar
+		The distance between sides (flat-to-flat) of a single segment.
+	gap_size : scalar
+		The gap between adjacent segments.
+	starting_ring : int
+		The first ring of segments. This can be used to exclude the center segment (by
+		setting it to one), or the center segment and first ring (by setting it to two).
+		The default (zero) includes the center segment.
+	return_segments : boolean
+		Whether to return a ModeBasis of all segments as well.
+
+	Returns
+	-------
+	Field generator
+		The segmented aperture.
+	list of Field generators
+		The segments. Only returned if return_segments is True.
+	'''
+	segment_circum_diameter = segment_flat_to_flat * 2 / np.sqrt(3)
+	segment = hexagonal_aperture(segment_circum_diameter, np.pi / 2)
+
+	segment_pitch = segment_flat_to_flat + gap_size
+	segment_positions = make_hexagonal_grid(segment_pitch, num_rings, pointy_top=False)
+
+	if starting_ring != 0:
+		starting_segment = 3 * (starting_ring - 1) * starting_ring + 1
+
+		mask = segment_positions.zeros(dtype='bool')
+		mask[starting_segment:] = True
+
+		segment_positions = segment_positions.subset(mask)
+
+	return make_segmented_aperture(segment, segment_positions, return_segments=return_segments)

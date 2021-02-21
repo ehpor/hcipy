@@ -2,7 +2,9 @@ import numpy as np
 from ..field import make_hexagonal_grid, Field
 from .generic import make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction
 
-def make_vlt_aperture(normalized=False, with_spiders=True, with_M3_cover=False):
+_vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
+
+def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with_M3_cover=False):
 	'''Make the VLT aperture.
 
 	This aperture is based on the ERIS pupil documentation: VLT-SPE-AES-11310-0006.
@@ -11,24 +13,43 @@ def make_vlt_aperture(normalized=False, with_spiders=True, with_M3_cover=False):
 	----------
 	normalized : boolean
 		If this is True, the outer diameter will be scaled to 1. Otherwise, the
-		diameter of the pupil will be 8.1196 meters.
+		diameter of the pupil will be 8.0 meters for UT1-3 and 8.1196 meters for UT4.
+	telescope : one of {'ut1', 'ut2', 'ut3', 'ut4', 'antu', 'kueyen', 'melipal', 'yepun'}
+		The specific telescope on the VLT, case insensitive. Default: UT3.
 	with_spiders : boolean
 		If this is False, the spiders will be left out. Default: True.
 	with_M3_cover : boolean
-		If this is True, a cover will be created for the M3 in stowed position. Default: False.
+		If this is True, a cover will be created for the M3 in stowed position.
+		This M3 cover is only available on UT4, mimicking the ERIS pupil. A warning
+		will be emitted when using an M3 cover with other UTs. Default: False.
 
 	Returns
 	-------
 	Field generator
 		The VLT aperture.
 	'''
-	pupil_diameter = 8.1196 # meter
+	telescope = telescope.lower()
+	if telescope not in ['ut1', 'ut2', 'ut3', 'ut4']:
+		if telescope not in _vlt_telescope_aliases:
+			raise ValueError(f'The VLT telescope "{telescope}" has not been implemented.')
+		telescope = _vlt_telescope_aliases[aliases]
+
+	if telescope in ['ut1', 'ut2', 'ut3']:
+		pupil_diameter = 8.0 # meter
+		central_obscuration_ratio = 1.116 / pupil_diameter
+	elif telescope == 'ut4':
+		pupil_diameter = 8.1196 # meter
+		central_obscuration_ratio = 0.6465 * 2 / pupil_diameter
+
 	spider_width = 0.040 # meter
-	central_obscuration_ratio = 0.6465 * 2 / 8.1196
 	spider_offset = 0.4045 # meter
 	spider_outer_radius = 4.2197 # meter
 	outer_diameter_M3_stow = 1.070 # meter
 	angle_between_spiders = 101 # degrees
+
+	if with_M3_cover and telescope != 'ut4':
+		import warnings
+		warnings.warn('Using the M3 cover on a telescope other than UT4 is not realistic.', stacklevel=2)
 
 	if normalized:
 		spider_width /= pupil_diameter

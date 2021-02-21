@@ -89,7 +89,7 @@ def test_hexagonal_segmented_aperture():
 
 def test_vlt_aperture():
 	options = {
-		'telescope': [('ut1', '_ut123'), ('ut2', '_ut123'), ('ut3', '_ut123')],
+		'telescope': [('ut1', '_ut123'), ('ut2', '_ut123'), ('ut3', '_ut123'), ('antu', '_ut123'), ('kueyen', '_ut123'), ('melipal', '_ut123')],
 		'normalized': [(False, ''), (True, '_normalized')],
 		'with_spiders': [(True, ''), (False, '_without_spiders')]
 	}
@@ -97,7 +97,7 @@ def test_vlt_aperture():
 	check_aperture_against_reference(make_vlt_aperture, 'vlt', 8.1196, options)
 
 	options = {
-		'telescope': [('ut4', '_ut4')],
+		'telescope': [('ut4', '_ut4'), ('yepun', '_ut4')],
 		'normalized': [(False, ''), (True, '_normalized')],
 		'with_spiders': [(True, ''), (False, '_without_spiders')],
 		'with_M3_cover': [(False, ''), (True, '_with_M3_cover')]
@@ -108,6 +108,9 @@ def test_vlt_aperture():
 	for telescope in ['ut1', 'ut2', 'ut3']:
 		with pytest.warns(UserWarning, match='Using the M3 cover on a telescope other than UT4 is not realistic.'):
 			aper = make_vlt_aperture(telescope=telescope, with_M3_cover=True)
+
+	with pytest.raises(ValueError):
+		aper = make_vlt_aperture(telescope='nonexistent_vlt_telescope')
 
 def test_magellan_aperture():
 	options = {

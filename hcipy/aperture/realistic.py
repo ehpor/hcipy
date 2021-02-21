@@ -32,7 +32,7 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 	if telescope not in ['ut1', 'ut2', 'ut3', 'ut4']:
 		if telescope not in _vlt_telescope_aliases:
 			raise ValueError(f'The VLT telescope "{telescope}" has not been implemented.')
-		telescope = _vlt_telescope_aliases[aliases]
+		telescope = _vlt_telescope_aliases[telescope]
 
 	if telescope in ['ut1', 'ut2', 'ut3']:
 		pupil_diameter = 8.0 # meter

@@ -19,8 +19,9 @@ class FresnelPropagator(AgnosticOpticalElement):
 		The distance to propagate
 	num_oversampling : int
 		The number of times the transfer function is oversampled. Default is 2.
-	wavelength : scalar
-		The wavelength of the wavefront.
+	zero_padding : scalar
+		The amount of zero padding to use for the propagation. A value of one means no
+		zero padding is applied. Default is 2.
 	refractive_index : scalar
 		The refractive index of the medium that the wavefront is propagating in.
 
@@ -29,10 +30,11 @@ class FresnelPropagator(AgnosticOpticalElement):
 	ValueError
 		If the `input_grid` is not regular and Cartesian.
 	'''
-	def __init__(self, input_grid, distance, num_oversampling=2, refractive_index=1):
+	def __init__(self, input_grid, distance, num_oversampling=2, zero_padding=2, refractive_index=1):
 		self._distance = distance
 
 		self._num_oversampling = num_oversampling
+		self._zero_padding = zero_padding
 		self._refractive_index = refractive_index
 
 		AgnosticOpticalElement.__init__(self, grid_dependent=True, wavelength_dependent=True)
@@ -66,7 +68,7 @@ class FresnelPropagator(AgnosticOpticalElement):
 			def transfer_function(fourier_grid):
 				return evaluate_supersampled(transfer_function_native, fourier_grid, self.num_oversampling)
 
-		instance_data.fourier_filter = FourierFilter(input_grid, transfer_function, q=2)
+		instance_data.fourier_filter = FourierFilter(input_grid, transfer_function, q=self.zero_padding)
 
 	@property
 	def distance(self):
@@ -85,6 +87,16 @@ class FresnelPropagator(AgnosticOpticalElement):
 	@num_oversampling.setter
 	def num_oversampling(self, num_oversampling):
 		self._num_oversampling = num_oversampling
+
+		self.clear_cache()
+
+	@property
+	def zero_padding(self):
+		return self._zero_padding
+
+	@zero_padding.setter
+	def zero_padding(self, zero_padding):
+		self._zero_padding = zero_padding
 
 		self.clear_cache()
 

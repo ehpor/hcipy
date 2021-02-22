@@ -1,7 +1,7 @@
 Changelog
 =========
 
-0.4.0 (Feb 20, 2021)
+0.4.0 (Feb 22, 2021)
 --------------------
 
 This HCIPy release provides significant speed improvements for Fourier transforms, propagations and the vortex coronagraphs, among some other minor improvements and bugfixes. See the list of all changes below for a summary. We dropped support for Python 3.5. This version supports Python 3.6+.

@@ -22,21 +22,21 @@ The banner above shows a number of simulations done with HCIPy. From left to rig
    :maxdepth: 1
    :caption: HCIPy Package
 
-   modules/field
    modules/aperture
-   modules/fourier
-   modules/optics
-   modules/propagation
+   modules/atmosphere
+   modules/config
    modules/coronagraphy
+   modules/field
+   modules/fourier
+   modules/interpolation
+   modules/metrics
+   modules/mode_basis
+   modules/optics
+   modules/plotting
+   modules/propagation
+   modules/util
    modules/wavefront_control
    modules/wavefront_sensing
-   modules/atmosphere
-   modules/mode_basis
-   modules/plotting
-   modules/config
-   modules/interpolation
-   modules/util
-   modules/metrics
 
 .. toctree::
    :maxdepth: 1

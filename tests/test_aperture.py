@@ -23,9 +23,13 @@ def check_against_reference(field_generator, diameter, baseline_name):
 			os.makedirs(os.path.dirname(fname))
 		write_fits(field, fname)
 
-def check_segmentation(aperture_function):
+def check_segmentation(aperture_function, segments=None):
 	grid = make_uniform_grid(256, [1, 1])
-	aperture, segments = aperture_function(normalized=True, return_segments=True)
+
+	if segments is None:
+		aperture, segments = aperture_function(normalized=True, return_segments=True)
+	else:
+		aperture = aperture_function
 
 	aperture = evaluate_supersampled(aperture, grid, 2)
 	segments = evaluate_supersampled(segments, grid, 2)
@@ -34,7 +38,7 @@ def check_segmentation(aperture_function):
 
 	assert np.allclose(aperture, aperture_from_segments)
 
-def check_aperture_against_reference(aperture_function, basename, diameter, options):
+def check_aperture_against_reference(aperture_function, basename, diameter, options, segmented=False):
 	keys = sorted(options.keys())
 	vals = [value for key, value in sorted(options.items())]
 
@@ -45,6 +49,9 @@ def check_aperture_against_reference(aperture_function, basename, diameter, opti
 		aperture = aperture_function(**kwargs)
 
 		check_against_reference(aperture, 1 if kwargs.get('normalized', False) else diameter, fname)
+
+		if segmented:
+			check_segmentation(*aperture_function(return_segments=True, **kwargs))
 
 def test_regular_polygon_aperture():
 	options = {
@@ -70,14 +77,40 @@ def test_obstructed_circular_aperture():
 
 	check_aperture_against_reference(functools.partial(make_obstructed_circular_aperture, pupil_diameter=1), 'obstructed_circular', 1, options)
 
+def test_hexagonal_segmented_aperture():
+	options = {
+		'num_rings': [(3, '_3rings'), (5, '_5rings')],
+		'segment_flat_to_flat': [(0.04, '_smallsegment'), (0.07, '_largesegment')],
+		'gap_size': [(0.01, '_smallgap'), (0.02, '_largegap')],
+		'starting_ring': [(0, '_withcenter'),  (2, '_withoutcenter')]
+	}
+
+	check_aperture_against_reference(make_hexagonal_segmented_aperture, 'hexagonal_segmented', 1, options, segmented=True)
+
 def test_vlt_aperture():
 	options = {
+		'telescope': [('ut1', '_ut123'), ('ut2', '_ut123'), ('ut3', '_ut123'), ('antu', '_ut123'), ('kueyen', '_ut123'), ('melipal', '_ut123')],
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_spiders': [(True, ''), (False, '_without_spiders')]
+	}
+
+	check_aperture_against_reference(make_vlt_aperture, 'vlt', 8.1196, options)
+
+	options = {
+		'telescope': [('ut4', '_ut4'), ('yepun', '_ut4')],
 		'normalized': [(False, ''), (True, '_normalized')],
 		'with_spiders': [(True, ''), (False, '_without_spiders')],
 		'with_M3_cover': [(False, ''), (True, '_with_M3_cover')]
 	}
 
 	check_aperture_against_reference(make_vlt_aperture, 'vlt', 8.1196, options)
+
+	for telescope in ['ut1', 'ut2', 'ut3']:
+		with pytest.warns(UserWarning, match='Using the M3 cover on a telescope other than UT4 is not realistic.'):
+			aper = make_vlt_aperture(telescope=telescope, with_M3_cover=True)
+
+	with pytest.raises(ValueError):
+		aper = make_vlt_aperture(telescope='nonexistent_vlt_telescope')
 
 def test_magellan_aperture():
 	options = {

@@ -113,7 +113,8 @@ class Wavefront(object):
 		'''
 		if self.is_scalar:
 			# This is a scaler field.
-			return np.abs(self.electric_field)**2
+			intensity = ne.evaluate('real(abs(elec))**2', local_dict={'elec': self.electric_field})
+			return Field(intensity, self.electric_field.grid)
 		elif self.is_partially_polarized:
 			# This is a tensor field.
 			x = self._electric_field[0, 0, :]

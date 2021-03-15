@@ -94,8 +94,13 @@ class MatrixFourierTransform(FourierTransform):
 
 		# Check if the matrices need to be (re)calculated.
 		if self.matrices_dtype != complex_dtype:
-			self.weights_input = (self.input_grid.weights).astype(float_dtype, copy=False)
-			self.weights_output = (self.output_grid.weights / (2 * np.pi)**self.ndim).astype(float_dtype, copy=False)
+			self.weights_input = self.input_grid.weights
+			if not np.isscalar(self.weights_input):
+				self.weights_input = self.weights_input.astype(float_dtype, copy=False)
+
+			self.weights_output = self.output_grid.weights / (2 * np.pi)**self.ndim
+			if not np.isscalar(self.weights_output):
+				self.weights_output = self.weights_output.astype(float_dtype, copy=False)
 
 			# If all input weights are all the same, use a scalar instead.
 			if not np.isscalar(self.weights_input) and np.all(self.weights_input == self.weights_input[0]):

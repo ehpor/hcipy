@@ -1,5 +1,6 @@
 import numpy as np
 from .optical_element import OpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward, INPUT_GRID_DEPENDENT, OUTPUT_GRID_DEPENDENT, WAVELENGTH_DEPENDENT
+from ..field import NumpyField
 import types
 
 def _attach_property(instance, property_name, property_object):

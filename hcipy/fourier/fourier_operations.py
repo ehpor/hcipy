@@ -115,7 +115,7 @@ class FourierFilter(object):
 			f[c] = field.shaped
 
 		# Don't overwrite f if it's the input array.
-		overwrite_x = self.cutout is not None
+		overwrite_x = self.cutout is not None and field.grid.ndim > 1
 		f = _fft_module.fftn(f, axes=tuple(range(-self.input_grid.ndim, 0)), overwrite_x=overwrite_x)
 
 		if (self._transfer_function.ndim - self.internal_grid.ndim) == 2:

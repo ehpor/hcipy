@@ -1,3 +1,5 @@
+import numpy as np
+
 from ..optics import Apodizer, OpticalElement
 from ..propagation import FraunhoferPropagator
 
@@ -55,7 +57,11 @@ class LyotCoronagraph(OpticalElement):
 		wf_foc.electric_field -= self.focal_plane_mask.forward(wf_foc).electric_field
 
 		lyot = self.prop.backward(wf_foc)
-		lyot.electric_field[:] = wavefront.electric_field - lyot.electric_field
+
+		# The next line is equal to
+		#     lyot.electric_field = wavefront.electric_field - lyot.electric_field
+		# but doesn't copy a numpy array.
+		np.subtract(wavefront.electric_field, lyot.electric_field, out=lyot.electric_field)
 
 		if self.lyot_stop is not None:
 			lyot = self.lyot_stop.forward(lyot)
@@ -84,7 +90,11 @@ class LyotCoronagraph(OpticalElement):
 		wf_foc.electric_field -= self.focal_plane_mask.backward(wf_foc).electric_field
 
 		pup = self.prop.backward(wf_foc)
-		pup.electric_field[:] = wf.electric_field - pup.electric_field
+
+		# The next line is equal to
+		#     pup.electric_field = wf.electric_field - pup.electric_field
+		# but doesn't copy a numpy array.
+		np.subtract(wf.electric_field, pup.electric_field, out=pup.electric_field)
 
 		return pup
 

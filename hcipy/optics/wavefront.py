@@ -334,7 +334,13 @@ class Wavefront(object):
 	def power(self):
 		'''The power of each pixel in the wavefront.
 		'''
-		return self.intensity * self.grid.weights
+		if self.electric_field.is_scalar_field or self.electric_field.is_vector_field:
+			variables = {'field': self.electric_field, 'weights': self.grid.weights}
+			power = ne.evaluate('real(abs(field))**2 * weights', local_dict=variables)
+
+			return Field(power, self.grid)
+		else:
+			return self.intensity * self.grid.weights
 
 	@property
 	def total_power(self):

@@ -114,7 +114,9 @@ class FourierFilter(object):
 			c = tuple([slice(None)] * field.tensor_order) + self.cutout
 			f[c] = field.shaped
 
-		f = _fft_module.fftn(f, axes=tuple(range(-self.input_grid.ndim, 0)), overwrite_x=True)
+		# Don't overwrite f if it's the input array.
+		overwrite_x = self.cutout is not None
+		f = _fft_module.fftn(f, axes=tuple(range(-self.input_grid.ndim, 0)), overwrite_x=overwrite_x)
 
 		if (self._transfer_function.ndim - self.internal_grid.ndim) == 2:
 			# The transfer function is a matrix field.

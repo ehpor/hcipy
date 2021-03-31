@@ -3,10 +3,10 @@ import os
 import shutil
 import base64
 from subprocess import Popen, PIPE
+import io
 
 import matplotlib
 import imageio
-from PIL import Image
 
 class FrameWriter(object):
 	'''A writer of frames from Matplotlib figures.
@@ -87,10 +87,9 @@ class FrameWriter(object):
 class GifWriter(object):
 	'''A writer of gif files from Matplotlib figures.
 
-	This class writes out individual frames to a `filename.frames` directory. When
-	the `close()` function is called, or the object is removed by the garbage collector,
-	the frames are collected in a single gif file. The individual frames are then deleted,
-	if `cleanup` is True (default).
+	.. warning::
+		This class used to write out individual frames to a directory,
+		before converting this into a gif file. This is now done internally.
 
 	Parameters
 	----------
@@ -98,20 +97,17 @@ class GifWriter(object):
 		The path and filename of the gif.
 	framerate : integer
 		The number of frames per second of the generated gif file.
-	cleanup : boolean
-		Whether to clean up the generated frames.
 	'''
-	def __init__(self, filename, framerate=15, cleanup=True):
+	def __init__(self, filename, framerate=15):
 		self.is_closed = False
 		self.filename = filename
 		self.framerate = framerate
-		self.cleanup = cleanup
 
-		self.path_to_frames = self.filename + "_frames"
-		if not os.path.exists(self.path_to_frames):
-			os.mkdir(self.path_to_frames)
+		self._frames = []
 
-		self.num_frames = 0
+	@property
+	def num_frames(self):
+		return len(self._frames)
 
 	def __del__(self):
 		try:
@@ -143,8 +139,6 @@ class GifWriter(object):
 		if self.is_closed:
 			raise RuntimeError('Attempted to add a frame to a closed GifWriter.')
 
-		dest = os.path.join(self.path_to_frames, '%05d.png' % self.num_frames)
-
 		if data is None:
 			if fig is None:
 				fig = matplotlib.pyplot.gcf()
@@ -152,78 +146,31 @@ class GifWriter(object):
 			facecolor = list(fig.get_facecolor())
 			facecolor[3] = 1
 
-			fig.savefig(dest, transparent=False, dpi=dpi, facecolor=facecolor)
+			buf = io.BytesIO()
+
+			fig.savefig(buf, transparent=False, dpi=dpi, facecolor=facecolor)
+
+			frame = imageio.imread(buf.getvalue())
 		else:
 			if cmap is not None:
-				data = matplotlib.cm.get_cmap(cmap)(data, bytes=True)
+				frame = matplotlib.cm.get_cmap(cmap)(data, bytes=True)
+			else:
+				frame = data.copy()
 
-			imageio.imwrite(dest, data, format='png')
-
-		self.num_frames += 1
-
-	@staticmethod
-	def convert_to_gif(dest_filename, src_file_path, framerate, src_file_suffix="png", num_files_to_convert=None):
-		'''Helper function to convert all files in a directory to a gif file.
-
-		Parameters
-		----------
-		dest_filename : string
-			The filename for the gif file.
-		src_file_path : string
-			The path to the directory with all the frames as image files.
-		framerate : integer
-			The number of frames per second for the generated gif file.
-		src_file_suffix : string
-			The file extension of the image files.
-		num_files_to_convert : integer or None
-			How many frames are expected in the directory. If None, then no check will be done.
-
-		Raises
-		------
-		OSError
-			If the number of files in the directory differs from the number of expected files.
-		'''
-		search_pattern = os.path.join(src_file_path, "*."+src_file_suffix)
-		files = glob.glob(search_pattern)
-		files.sort()
-
-		if num_files_to_convert is not None and len(files) != num_files_to_convert:
-			raise OSError("Expected {} files but found {}".format(num_files_to_convert, len(files)))
-
-		# Open all frames to convert
-		frames = []
-		for image_file in files:
-			frames.append(Image.open(image_file).copy())
-
-		# Convert to GIF
-		# https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html?highlight=duration#saving
-		# duration := display duration of each frame in ms
-		duration = int(1000 / framerate)
-		frames_to_append = frames[1:] if len(frames) > 1 else []
-		frames[0].save(dest_filename,
-						format="GIF",
-						append_images=frames_to_append,
-						save_all=True,
-						duration=duration,
-						loop=0)
+		self._frames.append(frame)
 
 	def convert(self):
-		'''Convert all images in the frames directory into a gif file.
-
-		This function doesn't remove the frames after conversion.
+		'''Convert all frames into a gif file.
 		'''
-		return self.convert_to_gif(self.filename, self.path_to_frames, self.framerate, num_files_to_convert=self.num_frames)
+		imageio.mimsave(self.filename, self._frames, fps=self.framerate)
 
 	def close(self):
-		'''Close the animation, create the final gif file and (potentially) remove the individual frames.
+		'''Close the animation and create the final gif file.
 		'''
 		try:
 			if not self.is_closed:
 				self.convert()
-				if self.cleanup:
-					shutil.rmtree(self.path_to_frames, ignore_errors=True)
 		finally:
-			self.num_frames = 0
 			self.is_closed = True
 
 class FFMpegWriter(object):

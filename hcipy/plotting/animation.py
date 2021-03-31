@@ -148,7 +148,11 @@ class GifWriter(object):
 		if data is None:
 			if fig is None:
 				fig = matplotlib.pyplot.gcf()
-			fig.savefig(dest, format='png', transparent=False)
+
+			facecolor = list(fig.get_facecolor())
+			facecolor[3] = 1
+
+			fig.savefig(dest, transparent=False, dpi=dpi, facecolor=facecolor)
 		else:
 			if cmap is not None:
 				data = matplotlib.cm.get_cmap(cmap)(data, bytes=True)

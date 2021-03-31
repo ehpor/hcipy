@@ -7,15 +7,23 @@ import matplotlib.pyplot as plt
 import os
 import pytest
 import shutil
+from subprocess import Popen
 
-def test_animation():
+def is_ffmpeg_installed():
+	try:
+		ffmpeg_path = Configuration().plotting.ffmpeg_path
+
+		if ffmpeg_path is None:
+			ffmpeg_path = 'ffmpeg'
+
+		res = Popen([ffmpeg_path, '-version'])
+	except OSError:
+		return False
+
+	return True
+
+def check_animation(mw):
 	grid = make_pupil_grid(256)
-
-	mw_frame = FrameWriter('test_frames/')
-	mw_gif = GifWriter('test.gif')
-	mw_mp4 = FFMpegWriter('test.mp4')
-
-	mws = [mw_frame, mw_gif, mw_mp4]
 
 	for i in range(25):
 		field = Field(np.random.randn(grid.size), grid)
@@ -23,20 +31,35 @@ def test_animation():
 		plt.clf()
 		imshow_field(field)
 
-		for mw in mws:
-			mw.add_frame()
+		mw.add_frame()
 
-	for mw in mws:
-		mw.close()
+	mw.close()
 
-		pytest.raises(RuntimeError, mw.add_frame)
+	pytest.raises(RuntimeError, mw.add_frame)
+
+def test_frame_writer():
+	mw = FrameWriter('test_frames/')
+
+	check_animation(mw)
 
 	assert os.path.isdir('test_frames')
 	shutil.rmtree('test_frames')
 
+def test_gif_writer():
+	mw = GifWriter('test.gif')
+
+	check_animation(mw)
+
 	assert os.path.isfile('test.gif')
-	assert not os.path.exists('test.gif.frames')
 	os.remove('test.gif')
+
+@pytest.mark.skipif(not is_ffmpeg_installed(), reason='FFMpeg is not installed.')
+def test_ffmpeg_writer():
+	mw = FFMpegWriter('test.mp4')
+
+	check_animation(mw)
+
+	html = mw._repr_html_()
 
 	assert os.path.isfile('test.mp4')
 	os.remove('test.mp4')

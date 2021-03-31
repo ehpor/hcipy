@@ -23,13 +23,12 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy conda-forge::ffmpeg
     displayName: Set up Anaconda environment
 
   - bash: |
       source activate test-environment
       pip install pytest pytest-azurepipelines
-      conda install ffmpeg --channel conda-forge
       pip install ".[dev]"
     displayName: Install HCIPy
 
@@ -83,13 +82,12 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy conda-forge::ffmpeg
     displayName: Set up Anaconda environment
 
   - bash: |
       source activate test-environment
       pip install pytest pytest-azurepipelines
-      conda install ffmpeg --channel conda-forge
       pip install ".[dev]"
     displayName: Install HCIPy
 
@@ -140,13 +138,12 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy
+      conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy conda-forge::ffmpeg
     displayName: Set up Anaconda environment
 
   - script: |
       call activate test-environment
       pip install pytest pytest-azurepipelines
-      conda install ffmpeg --channel conda-forge
       pip install ".[dev]"
     displayName: Install HCIPy
 
@@ -188,13 +185,12 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy conda-forge::ffmpeg
     displayName: Set up Anaconda environment
 
   - bash: |
       source activate test-environment
       sudo apt-get -y install pandoc
-      conda install ffmpeg --channel conda-forge
       pip install awscli
       pip install ".[doc]"
     displayName: Install HCIPy

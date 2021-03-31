@@ -49,13 +49,13 @@ class Wavefront(object):
 				raise ValueError('When supplying a Stokes vector, the electric field must be either a scalar or 2-tensor field.')
 
 			if electric_field.is_scalar_field:
-				self._electric_field = electric_field[np.newaxis, np.newaxis, :].astype('complex') * np.eye(2)[..., np.newaxis]
+				self.electric_field = electric_field[np.newaxis, np.newaxis, :] * np.eye(2)[..., np.newaxis]
 			else:
-				self._electric_field = electric_field.astype('complex')
+				self.electric_field = electric_field
 
 			self._input_stokes_vector = np.array(input_stokes_vector)
 		else:
-			self._electric_field = electric_field.astype('complex')
+			self.electric_field = electric_field
 			self._input_stokes_vector = None
 
 			if electric_field.tensor_order == 2:
@@ -75,14 +75,17 @@ class Wavefront(object):
 		return self._electric_field
 
 	@electric_field.setter
-	def electric_field(self, U):
-		if hasattr(U, 'grid'):
-			self._electric_field = U.astype('complex')
+	def electric_field(self, electric_field):
+		if not hasattr(electric_field, 'grid'):
+			raise ValueError('The electric field must be a Field.')
+
+		# Cast to complex with correct bit depth
+		if electric_field.dtype == 'float32' or electric_field.dtype == 'complex64':
+			dtype = 'complex64'
 		else:
-			if len(U) == 2:
-				self._electric_field = Field(U[0].astype('complex'), U[1])
-			else:
-				raise ValueError("Electric field requires an accompanying grid.")
+			dtype = 'complex128'
+
+		self._electric_field = electric_field.astype(dtype, copy=False)
 
 	@property
 	def input_stokes_vector(self):
@@ -113,7 +116,8 @@ class Wavefront(object):
 		'''
 		if self.is_scalar:
 			# This is a scaler field.
-			return np.abs(self.electric_field)**2
+			intensity = ne.evaluate('real(abs(elec))**2', local_dict={'elec': self.electric_field})
+			return Field(intensity, self.electric_field.grid)
 		elif self.is_partially_polarized:
 			# This is a tensor field.
 			x = self._electric_field[0, 0, :]
@@ -330,7 +334,13 @@ class Wavefront(object):
 	def power(self):
 		'''The power of each pixel in the wavefront.
 		'''
-		return self.intensity * self.grid.weights
+		if self.electric_field.is_scalar_field or self.electric_field.is_vector_field:
+			variables = {'field': self.electric_field, 'weights': self.grid.weights}
+			power = ne.evaluate('real(abs(field))**2 * weights', local_dict=variables)
+
+			return Field(power, self.grid)
+		else:
+			return self.intensity * self.grid.weights
 
 	@property
 	def total_power(self):

@@ -1,4 +1,5 @@
 import numpy as np
+import numexpr as ne
 
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..field import Field, evaluate_supersampled
@@ -52,18 +53,28 @@ class FresnelPropagator(AgnosticOpticalElement):
 				fft_upscale = FastFourierTransform(enlarged_grid)
 
 				def impulse_response(grid):
-					r_squared = grid.x**2 + grid.y**2
-					return Field(np.exp(1j * k * self.distance) / (1j * wavelength * self.distance) * np.exp(1j * k * r_squared / (2 * self.distance)), grid)
+					x = grid.x
+					y = grid.y
+					phase_factor = np.exp(1j * k * self.distance) / (1j * wavelength * self.distance)
+
+					variables = {'alpha': 0.5j * k / self.distance, 'x': x, 'y': y, 'phase_factor': phase_factor}
+					ir = ne.evaluate('phase_factor * exp(alpha * (x * x + y * y))', local_dict=variables)
+
+					return Field(ir, grid)
 
 				impulse_response = evaluate_supersampled(impulse_response, enlarged_grid, self.num_oversampling)
 
 				return fft_upscale.forward(impulse_response)
 		else:
 			def transfer_function_native(fourier_grid):
-				k_squared = fourier_grid.as_('polar').r**2
+				x = fourier_grid.x
+				y = fourier_grid.y
 				phase_factor = np.exp(1j * k * self.distance)
 
-				return Field(np.exp(-0.5j * self.distance * k_squared / k) * phase_factor, fourier_grid)
+				variables = {'alpha': -0.5j * self.distance / k, 'x': x, 'y': y, 'phase_factor': phase_factor}
+				tf = ne.evaluate('phase_factor * exp(alpha * (x * x + y * y))', local_dict=variables)
+
+				return Field(tf, fourier_grid)
 
 			def transfer_function(fourier_grid):
 				return evaluate_supersampled(transfer_function_native, fourier_grid, self.num_oversampling)

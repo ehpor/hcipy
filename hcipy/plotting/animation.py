@@ -8,23 +8,101 @@ import matplotlib
 import imageio
 from PIL import Image
 
+class FrameWriter(object):
+	'''A writer of frames from Matplotlib figures.
+
+	This class writes out individual frames to the specified directory. No
+	animation will be created for these frames.
+
+	Parameters
+	----------
+	path : string
+		The directory to which to write all frames. This path will be
+		created if it does not exist.
+	framerate : integer
+		Ignored, but provided for cohesion with other animation writers.
+	filename : string
+		The filename for each of the frames. This will be formatted using
+		filename.format(frame_number). Default: '{:05d}.png'.
+	'''
+	def __init__(self, path, framerate=15, filename='{:05d}.png'):
+		self.path = path
+		self.filename = filename
+
+		self.num_frames = 0
+
+		if not os.path.exists(self.path):
+			os.mkdir(self.path)
+
+		self.is_closed = False
+
+	def add_frame(self, fig=None, data=None, cmap=None, dpi=None):
+		'''Add a frame to the animation.
+
+		Parameters
+		----------
+		fig : Matplotlib figure
+			The Matplotlib figure acting as the animation frame.
+		data : ndarray
+			The image data array acting as the animation frame.
+		cmap : Matplotlib colormap
+			The optional colormap for the image data.
+		dpi : integer or None
+			The number of dots per inch with which to save the matplotlib figure.
+			If it is not given, the default Matplotlib dpi will be used.
+
+		Raises
+		------
+		RuntimeError
+			If the function was called on a closed FrameWriter.
+		'''
+		if self.is_closed:
+			raise RuntimeError('Attempted to add a frame to a closed GifWriter.')
+
+		dest = os.path.join(self.path, self.filename.format(self.num_frames))
+
+		if data is None:
+			if fig is None:
+				fig = matplotlib.pyplot.gcf()
+
+			facecolor = list(fig.get_facecolor())
+			facecolor[3] = 1
+
+			fig.savefig(dest, transparent=False, dpi=dpi, facecolor=facecolor)
+		else:
+			if cmap is not None:
+				data = matplotlib.cm.get_cmap(cmap)(data, bytes=True)
+
+			imageio.imwrite(dest, data)
+
+		self.num_frames += 1
+
+	def close(self):
+		'''Closes the animation writer.
+
+		Makes sure that no more frames can be written to the directory.
+		'''
+		self.is_closed = True
+
 class GifWriter(object):
 	'''A writer of gif files from Matplotlib figures.
 
-	This function writes out individual frames to a `filename.frames` directory. When
+	This class writes out individual frames to a `filename.frames` directory. When
 	the `close()` function is called, or the object is removed by the garbage collector,
 	the frames are collected in a single gif file. The individual frames are then deleted,
 	if `cleanup` is True (default).
 
 	Parameters
 	----------
+	filename : string
+		The path and filename of the gif.
 	framerate : integer
 		The number of frames per second of the generated gif file.
 	cleanup : boolean
 		Whether to clean up the generated frames.
 	'''
 	def __init__(self, filename, framerate=15, cleanup=True):
-		self.closed = False
+		self.is_closed = False
 		self.filename = filename
 		self.framerate = framerate
 		self.cleanup = cleanup
@@ -32,6 +110,7 @@ class GifWriter(object):
 		self.path_to_frames = self.filename + "_frames"
 		if not os.path.exists(self.path_to_frames):
 			os.mkdir(self.path_to_frames)
+
 		self.num_frames = 0
 
 	def __del__(self):
@@ -61,7 +140,7 @@ class GifWriter(object):
 		RuntimeError
 			If the function was called on a closed GifWriter.
 		'''
-		if self.closed:
+		if self.is_closed:
 			raise RuntimeError('Attempted to add a frame to a closed GifWriter.')
 
 		dest = os.path.join(self.path_to_frames, '%05d.png' % self.num_frames)
@@ -135,13 +214,13 @@ class GifWriter(object):
 		'''Close the animation, create the final gif file and (potentially) remove the individual frames.
 		'''
 		try:
-			if not self.closed:
+			if not self.is_closed:
 				self.convert()
 				if self.cleanup:
 					shutil.rmtree(self.path_to_frames, ignore_errors=True)
 		finally:
 			self.num_frames = 0
-			self.closed = True
+			self.is_closed = True
 
 class FFMpegWriter(object):
 	'''A writer of video files from Matplotlib figures.
@@ -180,7 +259,7 @@ class FFMpegWriter(object):
 			else:
 				raise ValueError('No codec was given and it could not be guessed based on the file extension.')
 
-		self.closed = True
+		self.is_closed = True
 		self.filename = filename
 		self.codec = codec
 		self.framerate = framerate
@@ -222,7 +301,8 @@ class FFMpegWriter(object):
 			self.p = Popen(command, stdin=PIPE)
 		except OSError:
 			raise RuntimeError('Something went wrong when opening FFMpeg. Is FFMpeg installed and accessible from the command line?')
-		self.closed = False
+
+		self.is_closed = False
 
 	def __del__(self):
 		try:
@@ -251,7 +331,7 @@ class FFMpegWriter(object):
 		RuntimeError
 			If the function was called on a closed FFMpegWriter.
 		'''
-		if self.closed:
+		if self.is_closed:
 			raise RuntimeError('Attempted to add a frame to a closed FFMpegWriter.')
 
 		if data is None:
@@ -273,11 +353,11 @@ class FFMpegWriter(object):
 
 		This closes the FFMpeg call.
 		'''
-		if not self.closed:
+		if not self.is_closed:
 			self.p.stdin.close()
 			self.p.wait()
 			self.p = None
-		self.closed = True
+		self.is_closed = True
 
 	def _repr_html_(self):
 		'''Get an HTML representation of the generated video.
@@ -293,7 +373,7 @@ class FFMpegWriter(object):
 		RuntimeError
 			If the call was made on an open FFMpegWriter.
 		'''
-		if not self.closed:
+		if not self.is_closed:
 			raise RuntimeError('Attempted to show the generated movie on an opened FFMpegWriter.')
 
 		video = open(self.filename, 'rb').read()

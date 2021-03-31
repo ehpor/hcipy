@@ -29,6 +29,7 @@ jobs:
   - bash: |
       source activate test-environment
       pip install pytest pytest-azurepipelines
+      conda install ffmpeg --channel conda-forge
       pip install ".[dev]"
     displayName: Install HCIPy
 
@@ -88,6 +89,7 @@ jobs:
   - bash: |
       source activate test-environment
       pip install pytest pytest-azurepipelines
+      conda install ffmpeg --channel conda-forge
       pip install ".[dev]"
     displayName: Install HCIPy
 
@@ -144,6 +146,7 @@ jobs:
   - script: |
       call activate test-environment
       pip install pytest pytest-azurepipelines
+      conda install ffmpeg --channel conda-forge
       pip install ".[dev]"
     displayName: Install HCIPy
 
@@ -190,7 +193,8 @@ jobs:
 
   - bash: |
       source activate test-environment
-      sudo apt-get -y install ffmpeg pandoc
+      sudo apt-get -y install pandoc
+      conda install ffmpeg --channel conda-forge
       pip install awscli
       pip install ".[doc]"
     displayName: Install HCIPy

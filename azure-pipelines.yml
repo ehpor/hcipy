@@ -23,7 +23,8 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy conda-forge::ffmpeg
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
+      sudo apt-get -y install ffmpeg
     displayName: Set up Anaconda environment
 
   - bash: |
@@ -82,7 +83,8 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy conda-forge::ffmpeg
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
+      brew install ffmpeg
     displayName: Set up Anaconda environment
 
   - bash: |
@@ -138,7 +140,8 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy conda-forge::ffmpeg
+      conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy
+      choco install ffmpeg -y
     displayName: Set up Anaconda environment
 
   - script: |
@@ -185,7 +188,8 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy conda-forge::ffmpeg
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
+      sudo apt-get -y install ffmpeg
     displayName: Set up Anaconda environment
 
   - bash: |

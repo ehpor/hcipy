@@ -6,11 +6,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import pytest
+import shutil
 
-def test_gif_writer():
+def test_animation():
 	grid = make_pupil_grid(256)
 
-	mw = GifWriter('test.gif')
+	mw_frame = FrameWriter('test_frames/')
+	mw_gif = GifWriter('test.gif')
+	mw_mp4 = FFMpegWriter('test.mp4')
+
+	mws = [mw_frame, mw_gif, mw_mp4]
 
 	for i in range(25):
 		field = Field(np.random.randn(grid.size), grid)
@@ -18,16 +23,23 @@ def test_gif_writer():
 		plt.clf()
 		imshow_field(field)
 
-		mw.add_frame()
+		for mw in mws:
+			mw.add_frame()
 
-	mw.close()
+	for mw in mws:
+		mw.close()
+
+		pytest.raises(RuntimeError, mw.add_frame)
+
+	assert os.path.isdir('test_frames')
+	shutil.rmtree('test_frames')
 
 	assert os.path.isfile('test.gif')
 	assert not os.path.exists('test.gif.frames')
-
-	pytest.raises(RuntimeError, mw.add_frame)
-
 	os.remove('test.gif')
+
+	assert os.path.isfile('test.mp4')
+	os.remove('test.mp4')
 
 def test_imshow_field():
 	grid = make_pupil_grid(256)

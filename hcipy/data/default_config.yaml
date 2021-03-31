@@ -19,7 +19,8 @@ fourier:
     precompute_matrices: false
 
 plotting:
-  # The directory of the ffmpeg binary. If this is empty, ffmpeg has be available from PATH.
+  # The path to the ffmpeg binary. If this is empty, ffmpeg should be available from PATH
+  # for some functions to work.
   ffmpeg_path:
 
   # The default colormap for imshow_psf().

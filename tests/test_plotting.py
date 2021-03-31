@@ -10,17 +10,12 @@ import shutil
 from subprocess import Popen
 
 def is_ffmpeg_installed():
-	try:
-		ffmpeg_path = Configuration().plotting.ffmpeg_path
+	ffmpeg_path = Configuration().plotting.ffmpeg_path
 
-		if ffmpeg_path is None:
-			ffmpeg_path = 'ffmpeg'
+	if ffmpeg_path is None:
+		ffmpeg_path = 'ffmpeg'
 
-		res = Popen([ffmpeg_path, '-version'])
-	except OSError:
-		return False
-
-	return True
+	return shutil.which(ffmpeg_path) is not None
 
 def check_animation(mw):
 	grid = make_pupil_grid(256)

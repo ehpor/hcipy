@@ -8,6 +8,8 @@ import io
 import matplotlib
 import imageio
 
+from ..config import Configuration
+
 class FrameWriter(object):
 	'''A writer of frames from Matplotlib figures.
 
@@ -215,6 +217,13 @@ class FFMpegWriter(object):
 		self.codec = codec
 		self.framerate = framerate
 
+		ffmpeg_path = Configuration().plotting.ffmpeg_path
+		if ffmpeg_path is None:
+			ffmpeg_path = 'ffmpeg'
+
+		if shutil.which(ffmpeg_path) is None:
+			raise RuntimeError('ffmpeg was not found. Did you install it and is it accessible, either from PATH or from the HCIPy configuration file?')
+
 		if codec == 'libx264':
 			if quality is None:
 				quality = 10
@@ -222,7 +231,7 @@ class FFMpegWriter(object):
 			if preset is None:
 				preset = 'veryslow'
 
-			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
+			command = [ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
 				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-i', '-',
 				'-vcodec', 'libx264', '-pix_fmt', 'yuv420p', '-preset', preset, '-r',
 				str(framerate), '-crf', str(quality), filename]
@@ -230,14 +239,14 @@ class FFMpegWriter(object):
 			if quality is None:
 				quality = 4
 
-			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
+			command = [ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
 				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-i', '-',
 				'-vcodec', 'mpeg4', '-q:v', str(quality), '-r', str(framerate), filename]
 		elif codec == 'libvpx-vp9':
 			if quality is None:
 				quality = 30
 
-			command = ['ffmpeg', '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
+			command = [ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
 				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-i', '-']
 			if quality < 0:
 				command.extend(['-vcodec', 'libvpx-vp9', '-lossless', '1',
@@ -251,7 +260,7 @@ class FFMpegWriter(object):
 		try:
 			self.p = Popen(command, stdin=PIPE)
 		except OSError:
-			raise RuntimeError('Something went wrong when opening FFMpeg. Is FFMpeg installed and accessible from the command line?')
+			raise RuntimeError('Something went wrong when opening FFMpeg.')
 
 		self.is_closed = False
 

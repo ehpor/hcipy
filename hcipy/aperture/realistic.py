@@ -68,21 +68,21 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 
 	obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio)
 
+	spider_inner_radius = spider_offset / np.cos(np.radians(45 - (angle_between_spiders - 90) / 2))
+
+	spider_start_1 = -spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
+	spider_end_1 = spider_outer_radius * np.array([np.cos(np.pi), np.sin(np.pi)])
+
+	spider_start_2 = -spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
+	spider_end_2 = spider_outer_radius * np.array([np.cos(-np.pi / 2), np.sin(-np.pi / 2)])
+
+	spider_start_3 = spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
+	spider_end_3 = spider_outer_radius * np.array([np.cos(0), np.sin(0)])
+
+	spider_start_4 = spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
+	spider_end_4 = spider_outer_radius * np.array([np.cos(np.pi / 2), np.sin(np.pi / 2)])
+		
 	if with_spiders:
-		spider_inner_radius = spider_offset / np.cos(np.radians(45 - (angle_between_spiders - 90) / 2))
-
-		spider_start_1 = -spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
-		spider_end_1 = spider_outer_radius * np.array([np.cos(np.pi), np.sin(np.pi)])
-
-		spider_start_2 = -spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
-		spider_end_2 = spider_outer_radius * np.array([np.cos(-np.pi / 2), np.sin(-np.pi / 2)])
-
-		spider_start_3 = spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
-		spider_end_3 = spider_outer_radius * np.array([np.cos(0), np.sin(0)])
-
-		spider_start_4 = spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
-		spider_end_4 = spider_outer_radius * np.array([np.cos(np.pi / 2), np.sin(np.pi / 2)])
-
 		spider1 = make_spider(spider_start_1, spider_end_1, spider_width)
 		spider2 = make_spider(spider_start_2, spider_end_2, spider_width)
 		spider3 = make_spider(spider_start_3, spider_end_3, spider_width)

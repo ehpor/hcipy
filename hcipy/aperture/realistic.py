@@ -86,6 +86,19 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 		spider2 = make_spider(spider_start_2, spider_end_2, spider_width)
 		spider3 = make_spider(spider_start_3, spider_end_3, spider_width)
 		spider4 = make_spider(spider_start_4, spider_end_4, spider_width)
+	
+	if return_segments:
+		spider_slope_1 = (spider_start_1[1] - spider_end_1[1]) / (spider_start_1[0] - spider_end_1[0])
+		spider_yintercept_1 = spider_start_1[1] - spider_slope_1 * spider_start_1[0]
+		
+		spider_slope_2 = (spider_start_2[1] - spider_end_2[1]) / (spider_start_2[0] - spider_end_2[0])
+		spider_yintercept_2 = spider_start_2[1] - spider_slope_2 * spider_start_2[0]
+		
+		spider_slope_3 = (spider_start_3[1] - spider_end_3[1]) / (spider_start_3[0] - spider_end_3[0])
+		spider_yintercept_3 = spider_start_3[1] - spider_slope_3 * spider_start_3[0]
+		
+		spider_slope_4 = (spider_start_4[1] - spider_end_4[1]) / (spider_start_4[0] - spider_end_4[0])
+		spider_yintercept_4 = spider_start_4[1] - spider_slope_4 * spider_start_4[0]	
 
 	if with_M3_cover:
 		m3_cover = make_obstruction(rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))

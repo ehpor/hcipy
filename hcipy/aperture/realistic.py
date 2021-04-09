@@ -4,7 +4,8 @@ from .generic import make_spider, circular_aperture, hexagonal_aperture, make_se
 
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
-def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with_M3_cover=False):
+def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with_M3_cover=False
+		     ,with_segment_gaps=False, return_segments=False):
 	'''Make the VLT aperture.
 
 	This aperture is based on the ERIS pupil documentation: VLT-SPE-AES-11310-0006.
@@ -22,11 +23,17 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 		If this is True, a cover will be created for the M3 in stowed position.
 		This M3 cover is only available on UT4, mimicking the ERIS pupil. A warning
 		will be emitted when using an M3 cover with other UTs. Default: False.
+	with_segment_gaps : boolean
+		Include the gaps due to the spiders between individual segments in the aperture.
+	return_segments : boolean
+		If this is True, the pupil quadrants (segments) will also be returned.
 
 	Returns
 	-------
-	Field generator
+	aperture : Field generator
 		The VLT aperture.
+	segments : list of Field generators
+		The segments. Only returned when `return_segments` is True.
 	'''
 	telescope = telescope.lower()
 	if telescope not in ['ut1', 'ut2', 'ut3', 'ut4']:

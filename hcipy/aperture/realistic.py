@@ -192,7 +192,10 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 			def func(grid):
 				return Field(obstructed_aperture(grid), grid)
 
-	return func
+	if return_segments:
+		return func, segments
+	else:
+		return func
 
 def make_subaru_aperture():
 	pass

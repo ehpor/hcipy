@@ -110,7 +110,63 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 			spider_gap_offset_2 = np.abs((spider_width / 2) * np.sqrt(spider_slope_2**2 + 1))
 			spider_gap_offset_3 = np.abs((spider_width / 2) * np.sqrt(spider_slope_3**2 + 1))
 			spider_gap_offset_4 = np.abs((spider_width / 2) * np.sqrt(spider_slope_4**2 + 1))
+			
+		def func_northwest_aperture(grid):
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = y[:, np.newaxis] > (spider_slope_1 * x[np.newaxis, :] + spider_yintercept_1 + spider_gap_offset_1)
+				f = f * (y[:, np.newaxis] < (spider_slope_4 * x[np.newaxis, :] + spider_yintercept_4 - spider_gap_offset_4))
+				f = f * (y[:, np.newaxis] > (((spider_start_1[1] - spider_start_4[1]) / (spider_start_1[0] - spider_start_4[0])) * x[np.newaxis, :]))
+				f = f.ravel() * obstructed_aperture(grid)
+			else:
+				x, y = grid.coords
+				f = y > (spider_slope_1 * x + spider_yintercept_1 + spider_gap_offset_1) 
+				f = f * (y < (spider_slope_4 * x + spider_yintercept_4 - spider_gap_offset_4))
+				f = f * (y > (((spider_start_1[1] - spider_start_4[1]) / (spider_start_1[0] - spider_start_4[0])) * x))
+				f = f * obstructed_aperture(grid)
+			return Field(f.astype('float'), grid)
 
+		def func_northeast_aperture(grid):
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = y[:, np.newaxis] > (spider_slope_3 * x[np.newaxis, :] + spider_yintercept_3 + spider_gap_offset_3)
+				f = f * (y[:, np.newaxis] > (spider_slope_4 * x[np.newaxis, :] + spider_yintercept_4 + spider_gap_offset_4))
+				f = f.ravel() * obstructed_aperture(grid)
+			else:
+				x, y = grid.coords
+				f = y > (spider_slope_3 * x + spider_yintercept_3 + spider_gap_offset_3) 
+				f = f * (y > (spider_slope_4 * x + spider_yintercept_4 + spider_gap_offset_4))
+				f = f * obstructed_aperture(grid)
+			return Field(f.astype('float'), grid)
+
+		def func_southeast_aperture(grid):
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = y[:, np.newaxis] > (spider_slope_2 * x[np.newaxis, :] + spider_yintercept_2 + spider_gap_offset_2) 
+				f = f * (y[:, np.newaxis] < (spider_slope_3 * x[np.newaxis, :] + spider_yintercept_3 - spider_gap_offset_3))
+				f = f * (y[:, np.newaxis] < (((spider_start_3[1] - spider_start_2[1]) / (spider_start_3[0] - spider_start_2[0])) * x[np.newaxis, :]))
+				f = f.ravel() * obstructed_aperture(grid)
+			else:
+				x, y = grid.coords
+				f = y > (spider_slope_2 * x + spider_yintercept_2 + spider_gap_offset_2) 
+				f = f * (y < (spider_slope_3 * x + spider_yintercept_3 - spider_gap_offset_3))
+				f = f * (y < (((spider_start_3[1] - spider_start_2[1]) / (spider_start_3[0] - spider_start_2[0])) * x))
+				f = f * obstructed_aperture(grid)
+			return Field(f.astype('float'), grid)
+
+		def func_southwest_aperture(grid):
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = y[:, np.newaxis] < (spider_slope_1 * x[np.newaxis, :] + spider_yintercept_1 - spider_gap_offset_1) 
+				f = f * (y[:, np.newaxis] < (spider_slope_2 * x[np.newaxis, :] + spider_yintercept_2 - spider_gap_offset_2))
+				f = f.ravel() * obstructed_aperture(grid)
+			else:
+				x, y = grid.coords
+				f = y < (spider_slope_1 * x + spider_yintercept_1 - spider_gap_offset_1) 
+				f = f * (y < (spider_slope_2 * x + spider_yintercept_2 - spider_gap_offset_2))
+				f = f * obstructed_aperture(grid)
+			return Field(f.astype('float'), grid)
+		
 	if with_M3_cover:
 		m3_cover = make_obstruction(rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))
 

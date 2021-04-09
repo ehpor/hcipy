@@ -1,6 +1,7 @@
 import numpy as np
 from ..field import make_hexagonal_grid, Field
 from .generic import make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction
+import functools
 
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
@@ -166,6 +167,12 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 				f = f * (y < (spider_slope_2 * x + spider_yintercept_2 - spider_gap_offset_2))
 				f = f * obstructed_aperture(grid)
 			return Field(f.astype('float'), grid)
+		
+		segments=[]
+		segments.append(functools.partial(func_northwest_aperture))
+		segments.append(functools.partial(func_northeast_aperture))
+		segments.append(functools.partial(func_southeast_aperture))
+		segments.append(functools.partial(func_southwest_aperture))
 		
 	if with_M3_cover:
 		m3_cover = make_obstruction(rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))

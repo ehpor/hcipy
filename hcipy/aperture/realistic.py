@@ -1,10 +1,12 @@
 import numpy as np
 from ..field import make_hexagonal_grid, Field
 from .generic import make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction
+import functools
 
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
-def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with_M3_cover=False):
+def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with_M3_cover=False
+		     ,with_segment_gaps=False, return_segments=False):
 	'''Make the VLT aperture.
 
 	This aperture is based on the ERIS pupil documentation: VLT-SPE-AES-11310-0006.
@@ -22,11 +24,17 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 		If this is True, a cover will be created for the M3 in stowed position.
 		This M3 cover is only available on UT4, mimicking the ERIS pupil. A warning
 		will be emitted when using an M3 cover with other UTs. Default: False.
+	with_segment_gaps : boolean
+		Include the gaps due to the spiders between individual segments in the aperture.
+	return_segments : boolean
+		If this is True, the pupil quadrants (segments) will also be returned.
 
 	Returns
 	-------
-	Field generator
+	aperture : Field generator
 		The VLT aperture.
+	segments : list of Field generators
+		The segments. Only returned when `return_segments` is True.
 	'''
 	telescope = telescope.lower()
 	if telescope not in ['ut1', 'ut2', 'ut3', 'ut4']:
@@ -60,7 +68,7 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 
 	obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio)
 
-	if with_spiders:
+	if with_spiders or return_segments:
 		spider_inner_radius = spider_offset / np.cos(np.radians(45 - (angle_between_spiders - 90) / 2))
 
 		spider_start_1 = -spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
@@ -74,12 +82,99 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 
 		spider_start_4 = spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
 		spider_end_4 = spider_outer_radius * np.array([np.cos(np.pi / 2), np.sin(np.pi / 2)])
-
+		
+	if with_spiders:
 		spider1 = make_spider(spider_start_1, spider_end_1, spider_width)
 		spider2 = make_spider(spider_start_2, spider_end_2, spider_width)
 		spider3 = make_spider(spider_start_3, spider_end_3, spider_width)
 		spider4 = make_spider(spider_start_4, spider_end_4, spider_width)
+	
+	if return_segments:
+		spider_slope_1 = (spider_start_1[1] - spider_end_1[1]) / (spider_start_1[0] - spider_end_1[0])
+		spider_yintercept_1 = spider_start_1[1] - spider_slope_1 * spider_start_1[0]
+		
+		spider_slope_2 = (spider_start_2[1] - spider_end_2[1]) / (spider_start_2[0] - spider_end_2[0])
+		spider_yintercept_2 = spider_start_2[1] - spider_slope_2 * spider_start_2[0]
+		
+		spider_slope_3 = (spider_start_3[1] - spider_end_3[1]) / (spider_start_3[0] - spider_end_3[0])
+		spider_yintercept_3 = spider_start_3[1] - spider_slope_3 * spider_start_3[0]
+		
+		spider_slope_4 = (spider_start_4[1] - spider_end_4[1]) / (spider_start_4[0] - spider_end_4[0])
+		spider_yintercept_4 = spider_start_4[1] - spider_slope_4 * spider_start_4[0]	
+		
+		spider_gap_offset_1 = 0
+		spider_gap_offset_2 = 0
+		spider_gap_offset_3 = 0
+		spider_gap_offset_4 = 0
+		
+		if with_segment_gaps:
+			spider_gap_offset_1 = np.abs((spider_width / 2) * np.sqrt(spider_slope_1**2 + 1))
+			spider_gap_offset_2 = np.abs((spider_width / 2) * np.sqrt(spider_slope_2**2 + 1))
+			spider_gap_offset_3 = np.abs((spider_width / 2) * np.sqrt(spider_slope_3**2 + 1))
+			spider_gap_offset_4 = np.abs((spider_width / 2) * np.sqrt(spider_slope_4**2 + 1))
+			
+		def func_northwest_aperture(grid):
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = y[:, np.newaxis] > (spider_slope_1 * x[np.newaxis, :] + spider_yintercept_1 + spider_gap_offset_1)
+				f = f * (y[:, np.newaxis] < (spider_slope_4 * x[np.newaxis, :] + spider_yintercept_4 - spider_gap_offset_4))
+				f = f * (y[:, np.newaxis] > (((spider_start_1[1] - spider_start_4[1]) / (spider_start_1[0] - spider_start_4[0])) * x[np.newaxis, :]))
+				f = f.ravel() * obstructed_aperture(grid)
+			else:
+				x, y = grid.coords
+				f = y > (spider_slope_1 * x + spider_yintercept_1 + spider_gap_offset_1) 
+				f = f * (y < (spider_slope_4 * x + spider_yintercept_4 - spider_gap_offset_4))
+				f = f * (y > (((spider_start_1[1] - spider_start_4[1]) / (spider_start_1[0] - spider_start_4[0])) * x))
+				f = f * obstructed_aperture(grid)
+			return Field(f.astype('float'), grid)
 
+		def func_northeast_aperture(grid):
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = y[:, np.newaxis] > (spider_slope_3 * x[np.newaxis, :] + spider_yintercept_3 + spider_gap_offset_3)
+				f = f * (y[:, np.newaxis] > (spider_slope_4 * x[np.newaxis, :] + spider_yintercept_4 + spider_gap_offset_4))
+				f = f.ravel() * obstructed_aperture(grid)
+			else:
+				x, y = grid.coords
+				f = y > (spider_slope_3 * x + spider_yintercept_3 + spider_gap_offset_3) 
+				f = f * (y > (spider_slope_4 * x + spider_yintercept_4 + spider_gap_offset_4))
+				f = f * obstructed_aperture(grid)
+			return Field(f.astype('float'), grid)
+
+		def func_southeast_aperture(grid):
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = y[:, np.newaxis] > (spider_slope_2 * x[np.newaxis, :] + spider_yintercept_2 + spider_gap_offset_2) 
+				f = f * (y[:, np.newaxis] < (spider_slope_3 * x[np.newaxis, :] + spider_yintercept_3 - spider_gap_offset_3))
+				f = f * (y[:, np.newaxis] < (((spider_start_3[1] - spider_start_2[1]) / (spider_start_3[0] - spider_start_2[0])) * x[np.newaxis, :]))
+				f = f.ravel() * obstructed_aperture(grid)
+			else:
+				x, y = grid.coords
+				f = y > (spider_slope_2 * x + spider_yintercept_2 + spider_gap_offset_2) 
+				f = f * (y < (spider_slope_3 * x + spider_yintercept_3 - spider_gap_offset_3))
+				f = f * (y < (((spider_start_3[1] - spider_start_2[1]) / (spider_start_3[0] - spider_start_2[0])) * x))
+				f = f * obstructed_aperture(grid)
+			return Field(f.astype('float'), grid)
+
+		def func_southwest_aperture(grid):
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = y[:, np.newaxis] < (spider_slope_1 * x[np.newaxis, :] + spider_yintercept_1 - spider_gap_offset_1) 
+				f = f * (y[:, np.newaxis] < (spider_slope_2 * x[np.newaxis, :] + spider_yintercept_2 - spider_gap_offset_2))
+				f = f.ravel() * obstructed_aperture(grid)
+			else:
+				x, y = grid.coords
+				f = y < (spider_slope_1 * x + spider_yintercept_1 - spider_gap_offset_1) 
+				f = f * (y < (spider_slope_2 * x + spider_yintercept_2 - spider_gap_offset_2))
+				f = f * obstructed_aperture(grid)
+			return Field(f.astype('float'), grid)
+		
+		segments=[]
+		segments.append(functools.partial(func_northwest_aperture))
+		segments.append(functools.partial(func_northeast_aperture))
+		segments.append(functools.partial(func_southeast_aperture))
+		segments.append(functools.partial(func_southwest_aperture))
+		
 	if with_M3_cover:
 		m3_cover = make_obstruction(rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))
 
@@ -98,7 +193,10 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 			def func(grid):
 				return Field(obstructed_aperture(grid), grid)
 
-	return func
+	if return_segments:
+		return func, segments
+	else:
+		return func
 
 def make_subaru_aperture():
 	pass

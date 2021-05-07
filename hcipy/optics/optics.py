@@ -19,7 +19,6 @@ def make_thin_lens(focal_length, refractive_index, reference_wavelength):
 	SurfaceApodizer
 		The thin lens optical element.
 	'''
-
 	n0 = refractive_index(reference_wavelength)
 	radius_of_curvature = focal_length * (n0 - 1)
 	sag = parabolic_surface_sag(-radius_of_curvature)

@@ -176,5 +176,3 @@ def make_LP_modes(grid, V_number, core_radius, return_betas=False):
 		return ModeBasis(modes, grid), np.array(betas)
 	else:
 		return ModeBasis(modes, grid)
-	
-	return modes

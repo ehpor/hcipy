@@ -570,7 +570,7 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 	-------
 	Field generator
 		The E-ELT aperture.
-	ELT_segments : list of Field generators
+	elt_segments : list of Field generators
 		The segments. Only returned when `return_segments` is True.
 	'''
 
@@ -578,16 +578,17 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 	# The datafile 'eelt_segment_indices.txt' contains the segment indices that will be used.
 	filename = pkg_resources.resource_stream('hcipy', 'data/eelt_segment_indices.txt')
 	segment_indices = np.loadtxt(filename, dtype=np.int)
-	
+	elt_outer_diameter = 39.14634
+	spider_width = 0.4
 	segment_size = 1.45
 	segment_gap = 0.004
 	
 	if normalized:
-		segment_size /= 39.14634
-		segment_gap /= 39.14634
+		segment_size /= elt_outer_diameter
+		segment_gap /= elt_outer_diameter
 
 	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3)/2 + segment_gap, 17, pointy_top=True).subset(segment_indices)
-	segment_shape = hexagonal_aperture(segment_size, angle=np.pi/2 * 0)
+	segment_shape = hexagonal_aperture(segment_size, angle=0)
 	
 	if return_segments:
 		elt_aperture_function, elt_segments = make_segmented_aperture(segment_shape, segment_positions, return_segments=return_segments)
@@ -595,9 +596,9 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 		elt_aperture_function = make_segmented_aperture(segment_shape, segment_positions)	
 	
 	if normalized:
-		spiders = [make_spider_infinite([0,0], 60 * i, 0.4 / 39.14634) for i in range(6)]
+		spiders = [make_spider_infinite([0,0], 60 * i, spider_width / elt_outer_diameter) for i in range(6)]
 	else:
-		spiders = [make_spider_infinite([0,0], 60 * i, 0.4) for i in range(6)]
+		spiders = [make_spider_infinite([0,0], 60 * i, spider_width) for i in range(6)]
 	
 	def elt_aperture_with_spiders(grid):
 		aperture = elt_aperture_function(grid)

@@ -14,8 +14,8 @@ def make_standard_atmospheric_layers(input_grid, L0=10):
 
 	return layers
 
-def make_lco_atmospheric_layers(input_grid, r0=0.16, L0=25, wavelength=550e-9):
-	'''Creates a multi-layer atmosphere for the Los Campanos Observatory site.
+def make_las_campanas_atmospheric_layers(input_grid, r0=0.16, L0=25, wavelength=550e-9):
+	'''Creates a multi-layer atmosphere for the Las Campanas Observatory site.
 	
 	The layer parameters are taken from [Males2019]_ who based it on site testing from [Prieto2010]_ and [Osip2011]_ .
 
@@ -44,7 +44,6 @@ def make_lco_atmospheric_layers(input_grid, r0=0.16, L0=25, wavelength=550e-9):
 	list
 		A list of turbulence layers.
 	'''
-
 	heights = np.array([250, 500, 1000, 2000, 4000, 8000, 16000])
 	velocities = np.array([10, 10, 20, 20, 25, 30, 25])
 	

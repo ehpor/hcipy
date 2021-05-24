@@ -1,6 +1,9 @@
 import numpy as np
 
-class Field(np.ndarray):
+from .field import FieldBase, field_backend
+
+@field_backend('numpy', ['np'])
+class NumpyField(FieldBase, np.lib.mixins.NDArrayOperatorsMixin):
 	'''The value of some physical quantity for each point in some coordinate system.
 
 	Parameters
@@ -15,15 +18,124 @@ class Field(np.ndarray):
 	grid : Grid
 		The grid on which the values are defined.
 	'''
-	def __new__(cls, arr, grid):
-		obj = np.asarray(arr).view(cls)
-		obj.grid = grid
-		return obj
+	def __init__(self, array, grid):
+		self.array = np.asarray(array)
+		self.grid = grid
 
-	def __array_finalize__(self, obj):
-		if obj is None:
-			return
-		self.grid = getattr(obj, 'grid', None)
+	def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+		out = kwargs.get('out', ())
+
+		inputs = tuple(x.array if isinstance(x, NumpyField) else x for x in inputs)
+
+		if out:
+			kwargs['out'] = tuple(x.array if isinstance(x, NumpyField) else x for x in out)
+
+		result = getattr(ufunc, method)(*inputs, **kwargs)
+
+		if isinstance(result, np.ndarray):
+			return NumpyField(result, self.grid)
+		else:
+			return result
+
+	def __array__(self, dtype=None):
+		if dtype is None:
+			return self.array
+
+		return self.array.astype(dtype, copy=False)
+
+	def __array_function__(self, func, types, args, kwargs):
+		args = tuple(x.array if isinstance(x, NumpyField) else x for x in args)
+
+		result = func(*args, **kwargs)
+
+		if isinstance(result, np.ndarray):
+			return NumpyField(result, self.grid)
+		return result
+
+	@classmethod
+	def is_native_array(cls, array):
+		return True
+
+	def __getitem__(self, indices):
+		return NumpyField(self.array[indices], self.grid)
+
+	def __setitem__(self, indices, values):
+		self.array[indices] = values
+
+		return self
+
+	@property
+	def T(self):
+		return np.transpose(self)
+
+	@property
+	def dtype(self):
+		return self.array.dtype
+
+	@property
+	def imag(self):
+		return np.imag(self)
+
+	@property
+	def real(self):
+		return np.real(self)
+
+	@property
+	def size(self):
+		return np.prod(self.shape)
+
+	@property
+	def ndim(self):
+		return len(self.shape)
+
+	@property
+	def shape(self):
+		return self.array.shape
+
+	def astype(self, dtype, *args, **kwargs):
+		return NumpyField(self.array.astype(dtype, *args, **kwargs), self.grid)
+
+	def __len__(self):
+		return len(self.array)
+
+	def conj(self):
+		return np.conj(self)
+
+	def conjugate(self):
+		return np.conjugate(self)
+
+	all = np.all
+	any = np.any
+	argmax = np.argmax
+	argmin = np.argmin
+	argpartition = np.argpartition
+	argsort = np.argsort
+	clip = np.clip
+	compress = np.compress
+	#conj = np.conj
+	#conjugate = np.conjugate
+	copy = np.copy
+	cumprod = np.cumprod
+	cumsum = np.cumsum
+	dot = np.dot
+	flatten = np.ravel
+	max = np.max
+	mean = np.mean
+	min = np.min
+	nonzero = np.nonzero
+	prod = np.prod
+	ptp = np.ptp
+	ravel = np.ravel
+	repeat = np.repeat
+	reshape = np.reshape
+	round = np.round
+	sort = np.sort
+	squeeze = np.squeeze
+	std = np.std
+	sum = np.sum
+	trace = np.trace
+	transpose = np.transpose
+	var = np.var
 
 	@classmethod
 	def from_dict(cls, tree):
@@ -71,7 +183,7 @@ class Field(np.ndarray):
 		tuple
 			The state of the Field.
 		'''
-		data_state = super().__reduce__(self)[2]
+		data_state = self.array.__reduce__()[2]
 		return data_state + (self.grid,)
 
 	def __setstate__(self, state):
@@ -84,7 +196,7 @@ class Field(np.ndarray):
 		'''
 		_, shp, typ, isf, raw, grid = state
 
-		super().__setstate__((shp, typ, isf, raw))
+		self.array.__setstate__((shp, typ, isf, raw))
 		self.grid = grid
 
 	def __reduce__(self):
@@ -100,70 +212,6 @@ class Field(np.ndarray):
 			(self.__class__, np.ndarray, (0,), 'b',),
 			self.__getstate__()
 		)
-
-	@property
-	def tensor_order(self):
-		'''The order of the tensor of the field.
-		'''
-		return self.ndim - 1
-
-	@property
-	def tensor_shape(self):
-		'''The shape of the tensor of the field.
-		'''
-		return np.array(self.shape)[:-1]
-
-	@property
-	def is_scalar_field(self):
-		'''True if this field is a scalar field (ie. a tensor order of 0), False otherwise.
-		'''
-		return self.tensor_order == 0
-
-	@property
-	def is_vector_field(self):
-		'''True if this field is a vector field (ie. a tensor order of 1), False otherwise.
-		'''
-		return self.tensor_order == 1
-
-	@property
-	def is_valid_field(self):
-		'''True if the field corresponds with its grid.
-		'''
-		return self.shape[-1] == self.grid.size
-
-	@property
-	def shaped(self):
-		'''The reshaped version of this field.
-
-		Raises
-		------
-		ValueError
-			If this field isn't separated, no reshaped version can be made.
-		'''
-		if not self.grid.is_separated:
-			raise ValueError('This field doesn\'t have a shape.')
-
-		if self.tensor_order > 0:
-			new_shape = np.concatenate([np.array(self.shape)[:-1], self.grid.shape])
-			return self.reshape(new_shape)
-
-		return self.reshape(self.grid.shape)
-
-	def at(self, p):
-		'''The value of this field closest to point p.
-
-		Parameters
-		----------
-		p : array_like
-			The point at which the closest value should be returned.
-
-		Returns
-		-------
-		array_like
-			The value, potentially tensor, closest to point p.
-		'''
-		i = self.grid.closest_to(p)
-		return self[..., i]
 
 def _field_reconstruct(subtype, baseclass, baseshape, basetype):
 	'''Internal function for building a new Field object for pickling.
@@ -187,4 +235,4 @@ def _field_reconstruct(subtype, baseclass, baseshape, basetype):
 	data = np.ndarray.__new__(baseclass, baseshape, basetype)
 	grid = None
 
-	return subtype.__new__(subtype, data, grid)
+	return subtype(data, grid)

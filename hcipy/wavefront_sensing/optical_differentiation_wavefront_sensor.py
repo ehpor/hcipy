@@ -106,8 +106,6 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 
 		filter_3 = amplitude_filter(surface_grid.y / filter_size)
 		filter_3 *= filter_mask
-		for f in filter_3:
-			print(f)
 
 		filter_4 = -amplitude_filter(-surface_grid.y / filter_size)
 		filter_4 *= filter_mask

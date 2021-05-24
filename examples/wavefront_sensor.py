@@ -41,7 +41,6 @@ def test_pupil_plane_wavefront_sensors():
 		# Measure the response of all wavefront sensors
 		for j, wfs in enumerate(wavefront_sensors):
 			wf_out = wfs.forward(wf)
-			print(wf_out.total_power)
 			plt.subplot(num_wfs, num_zernike, i+1 + num_zernike*j)
 			imshow_field(wf_out.intensity-refs[j])
 

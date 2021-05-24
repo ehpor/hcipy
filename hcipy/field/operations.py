@@ -1,4 +1,4 @@
-from .field import Field
+from .field import Field, is_field
 import numpy as np
 import string
 
@@ -64,12 +64,12 @@ def field_einsum(subscripts, *operands, **kwargs):
 		If all of the fields don't have	the same grid size. If the number of
 		operands is not equal to the number of subscripts specified.
 	'''
-	is_field = [isinstance(o, Field) for o in operands]
-	if not np.count_nonzero(is_field):
+	is_fields = [is_field(o) for o in operands]
+	if not np.count_nonzero(is_fields):
 		return np.einsum(subscripts, *operands, **kwargs)
 
-	field_sizes = [o.grid.size for i, o in enumerate(operands) if is_field[i]]
-	element_sizes = [o.shape[-1] for i, o in enumerate(operands) if is_field[i]]
+	field_sizes = [o.grid.size for i, o in enumerate(operands) if is_fields[i]]
+	element_sizes = [o.shape[-1] for i, o in enumerate(operands) if is_fields[i]]
 
 	if not np.allclose(field_sizes, field_sizes[0]) or not np.allclose(element_sizes, element_sizes[0]):
 		raise ValueError('All fields must be the same size for a field_einsum().')
@@ -91,7 +91,7 @@ def field_einsum(subscripts, *operands, **kwargs):
 	unused_index = [a for a in string.ascii_lowercase if a not in subscripts][0]
 
 	# Add the field dimension to the input field operands.
-	ss = [s + unused_index if is_field[i] else s for i, s in enumerate(ss)]
+	ss = [s + unused_index if is_fields[i] else s for i, s in enumerate(ss)]
 
 	# Recombine all operands into the final subscripts
 	if len(splitted_string) == 2:
@@ -100,7 +100,7 @@ def field_einsum(subscripts, *operands, **kwargs):
 		subscripts_new = ','.join(ss)
 
 	res = np.einsum(subscripts_new, *operands, **kwargs)
-	grid = operands[np.flatnonzero(np.array(is_field))[0]].grid
+	grid = operands[np.flatnonzero(np.array(is_fields))[0]].grid
 
 	if 'out' in kwargs:
 		kwargs['out'] = Field(res, grid)

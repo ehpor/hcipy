@@ -349,6 +349,94 @@ def make_luvoir_a_lyot_stop(normalized=False, with_spiders=False, spider_oversiz
 
 	return aper
 
+def make_luvoir_b_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, segment_transmissions=1,
+						   return_header=False, return_segments=False):
+	'''
+	Segment gaps can be included or excluded, and the transmission for each
+	of the segments can also be changed. Segments can be returned as well.
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the pupil diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 15.0 meters.
+	with_segment_gaps : boolean
+		Include the gaps between individual segments in the aperture.
+	gap_padding : scalar
+		Arbitrary padding of gap size to represent gaps on smaller arrays - this effectively
+		makes the gaps larger and the segments smaller to preserve the same segment pitch.
+	segment_transmissions : scalar or array_like
+		The transmission for each of the segments. If this is a scalar, this transmission
+		will be used for all segments.
+	return_header : boolean
+		If this is True, a header will be returned giving all important values for the
+		created aperture for reference.
+	return_segments : boolean
+		If this is True, the segments will also be returned as a ModeBasis.
+
+	Returns
+	-------
+	aperture : Field generator
+		The LUVOIR B aperture.
+	aperture_header : dict
+		A dictionary containing all quantities used when making this aperture. Only returned if
+		`return_header` is True.
+	segments : list of Field generators
+		The segments. Only returned when `return_segments` is True.
+	'''
+	pupil_diameter = 8.0 #m actual circumscribed diameter, used for lam/D calculations other measurements normalized by this diameter
+	pupil_inscribed = 6.7 #m actual inscribed diameter
+	actual_segment_flat_diameter = 0.955 #m actual segment flat-to-flat diameter
+	actual_segment_gap = 0.006 #m actual gap size between segments
+
+	segment_gap = actual_segment_gap * gap_padding #padding out the segmentation gaps so they are visible and not sub-pixel
+	if not with_segment_gaps:
+		segment_gap = 0
+
+	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
+	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter #segment circumscribed diameter
+
+	num_rings = 4 #number of full rings of hexagons around central segment
+
+	if not with_segment_gaps:
+		segment_gap = 0
+
+	aperture_header = {'TELESCOP':'LUVOIR B','D_CIRC': pupil_diameter, 'D_INSC':pupil_inscribed,\
+						'SEG_F2F_D':actual_segment_flat_diameter,'SEG_GAP':actual_segment_gap, \
+						'NORM':normalized, 'SEG_TRAN':segment_transmissions,'GAP_PAD':gap_padding, \
+						'PROV':'LUVOIR final report 2019'}
+
+	if normalized:
+		segment_circum_diameter /= pupil_diameter
+		actual_segment_flat_diameter /= pupil_diameter
+		actual_segment_gap /= pupil_diameter
+		pupil_diameter = 1.0
+
+	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
+	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.9)) #corner clipping
+
+	segment = hexagonal_aperture(segment_circum_diameter, np.pi / 2)
+
+	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=return_segments)
+
+	if return_segments:
+		segmented_aperture, segments = segmented_aperture
+
+	def func(grid):
+		res = segmented_aperture(grid)
+
+		return Field(res, grid)
+
+	if return_header:
+		if return_segments:
+			return func, aperture_header, segments
+		else:
+			return func, aperture_header
+	elif return_segments:
+		return func, segments
+	else:
+		return func
+
 def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, return_header=False, return_segments=False):
 	'''Make the HiCAT P3 apodizer mask
 

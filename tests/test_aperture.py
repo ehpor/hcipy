@@ -7,7 +7,7 @@ import pytest
 import functools
 
 def check_against_reference(field_generator, diameter, baseline_name):
-	fname = os.path.join(os.path.dirname(__file__), 'baseline_for_apertures/' + baseline_name + '.fits')
+	fname = os.path.join(os.path.dirname(__file__), 'baseline_for_apertures/' + baseline_name + '.fits.gz')
 
 	grid = make_uniform_grid(256, [diameter, diameter])
 	field = evaluate_supersampled(field_generator, grid, 8)

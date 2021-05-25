@@ -315,7 +315,8 @@ def make_luvoir_a_lyot_stop(normalized=False, with_spiders=False, spider_oversiz
 	lyot_reference_diameter = pupil_diameter
 
 	ls_header = {'TELESCOP':'LUVOIR A', 'D_CIRC': pupil_diameter, 'D_INSC': 13.5,
-				 'LS_ID': inner_diameter_fraction, 'LS_OD': outer_diameter_fraction, 'LS_REF_D': lyot_reference_diameter, 'NORM': normalized, 'STRUT_ST': spid_start}
+				 'LS_ID': inner_diameter_fraction, 'LS_OD': outer_diameter_fraction,
+				 'LS_REF_D': lyot_reference_diameter, 'NORM': normalized, 'STRUT_ST': spid_start}
 
 	if with_spiders:
 		ls_header['STRUT_W']  = spider_width
@@ -351,7 +352,9 @@ def make_luvoir_a_lyot_stop(normalized=False, with_spiders=False, spider_oversiz
 
 def make_luvoir_b_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, segment_transmissions=1,
 						   return_header=False, return_segments=False):
-	'''
+	'''Make the LUVOIR B aperture.
+
+	This aperture is based on the LUVOIR final report 2019.
 	Segment gaps can be included or excluded, and the transmission for each
 	of the segments can also be changed. Segments can be returned as well.
 
@@ -359,7 +362,7 @@ def make_luvoir_b_aperture(normalized=False, with_segment_gaps=True, gap_padding
 	----------
 	normalized : boolean
 		If this is True, the pupil diameter will be scaled to 1. Otherwise, the
-		diameter of the pupil will be 15.0 meters.
+		diameter of the pupil will be 8.0 meters.
 	with_segment_gaps : boolean
 		Include the gaps between individual segments in the aperture.
 	gap_padding : scalar
@@ -389,7 +392,8 @@ def make_luvoir_b_aperture(normalized=False, with_segment_gaps=True, gap_padding
 	actual_segment_flat_diameter = 0.955 #m actual segment flat-to-flat diameter
 	actual_segment_gap = 0.006 #m actual gap size between segments
 
-	segment_gap = actual_segment_gap * gap_padding #padding out the segmentation gaps so they are visible and not sub-pixel
+	# padding out the segmentation gaps so they are visible and not sub-pixel
+	segment_gap = actual_segment_gap * gap_padding
 	if not with_segment_gaps:
 		segment_gap = 0
 
@@ -401,10 +405,10 @@ def make_luvoir_b_aperture(normalized=False, with_segment_gaps=True, gap_padding
 	if not with_segment_gaps:
 		segment_gap = 0
 
-	aperture_header = {'TELESCOP':'LUVOIR B','D_CIRC': pupil_diameter, 'D_INSC':pupil_inscribed,\
-						'SEG_F2F_D':actual_segment_flat_diameter,'SEG_GAP':actual_segment_gap, \
-						'NORM':normalized, 'SEG_TRAN':segment_transmissions,'GAP_PAD':gap_padding, \
-						'PROV':'LUVOIR final report 2019'}
+	aperture_header = {'TELESCOP':'LUVOIR B','D_CIRC': pupil_diameter, 'D_INSC':pupil_inscribed,
+					   'SEG_F2F_D':actual_segment_flat_diameter,'SEG_GAP':actual_segment_gap,
+					   'NORM':normalized, 'SEG_TRAN':segment_transmissions,'GAP_PAD':gap_padding,
+					   'PROV':'LUVOIR final report 2019'}
 
 	if normalized:
 		segment_circum_diameter /= pupil_diameter
@@ -413,7 +417,8 @@ def make_luvoir_b_aperture(normalized=False, with_segment_gaps=True, gap_padding
 		pupil_diameter = 1.0
 
 	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
-	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.9)) #corner clipping
+	# clipping the "corner" segments of the outermost rings
+	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.9))
 
 	segment = hexagonal_aperture(segment_circum_diameter, np.pi / 2)
 

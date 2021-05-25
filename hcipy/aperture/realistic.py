@@ -160,11 +160,12 @@ def make_keck_aperture():
 
 def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gaps=True,
 		gap_padding=1, segment_transmissions=1, return_header=False, return_segments=False):
-	'''
+	'''Make the LUVOIR A aperture.
+
 	This aperture changes frequently. This one is based on LUVOIR Apertures dimensions
 	from Matt Bolcar, LUVOIR lead engineer (as of 10 April 2019)
 	Spiders and segment gaps can be included or excluded, and the transmission for each
-	of the segments can also be changed. Segements can be returned as well.
+	of the segments can also be changed. Segments can be returned as well.
 
 	Parameters
 	----------
@@ -202,28 +203,26 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 	actual_segment_flat_diameter = 1.2225 #m actual segment flat-to-flat diameter
 	actual_segment_gap = 0.006 #m actual gap size between segments
 	spider_width = 0.150 #m actual strut size
-	lower_spider_angle = 12.7 #deg angle at which lower spiders are offset from vertical
 	spid_start = 0.30657 #m spider starting point distance from center of aperture
+	num_rings = 6 #number of full rings of hexagons around central segment
+	lower_spider_angle = 12.7 #deg spiders are upside-down 'Y' shaped; degree the lower two spiders are offset from vertical by this amount
 
-	segment_gap = actual_segment_gap * gap_padding #padding out the segmentation gaps so they are visible and not sub-pixel
+	# padding out the segmentation gaps so they are visible and not sub-pixel
+	segment_gap = actual_segment_gap * gap_padding
 	if not with_segment_gaps:
 		segment_gap = 0
 
 	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
 	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter #segment circumscribed diameter
 
-	num_rings = 6 #number of full rings of hexagons around central segment
-
-	lower_spider_angle = 12.7 #deg spiders are upside-down 'Y' shaped; degree the lower two spiders are offset from vertical by this amount
-
 	if not with_segment_gaps:
 		segment_gap = 0
 
-	aperture_header = {'TELESCOP':'LUVOIR A','D_CIRC': pupil_diameter, 'D_INSC':pupil_inscribed,\
-						'SEG_F2F_D':actual_segment_flat_diameter,'SEG_GAP':actual_segment_gap, \
-						'STRUT_W':spider_width,'STRUT_AN':lower_spider_angle,'NORM':normalized, \
-						'SEG_TRAN':segment_transmissions,'GAP_PAD':gap_padding, 'STRUT_ST':spid_start, \
-						'PROV':'MBolcar ppt 20180815'}
+	aperture_header = {'TELESCOP':'LUVOIR A','D_CIRC': pupil_diameter, 'D_INSC':pupil_inscribed,
+					   'SEG_F2F_D':actual_segment_flat_diameter,'SEG_GAP':actual_segment_gap,
+					   'STRUT_W':spider_width,'STRUT_AN':lower_spider_angle,'NORM':normalized,
+					   'SEG_TRAN':segment_transmissions,'GAP_PAD':gap_padding, 'STRUT_ST':spid_start,
+					   'PROV':'MBolcar ppt 20180815'}
 
 	if normalized:
 		segment_circum_diameter /= pupil_diameter
@@ -234,7 +233,8 @@ def make_luvoir_a_aperture(normalized=False, with_spiders=True, with_segment_gap
 		pupil_diameter = 1.0
 
 	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
-	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.98)) #corner clipping
+	# clipping the "corner" segments of the outermost rings
+	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.98))
 	segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
 
 	segment = hexagonal_aperture(segment_circum_diameter, np.pi / 2)

@@ -16,7 +16,7 @@ This page is intended for the maintainer of HCIPy, and contains step-by-step ins
 
         pytest ./tests --runslow
 
-    Also make sure that the latest CI for the master branch on `Travis <https://travis-ci.com/ehpor/hcipy>`__ and `Appveyor <https://ci.appveyor.com/project/ehpor/hcipy>`__ are passing. Build the documentation and check if it is building without errors or problematic warnings.
+    Also make sure that the latest CI for the master branch on `Azure Pipelines <https://dev.azure.com/ehpor/hcipy/_build?definitionId=1>`__ is passing. Build the documentation and check if it is building without errors or problematic warnings.
 
     .. code-block:: shell
 

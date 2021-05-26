@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.sparse import csr_matrix
 import pkg_resources
+import numexpr as ne
 
 from .optical_element import OpticalElement
 from ..field import make_uniform_grid, evaluate_supersampled
@@ -207,7 +208,10 @@ class DeformableMirror(OpticalElement):
 			The reflected wavefront.
 		'''
 		wf = wavefront.copy()
-		wf.electric_field *= np.exp(2j * self.surface * wavefront.wavenumber)
+
+		variables = {'alpha': 2j * wavefront.wavenumber, 'surf': self.surface}
+		wf.electric_field *= ne.evaluate('exp(alpha * surf)', local_dict=variables)
+
 		return wf
 
 	def backward(self, wavefront):
@@ -224,7 +228,10 @@ class DeformableMirror(OpticalElement):
 			The reflected wavefront.
 		'''
 		wf = wavefront.copy()
-		wf.electric_field *= np.exp(-2j * self.surface * wavefront.wavenumber)
+
+		variables = {'alpha': -2j * wavefront.wavenumber, 'surf': self.surface}
+		wf.electric_field *= ne.evaluate('exp(alpha * surf)', local_dict=variables)
+
 		return wf
 
 	@property

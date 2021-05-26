@@ -10,10 +10,12 @@ __all__ = [
     'make_obstruction',
     'make_rotated_aperture',
     'make_segmented_aperture',
-	'make_elt_aperture',
+	  'make_elt_aperture',
+    'make_hexagonal_segmented_aperture',
     'make_magellan_aperture',
     'make_luvoir_a_aperture',
     'make_luvoir_a_lyot_stop',
+    'make_luvoir_b_aperture',
     'make_hicat_aperture',
     'make_hicat_lyot_stop',
 	'make_vlt_aperture'

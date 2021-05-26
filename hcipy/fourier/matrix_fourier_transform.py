@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.linalg import blas
-from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
+from .fourier_transform import FourierTransform, multiplex_for_tensor_fields, _get_float_and_complex_dtype
 from ..field import Field
 from ..config import Configuration
 import numexpr as ne
@@ -81,12 +81,7 @@ class MatrixFourierTransform(FourierTransform):
 			The data type for which to calculate the matrices.
 		'''
 		# Set the correct complex and real data type, based on the input data type.
-		if dtype == np.dtype('float32') or dtype == np.dtype('complex64'):
-			complex_dtype = 'complex64'
-			float_dtype = 'float32'
-		else:
-			complex_dtype = 'complex128'
-			float_dtype = 'float64'
+		float_dtype, complex_dtype = _get_float_and_complex_dtype(dtype)
 
 		# Check if the matrices need to be (re)calculated.
 		if self.matrices_dtype != complex_dtype:

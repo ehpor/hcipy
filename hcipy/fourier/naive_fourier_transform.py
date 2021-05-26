@@ -1,6 +1,6 @@
 import numpy as np
 
-from .fourier_transform import FourierTransform, multiplex_for_tensor_fields
+from .fourier_transform import FourierTransform, multiplex_for_tensor_fields, _get_float_and_complex_dtype
 from ..field import Field
 from ..config import Configuration
 
@@ -98,7 +98,8 @@ class NaiveFourierTransform(FourierTransform):
 		else:
 			res = np.array([(field * self.input_grid.weights).dot(np.exp(-1j * np.dot(p, self.coords_in))) for p in self.coords_out.T])
 
-		return Field(res, self.output_grid).astype(field.dtype)
+		float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
+		return Field(res, self.output_grid).astype(complex_dtype, copy=False)
 
 	@multiplex_for_tensor_fields
 	def backward(self, field):
@@ -120,4 +121,5 @@ class NaiveFourierTransform(FourierTransform):
 			res = np.array([(field * self.output_grid.weights).dot(np.exp(1j * np.dot(p, self.coords_out))) for p in self.coords_in.T])
 			res /= (2 * np.pi)**self.input_grid.ndim
 
-		return Field(res, self.input_grid).astype(field.dtype)
+		float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
+		return Field(res, self.input_grid).astype(complex_dtype, copy=False)

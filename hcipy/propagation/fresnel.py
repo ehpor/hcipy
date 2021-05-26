@@ -1,4 +1,5 @@
 import numpy as np
+import numexpr as ne
 
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..field import Field, evaluate_supersampled
@@ -19,8 +20,9 @@ class FresnelPropagator(AgnosticOpticalElement):
 		The distance to propagate
 	num_oversampling : int
 		The number of times the transfer function is oversampled. Default is 2.
-	wavelength : scalar
-		The wavelength of the wavefront.
+	zero_padding : scalar
+		The amount of zero padding to use for the propagation. A value of one means no
+		zero padding is applied. Default is 2.
 	refractive_index : scalar
 		The refractive index of the medium that the wavefront is propagating in.
 
@@ -29,10 +31,11 @@ class FresnelPropagator(AgnosticOpticalElement):
 	ValueError
 		If the `input_grid` is not regular and Cartesian.
 	'''
-	def __init__(self, input_grid, distance, num_oversampling=2, refractive_index=1):
+	def __init__(self, input_grid, distance, num_oversampling=2, zero_padding=2, refractive_index=1):
 		self._distance = distance
 
 		self._num_oversampling = num_oversampling
+		self._zero_padding = zero_padding
 		self._refractive_index = refractive_index
 
 		AgnosticOpticalElement.__init__(self, grid_dependent=True, wavelength_dependent=True)
@@ -50,23 +53,33 @@ class FresnelPropagator(AgnosticOpticalElement):
 				fft_upscale = FastFourierTransform(enlarged_grid)
 
 				def impulse_response(grid):
-					r_squared = grid.x**2 + grid.y**2
-					return Field(np.exp(1j * k * self.distance) / (1j * wavelength * self.distance) * np.exp(1j * k * r_squared / (2 * self.distance)), grid)
+					x = grid.x
+					y = grid.y
+					phase_factor = np.exp(1j * k * self.distance) / (1j * wavelength * self.distance)
+
+					variables = {'alpha': 0.5j * k / self.distance, 'x': x, 'y': y, 'phase_factor': phase_factor}
+					ir = ne.evaluate('phase_factor * exp(alpha * (x * x + y * y))', local_dict=variables)
+
+					return Field(ir, grid)
 
 				impulse_response = evaluate_supersampled(impulse_response, enlarged_grid, self.num_oversampling)
 
 				return fft_upscale.forward(impulse_response)
 		else:
 			def transfer_function_native(fourier_grid):
-				k_squared = fourier_grid.as_('polar').r**2
+				x = fourier_grid.x
+				y = fourier_grid.y
 				phase_factor = np.exp(1j * k * self.distance)
 
-				return Field(np.exp(-0.5j * self.distance * k_squared / k) * phase_factor, fourier_grid)
+				variables = {'alpha': -0.5j * self.distance / k, 'x': x, 'y': y, 'phase_factor': phase_factor}
+				tf = ne.evaluate('phase_factor * exp(alpha * (x * x + y * y))', local_dict=variables)
+
+				return Field(tf, fourier_grid)
 
 			def transfer_function(fourier_grid):
 				return evaluate_supersampled(transfer_function_native, fourier_grid, self.num_oversampling)
 
-		instance_data.fourier_filter = FourierFilter(input_grid, transfer_function, q=2)
+		instance_data.fourier_filter = FourierFilter(input_grid, transfer_function, q=self.zero_padding)
 
 	@property
 	def distance(self):
@@ -85,6 +98,16 @@ class FresnelPropagator(AgnosticOpticalElement):
 	@num_oversampling.setter
 	def num_oversampling(self, num_oversampling):
 		self._num_oversampling = num_oversampling
+
+		self.clear_cache()
+
+	@property
+	def zero_padding(self):
+		return self._zero_padding
+
+	@zero_padding.setter
+	def zero_padding(self, zero_padding):
+		self._zero_padding = zero_padding
 
 		self.clear_cache()
 

@@ -1,4 +1,5 @@
 __all__ = [
+	'FrameWriter',
 	'GifWriter',
 	'FFMpegWriter',
 	'set_color_scheme',

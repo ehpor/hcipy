@@ -143,6 +143,16 @@ def test_luvoir_a_lyot_stop():
 
 	check_aperture_against_reference(make_luvoir_a_lyot_stop, 'luvoir_a_lyot', 15, options)
 
+def test_luvoir_b_aperture():
+	check_against_reference(make_luvoir_b_aperture(), 8.0, 'luvoir_b/pupil')
+	check_segmentation(make_luvoir_b_aperture)
+
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_segment_gaps': [(True, ''), (False, '_without_segment_gaps')]
+	}
+	check_aperture_against_reference(make_luvoir_b_aperture, 'luvoir_b', 8, options)
+
 def test_hicat_aperture():
 	check_against_reference(make_hicat_aperture(), 0.019725, 'hicat_pupil/pupil')
 

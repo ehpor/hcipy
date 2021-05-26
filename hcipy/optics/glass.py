@@ -118,6 +118,6 @@ def _parse_sellmeier_glass_catalogue(filename):
 
 	database = {}
 	for di in data:
-		database[di[0].replace(" ", "")] = make_sellmeier_glass(1, di[1:4].astype(np.float), di[4::].astype(np.float))
+		database[di[0].replace(" ", "")] = make_sellmeier_glass(1, di[1:4].astype('float'), di[4::].astype('float'))
 
 	return database

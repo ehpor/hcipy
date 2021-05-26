@@ -1,31 +1,6 @@
 import numpy as np
-from .optical_element import AgnosticOpticalElement
 from .surface_profiles import parabolic_surface_sag
 from .apodization import SurfaceApodizer
-
-
-def make_thin_lens(focal_length, refractive_index, reference_wavelength):
-	'''Create a parabolic thin lens.
-
-	Parameters
-	----------
-	focal_length : scalar
-		The focal length of the thin lens.
-	refractive_index : scalar or function of wavelength
-		The refractive index of the lens material.
-	reference_wavelength : scalar
-		The wavelength for which the focal length is defined.
-	
-	Returns
-	-------
-	SurfaceApodizer
-		The thin lens optical element.
-	'''
-	n0 = refractive_index(reference_wavelength)
-	radius_of_curvature = focal_length * (n0 - 1)
-	sag = parabolic_surface_sag(-radius_of_curvature)
-
-	return SurfaceApodizer(sag, refractive_index)
 
 class ThinLens(SurfaceApodizer):
 	'''A parabolic thin lens.
@@ -49,8 +24,6 @@ class ThinLens(SurfaceApodizer):
 		n0 = refractive_index(reference_wavelength)
 		radius_of_curvature = focal_length * (n0 - 1)
 		sag = parabolic_surface_sag(-radius_of_curvature)
-
-		self.surface = SurfaceApodizer(sag, refractive_index)
 		super().__init__(sag, refractive_index)
 	
 	@property
@@ -67,4 +40,4 @@ class ThinLens(SurfaceApodizer):
 		radius_of_curvature = focal_length * (n0 - 1)
 		sag = parabolic_surface_sag(-radius_of_curvature)
 
-		self._surface_sag = sag
+		self.surface_sag = sag

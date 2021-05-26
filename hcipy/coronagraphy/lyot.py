@@ -23,8 +23,10 @@ class LyotCoronagraph(OpticalElement):
 	lyot_stop : Field or OpticalElement or None
 		The (complex) transmission of the Lyot stop. If this is an :class:`OpticalElement`,
 		this will be used instead. This allows for more realistic implementations of Lyot stops.
+	focal_length : scalar
+		The internal focal length of the Lyot system.
 	'''
-	def __init__(self, input_grid, focal_plane_mask, lyot_stop=None):
+	def __init__(self, input_grid, focal_plane_mask, lyot_stop=None, focal_length=1):
 		if hasattr(focal_plane_mask, 'input_grid'):
 			# Focal plane mask is an optical element.
 			grid = focal_plane_mask.input_grid
@@ -38,7 +40,7 @@ class LyotCoronagraph(OpticalElement):
 			lyot_stop = Apodizer(lyot_stop)
 		self.lyot_stop = lyot_stop
 
-		self.prop = FraunhoferPropagator(input_grid, grid)
+		self.prop = FraunhoferPropagator(input_grid, grid, focal_length=focal_length)
 
 	def forward(self, wavefront):
 		'''Propagate the wavefront through the Lyot coronagraph.
@@ -114,8 +116,10 @@ class OccultedLyotCoronagraph(OpticalElement):
 	lyot_stop : Field or OpticalElement or None
 		The (complex) transmission of the Lyot stop. If this is an :class:`OpticalElement`,
 		this will be used instead. This allows for more realistic implementations of Lyot stops.
+	focal_length : scalar
+		The internal focal length of the Lyot system.
 	'''
-	def __init__(self, input_grid, focal_plane_mask):
+	def __init__(self, input_grid, focal_plane_mask, focal_length=1):
 		if hasattr(focal_plane_mask, 'input_grid'):
 			# Focal plane mask is an optical element.
 			grid = focal_plane_mask.input_grid
@@ -125,7 +129,7 @@ class OccultedLyotCoronagraph(OpticalElement):
 			grid = focal_plane_mask.grid
 			self.focal_plane_mask = Apodizer(focal_plane_mask)
 
-		self.prop = FraunhoferPropagator(input_grid, grid)
+		self.prop = FraunhoferPropagator(input_grid, grid, focal_length=focal_length)
 
 	def forward(self, wavefront):
 		'''Propagate the wavefront through the Lyot coronagraph.

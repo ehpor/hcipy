@@ -578,36 +578,38 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 	spider_width = 0.4
 	segment_size = 1.45
 	segment_gap = 0.004
-	
+	inner_diameter = 9.4136
+	outer_diameter = 39.14634
+
 	if normalized:
 		segment_size /= elt_outer_diameter
 		segment_gap /= elt_outer_diameter
+		inner_diameter /= elt_outer_diameter
+		outer_diameter /= elt_outer_diameter
+		spider_width /= elt_outer_diameter
 
 	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3)/2 + segment_gap, 17, pointy_top=False)
 
 	# remove the inner segments
-	central_obscuration_mask = (1 - hexagonal_aperture(2 * 4.7068 * 2 / np.sqrt(3))(segment_positions))>0
+	central_obscuration_mask = (1 - hexagonal_aperture(inner_diameter * 2 / np.sqrt(3))(segment_positions))>0
 	segment_positions = segment_positions.subset(central_obscuration_mask)
 
 	# remove the pointy tops for a more circular aperture
-	edge_mask_top = abs(segment_positions.y) < ((elt_outer_diameter / 2) * 0.99)
-	edge_mask_positive_30 = abs(np.cos(np.pi/6) * segment_positions.x + np.sin(np.pi/6) * segment_positions.y) < ((elt_outer_diameter / 2) * 0.99)
-	edge_mask_negative_30 = abs(np.cos(np.pi/6) * segment_positions.x - np.sin(np.pi/6) * segment_positions.y) < ((elt_outer_diameter / 2) * 0.99)
+	edge_mask_top = abs(segment_positions.y) < ((outer_diameter / 2) * 0.99)
+	edge_mask_positive_30 = abs(np.cos(np.pi/6) * segment_positions.x + np.sin(np.pi/6) * segment_positions.y) < ((outer_diameter / 2) * 0.99)
+	edge_mask_negative_30 = abs(np.cos(np.pi/6) * segment_positions.x - np.sin(np.pi/6) * segment_positions.y) < ((outer_diameter / 2) * 0.99)
 	all_edge_masks = edge_mask_top * edge_mask_positive_30 * edge_mask_negative_30 > 0
 
 	segment_positions = segment_positions.subset(all_edge_masks)
 
-	segment_shape = hexagonal_aperture(segment_size, angle=0)
+	segment_shape = hexagonal_aperture(segment_size, angle=np.pi/2)
 	
 	if return_segments:
 		elt_aperture_function, elt_segments = make_segmented_aperture(segment_shape, segment_positions, return_segments=return_segments)
 	else:
 		elt_aperture_function = make_segmented_aperture(segment_shape, segment_positions)	
 	
-	if normalized:
-		spiders = [make_spider_infinite([0,0], 60 * i, spider_width / elt_outer_diameter) for i in range(6)]
-	else:
-		spiders = [make_spider_infinite([0,0], 60 * i, spider_width) for i in range(6)]
+	spiders = [make_spider_infinite([0,0], 60 * i + 30, spider_width) for i in range(6)]
 	
 	def elt_aperture_with_spiders(grid):
 		aperture = elt_aperture_function(grid)

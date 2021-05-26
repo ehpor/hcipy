@@ -1,8 +1,6 @@
 import numpy as np
 from scipy import sparse
 
-from ..field import Field
-
 def generate_convolution_matrix(grid, kernel):
 	'''Create the matrix that applies a convolution with kernel.
 

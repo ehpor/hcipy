@@ -1,5 +1,4 @@
 import numpy as np
-import pkg_resources
 from ..field import make_hexagonal_grid, Field
 from .generic import make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction
 
@@ -667,7 +666,7 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter_fra
 def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False):
 	'''Make the European Extremely Large Telescope aperture.
 
-	This aperture is based on Figure 3.66 that describes the pupil in the E-ELT Construction Proposal: 
+	This aperture is based on Figure 3.66 that describes the pupil in the E-ELT Construction Proposal:
 		https://www.eso.org/sci/facilities/eelt/docs/index.html .
 
 	Parameters
@@ -721,7 +720,7 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 	if return_segments:
 		elt_aperture_function, elt_segments = make_segmented_aperture(segment_shape, segment_positions, return_segments=return_segments)
 	else:
-		elt_aperture_function = make_segmented_aperture(segment_shape, segment_positions)	
+		elt_aperture_function = make_segmented_aperture(segment_shape, segment_positions)
 	
 	spiders = [make_spider_infinite([0,0], 60 * i + 30, spider_width) for i in range(6)]
 	

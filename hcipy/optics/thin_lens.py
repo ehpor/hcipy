@@ -1,4 +1,3 @@
-import numpy as np
 from .surface_profiles import parabolic_surface_sag
 from .apodization import SurfaceApodizer
 

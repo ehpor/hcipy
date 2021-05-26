@@ -107,7 +107,7 @@ def make_subaru_aperture():
 def make_lbt_aperture():
 	pass
 
-def make_magellan_aperture(normalized=False, with_spiders=True, oversize=1.0):
+def make_magellan_aperture(normalized=False, with_spiders=True):
 	'''Make the Magellan aperture.
 
 	Parameters

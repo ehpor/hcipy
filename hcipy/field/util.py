@@ -358,9 +358,9 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 		* 'mean': compute the mean of values for points within each superpixel.
 		* 'sum': compute the sum of values for points within each superpixel. This is identical to a weighted histogram.
 		* 'min': compute the minimum of values for points within each superpixel.
-		* 'max': compute the maximum of values for point within each superpixel.
-		* 'median': compute the median of values for point within each superpixel.
-		* 'nanmedian': compute the median of values for point within each superpixel.
+		* 'max': compute the maximum of values for points within each superpixel.
+		* 'median': compute the median of values for points within each superpixel.
+		* 'nanmedian': compute the median of values for points within each superpixel while ignoring NaN values.
 
 	Returns
 	-------

@@ -553,7 +553,7 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter_fra
 def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False):
 	'''Make the European Extremely Large Telescope aperture.
 
-	This aperture is based on the pupil documentation in the E-ELT Construction Proposal: 
+	This aperture is based on Figure 3.66 that describes the pupil in the E-ELT Construction Proposal: 
 		https://www.eso.org/sci/facilities/eelt/docs/index.html .
 
 	Parameters
@@ -574,10 +574,6 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 		The segments. Only returned when `return_segments` is True.
 	'''
 
-	# The ELT aperture is generate by first creating a filled hexagonal grid.
-	# The datafile 'eelt_segment_indices.txt' contains the segment indices that will be used.
-	filename = pkg_resources.resource_stream('hcipy', 'data/eelt_segment_indices.txt')
-	segment_indices = np.loadtxt(filename, dtype=np.int)
 	elt_outer_diameter = 39.14634
 	spider_width = 0.4
 	segment_size = 1.45
@@ -587,7 +583,20 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 		segment_size /= elt_outer_diameter
 		segment_gap /= elt_outer_diameter
 
-	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3)/2 + segment_gap, 17, pointy_top=True).subset(segment_indices)
+	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3)/2 + segment_gap, 17, pointy_top=False)
+
+	# remove the inner segments
+	central_obscuration_mask = (1 - hexagonal_aperture(2 * 4.7068 * 2 / np.sqrt(3))(segment_positions))>0
+	segment_positions = segment_positions.subset(central_obscuration_mask)
+
+	# remove the pointy tops for a more circular aperture
+	edge_mask_top = abs(segment_positions.y) < ((elt_outer_diameter / 2) * 0.99)
+	edge_mask_positive_30 = abs(np.cos(np.pi/6) * segment_positions.x + np.sin(np.pi/6) * segment_positions.y) < ((elt_outer_diameter / 2) * 0.99)
+	edge_mask_negative_30 = abs(np.cos(np.pi/6) * segment_positions.x - np.sin(np.pi/6) * segment_positions.y) < ((elt_outer_diameter / 2) * 0.99)
+	all_edge_masks = edge_mask_top * edge_mask_positive_30 * edge_mask_negative_30 > 0
+
+	segment_positions = segment_positions.subset(all_edge_masks)
+
 	segment_shape = hexagonal_aperture(segment_size, angle=0)
 	
 	if return_segments:

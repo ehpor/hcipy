@@ -133,7 +133,10 @@ def read_grid(filename, fmt=None):
 	if fmt in ['asdf', 'fits']:
 		import asdf
 
-		f = asdf.open(filename)
+		if fmt == 'fits':
+			f = asdf.fits_embed.AsdfInFits.open(filename)
+		else:
+			f = asdf.open(filename)
 		grid = Grid.from_dict(f.tree['grid'])
 		f.close()
 
@@ -237,7 +240,7 @@ def read_field(filename, fmt=None):
 		import asdf
 		from ..field import Grid
 
-		f = asdf.open(filename)
+		f = asdf.fits_embed.AsdfInFits.open(filename)
 		tree = f.tree['field']
 
 		if 'grid' in tree:
@@ -363,7 +366,7 @@ def read_mode_basis(filename, fmt=None):
 		import asdf
 		from ..field import Grid
 
-		f = asdf.open(filename)
+		f = asdf.fits_embed.AsdfInFits.open(filename)
 		tree = f.tree['mode_basis']
 
 		if 'modes' in tree:

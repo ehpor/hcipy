@@ -206,6 +206,24 @@ def test_multi_layer_atmosphere():
 	wf_out2 = atmospheric_model.forward(wf)
 	assert not np.allclose(wf_out.electric_field, wf_out2.electric_field)
 
+def test_las_campanas_atmosphere():
+	r0 = 0.1
+	wavelength = 500e-9
+
+	grid = make_pupil_grid(256, 1.5)
+	layers = make_las_campanas_atmospheric_layers(grid)
+	atmospheric_model = MultiLayerAtmosphere(layers, scintillation=False)
+	atmospheric_model.Cn_squared = Cn_squared_from_fried_parameter(r0, wavelength)
+	atmospheric_model.reset()
+
+	aperture = Field(np.exp(-(grid.as_('polar').r / 0.65)**20), grid)
+	wf = Wavefront(aperture, wavelength)
+
+	# Model with no scintillation should only not modify amplitude
+	wf_out = atmospheric_model.forward(wf)
+	assert np.allclose(wf_out.amplitude, aperture)
+
+
 def test_fried_parameter_seeing():
 	for i in range(10):
 		seeing = np.random.uniform(0.5, 2) # arcsec

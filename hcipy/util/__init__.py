@@ -18,7 +18,9 @@ __all__ = [
     'write_field',
     'read_mode_basis',
     'write_mode_basis',
-	'make_laplacian_matrix'
+	'generate_convolution_matrix',
+	'make_laplacian_matrix',
+	'make_derivative_matrix'
 ]
 
 from .spectral_noise import *

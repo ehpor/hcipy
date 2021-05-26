@@ -1,3 +1,5 @@
+from hcipy.field.util import make_uniform_grid
+from ..field import Field
 import numpy as np
 from scipy import sparse
 
@@ -18,9 +20,9 @@ def generate_convolution_matrix(grid, kernel):
 	array_like
 		The matrix that applies the convolution.
 	'''
-	num_x = kernel.shape[1]
-	num_y = kernel.shape[0]
-
+	num_x = kernel.grid.shape[1]
+	num_y = kernel.grid.shape[0]
+	
 	yy, xx = np.meshgrid(np.arange(num_y), np.arange(num_y))
 	offsets = ((xx - num_x // 2) + (yy - num_y // 2) * grid.shape[0] ).ravel()
 	convolution_matrix = sparse.diags(kernel, offsets, shape=(grid.size, grid.size))
@@ -42,13 +44,14 @@ def make_laplacian_matrix(grid):
 	if grid.is_('cartesian') and grid.is_separated and grid.is_regular:
 		num_x = 3
 		num_y = 3
-		kernel = np.zeros((num_y, num_x))
+		kernel_grid = make_uniform_grid((num_x, num_y), (1, 1))
+		kernel = kernel_grid.zeros().shaped
 		kernel[1, 1] = 4
 		kernel[1, 0] = -1
 		kernel[1, 2] = -1
 		kernel[0, 1] = -1
 		kernel[2, 1] = -1
-		kernel = kernel.ravel()
+		kernel = Field(kernel.ravel(), kernel_grid)
 
 		return generate_convolution_matrix(grid, kernel)
 	else:
@@ -72,7 +75,9 @@ def make_derivative_matrix(grid, axis='x'):
 	if grid.is_('cartesian') and grid.is_separated and grid.is_regular:
 		num_x = 3
 		num_y = 3
-		kernel = np.zeros((num_y, num_x))
+		kernel_grid = make_uniform_grid((num_x, num_y), (1, 1))
+		kernel = kernel_grid.zeros()
+		kernel = kernel.shaped
 
 		if axis == 'x':
 			kernel[1, 0] = -1 / (2 * grid.delta[1])
@@ -83,7 +88,7 @@ def make_derivative_matrix(grid, axis='x'):
 		else:
 			raise NotImplementedError()
 
-		kernel = kernel.ravel()
+		kernel = Field(kernel.ravel(), kernel_grid)
 		return generate_convolution_matrix(grid, kernel)
 	else:
 		raise NotImplementedError()

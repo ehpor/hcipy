@@ -643,7 +643,7 @@ def test_thin_lens():
 	focal_length = 300e-1
 	lens = ThinLens(focal_length, lambda x : 1.5, 1e-6)
 	aperture = evaluate_supersampled( circular_aperture(5e-2), grid, 8 )
-	assert abs( (lens.focal_length - focal_length)/focal_length - 1.0 ) < 1e-10
+	assert abs((lens.focal_length - focal_length)/focal_length) < 1e-10
 	
 	nsteps = 20
 	dz = focal_length / (nsteps/2)

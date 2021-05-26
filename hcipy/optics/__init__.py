@@ -57,7 +57,7 @@ __all__ = [
     'TipTiltMirror',
     'SimpleVibration',
     'Wavefront',
-	'make_thin_lens'
+	'ThinLens'
 ]
 
 from .optical_element import *
@@ -73,10 +73,10 @@ from .gaussian_beam import *
 from .glass import *
 from .magnifier import *
 from .micro_lens_array import *
-from .optics import *
 from .periodic_optical_element import *
 from .polarization import *
 from .segmented_mirror import *
 from .surface_profiles import *
+from .thin_lens import *
 from .tip_tilt_mirror import *
 from .vibration import *

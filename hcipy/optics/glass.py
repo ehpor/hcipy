@@ -114,10 +114,10 @@ def _build_glass_catalogue():
 	_glass_catalogue.update(_parse_sellmeier_glass_catalogue(pkg_resources.resource_stream('hcipy', 'data/ohara_glass_catalogue_2019_08.csv')))
 
 def _parse_sellmeier_glass_catalogue(filename):
-	data = np.loadtxt(filename, dtype=np.str, delimiter=',', skiprows=1)
+	data = np.loadtxt(filename, dtype=str, delimiter=',', skiprows=1)
 
 	database = {}
 	for di in data:
-		database[di[0].replace(" ", "")] = make_sellmeier_glass(1, di[1:4].astype(np.float), di[4::].astype(np.float))
+		database[di[0].replace(" ", "")] = make_sellmeier_glass(1, di[1:4].astype('float'), di[4::].astype('float'))
 
 	return database

@@ -171,8 +171,7 @@ def test_lyot_coronagraph():
 	norm = prop(wf).power.max()
 	wf_foc = prop(cor(wf))
 	wf_foc2 = prop(cor2(wf))
-	abs_err = abs(wf_foc.power - wf_foc2.power).max()
 
 	# Checks performance of the coronagraph and if the focal length does not introduce artifacts
 	assert (wf_foc.power.max() / norm) < 5e-3
-	assert abs_err < 1e-15
+	np.testing.assert_allclose(wf_foc.power, wf_foc2.power)

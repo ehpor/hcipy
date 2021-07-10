@@ -47,7 +47,7 @@ setup(name='hcipy',
 			"nbformat",
 			"nbconvert",
 			"sphinx-automodapi",
-			"progressbar2"]},
+			"tqdm"]},
 	zip_safe=False,
 	classifiers=[
 		"Development Status :: 3 - Alpha",

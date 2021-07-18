@@ -20,7 +20,7 @@ def generate_convolution_matrix(grid, kernel):
 		The matrix that applies the convolution.
 	'''
 	if hasattr(kernel, 'grid'):
-		if np.all(kernel.grid.delta == grid.delta):
+		if np.all( (abs(kernel.grid.delta - grid.delta) / grid.delta) < 1e-10):
 			num_x = kernel.grid.shape[1]
 			num_y = kernel.grid.shape[0]
 		else:
@@ -50,7 +50,7 @@ def make_laplacian_matrix(grid):
 	if grid.is_('cartesian') and grid.is_separated and grid.is_regular:
 		num_x = 3
 		num_y = 3
-		kernel_grid = make_uniform_grid((num_x, num_y), (1, 1))
+		kernel_grid = make_uniform_grid((num_x, num_y), (num_x * grid.delta[0], num_y * grid.delta[1]), has_center=True)
 		kernel = kernel_grid.zeros().shaped
 		kernel[1, 1] = 4
 		kernel[1, 0] = -1
@@ -81,7 +81,7 @@ def make_derivative_matrix(grid, axis='x'):
 	if grid.is_('cartesian') and grid.is_separated and grid.is_regular:
 		num_x = 3
 		num_y = 3
-		kernel_grid = make_uniform_grid((num_x, num_y), (1, 1))
+		kernel_grid = make_uniform_grid((num_x, num_y), (num_x * grid.delta[0], num_y * grid.delta[1]), has_center=True)
 		kernel = kernel_grid.zeros()
 		kernel = kernel.shaped
 

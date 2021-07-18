@@ -18,10 +18,12 @@ def binned_profile(y, x, bins=20, statistic='mean'):
 	statistic : string
 		The statistic to compute (default is 'mean').
 		The following statistics are available:
-		* 'mean': compute the mean of values for points within the bin edges.
-		* 'sum': compute the sum of values for points within the bin edges.
-		* 'min': compute the minimum of values for points within the bin edges.
-		* 'max': compute the maximum of values for point within the bin edges.
+		* 'mean': compute the mean of values for points within the bin edges while ignoring NaN values.
+		* 'sum': compute the sum of values for points within the bin edges while ignoring NaN values.
+		* 'min': compute the minimum of values for points within the bin edges while ignoring NaN values.
+		* 'max': compute the maximum of values for points within the bin edges while ignoring NaN values.
+		* 'std': compute the standard deviation of values for points within the bin edges while ignoring NaN values.
+		* 'var': compute the variance of values for points within the bin edges while ignoring NaN values.
 
 	Returns
 	-------
@@ -54,7 +56,7 @@ def binned_profile(y, x, bins=20, statistic='mean'):
 	num_per_bin = np.histogram(x, bins)[0]
 	which_bin = np.digitize(x, bins)
 
-	statistics = {'mean': np.nanmean, 'median': np.nanmedian, 'max': np.nanmax, 'min': np.nanmin}
+	statistics = {'mean': np.nanmean, 'median': np.nanmedian, 'max': np.nanmax, 'min': np.nanmin, 'std': np.nanstd, 'var': np.nanvar}
 
 	if statistic not in statistics:
 		raise ValueError('Statistic %s not implemented.' % statistic)

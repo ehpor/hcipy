@@ -58,3 +58,28 @@ def test_mode_basis_io():
 				assert np.allclose(mode_basis[i], new_mode_basis[i])
 
 			os.remove(fname)
+
+
+def test_finite_difference():
+
+	grid = make_pupil_grid(16)
+	surface = grid.ones()
+
+	Dx = make_derivative_matrix(grid, axis='x')
+	Dy = make_derivative_matrix(grid, axis='y')
+
+	surface_dx = Dx.dot(surface)
+	surface_dy = Dy.dot(surface)
+
+	assert  abs(np.median(surface_dx)) < 1e-10
+	assert  abs(np.median(surface_dy)) < 1e-10
+
+	laplacian = make_laplacian_matrix(grid)
+	surface_lap = laplacian.dot(surface)
+	assert  abs(np.median(surface_lap)) < 1e-10
+	
+	# Test if numpy array is handled correctly b
+	laplacian_kernel = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
+	laplacian_operator = generate_convolution_matrix(grid, laplacian_kernel)
+	surface_lap = laplacian_operator.dot(surface)
+	assert  abs(np.median(surface_lap)) < 1e-10

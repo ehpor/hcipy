@@ -1,5 +1,4 @@
-from hcipy.field.util import make_uniform_grid
-from ..field import Field
+from ..field import Field, make_uniform_grid
 import numpy as np
 from scipy import sparse
 
@@ -20,8 +19,15 @@ def generate_convolution_matrix(grid, kernel):
 	array_like
 		The matrix that applies the convolution.
 	'''
-	num_x = kernel.grid.shape[1]
-	num_y = kernel.grid.shape[0]
+	if hasattr(kernel, 'grid'):
+		if np.all(kernel.grid.delta == grid.delta):
+			num_x = kernel.grid.shape[1]
+			num_y = kernel.grid.shape[0]
+		else:
+			raise ValueError("Kernel and grid are sampled with different grid spacings.")
+	else:
+		num_x = kernel.shape[1]
+		num_y = kernel.shape[0]
 	
 	yy, xx = np.meshgrid(np.arange(num_y), np.arange(num_y))
 	offsets = ((xx - num_x // 2) + (yy - num_y // 2) * grid.shape[0] ).ravel()

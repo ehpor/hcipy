@@ -20,15 +20,19 @@ def generate_convolution_matrix(grid, kernel):
 		The matrix that applies the convolution.
 	'''
 	if hasattr(kernel, 'grid'):
-		if np.all( (abs(kernel.grid.delta - grid.delta) / grid.delta) < 1e-10):
+		if np.all((abs(kernel.grid.delta - grid.delta) / grid.delta) < 1e-10):
 			num_x = kernel.grid.shape[1]
 			num_y = kernel.grid.shape[0]
 		else:
 			raise ValueError("Kernel and grid are sampled with different grid spacings.")
 	else:
-		num_x = kernel.shape[1]
-		num_y = kernel.shape[0]
-	
+		if kernel.ndim == 2:
+			num_x = kernel.shape[1]
+			num_y = kernel.shape[0]
+			kernel = kernel.ravel()
+		elif kernel.ndim == 1:
+			raise NotImplementedError("Can not create a convolution kernel from a 1D array.")
+		
 	yy, xx = np.meshgrid(np.arange(num_y), np.arange(num_y))
 	offsets = ((xx - num_x // 2) + (yy - num_y // 2) * grid.shape[0] ).ravel()
 	convolution_matrix = sparse.diags(kernel, offsets, shape=(grid.size, grid.size))

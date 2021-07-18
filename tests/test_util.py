@@ -78,3 +78,8 @@ def test_finite_difference():
 	surface_lap = laplacian.dot(surface)
 	assert  abs(np.median(surface_lap)) < 1e-10
 	
+	# Test if numpy array is handled correctly b
+	laplacian_kernel = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
+	laplacian_operator = generate_convolution_matrix(grid, laplacian_kernel)
+	surface_lap = laplacian_operator.dot(surface)
+	assert  abs(np.median(surface_lap)) < 1e-10

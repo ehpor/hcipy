@@ -11,7 +11,7 @@ def generate_convolution_matrix(grid, kernel):
 	----------
 	grid : Grid
 		The :class:`Grid` for which the convolution matrix will be created.
-	kernel : array_like
+	kernel : Field or array_like
 		The convolution kernel
 	
 	Returns
@@ -20,7 +20,7 @@ def generate_convolution_matrix(grid, kernel):
 		The matrix that applies the convolution.
 	'''
 	if hasattr(kernel, 'grid'):
-		if np.all((abs(kernel.grid.delta - grid.delta) / grid.delta) < 1e-10):
+		if np.allclose(kernel.grid.delta, grid.delta):
 			num_x = kernel.grid.shape[1]
 			num_y = kernel.grid.shape[0]
 		else:
@@ -33,8 +33,8 @@ def generate_convolution_matrix(grid, kernel):
 		elif kernel.ndim == 1:
 			raise NotImplementedError("Can not create a convolution kernel from a 1D array.")
 		
-	yy, xx = np.meshgrid(np.arange(num_y), np.arange(num_y))
-	offsets = ((xx - num_x // 2) + (yy - num_y // 2) * grid.shape[0] ).ravel()
+	index_y, index_x = np.indices((num_y, num_x))
+	offsets = ((index_x - num_x // 2) + (index_y - num_y // 2) * grid.shape[0]).ravel()
 	convolution_matrix = sparse.diags(kernel, offsets, shape=(grid.size, grid.size))
 	return convolution_matrix
 

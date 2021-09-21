@@ -1,6 +1,6 @@
 import numpy as np
 
-def read_fits(filename):
+def read_fits(filename, extension=0):
 	'''Read an array from a fits file.
 
 	Parameters
@@ -14,7 +14,7 @@ def read_fits(filename):
 		The ndarray read from the fits file.
 	'''
 	from astropy.io import fits
-	return fits.getdata(filename).copy()
+	return fits.getdata(filename, extension).copy()
 
 def write_fits(data, filename, shape=None, overwrite=True):
 	'''Write the data to a fits-file.

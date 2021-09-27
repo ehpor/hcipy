@@ -1,6 +1,6 @@
 import numpy as np
 from ..field import make_hexagonal_grid, Field
-from .generic import make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction
+from .generic import elliptical_aperture, make_rotated_aperture, make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction, regular_polygon_aperture
 
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
@@ -750,3 +750,87 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 		return elt_aperture_with_spiders, elt_segments
 	else:
 		return elt_aperture_with_spiders
+
+def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False):
+	'''Make the Giant Magellan Telescope aperture.
+
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 25.448 meters.
+	with_spiders : boolean
+		If this is False, the spiders will be left out. Default: True.
+	return_segments : boolean
+		If this is True, the segments will also be returned as a list of Field generators.
+
+	Returns
+	-------
+	Field generator
+		The GMT aperture.
+	elt_segments : list of Field generators
+		The segments. Only returned when `return_segments` is True.
+	'''
+	
+	##
+	gtm_outer_diameter = 25.448
+	inner_diameter = 1.78
+	segment_size = 8.365 - 0.015
+	off_axis_segment_size = 8.365 + 0.035
+	
+	## 0.359 mm from the off-axis segment to the on-axis segment
+	segment_gap = 0.359 + 0.03
+	off_axis_tilt = np.deg2rad(13.522)
+	central_hole_size = 3.25 / segment_size
+	segment_distance = segment_size/2 + off_axis_segment_size/2 * np.cos(off_axis_tilt) + segment_gap
+	
+	def make_diverging_spider(position, opening_angle, orientation):
+		
+		def func(grid):
+			theta = grid.shifted(position).rotated(orientation).as_('polar').theta
+			#return Field( abs(np.cos(theta)) > np.cos(opening_angle/2), grid)
+			return Field( abs(theta) < opening_angle/2, grid)
+
+		return func
+
+	def make_central_aperture(grid):
+		
+		center_segment = make_obstructed_circular_aperture(segment_size, central_hole_size)(grid)
+
+		spider_mask = 1 - regular_polygon_aperture(3, 4.8, angle=np.pi, center=None)(grid) 
+		spider_mask += regular_polygon_aperture(3, 4.0, angle=np.pi, center=None)(grid)
+
+		spider_mask2 = 1 - make_rotated_aperture( regular_polygon_aperture(3, 9.55, center=None), np.deg2rad(10.8) )(grid)
+		spider_mask2 += make_rotated_aperture( regular_polygon_aperture(3, 9.0, center=None), np.deg2rad(9.3) )(grid)
+	
+		spider_mask3 = grid.ones()
+		
+		t0 = np.deg2rad(58.0)
+		radius = 2.4
+		for i in range(3):
+			spider_start = radius * np.array([-np.sin(t0 + 2 * np.pi/3 * i), -np.cos(t0 + 2 * np.pi/3 * i)])
+			spider_mask3 -= center_segment * make_diverging_spider(spider_start, np.deg2rad(4), np.deg2rad(70.0 - 180.0 + 120.0 * i))(grid)
+
+		return center_segment * spider_mask * spider_mask2 * spider_mask3
+
+	apertures = [make_central_aperture,]
+	shifts = [[0,0], ]
+	for i in range(6):
+		rotation_angle = np.pi/3 * i
+		xc = segment_distance * np.cos(rotation_angle)
+		yc = segment_distance * np.sin(rotation_angle)
+		
+		aperture = make_rotated_aperture(elliptical_aperture([off_axis_segment_size * np.cos(off_axis_tilt), off_axis_segment_size]), rotation_angle)
+		apertures.append(aperture)
+
+		shifts.append([xc, yc])
+
+	# Center segment obscurations
+	def make_aperture(grid):
+		aperture = grid.zeros()
+		for p, ap in zip(shifts, apertures):
+			aperture += ap(grid.shifted(p)) 
+		return aperture
+
+	return make_aperture

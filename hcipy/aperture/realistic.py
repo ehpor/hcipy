@@ -826,11 +826,19 @@ def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False
 
 		shifts.append([xc, yc])
 
+		
+
 	# Center segment obscurations
 	def make_aperture(grid):
 		aperture = grid.zeros()
 		for p, ap in zip(shifts, apertures):
-			aperture += ap(grid.shifted(p)) 
+			#aperture += ap(grid.shifted(p)) 
+			aperture += ap(grid) 
 		return aperture
 
-	return make_aperture
+	
+
+	if return_segments:
+		return make_aperture, apertures
+	else:
+		return make_aperture

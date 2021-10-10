@@ -3,6 +3,8 @@ import numpy as np
 from ..config import Configuration
 
 class Field(object):
+    backend = None
+
     _backends = {}
     _backend_aliases = {}
 
@@ -17,6 +19,7 @@ class Field(object):
         return backend
 
     def __new__(cls, array, grid, backend=None):
+        # Avoid infinite recursion due to children inheriting this function as well.
         if cls is not Field:
             return super().__new__(cls)
 

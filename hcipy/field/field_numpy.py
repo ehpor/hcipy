@@ -1,9 +1,24 @@
 import numpy as np
 
-from .field import FieldBase, field_backend
+from .field import Field, field_backend
+
+def _unwrap(arg):
+	if isinstance(arg, NumpyField):
+		return arg.array
+
+	if isinstance(arg, list):
+		return [_unwrap(x) for x in arg]
+
+	if isinstance(arg, dict):
+		return {key: _unwrap(val) for key, val in arg.items()}
+
+	if isinstance(arg, tuple):
+		return tuple(_unwrap(x) for x in arg)
+
+	return arg
 
 @field_backend('numpy', ['np'])
-class NumpyField(FieldBase, np.lib.mixins.NDArrayOperatorsMixin):
+class NumpyField(Field, np.lib.mixins.NDArrayOperatorsMixin):
 	'''The value of some physical quantity for each point in some coordinate system.
 
 	Parameters
@@ -25,7 +40,7 @@ class NumpyField(FieldBase, np.lib.mixins.NDArrayOperatorsMixin):
 	def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
 		out = kwargs.get('out', ())
 
-		inputs = tuple(x.array if isinstance(x, NumpyField) else x for x in inputs)
+		inputs = _unwrap(inputs)
 
 		if out:
 			kwargs['out'] = tuple(x.array if isinstance(x, NumpyField) else x for x in out)
@@ -44,7 +59,7 @@ class NumpyField(FieldBase, np.lib.mixins.NDArrayOperatorsMixin):
 		return self.array.astype(dtype, copy=False)
 
 	def __array_function__(self, func, types, args, kwargs):
-		args = tuple(x.array if isinstance(x, NumpyField) else x for x in args)
+		args = _unwrap(args)
 
 		result = func(*args, **kwargs)
 
@@ -57,7 +72,11 @@ class NumpyField(FieldBase, np.lib.mixins.NDArrayOperatorsMixin):
 		return True
 
 	def __getitem__(self, indices):
-		return NumpyField(self.array[indices], self.grid)
+		res = self.array[indices]
+		if np.isscalar(res):
+			return res
+
+		return NumpyField(res, self.grid)
 
 	def __setitem__(self, indices, values):
 		self.array[indices] = values

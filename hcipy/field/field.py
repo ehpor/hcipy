@@ -1,10 +1,8 @@
-from abc import ABC, abstractmethod
-
 import numpy as np
 
 from ..config import Configuration
 
-class FieldBase(ABC):
+class Field(object):
     _backends = {}
     _backend_aliases = {}
 
@@ -18,10 +16,36 @@ class FieldBase(ABC):
 
         return backend
 
+    def __new__(cls, array, grid, backend=None):
+        if cls is not Field:
+            return super().__new__(cls)
+
+        if backend is None:
+            # Use default backend unless overridden.
+            backend = Configuration().field.default_backend
+
+            if is_field(array):
+                # If array is already a Field, just create a new Field with the same backend.
+                backend = array.backend
+            else:
+                # Decide backend on array_type.
+                for name, backend_class in Field._backends.items():
+                    if backend_class.is_native_array(array):
+                        backend = name
+                        break
+        else:
+            if is_field(array):
+                if array.backend != backend:
+                    array = array.numpy().array
+
+        # Return Field of the correct backend
+        backend = Field.resolve_backend(backend)
+
+        return Field._backends[backend](array, grid)
+
     @classmethod
-    @abstractmethod
     def is_native_array(cls, array):
-        pass
+        raise NotImplementedError()
 
     def as_backend(self, backend):
         backend = self.resolve_backend(backend)
@@ -96,59 +120,55 @@ class FieldBase(ABC):
         i = self.grid.closest_to(p)
         return self[..., i]
 
-def Field(array, grid, backend=None):
-    if backend is None:
-        # Use default backend unless overridden.
-        backend = Configuration().field.default_backend
+    def __repr__(self):
+        '''The text representation of the field.
 
-        if is_field(array):
-            # If array is already a Field, just create a new Field with the same backend.
-            backend = array.backend
-        else:
-            # Decide backend on array_type.
-            for name, backend_class in FieldBase._backends.items():
-                if backend_class.is_native_array(array):
-                    backend = name
-                    break
-    else:
-        if is_field(array):
-            if array.backend != backend:
-                array = array.numpy().array
+        Returns
+        -------
+        str
+            The text representation of the field.
+        '''
+        return self.__class__.__name__ + '(' + repr(self.array) + ')'
 
-    # Return Field of the correct backend
-    backend = FieldBase.resolve_backend(backend)
+    def __str__(self):
+        '''The field converted to a string.
 
-    return FieldBase._backends[backend](array, grid)
+        Returns
+        -------
+        str
+            The field converted to a string.
+        '''
+        return self.__class__.__name__ + '(' + str(self.array) + ')'
 
 def field_backend(name, aliases=None):
     if aliases is None:
         aliases = []
 
     def decorator(cls):
-        if not issubclass(cls, FieldBase):
-            raise ValueError('All Fields must be a subclass of FieldBase.')
+        if not issubclass(cls, Field):
+            raise ValueError('All Fields must be a subclass of Field.')
 
         cls.backend = name
 
-        if name in FieldBase._backends:
+        if name in Field._backends:
             raise ValueError('Backend already registered.')
 
-        FieldBase._backends[name] = cls
+        Field._backends[name] = cls
 
         for alias in aliases:
-            if alias in FieldBase._backends:
+            if alias in Field._backends:
                 raise ValueError('A backend already exists with this name.')
 
-            if alias in FieldBase._backend_aliases:
+            if alias in Field._backend_aliases:
                 raise ValueError('A backend already exists with this alias.')
 
-            FieldBase._backend_aliases[alias] = name
+            Field._backend_aliases[alias] = name
 
-        setattr(FieldBase, name, lambda self: self.as_backend(name))
+        setattr(Field, name, lambda self: self.as_backend(name))
 
         return cls
 
     return decorator
 
 def is_field(obj):
-    return isinstance(obj, FieldBase)
+    return isinstance(obj, Field)

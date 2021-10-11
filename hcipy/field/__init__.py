@@ -1,6 +1,7 @@
 __all__ = [
     'Grid',
     'Field',
+    'NumpyField',
     'CartesianGrid',
     'PolarGrid',
     'UnstructuredCoords',

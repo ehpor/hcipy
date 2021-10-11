@@ -10,41 +10,43 @@ class Field(object):
 
     @classmethod
     def resolve_backend(cls, backend):
-        if backend in cls._backend_aliases:
-            return cls._backend_aliases[backend]
+        if backend in cls._backends:
+            return backend
 
-        if backend not in cls._backends:
-            raise KeyError(f'Backend "{backend}" not implemented.')
+        resolved = cls._backend_aliases.get(backend)
+        if resolved:
+            return resolved
 
-        return backend
+        raise KeyError(f'Backend "{backend}" not implemented.')
 
     def __new__(cls, array, grid, backend=None):
         # Avoid infinite recursion due to children inheriting this function as well.
         if cls is not Field:
-            return super().__new__(cls)
+            return object.__new__(cls)
 
         if backend is None:
-            # Use default backend unless overridden.
-            backend = Configuration().field.default_backend
-
-            if is_field(array):
+            if isinstance(array, Field):
                 # If array is already a Field, just create a new Field with the same backend.
-                backend = array.backend
+                backend_class = array.__class__
             else:
                 # Decide backend on array_type.
                 for name, backend_class in Field._backends.items():
                     if backend_class.is_native_array(array):
-                        backend = name
                         break
+                else:
+                    # Use the default backend designated by the config file.
+                    default_backend = Configuration().field.default_backend
+                    backend_class = Field._backends[default_backend]
         else:
             if is_field(array):
                 if array.backend != backend:
                     array = array.numpy().array
 
-        # Return Field of the correct backend
-        backend = Field.resolve_backend(backend)
+            # Return Field of the correct backend
+            backend = Field.resolve_backend(backend)
+            backend_class = Field._backends[backend]
 
-        return Field._backends[backend](array, grid)
+        return object.__new__(backend_class)
 
     @classmethod
     def is_native_array(cls, array):

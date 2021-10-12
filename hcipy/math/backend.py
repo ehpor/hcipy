@@ -17,6 +17,18 @@ _module_aliases = {}
 _function_aliases = {}
 _function_wrappers = {}
 
+_constants = [
+    'Inf', 'Infinity',
+    'NAN', 'NINF', 'NZERO',
+    'NaN', 'PINF', 'PZERO',
+    'e',
+    'euler_gamma',
+    'inf', 'infty',
+    'nan',
+    'newaxis',
+    'pi'
+]
+
 def call(func_name, *args, like=None, **kwargs):
     if like is None:
         backend = infer_backend_from_signature(func_name, *args, **kwargs)
@@ -40,6 +52,9 @@ class BackendShim:
             self.linalg = BackendShim('linalg')
             self.random = BackendShim('random')
             self.fft = BackendShim('fft')
+
+            for name in _constants:
+                setattr(self, name, getattr(onp, name))
 
     def __getattr__(self, func_name):
         if self.submodule is not None:

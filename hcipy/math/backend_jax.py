@@ -1,4 +1,4 @@
-from .backend import _functions, _custom_wrappers, _module_aliases, _backend_aliases, call
+from .backend import _functions, _function_wrappers, _module_aliases, _backend_aliases, call
 
 _jax_random_key = None
 
@@ -57,8 +57,8 @@ _backend_aliases['jaxlib'] = 'jax'
 
 _module_aliases['jax'] = 'jax.numpy'
 
-#_custom_wrappers['jax', 'linalg.qr'] = qr_allow_fat
-#_custom_wrappers['jax', 'linalg.svd'] = svd_not_full_matrices_wrapper
+#_function_wrappers['jax', 'linalg.qr'] = qr_allow_fat
+#_function_wrappers['jax', 'linalg.svd'] = svd_not_full_matrices_wrapper
 
 _functions['jax']['to_numpy'] = jax_to_numpy
 _functions['jax']['random.seed'] = jax_random_seed

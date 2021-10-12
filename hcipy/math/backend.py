@@ -4,6 +4,8 @@ from collections import defaultdict, OrderedDict
 
 from ..config import Configuration
 
+import numpy as onp
+
 def first_arg_dispatcher(*args, **kwargs):
     return args[0]
 
@@ -13,7 +15,7 @@ _backend_aliases = {}
 
 _module_aliases = {}
 _function_aliases = {}
-_custom_wrappers = {}
+_function_wrappers = {}
 
 def call(func_name, *args, like=None, **kwargs):
     if like is None:
@@ -90,8 +92,8 @@ def import_library_function(backend, func_name):
 
         library_function = getattr(library, only_func_name)
 
-        if (module_name, only_func_name) in _custom_wrappers:
-            library_function = _custom_wrappers[module_name, only_func_name](library_function)
+        if (module_name, only_func_name) in _function_wrappers:
+            library_function = _function_wrappers[module_name, only_func_name](library_function)
 
         _functions[backend][func_name] = library_function
 

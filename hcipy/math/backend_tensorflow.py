@@ -1,6 +1,6 @@
 import functools
 
-from .backend import _functions, _custom_wrappers, _function_aliases, make_translator, call
+from .backend import _functions, _function_wrappers, _function_aliases, make_translator, call
 import numpy as np
 
 def tensorflow_to_numpy(x):
@@ -83,30 +83,30 @@ _function_aliases['tensorflow', 'astype'] = 'cast'
 _function_aliases['tensorflow', 'power'] = 'pow'
 _function_aliases['tensorflow', 'take'] = 'gather'
 
-#_custom_wrappers['tensorflow', 'linalg.svd'] = svd_sUV_to_UsVH_wrapper
-#_custom_wrappers['tensorflow', 'linalg.qr'] = qr_allow_fat
-#_custom_wrappers['tensorflow', 'linalg.solve'] = binary_allow_1d_rhs_wrap
-#_custom_wrappers['tensorflow', 'matmul'] = binary_allow_1d_rhs_wrap
-#_custom_wrappers['tensorflow', 'tril'] = tril_to_band_part
-#_custom_wrappers['tensorflow', 'triu'] = triu_to_band_part
-_custom_wrappers['tensorflow', 'pad'] = tensorflow_pad_wrap
-_custom_wrappers['tensorflow', 'where'] = tensorflow_where_wrap
-_custom_wrappers['tensorflow', 'split'] = tensorflow_split_wrap
-_custom_wrappers['tensorflow.random', 'uniform'] = make_translator(
+#_function_wrappers['tensorflow', 'linalg.svd'] = svd_sUV_to_UsVH_wrapper
+#_function_wrappers['tensorflow', 'linalg.qr'] = qr_allow_fat
+#_function_wrappers['tensorflow', 'linalg.solve'] = binary_allow_1d_rhs_wrap
+#_function_wrappers['tensorflow', 'matmul'] = binary_allow_1d_rhs_wrap
+#_function_wrappers['tensorflow', 'tril'] = tril_to_band_part
+#_function_wrappers['tensorflow', 'triu'] = triu_to_band_part
+_function_wrappers['tensorflow', 'pad'] = tensorflow_pad_wrap
+_function_wrappers['tensorflow', 'where'] = tensorflow_where_wrap
+_function_wrappers['tensorflow', 'split'] = tensorflow_split_wrap
+_function_wrappers['tensorflow.random', 'uniform'] = make_translator(
     [
         ('low', ('minval', 0.0)),
         ('high', ('maxval', 1.0)),
         ('size', ('shape', ())),
     ]
 )
-_custom_wrappers['tensorflow.random', 'normal'] = make_translator(
+_function_wrappers['tensorflow.random', 'normal'] = make_translator(
     [
         ('loc', ('mean', 0.0)),
         ('scale', ('stddev', 1.0)),
         ('size', ('shape', ())),
     ]
 )
-_custom_wrappers['tensorflow', 'clip'] = make_translator(
+_function_wrappers['tensorflow', 'clip'] = make_translator(
     [
         ('a', ('t', 0.0)),
         ('a_min', ('clip_value_min',)),

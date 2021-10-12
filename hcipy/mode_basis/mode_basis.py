@@ -41,9 +41,9 @@ class ModeBasis(object):
 				self._transformation_matrix = transformation_matrix.tocsc()
 		else:
 			if is_list:
-				self._transformation_matrix = np.stack(transformation_matrix, axis=-1)
+				self._transformation_matrix = np.asarray(np.stack(transformation_matrix, axis=-1))
 			else:
-				self._transformation_matrix = transformation_matrix
+				self._transformation_matrix = np.asarray(transformation_matrix)
 
 		if grid is not None:
 			self.grid = grid

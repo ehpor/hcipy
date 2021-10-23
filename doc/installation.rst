@@ -4,13 +4,21 @@ Installation
 Using pip
 ---------
 
-HCIPy is available on PyPI, so installation can be as easy as:
+HCIPy may be installed in one of three different ways:
+
+1. Using Conda through conda-forge.
 
 .. code-block:: shell
 
-    pip install hcipy --upgrade
+    conda install conda-forge:hcipy
 
-It is also possible to install the latest development version from Github, by:
+2. Using PyPI.
+
+.. code-block:: shell
+
+    pip install hcipy
+
+3. Using git to clone the source code hosted in `this repository on Github <https://github.com/ehpor/hcipy>`_.
 
 .. code-block:: shell
 
@@ -18,27 +26,12 @@ It is also possible to install the latest development version from Github, by:
     cd hcipy
     pip install -e .
 
-The ``-e`` flag tells ``pip`` to install HCIPy in editable mode, ie. edits to the source files in the ``hcipy`` directory will change the library. This allows for easy updates by simply pulling the git repository:
-
-.. code-block:: shell
-
-    git pull
-    python setup.py egg_info
-
-You can check if HCIPy is installed correctly by importing it in Python:
+Once installed, you can check if HCIPy is working correctly by importing it in Python:
 
 .. code-block:: python
 
     >>> import hcipy
     >>> print(hcipy.__version__)
-
-If you want to install the latest development verison, but do not intend to receive continuous updates (not advised), you can also install in non-editable mode:
-
-.. code-block:: shell
-
-    git clone https://github.com/ehpor/hcipy
-    pip install ./hcipy
-    rm -rf hcipy
 
 Dependencies
 ------------
@@ -56,9 +49,7 @@ All Python dependencies of HCIPy will be installed automatically by the installe
 * **numexpr** (for speedup of lengthy numerical operations)
 * **asdf** (for reading and writing of HCIPy objects)
 
-However, there is one dependency that ``pip`` does not automatically install. This is FFMpeg, which is used for writing out animations to video files. Installation of FFMpeg is not necessary, unless you want to use the ``FFMpegWriter`` class in HCIPy.
-
-Most Linux systems should have this preinstalled, but on MacOS and Windows, you need to install it yourself, either from their `website <https://www.ffmpeg.org/>`_ or other sources. You also need to make sure that the ``ffmpeg`` binary can be found by HCIPy. You can do this by adding the ``ffmpeg/bin`` directory to the ``PATH`` environment variable, if this is not already done by the FFMpeg installer.
+When installing from ``pip`` there is one non-Python dependency that cannot be installed automatically. This is FFMpeg, which is used for writing out animations to video files. Installation of FFMpeg is not required, unless you want to use the ``FFMpegWriter`` class in HCIPy. Most Linux systems should have the FFMpeg binaries preinstalled. On MacOS and Windows however, you need to install them yourself, either from their `website <https://www.ffmpeg.org/>`_ or other sources. You also need to make sure that the ``ffmpeg`` binary can be found by HCIPy. You can do this by adding the ``ffmpeg/bin`` directory to the ``PATH`` environment variable, if this is not already done by the FFMpeg installer, or by adding to path to your HCIPy configuration file.
 
 Running the test suite
 ----------------------

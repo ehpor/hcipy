@@ -9,6 +9,7 @@ from . import mode_basis
 from . import optics
 from . import plotting
 from . import propagation
+from . import tests
 from . import util
 from . import wavefront_control
 from . import wavefront_sensing
@@ -26,6 +27,7 @@ from .mode_basis import *
 from .optics import *
 from .plotting import *
 from .propagation import *
+from .tests import *
 from .util import *
 from .wavefront_control import *
 from .wavefront_sensing import *
@@ -44,6 +46,7 @@ __all__.extend(mode_basis.__all__)
 __all__.extend(optics.__all__)
 __all__.extend(plotting.__all__)
 __all__.extend(propagation.__all__)
+__all__.extend(tests.__all__)
 __all__.extend(util.__all__)
 __all__.extend(wavefront_control.__all__)
 __all__.extend(wavefront_sensing.__all__)

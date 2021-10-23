@@ -43,7 +43,7 @@ jobs:
 
   - bash: |
       source activate test-environment
-      python -m coverage run -m pytest ./tests -ra --junitxml=junit/unit-test.xml
+      python -m coverage run -m pytest hcipy -ra --junitxml=junit/unit-test.xml
     displayName: Run tests
 
   - bash: |
@@ -102,7 +102,7 @@ jobs:
 
   - bash: |
       source activate test-environment
-      coverage run -m pytest ./tests -ra --junitxml=junit/unit-test.xml
+      coverage run -m pytest hcipy -ra --junitxml=junit/unit-test.xml
     displayName: Run tests
 
   - bash: |
@@ -158,7 +158,7 @@ jobs:
 
   - script: |
       call activate test-environment
-      coverage run -m pytest ./tests -ra --junitxml=junit/unit-test.xml
+      coverage run -m pytest hcipy -ra --junitxml=junit/unit-test.xml
     displayName: Run tests
 
   - bash: |

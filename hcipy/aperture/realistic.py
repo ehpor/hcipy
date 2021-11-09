@@ -1,6 +1,6 @@
 import numpy as np
 from ..field import make_hexagonal_grid, Field
-from .generic import elliptical_aperture, make_rotated_aperture, make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction, regular_polygon_aperture
+from .generic import elliptical_aperture, make_rotated_aperture, make_shifted_aperture, make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction, regular_polygon_aperture
 
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
@@ -774,71 +774,175 @@ def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	'''
 	
 	##
-	gtm_outer_diameter = 25.448
-	inner_diameter = 1.78
-	segment_size = 8.365 - 0.015
-	off_axis_segment_size = 8.365 + 0.035
+	gmt_outer_diameter = 25.448
+	segment_size = 8.365 - 0.072
+	off_axis_segment_size = 8.365 - 0.015
 	
+	## The spider truss to hold the secondary
+	spider_1_width = 0.119
+	spider_2_width = 0.115
+	radius_spider_1 = 2.386
+	radius_spider_2 = 2.409
+	offset_spider_2 = -0.05
+	truss_size = 4.93
+
 	## 0.359 mm from the off-axis segment to the on-axis segment
-	segment_gap = 0.359 + 0.03
+	segment_gap = 0.359 + 0.088
 	off_axis_tilt = np.deg2rad(13.522)
-	central_hole_size = 3.25 / segment_size
+	central_hole_size = 3.495 / segment_size
 	segment_distance = segment_size/2 + off_axis_segment_size/2 * np.cos(off_axis_tilt) + segment_gap
-	
-	def make_diverging_spider(position, opening_angle, orientation):
+
+	if normalized:
+		
+		segment_size /= gmt_outer_diameter		
+		off_axis_segment_size /= gmt_outer_diameter
+		segment_gap /= gmt_outer_diameter
+		segment_distance /= gmt_outer_diameter
+		
+		truss_size /= gmt_outer_diameter
+		spider_1_width /= gmt_outer_diameter
+		spider_2_width /= gmt_outer_diameter
+		radius_spider_1 /= gmt_outer_diameter
+		radius_spider_2 /= gmt_outer_diameter
+		offset_spider_2 /= gmt_outer_diameter
+
+		
+	def make_diverging_spider(position, start_width, divergence, orientation):
 		
 		def func(grid):
-			theta = grid.shifted(position).rotated(orientation).as_('polar').theta
-			#return Field( abs(np.cos(theta)) > np.cos(opening_angle/2), grid)
-			return Field( abs(theta) < opening_angle/2, grid)
+			y = grid.shifted(position).rotated(orientation).y
+			x = grid.shifted(position).rotated(orientation).x
+			return Field(abs(y) < (np.sin(divergence) * abs(x) + start_width/2) * (x>=0), grid)
 
 		return func
 
-	def make_central_aperture(grid):
+	def make_central_gmt_segment(grid):
 		
 		center_segment = make_obstructed_circular_aperture(segment_size, central_hole_size)(grid)
+		if with_spiders:
+			
+			spider_attachement_mask = 1 - regular_polygon_aperture(3, truss_size, angle=np.pi, center=None)(grid) 
 
-		spider_mask = 1 - regular_polygon_aperture(3, 4.8, angle=np.pi, center=None)(grid) 
-		spider_mask += regular_polygon_aperture(3, 4.0, angle=np.pi, center=None)(grid)
+			spider_mask = grid.ones()	
+			for i in range(3):
+				offset_angle = 2 * np.pi / 3 * i
+				spider_1_start = radius_spider_1 * np.array([np.sin(offset_angle), np.cos(offset_angle)])
+				spider_mask *= 1 - make_diverging_spider(spider_1_start, spider_1_width, np.deg2rad(1.16), np.deg2rad(9.83) + offset_angle)(grid)
+				spider_mask *= 1 - make_diverging_spider(spider_1_start, spider_1_width, np.deg2rad(1.16), np.deg2rad(180.0 - 9.83) + offset_angle)(grid)
+				
+				spider_2_start = radius_spider_2 * np.array([np.sin(offset_angle), np.cos(offset_angle)]) + offset_spider_2 * np.array([np.cos(offset_angle), -np.sin(offset_angle)]) 
+				spider_mask *= 1 - make_diverging_spider(spider_2_start, spider_2_width, np.deg2rad(0.0), np.deg2rad(-11.2) + offset_angle)(grid)
 
-		spider_mask2 = 1 - make_rotated_aperture( regular_polygon_aperture(3, 9.55, center=None), np.deg2rad(10.8) )(grid)
-		spider_mask2 += make_rotated_aperture( regular_polygon_aperture(3, 9.0, center=None), np.deg2rad(9.3) )(grid)
-	
-		spider_mask3 = grid.ones()
-		
-		t0 = np.deg2rad(58.0)
-		radius = 2.4
-		for i in range(3):
-			spider_start = radius * np.array([-np.sin(t0 + 2 * np.pi/3 * i), -np.cos(t0 + 2 * np.pi/3 * i)])
-			spider_mask3 -= center_segment * make_diverging_spider(spider_start, np.deg2rad(4), np.deg2rad(70.0 - 180.0 + 120.0 * i))(grid)
+			return center_segment * spider_mask * spider_attachement_mask
 
-		return center_segment * spider_mask * spider_mask2 * spider_mask3
+		else:
+			return center_segment
 
-	apertures = [make_central_aperture,]
-	shifts = [[0,0], ]
+	segment_functions = [make_central_gmt_segment,]
 	for i in range(6):
 		rotation_angle = np.pi/3 * i
 		xc = segment_distance * np.cos(rotation_angle)
 		yc = segment_distance * np.sin(rotation_angle)
 		
-		aperture = make_rotated_aperture(elliptical_aperture([off_axis_segment_size * np.cos(off_axis_tilt), off_axis_segment_size]), rotation_angle)
-		apertures.append(aperture)
-
-		shifts.append([xc, yc])
-
-		
+		aperture = make_shifted_aperture( make_rotated_aperture(elliptical_aperture([off_axis_segment_size * np.cos(off_axis_tilt), off_axis_segment_size]), rotation_angle), [xc, yc])
+		segment_functions.append(aperture)
 
 	# Center segment obscurations
 	def make_aperture(grid):
 		aperture = grid.zeros()
-		for p, ap in zip(shifts, apertures):
-			#aperture += ap(grid.shifted(p)) 
-			aperture += ap(grid) 
+		for segment in segment_functions:
+			aperture += segment(grid)
 		return aperture
 
-	
-
 	if return_segments:
-		return make_aperture, apertures
+		return make_aperture, segment_functions
 	else:
 		return make_aperture
+
+def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False):
+	'''Make the Thirty-Meter Telescope aperture.
+
+	The aperture is based on the description from https://www.tmt.org/page/optics. The size of
+	the secondary and the spiders were derived from Figure 5 of [JensenClem2021]_
+
+	.. [JensenClem2021] Rebecca Jensen-Clem et al. "The Planetary Systems Imager Adaptive Optics System:
+	 An Initial Optical Design and Performance Analysis Tools for the PSI-Red AO System" SPIE Vol. 11823 (2021)
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 30.0 meters.
+	with_spiders : boolean
+		If this is False, the spiders will be left out. Default: True.
+	return_segments : boolean
+		If this is True, the segments will also be returned as a list of Field generators.
+
+	Returns
+	-------
+	Field generator
+		The TMT aperture.
+	tmt_segments : list of Field generators
+		The segments. Only returned when `return_segments` is True.
+	'''
+
+	tmt_outer_diameter = 30.0
+	spider_width = 0.22
+	segment_size = 1.44
+	segment_gap = 0.0025
+	inner_diameter = 2.5 * segment_size
+	outer_diameter = 30.0
+	central_obscuration = 3.636	#m
+
+	if normalized:
+		segment_size /= tmt_outer_diameter
+		segment_gap /= tmt_outer_diameter
+		inner_diameter /= tmt_outer_diameter
+		outer_diameter /= tmt_outer_diameter
+		spider_width /= tmt_outer_diameter
+
+	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3)/2 + segment_gap, 13, pointy_top=False)
+
+	# remove the first ring and the central segment
+	missing_segments_mask = (1 - hexagonal_aperture(inner_diameter * 2 / np.sqrt(3))(segment_positions))>0
+	segment_positions = segment_positions.subset(missing_segments_mask)
+	
+	# Clip the outer segments
+	inscribed_circle = circular_aperture(0.98 * 30.0)(segment_positions) > 0
+	segment_positions = segment_positions.subset(inscribed_circle)
+
+	segment_shape = hexagonal_aperture(segment_size, angle=np.pi/2)
+	
+	if return_segments:
+		tmt_aperture_function, tmt_segments = make_segmented_aperture(segment_shape, segment_positions, return_segments=return_segments)
+	else:
+		tmt_aperture_function = make_segmented_aperture(segment_shape, segment_positions)
+	
+	spiders = [make_spider_infinite([0,0], 60 * i + 30, spider_width) for i in range(6)]
+	
+	def tmt_aperture_with_spiders(grid):
+		aperture = tmt_aperture_function(grid) * (1 - circular_aperture(central_obscuration)(grid))
+			
+		if with_spiders:
+			for spider in spiders:
+				aperture *= spider(grid)
+			
+		return aperture
+	
+	if with_spiders and return_segments:
+		# Use function to return the lambda, to avoid incorrect binding of variables
+		def spider_func(grid):
+			spider_aperture = grid.ones()
+			for spider in spiders:
+				spider_aperture *= spider(grid)
+			return spider_aperture
+
+		def segment_with_spider(segment):
+			return lambda grid: segment(grid) * spider_func(grid)
+
+		tmt_segments = [segment_with_spider(s) for s in tmt_segments]
+
+	if return_segments:
+		return tmt_aperture_with_spiders, tmt_segments
+	else:
+		return tmt_aperture_with_spiders

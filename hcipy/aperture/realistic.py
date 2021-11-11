@@ -754,6 +754,8 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False):
 	'''Make the Giant Magellan Telescope aperture.
 
+	The primary mirror parameters come from the GMT Observatory Architecture Documentation (GMT-REQ-03215, Rev. F):
+	https://www.gmto.org/resources/slpdr/ . Small corrections have been applied to match to the actual pupil from internal GMTO files.
 
 	Parameters
 	----------
@@ -790,7 +792,7 @@ def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	segment_gap = 0.359 + 0.088
 	off_axis_tilt = np.deg2rad(13.522)
 	central_hole_size = 3.495 / segment_size
-	segment_distance = segment_size/2 + off_axis_segment_size/2 * np.cos(off_axis_tilt) + segment_gap
+	segment_distance = segment_size / 2 + off_axis_segment_size / 2 * np.cos(off_axis_tilt) + segment_gap
 
 	if normalized:
 		
@@ -895,20 +897,21 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	central_obscuration = 3.636	#m
 
 	if normalized:
+		spider_width /= tmt_outer_diameter
 		segment_size /= tmt_outer_diameter
 		segment_gap /= tmt_outer_diameter
 		inner_diameter /= tmt_outer_diameter
 		outer_diameter /= tmt_outer_diameter
-		spider_width /= tmt_outer_diameter
+		central_obscuration /= tmt_outer_diameter
 
-	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3)/2 + segment_gap, 13, pointy_top=False)
+	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3) / 2 + segment_gap, 13, pointy_top=False)
 
 	# remove the first ring and the central segment
 	missing_segments_mask = (1 - hexagonal_aperture(inner_diameter * 2 / np.sqrt(3))(segment_positions))>0
 	segment_positions = segment_positions.subset(missing_segments_mask)
 	
 	# Clip the outer segments
-	inscribed_circle = circular_aperture(0.98 * 30.0)(segment_positions) > 0
+	inscribed_circle = circular_aperture(0.98 * outer_diameter)(segment_positions) > 0
 	segment_positions = segment_positions.subset(inscribed_circle)
 
 	segment_shape = hexagonal_aperture(segment_size, angle=np.pi/2)
@@ -918,7 +921,7 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	else:
 		tmt_aperture_function = make_segmented_aperture(segment_shape, segment_positions)
 	
-	spiders = [make_spider_infinite([0,0], 60 * i + 30, spider_width) for i in range(6)]
+	spiders = [make_spider_infinite([0, 0], 60 * i + 30, spider_width) for i in range(6)]
 	
 	def tmt_aperture_with_spiders(grid):
 		aperture = tmt_aperture_function(grid) * (1 - circular_aperture(central_obscuration)(grid))
@@ -930,6 +933,7 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 		return aperture
 	
 	if with_spiders and return_segments:
+
 		# Use function to return the lambda, to avoid incorrect binding of variables
 		def spider_func(grid):
 			spider_aperture = grid.ones()
@@ -938,9 +942,16 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 			return spider_aperture
 
 		def segment_with_spider(segment):
-			return lambda grid: segment(grid) * spider_func(grid)
+			return lambda grid: segment(grid) * spider_func(grid) * (1 - circular_aperture(central_obscuration)(grid))
 
 		tmt_segments = [segment_with_spider(s) for s in tmt_segments]
+
+	elif not with_spiders and return_segments:
+		
+		def segment_with_central_obscuration(segment):
+			return lambda grid: segment(grid) * (1 - circular_aperture(central_obscuration)(grid))
+
+		tmt_segments = [segment_with_central_obscuration(s) for s in tmt_segments]
 
 	if return_segments:
 		return tmt_aperture_with_spiders, tmt_segments

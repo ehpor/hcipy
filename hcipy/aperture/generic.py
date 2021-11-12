@@ -39,7 +39,7 @@ def circular_aperture(diameter, center=None):
 
 	return func
 
-def elliptical_aperture(diameters, center=None):
+def elliptical_aperture(diameters, center=None, angle=0):
 	'''Makes a Field generator for an elliptical aperture.
 
 	Parameters
@@ -48,8 +48,9 @@ def elliptical_aperture(diameters, center=None):
 		The diameters of the aperture in the two directions.
 	center : array_like or None
 		The center of the aperture.
+	angle : 
+		The orientation of the ellipse in radians.
 
-	Returns
 	-------
 	Field generator
 		This function can be evaluated on a grid to get a Field.
@@ -60,12 +61,12 @@ def elliptical_aperture(diameters, center=None):
 		shift = center * np.ones(2)
 
 	def func(grid):
-		if grid.is_separated:
-			x, y = grid.separated_coords
-			f = ((((x - shift[0]) / (diameters[0] / 2))**2)[np.newaxis, :] + (((y - shift[1]) / (diameters[1] / 2))**2)[:, np.newaxis] <= 1).ravel()
-		else:
-			x, y = grid.as_('cartesian').coords
-			f = (((x - shift[0]) / (diameters[0] / 2))**2 + ((y - shift[1]) / (diameters[1] / 2))**2) <= 1
+
+		x, y = grid.as_('cartesian').coords
+		x_transformed = np.cos(angle) * (x-shift[0]) + np.sin(angle) * (y-shift[1])
+		y_transformed = -np.sin(angle) * (x-shift[0]) + np.cos(angle) * (y-shift[1])
+		
+		f = ((x_transformed / (diameters[0] / 2))**2 + (y_transformed / (diameters[1] / 2))**2) <= 1
 
 		return Field(f.astype('float'), grid)
 
@@ -363,21 +364,21 @@ def make_rotated_aperture(aperture, angle):
 	return lambda grid: Field(aperture(grid.rotated(-angle)), grid)
 
 def make_shifted_aperture(aperture, shift):
-	'''Create a rotated version of `aperture`.
+	'''Create a shifted version of `aperture`.
 
 	Parameters
 	----------
 	aperture : Field generator
 		The aperture to rotate.
-	angle : scalar
-		The angle in radians by which to rotate the aperture.
+	shift : array_like
+		The shift of the aperture.
 
 	Returns
 	-------
 	Field generator
-		The rotated aperture.
+		The shifted aperture.
 	'''
-	return lambda grid: Field(aperture(grid.shifted(shift)), grid)
+	return lambda grid: Field(aperture(grid.shifted([-shift[0], -shift[1]])), grid)
 
 def make_segmented_aperture(segment_shape, segment_positions, segment_transmissions=1, return_segments=False):
 	'''Create a segmented aperture.

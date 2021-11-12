@@ -205,3 +205,10 @@ def test_gmt_aperture():
 	check_aperture_against_reference(make_gmt_aperture, 'gmt', 25.448, options)
 	
 	check_segmentation(make_gmt_aperture)
+
+def test_shifted_aperture():
+	grid = make_pupil_grid(256, 2.0)
+	aperture1 = circular_aperture(1.0, center=[0.25, 0.25])(grid)
+	aperture2 = make_shifted_aperture( circular_aperture(1.0),  np.array([0.25, 0.25]) )(grid)
+
+	assert np.allclose(aperture1, aperture2)

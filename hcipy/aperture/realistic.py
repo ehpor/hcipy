@@ -686,7 +686,6 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 	elt_segments : list of Field generators
 		The segments. Only returned when `return_segments` is True.
 	'''
-
 	elt_outer_diameter = 39.14634
 	spider_width = 0.4
 	segment_size = 1.45
@@ -774,13 +773,11 @@ def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	elt_segments : list of Field generators
 		The segments. Only returned when `return_segments` is True.
 	'''
-	
-	##
 	gmt_outer_diameter = 25.448
 	segment_size = 8.365 - 0.072
 	off_axis_segment_size = 8.365 - 0.015
 	
-	## The spider truss to hold the secondary
+	# The spider truss to hold the secondary
 	spider_1_width = 0.119
 	spider_2_width = 0.115
 	radius_spider_1 = 2.386
@@ -788,41 +785,34 @@ def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	offset_spider_2 = -0.05
 	truss_size = 4.93
 
-	## 0.359 mm from the off-axis segment to the on-axis segment
+	# 0.359 mm from the off-axis segment to the on-axis segment
 	segment_gap = 0.359 + 0.088
 	off_axis_tilt = np.deg2rad(13.522)
 	central_hole_size = 3.495 / segment_size
 	segment_distance = segment_size / 2 + off_axis_segment_size / 2 * np.cos(off_axis_tilt) + segment_gap
 
 	if normalized:
-		
 		segment_size /= gmt_outer_diameter		
 		off_axis_segment_size /= gmt_outer_diameter
 		segment_gap /= gmt_outer_diameter
 		segment_distance /= gmt_outer_diameter
-		
 		truss_size /= gmt_outer_diameter
 		spider_1_width /= gmt_outer_diameter
 		spider_2_width /= gmt_outer_diameter
 		radius_spider_1 /= gmt_outer_diameter
 		radius_spider_2 /= gmt_outer_diameter
 		offset_spider_2 /= gmt_outer_diameter
-
 		
 	def make_diverging_spider(position, start_width, divergence, orientation):
-		
 		def func(grid):
 			y = grid.shifted(position).rotated(orientation).y
 			x = grid.shifted(position).rotated(orientation).x
 			return Field(abs(y) < (np.sin(divergence) * abs(x) + start_width/2) * (x>=0), grid)
-
 		return func
 
 	def make_central_gmt_segment(grid):
-		
 		center_segment = make_obstructed_circular_aperture(segment_size, central_hole_size)(grid)
 		if with_spiders:
-			
 			spider_attachement_mask = 1 - regular_polygon_aperture(3, truss_size, angle=np.pi, center=None)(grid) 
 
 			spider_mask = grid.ones()	
@@ -836,17 +826,16 @@ def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False
 				spider_mask *= 1 - make_diverging_spider(spider_2_start, spider_2_width, np.deg2rad(0.0), np.deg2rad(-11.2) + offset_angle)(grid)
 
 			return center_segment * spider_mask * spider_attachement_mask
-
 		else:
 			return center_segment
 
-	segment_functions = [make_central_gmt_segment,]
+	segment_functions = [make_central_gmt_segment]
 	for i in range(6):
 		rotation_angle = np.pi/3 * i
 		xc = segment_distance * np.cos(rotation_angle)
 		yc = segment_distance * np.sin(rotation_angle)
-		
-		aperture = make_shifted_aperture( make_rotated_aperture(elliptical_aperture([off_axis_segment_size * np.cos(off_axis_tilt), off_axis_segment_size]), rotation_angle), [xc, yc])
+
+		aperture = elliptical_aperture([off_axis_segment_size * np.cos(off_axis_tilt), off_axis_segment_size], center=[xc, yc], angle=rotation_angle)
 		segment_functions.append(aperture)
 
 	# Center segment obscurations
@@ -887,13 +876,11 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	tmt_segments : list of Field generators
 		The segments. Only returned when `return_segments` is True.
 	'''
-
 	tmt_outer_diameter = 30.0
 	spider_width = 0.22
 	segment_size = 1.44
 	segment_gap = 0.0025
 	inner_diameter = 2.5 * segment_size
-	outer_diameter = 30.0
 	central_obscuration = 3.636	#m
 
 	if normalized:
@@ -901,8 +888,8 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 		segment_size /= tmt_outer_diameter
 		segment_gap /= tmt_outer_diameter
 		inner_diameter /= tmt_outer_diameter
-		outer_diameter /= tmt_outer_diameter
 		central_obscuration /= tmt_outer_diameter
+		tmt_outer_diameter = 1.0
 
 	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3) / 2 + segment_gap, 13, pointy_top=False)
 
@@ -911,7 +898,7 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	segment_positions = segment_positions.subset(missing_segments_mask)
 	
 	# Clip the outer segments
-	inscribed_circle = circular_aperture(0.98 * outer_diameter)(segment_positions) > 0
+	inscribed_circle = circular_aperture(0.98 * tmt_outer_diameter)(segment_positions) > 0
 	segment_positions = segment_positions.subset(inscribed_circle)
 
 	segment_shape = hexagonal_aperture(segment_size, angle=np.pi/2)
@@ -925,15 +912,14 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	
 	def tmt_aperture_with_spiders(grid):
 		aperture = tmt_aperture_function(grid) * (1 - circular_aperture(central_obscuration)(grid))
-			
+
 		if with_spiders:
 			for spider in spiders:
 				aperture *= spider(grid)
-			
+		
 		return aperture
 	
 	if with_spiders and return_segments:
-
 		# Use function to return the lambda, to avoid incorrect binding of variables
 		def spider_func(grid):
 			spider_aperture = grid.ones()
@@ -945,12 +931,10 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 			return lambda grid: segment(grid) * spider_func(grid) * (1 - circular_aperture(central_obscuration)(grid))
 
 		tmt_segments = [segment_with_spider(s) for s in tmt_segments]
-
 	elif not with_spiders and return_segments:
-		
 		def segment_with_central_obscuration(segment):
 			return lambda grid: segment(grid) * (1 - circular_aperture(central_obscuration)(grid))
-
+		
 		tmt_segments = [segment_with_central_obscuration(s) for s in tmt_segments]
 
 	if return_segments:

@@ -88,6 +88,12 @@ def reconstruct_fft_grid_parameters(input_grid, fft_grid):
 	epsilon = np.finfo(float).eps
 
 	q = (2 * np.pi / (input_grid.delta * input_grid.dims)) / fft_grid.delta
+
+	# Check that the calculated q corresponds to an integer zeropadding.
+	zeropadded_dims = q * input_grid.dims
+	if np.any(np.abs(zeropadded_dims - np.round(zeropadded_dims)) > 1e-10):
+		raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} does not correspond to an integer zeropadding.')
+
 	fov = (fft_grid.dims / (input_grid.dims * q)) * (1 + epsilon)
 	shift = fft_grid.zero - fft_grid.delta * (-fft_grid.dims / 2 + np.mod(fft_grid.dims, 2) * 0.5)
 

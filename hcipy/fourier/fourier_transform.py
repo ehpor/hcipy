@@ -115,9 +115,21 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 	FourierTransform
 		The Fourier transform that was requested.
 	'''
-	from .fast_fourier_transform import FastFourierTransform, make_fft_grid
+	from .fast_fourier_transform import FastFourierTransform, make_fft_grid, reconstruct_fft_grid_parameters
 	from .matrix_fourier_transform import MatrixFourierTransform
 	from .naive_fourier_transform import NaiveFourierTransform
+
+	if output_grid is not None:
+		# Try to detect if the grid is compatible with an FFT grid.
+		try:
+			q, fov, shift = reconstruct_fft_grid_parameters(input_grid, output_grid)
+
+			# If we got this far, the output grid is a native FFT grid.
+			# Remove output grid as its now completely defined by q, fov and shift parameters.
+			output_grid = None
+		except ValueError:
+			# The grid is not a native FFT grid.
+			pass
 
 	if output_grid is None:
 		# Choose between FFT and MFT

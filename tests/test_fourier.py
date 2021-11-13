@@ -1,5 +1,6 @@
 from hcipy import *
 import numpy as np
+import pytest
 
 def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims):
 	grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
@@ -95,7 +96,15 @@ def test_make_fourier_transform():
 	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='estimate')
 	assert type(ft) == FastFourierTransform
 
+	fft_grid = make_fft_grid(input_grid, q=1, fov=1)
+	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
+	assert type(ft) == FastFourierTransform
+
 	ft = make_fourier_transform(input_grid, q=8, fov=0.3, planner='estimate')
+	assert type(ft) == MatrixFourierTransform
+
+	fft_grid = make_fft_grid(input_grid, q=8, fov=0.3)
+	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
 	assert type(ft) == MatrixFourierTransform
 
 	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='measure')

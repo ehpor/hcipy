@@ -11,17 +11,19 @@ try:
 except ImportError:
 	_fft_module = np.fft
 
-def make_fft_grid(input_grid, q=1, fov=1):
+def make_fft_grid(input_grid, q=1, fov=1, shift=0):
 	'''Calculate the grid returned by a Fast Fourier Transform.
 
 	Parameters
 	----------
 	input_grid : Grid
 		The grid defining the sampling in the real domain..
-	q : scalar
+	q : scalar or array_like
 		The amount of zeropadding to perform. A value of 1 denotes no zeropadding.
-	fov : scalar
+	fov : scalar or array_like
 		The amount of cropping to perform in the Fourier domain.
+	shift : scalar or array_like
+		The shift to apply on the output grid.
 
 	Returns
 	-------
@@ -30,6 +32,7 @@ def make_fft_grid(input_grid, q=1, fov=1):
 	'''
 	q = np.ones(input_grid.ndim, dtype='float') * q
 	fov = np.ones(input_grid.ndim, dtype='float') * fov
+	shift = np.ones(input_grid.ndim, dtype='float') * shift
 
 	# Check assumptions
 	if not input_grid.is_regular:
@@ -39,7 +42,7 @@ def make_fft_grid(input_grid, q=1, fov=1):
 
 	delta = (2 * np.pi / (input_grid.delta * input_grid.dims)) / q
 	dims = (input_grid.dims * fov * q).astype('int')
-	zero = delta * (-dims / 2 + np.mod(dims, 2) * 0.5)
+	zero = delta * (-dims / 2 + np.mod(dims, 2) * 0.5) + shift
 
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 

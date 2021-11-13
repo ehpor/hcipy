@@ -34,6 +34,9 @@ def make_fft_grid(input_grid, q=1, fov=1, shift=0):
 	fov = np.ones(input_grid.ndim, dtype='float') * fov
 	shift = np.ones(input_grid.ndim, dtype='float') * shift
 
+	# Correct q for a discrete zero padding of the input grid.
+	q = np.round(q * input_grid.dims) / input_grid.dims
+
 	# Check assumptions
 	if not input_grid.is_regular:
 		raise ValueError('The input_grid must be regular.')
@@ -179,7 +182,7 @@ class FastFourierTransform(FourierTransform):
 		self.internal_grid = make_fft_grid(input_grid, q, 1)
 
 		self.shape_out = self.output_grid.shape
-		self.internal_shape = (self.shape_in * q).astype('int')
+		self.internal_shape = self.internal_grid.shape
 		self.internal_array = np.zeros(self.internal_shape, 'complex')
 
 		# Calculate the part of the array in which to insert the input field (for zeropadding).

@@ -60,10 +60,10 @@ def test_fourier_energy_conservation_1d():
 	np.random.seed(0)
 
 	for dtype in ['complex128', 'complex64']:
-		for shift_input in [0,0.1]:
-			for scale in [1,2]:
-				for shift_output in [0,0.1]:
-					for q in [1,3,4]:
+		for shift_input in [0, 0.1]:
+			for scale in [1, 2]:
+				for shift_output in [0, 0.1]:
+					for q in [1, 1.23, 3, 4]:
 						for fov in [1, 0.5, 0.8]:
 							for dims in [64, 65]:
 								check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
@@ -72,12 +72,12 @@ def test_fourier_energy_conservation_2d():
 	np.random.seed(0)
 
 	for dtype in ['complex128', 'complex64']:
-		for shift_input in [[0,0],[0.1]]:
-			for scale in [1,2]:
+		for shift_input in [[0,0], [0.1]]:
+			for scale in [1, 2]:
 				for shift_output in [[0,0], [0.1]]:
-					for q in [1,3,4]:
-						for fov in [1,0.5,0.8]:
-							for dims in [[8,8],[8,16],[9,9],[9,18]]:
+					for q in [1, 1.23, 3, 4]:
+						for fov in [1, 0.5, 0.8]:
+							for dims in [[8,8], [8,16], [9,9], [9,18]]:
 								check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
 
 def check_symmetry(scale, q, fov, dims):
@@ -115,12 +115,12 @@ def test_make_fourier_transform():
 	assert type(ft) == NaiveFourierTransform
 
 def test_fft_grid_reconstruction():
-	for shift_input in [[0,0],[0.1]]:
-			for scale in [1,2]:
+	for shift_input in [[0,0], [0.1]]:
+			for scale in [1, 2]:
 				for shift_output in [[0,0], [0.1]]:
-					for q in [1, 1.234, 3,4]:
-						for fov in [1,0.5,0.8, [0.3, 0.23]]:
-							for dims in [[8,8],[8,16],[9,9],[9,18]]:
+					for q in [1, 1.234, 3, 4]:
+						for fov in [1, 0.5, 0.8, [0.3, 0.23]]:
+							for dims in [[8,8], [8,16], [9,9], [9,18]]:
 								input_grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
 
 								fft_grid = make_fft_grid(input_grid, q, fov, shift_output)

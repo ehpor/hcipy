@@ -89,10 +89,10 @@ def reconstruct_fft_grid_parameters(input_grid, fft_grid):
 	shift = fft_grid.zero - fft_grid.delta * (-fft_grid.dims / 2 + np.mod(fft_grid.dims, 2) * 0.5)
 
 	if np.any(q < 1):
-		raise ValueError('fft_grid is not an FFT grid of input_grid.')
+		raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} would be < 1.')
 
 	if np.any(fov > (1 + 2 * epsilon)):
-		raise ValueError('fft_grid is not an FFT grid of input_grid.')
+		raise ValueError(f'fft_grid is not an FFT grid of input_grid: fov of {fov} would be > 1 .')
 
 	return q, fov, shift
 

@@ -142,9 +142,10 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 			output_grid = make_fft_grid(input_grid, q, fov)
 
 			if planner == 'estimate':
-				# Estimate analytically from complexities
-				N_in = input_grid.shape * q
-				N_out = output_grid.shape
+				# Estimate analytically from complexities.
+				# Convert shapes to float to avoid potential overflows.
+				N_in = input_grid.shape.astype('float') * q
+				N_out = output_grid.shape.astype('float')
 
 				if input_grid.ndim == 1:
 					fft = 4 * N_in[0] * np.log2(N_in)
@@ -152,12 +153,13 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 				else:
 					fft = 4 * np.prod(N_in) * np.log2(np.prod(N_in))
 					mft = 4 * (np.prod(input_grid.shape) * N_out[1] + np.prod(N_out) * input_grid.shape[0])
+
 				if fft > mft:
 					method = 'mft'
 				else:
 					method = 'fft'
 			elif planner == 'measure':
-				# Measure directly
+				# Measure directly.
 				fft = FastFourierTransform(input_grid, q, fov)
 				mft = MatrixFourierTransform(input_grid, output_grid)
 

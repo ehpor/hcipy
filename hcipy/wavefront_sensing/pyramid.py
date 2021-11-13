@@ -86,7 +86,7 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		self.output_grid = output_grid
 
 		if pupil_diameter is None:
-			pupil_diameter = np.max(input_grid.delta * (input_grid.shape - 1))
+			pupil_diameter = np.max(input_grid.delta * input_grid.shape)
 
 		if separation is None:
 			separation = pupil_diameter
@@ -102,7 +102,7 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 			raise ValueError('The requested focal plane sampling is too low to sufficiently sample the wavefront sensor output.')
 
 		if num_airy is None:
-			self.num_airy = np.max(input_grid.shape - 1) / 2
+			self.num_airy = np.max(input_grid.shape) / 2
 		else:
 			self.num_airy = num_airy
 

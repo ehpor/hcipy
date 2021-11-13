@@ -46,6 +46,56 @@ def make_fft_grid(input_grid, q=1, fov=1, shift=0):
 
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 
+def reconstruct_fft_grid_parameters(input_grid, fft_grid):
+	'''Try to reconstruct the FFT parameters of a grid.
+
+	.. note::
+		The parameters that this function outputs might not
+		correspond perfectly to the original parameters you used.
+		However, it guarantees that an FFT grid generated with these
+		reconstructed parameters will create the same FFT grid as an
+		FFT generated with the original parameters.
+
+	Parameters
+	----------
+	input_grid : Grid
+		The grid defining the sampling in the real domain.
+	fft_grid : Grid
+		A grid that corresponds to an FFT grid.
+
+	Returns
+	-------
+	q : ndarray
+		The amount of zeropadding detected in the real domain.
+	fov : ndarray
+		The amount of cropping detected in the Fourier domain.
+	shift : ndarray
+		The amount of shifting detected in the Fourier domain.
+
+	Raises
+	------
+	ValueError
+		If `fft_grid` does not correspond to an FFT grid of `input_grid`.
+	'''
+	if not input_grid.is_regular:
+		raise ValueError('The input grid must be regular to reconstruct an fft grid.')
+	if not fft_grid.is_regular:
+		raise ValueError('The fft grid is not regular and therefore cannot be an fft grid.')
+
+	epsilon = np.finfo(float).eps
+
+	q = (2 * np.pi / (input_grid.delta * input_grid.dims)) / fft_grid.delta
+	fov = (fft_grid.dims / (input_grid.dims * q)) * (1 + epsilon)
+	shift = fft_grid.zero - fft_grid.delta * (-fft_grid.dims / 2 + np.mod(fft_grid.dims, 2) * 0.5)
+
+	if np.any(q < 1):
+		raise ValueError('fft_grid is not an FFT grid of input_grid.')
+
+	if np.any(fov > (1 + 2 * epsilon)):
+		raise ValueError('fft_grid is not an FFT grid of input_grid.')
+
+	return q, fov, shift
+
 def _numexpr_grid_shift(shift, grid, out=None):
 	'''Fast evaluation of np.exp(1j * np.dot(shift, grid.coords)) using NumExpr.
 
@@ -125,7 +175,7 @@ class FastFourierTransform(FourierTransform):
 			emulate_fftshifts = Configuration().fourier.fft.emulate_fftshifts
 		self.emulate_fftshifts = emulate_fftshifts
 
-		self.output_grid = make_fft_grid(input_grid, q, fov).shifted(shift)
+		self.output_grid = make_fft_grid(input_grid, q, fov, shift)
 		self.internal_grid = make_fft_grid(input_grid, q, 1)
 
 		self.shape_out = self.output_grid.shape

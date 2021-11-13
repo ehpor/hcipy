@@ -105,6 +105,35 @@ def test_make_fourier_transform():
 	ft = make_fourier_transform(input_grid, output_grid)
 	assert type(ft) == NaiveFourierTransform
 
+def test_fft_grid_reconstruction():
+	for shift_input in [[0,0],[0.1]]:
+			for scale in [1,2]:
+				for shift_output in [[0,0], [0.1]]:
+					for q in [1, 1.234, 3,4]:
+						for fov in [1,0.5,0.8, [0.3, 0.23]]:
+							for dims in [[8,8],[8,16],[9,9],[9,18]]:
+								input_grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
+
+								fft_grid = make_fft_grid(input_grid, q, fov, shift_output)
+
+								q_recon, fov_recon, shift_output_recon = reconstruct_fft_grid_parameters(input_grid, fft_grid)
+								fft_grid_recon = make_fft_grid(input_grid, q_recon, fov_recon, shift_output_recon)
+
+								print(q, fov, shift_output)
+								print(q_recon, fov_recon, shift_output_recon)
+
+								assert np.allclose(fft_grid.x, fft_grid_recon.x)
+								assert np.allclose(fft_grid.y, fft_grid_recon.y)
+
+	# Check raising behaviour.
+	input_grid = make_uniform_grid([128, 128], 1)
+	output_grid = CartesianGrid(SeparatedCoords(input_grid.separated_coords))
+
+	with pytest.raises(ValueError):
+		reconstruct_fft_grid_parameters(input_grid, output_grid)
+	with pytest.raises(ValueError):
+		reconstruct_fft_grid_parameters(output_grid, input_grid)
+
 def test_mft_precomputations():
 	input_grid = make_pupil_grid(128)
 	output_grid = make_fft_grid(input_grid, 1, 0.25)

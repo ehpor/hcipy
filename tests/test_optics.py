@@ -635,45 +635,50 @@ def test_step_index_fiber():
 		assert forward_wf.total_power <= img.total_power * (1 + 1e-4)
 		assert backward_wf.total_power <= forward_wf.total_power * (1 + 1e-4)
 
+def check_thin_lens(wf, lens, num_steps, focal_length):
+	dz = focal_length / (num_steps / 2)
+	prop = FresnelPropagator(wf.electric_field.grid, dz)
+
+	wavefront = lens(wf)
+
+	z = [0]
+	peak = [wavefront.power.max()]
+
+	for i in range(num_steps):
+		wavefront = prop(wavefront)
+
+		z.append(z[-1] + dz)
+		peak.append(wavefront.power.max())
+
+	print('z', z)
+	print('peak', peak)
+
+	return z, peak
+
 def test_thin_lens():
 	wavelength = 1e-6
-	Dgrid = 1e-1
-	grid = make_pupil_grid(513, Dgrid)
+	pupil_diameter = 5e-2
+	num_steps = 20
+
+	grid = make_pupil_grid(513, 2 * pupil_diameter)
 
 	focal_length = 300e-1
-	lens = ThinLens(focal_length, lambda x : 1.5, 1e-6)
-	aperture = evaluate_supersampled( circular_aperture(5e-2), grid, 8 )
-	assert abs((lens.focal_length - focal_length)/focal_length) < 1e-10
-	
-	nsteps = 20
-	dz = focal_length / (nsteps/2)
-	z = np.arange(nsteps+1) * dz
-	prop = AngularSpectrumPropagator(grid, dz)
-	
+	lens = ThinLens(focal_length, lambda x: 1.5, 1e-6)
+
+	aperture = evaluate_supersampled(circular_aperture(pupil_diameter), grid, 8)
+	assert abs((lens.focal_length - focal_length) / focal_length) < 1e-10
+
 	wf = Wavefront(aperture, wavelength)
 	wf.total_power = 1
-	wf = lens(wf)
 
-	peak = [wf.power.max(),]
-	for i in range(nsteps):
-		wf = prop(wf)
-		peak.append(wf.power.max())
-	
-	lens.focal_length = 2.0 * focal_length
+	z1, peak1 = check_thin_lens(wf, lens, num_steps, focal_length)
 
-	nsteps = 20
-	dz = 2.0 * focal_length / (nsteps/2)
-	z2 = np.arange(nsteps+1) * dz
-	prop = AngularSpectrumPropagator(grid, dz)
-	
-	wf = Wavefront(aperture, wavelength)
-	wf.total_power = 1
-	wf = lens(wf)
-	
-	peak2 = [wf.power.max(),]
-	for i in range(nsteps):
-		wf = prop(wf)
-		peak2.append(wf.power.max())
+	lens.focal_length = 2 * focal_length
+	z2, peak2 = check_thin_lens(wf, lens, num_steps, 2 * focal_length)
 
-	assert abs(z[np.argmax(peak)]/focal_length - 1.0) < 0.01
-	assert abs(z2[np.argmax(peak2)]/(2.0 * focal_length) - 1.0) < 0.01
+	lens.focal_length = 0.75 * focal_length
+	z3, peak3 = check_thin_lens(wf, lens, num_steps, 0.75 * focal_length)
+
+	assert abs(z1[np.argmax(peak1)] / focal_length - 1.0) < 0.01
+	assert abs(z2[np.argmax(peak2)] / (2 * focal_length) - 1.0) < 0.01
+	assert abs(z3[np.argmax(peak3)] / (0.75 * focal_length) - 1.0) < 0.01

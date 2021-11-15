@@ -115,9 +115,21 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 	FourierTransform
 		The Fourier transform that was requested.
 	'''
-	from .fast_fourier_transform import FastFourierTransform, make_fft_grid
+	from .fast_fourier_transform import FastFourierTransform, make_fft_grid, get_fft_parameters
 	from .matrix_fourier_transform import MatrixFourierTransform
 	from .naive_fourier_transform import NaiveFourierTransform
+
+	if output_grid is not None:
+		# Try to detect if the grid is compatible with an FFT grid.
+		try:
+			q, fov, shift = get_fft_parameters(output_grid, input_grid)
+
+			# If we got this far, the output grid is a native FFT grid.
+			# Remove output grid as its now completely defined by q, fov and shift parameters.
+			output_grid = None
+		except ValueError:
+			# The grid is not a native FFT grid.
+			pass
 
 	if output_grid is None:
 		# Choose between FFT and MFT
@@ -130,9 +142,10 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 			output_grid = make_fft_grid(input_grid, q, fov)
 
 			if planner == 'estimate':
-				# Estimate analytically from complexities
-				N_in = input_grid.shape * q
-				N_out = output_grid.shape
+				# Estimate analytically from complexities.
+				# Convert shapes to float to avoid potential overflows.
+				N_in = input_grid.shape.astype('float') * q
+				N_out = output_grid.shape.astype('float')
 
 				if input_grid.ndim == 1:
 					fft = 4 * N_in[0] * np.log2(N_in)
@@ -140,12 +153,13 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 				else:
 					fft = 4 * np.prod(N_in) * np.log2(np.prod(N_in))
 					mft = 4 * (np.prod(input_grid.shape) * N_out[1] + np.prod(N_out) * input_grid.shape[0])
+
 				if fft > mft:
 					method = 'mft'
 				else:
 					method = 'fft'
 			elif planner == 'measure':
-				# Measure directly
+				# Measure directly.
 				fft = FastFourierTransform(input_grid, q, fov)
 				mft = MatrixFourierTransform(input_grid, output_grid)
 

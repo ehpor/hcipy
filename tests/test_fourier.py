@@ -125,7 +125,9 @@ def test_fft_grid_reconstruction():
 
 								fft_grid = make_fft_grid(input_grid, q, fov, shift_output)
 
-								q_recon, fov_recon, shift_output_recon = reconstruct_fft_grid_parameters(input_grid, fft_grid)
+								assert is_fft_grid(fft_grid, input_grid)
+
+								q_recon, fov_recon, shift_output_recon = get_fft_parameters(fft_grid, input_grid)
 								fft_grid_recon = make_fft_grid(input_grid, q_recon, fov_recon, shift_output_recon)
 
 								print(q, fov, shift_output)
@@ -139,14 +141,19 @@ def test_fft_grid_reconstruction():
 	output_grid = CartesianGrid(SeparatedCoords(input_grid.separated_coords))
 
 	with pytest.raises(ValueError):
-		reconstruct_fft_grid_parameters(input_grid, output_grid)
+		get_fft_parameters(output_grid, input_grid)
 	with pytest.raises(ValueError):
-		reconstruct_fft_grid_parameters(output_grid, input_grid)
+		get_fft_parameters(input_grid, output_grid)
+
+	assert not is_fft_grid(output_grid, input_grid)
+	assert not is_fft_grid(input_grid, output_grid)
 
 	output_grid = make_fft_grid(input_grid, 1, 0.5).scaled(1.001)
 
 	with pytest.raises(ValueError):
-		reconstruct_fft_grid_parameters(input_grid, output_grid)
+		get_fft_parameters(output_grid, input_grid)
+
+	assert not is_fft_grid(output_grid, input_grid)
 
 def test_fft_exceptions():
 	regular_grid = make_uniform_grid([128, 128], 1)

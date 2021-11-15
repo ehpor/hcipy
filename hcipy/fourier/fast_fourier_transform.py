@@ -49,22 +49,27 @@ def make_fft_grid(input_grid, q=1, fov=1, shift=0):
 
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 
-def reconstruct_fft_grid_parameters(input_grid, fft_grid):
+def get_fft_parameters(fft_grid, input_grid):
 	'''Try to reconstruct the FFT parameters of a grid.
 
 	.. note::
+		Not every grid is an FFT grid. This function will raise a
+		ValueError if this is the case. You can alternatively use
+		`is_fft_grid()` to check if a grid is an FFT grid or not.
+
+	.. note::
 		The parameters that this function outputs might not
-		correspond perfectly to the original parameters you used.
+		correspond perfectly to the original FFT parameters you used.
 		However, it guarantees that an FFT grid generated with these
 		reconstructed parameters will create the same FFT grid as an
 		FFT generated with the original parameters.
 
 	Parameters
 	----------
+	fft_grid : Grid
+		A grid that corresponds to a native FFT grid of `input_grid`.
 	input_grid : Grid
 		The grid defining the sampling in the real domain.
-	fft_grid : Grid
-		A grid that corresponds to an FFT grid.
 
 	Returns
 	-------
@@ -104,6 +109,30 @@ def reconstruct_fft_grid_parameters(input_grid, fft_grid):
 		raise ValueError(f'fft_grid is not an FFT grid of input_grid: fov of {fov} would be > 1 .')
 
 	return q, fov, shift
+
+def is_fft_grid(grid, input_grid):
+	'''Returns whether `grid` is a native FFT grid of `input_grid` or not.
+
+	.. note::
+		The function get_fft_parameters() can be used
+
+	Parameters
+	----------
+	grid : Grid
+		The grid in the Fourier domain. This grid is checked.
+	input_grid : Grid
+		The grid in the real domain of the FFT.
+
+	Returns
+	-------
+	boolean
+		Whether `grid` is a native FFT grid of `input_grid` for some q, fov and shift.
+	'''
+	try:
+		get_fft_parameters(grid, input_grid)
+	except ValueError:
+		return False
+	return True
 
 def _numexpr_grid_shift(shift, grid, out=None):
 	'''Fast evaluation of np.exp(1j * np.dot(shift, grid.coords)) using NumExpr.

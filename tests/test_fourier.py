@@ -87,7 +87,7 @@ def test_fourier_symmetries_2d():
 	for scale in [1, 2]:
 		for q in [1, 3, 4]:
 			for fov in [1, 0.5, 0.8]:
-				for dims in [[8, 8], [8, 16],[9, 9],[9, 18]]:
+				for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
 					check_symmetry(scale, q, fov, dims)
 
 def test_make_fourier_transform():

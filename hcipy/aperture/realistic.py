@@ -835,7 +835,7 @@ def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False
 		xc = segment_distance * np.cos(rotation_angle)
 		yc = segment_distance * np.sin(rotation_angle)
 
-		aperture = elliptical_aperture([off_axis_segment_size * np.cos(off_axis_tilt), off_axis_segment_size], center=[xc, yc], angle=rotation_angle)
+		aperture = elliptical_aperture([off_axis_segment_size * np.cos(off_axis_tilt), off_axis_segment_size], center=[xc, yc], angle=-rotation_angle)
 		segment_functions.append(aperture)
 
 	# Center segment obscurations

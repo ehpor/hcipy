@@ -62,28 +62,15 @@ def elliptical_aperture(diameters, center=None, angle=0):
 
 	def func(grid):
 		if grid.is_separated:
-			#Only ellipses oriented with the principle axes of the grid can be sped up.
-			if abs(abs(np.cos(angle)) - 1) < 1e-14:
-				x, y = grid.separated_coords
-				x_transformed = 2 * (x - shift[0])/diameters[0]
-				y_transformed = 2 * (y - shift[1])/diameters[1]
-				f = (((x_transformed**2)[np.newaxis, :] + (y_transformed**2)[:, np.newaxis]) <= 1).ravel()
-			elif abs(abs(np.sin(angle)) - 1) < 1e-14:
-				x, y = grid.separated_coords	
-				x_transformed = 2 * (x - shift[0])/diameters[1]
-				y_transformed = 2 * (y - shift[1])/diameters[0]
-				f = (((x_transformed**2)[np.newaxis, :] + (y_transformed**2)[:, np.newaxis]) <= 1).ravel()
-			else:
-				x, y = grid.as_('cartesian').coords
-				x_transformed = 2 * (np.cos(angle) * (x-shift[0]) + np.sin(angle) * (y-shift[1])) / diameters[0]
-				y_transformed = 2 * (-np.sin(angle) * (x-shift[0]) + np.cos(angle) * (y-shift[1])) / diameters[1]
-				f = (x_transformed**2 + y_transformed**2) <= 1 	
+			x, y = grid.shifted(shift).separated_coords
+			term1 = ((2 * x * np.cos(angle) / diameters[0])[np.newaxis, :] - (2 * y * np.sin(angle) / diameters[0])[:, np.newaxis])**2
+			term2 = ((2 * x * np.sin(angle) / diameters[1])[np.newaxis, :] + (2 * y * np.cos(angle) / diameters[1])[:, np.newaxis])**2
+			f = (term1 + term2 <= 1).ravel()
 		else:
-			x, y = grid.as_('cartesian').coords
-			x_transformed = 2 * (np.cos(angle) * (x-shift[0]) + np.sin(angle) * (y-shift[1])) / diameters[0]
-			y_transformed = 2 * (-np.sin(angle) * (x-shift[0]) + np.cos(angle) * (y-shift[1])) / diameters[1]
+			x, y = grid.as_('cartesian').shifted(shift).coords
+			x_transformed = 2 * (x * np.cos(angle) - y * np.sin(angle)) / diameters[0]
+			y_transformed = 2 * (x * np.sin(angle) + y * np.cos(angle)) / diameters[1]
 			f = (x_transformed**2 + y_transformed**2) <= 1
-
 		return Field(f.astype('float'), grid)
 
 	return func

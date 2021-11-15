@@ -7,7 +7,9 @@ def read_fits(filename, extension=0):
 	----------
 	filename : string
 		The filename of the file to read. This can include a path.
-
+	extension : integer
+		The extension of the fits file that is being read.
+	
 	Returns
 	-------
 	ndarray

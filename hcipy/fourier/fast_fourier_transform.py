@@ -148,12 +148,17 @@ class FastFourierTransform(FourierTransform):
 	----------
 	input_grid : Grid
 		The grid that is expected for the input field.
-	q : scalar
-		The amount of zeropadding to perform. A value of 1 denotes no zeropadding.
-	fov : scalar
-		The amount of cropping to perform in the Fourier domain.
+	q : scalar or array_like
+		The amount of zeropadding to perform. A value of 1 denotes no zeropadding. A value of
+		2 indicates zeropadding to twice the dimensions of the input grid. Note: as
+		zeropadding has to be done by an integer number of pixels, the q will be rounded to
+		the closest possible number to satisfy this constraint.
+	fov : scalar or array_like
+		The amount of cropping to perform in the Fourier domain. A value of 1 indicates that
+		no cropping will be performed.
 	shift : array_like or scalar
-		The amount by which to shift the output grid.
+		The amount by which to shift the output grid. If this is a scalar, the same shift will
+		be used for all dimensions.
 	emulate_fftshifts : boolean or None
 		Whether to emulate FFTshifts normally used in the FFT by multiplications in the
 		opposite domain. Enabling this increases performance by 3x, but degrades accuracy of
@@ -164,13 +169,22 @@ class FastFourierTransform(FourierTransform):
 	------
 	ValueError
 		If the input grid is not regular or Cartesian.
+	ValueError
+		If q < 1 or fov < 0 or fov > 1, both of which are impossible for an FFT to calculate.
 	'''
 	def __init__(self, input_grid, q=1, fov=1, shift=0, emulate_fftshifts=None):
+		epsilon = np.finfo(float).eps
+
 		# Check assumptions
 		if not input_grid.is_regular:
 			raise ValueError('The input_grid must be regular.')
 		if not input_grid.is_('cartesian'):
 			raise ValueError('The input_grid must be Cartesian.')
+
+		if np.any(q < 1):
+			raise ValueError('The amount of zeropadding (q) must be larger than 1.')
+		if np.any(fov > (1 + 2 * epsilon)) or np.any(fov < 0):
+			raise ValueError('The amount of cropping (fov) must be between 0 and 1.')
 
 		self.input_grid = input_grid
 

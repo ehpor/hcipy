@@ -143,6 +143,31 @@ def test_fft_grid_reconstruction():
 	with pytest.raises(ValueError):
 		reconstruct_fft_grid_parameters(output_grid, input_grid)
 
+	output_grid = make_fft_grid(input_grid, 1, 0.5).scaled(1.001)
+
+	with pytest.raises(ValueError):
+		reconstruct_fft_grid_parameters(input_grid, output_grid)
+
+def test_fft_exceptions():
+	regular_grid = make_uniform_grid([128, 128], 1)
+	irregular_cartesian_grid = CartesianGrid(UnstructuredCoords([np.random.randn(1024), np.random.randn(1024)]))
+	irregular_polar_grid = irregular_cartesian_grid.as_('polar')
+
+	with pytest.raises(ValueError):
+		FastFourierTransform(regular_grid, 0.9, 0.5)
+
+	with pytest.raises(ValueError):
+		FastFourierTransform(regular_grid, 2, 1.1)
+
+	with pytest.raises(ValueError):
+		FastFourierTransform(regular_grid, 2, -0.1)
+
+	with pytest.raises(ValueError):
+		FastFourierTransform(irregular_cartesian_grid, 2, 0.5)
+
+	with pytest.raises(ValueError):
+		FastFourierTransform(irregular_polar_grid, 2, 10.5)
+
 def test_mft_precomputations():
 	input_grid = make_pupil_grid(128)
 	output_grid = make_fft_grid(input_grid, 1, 0.25)

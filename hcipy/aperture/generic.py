@@ -60,16 +60,26 @@ def elliptical_aperture(diameters, center=None, angle=0):
 	else:
 		shift = center * np.ones(2)
 
+	# Pre-calculate the minor and major axes dimensions after rotation
+	major_axis = diameters[0] / 2
+	minor_axis = diameters[1] / 2
+	
+	cos_angle_major = np.cos(angle) / major_axis
+	cos_angle_minor = np.cos(angle) / minor_axis
+
+	sin_angle_major = np.sin(angle) / major_axis
+	sin_angle_minor = np.sin(angle) / minor_axis
+
 	def func(grid):
 		if grid.is_separated:
 			x, y = grid.shifted(shift).separated_coords
-			term1 = ((2 * x * np.cos(angle) / diameters[0])[np.newaxis, :] - (2 * y * np.sin(angle) / diameters[0])[:, np.newaxis])**2
-			term2 = ((2 * x * np.sin(angle) / diameters[1])[np.newaxis, :] + (2 * y * np.cos(angle) / diameters[1])[:, np.newaxis])**2
+			term1 = ((x * cos_angle_major)[np.newaxis, :] - (y * sin_angle_major)[:, np.newaxis])**2
+			term2 = ((x * sin_angle_minor)[np.newaxis, :] + (y *  cos_angle_minor)[:, np.newaxis])**2
 			f = (term1 + term2 <= 1).ravel()
 		else:
 			x, y = grid.as_('cartesian').shifted(shift).coords
-			x_transformed = 2 * (x * np.cos(angle) - y * np.sin(angle)) / diameters[0]
-			y_transformed = 2 * (x * np.sin(angle) + y * np.cos(angle)) / diameters[1]
+			x_transformed = (x * cos_angle_major - y * sin_angle_major)
+			y_transformed = (x * sin_angle_minor + y * cos_angle_minor)
 			f = (x_transformed**2 + y_transformed**2) <= 1
 		return Field(f.astype('float'), grid)
 

@@ -158,6 +158,10 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 def make_hale_aperture(normalized=False, with_spiders=True):
 	'''Make the Hale Telescope aperture.
 
+	The size of the spiders and the attachements were based on the actual pupil measurements from Figure 2 of [Galicher2019]_
+
+	.. [Galicher2019] Raphael Galicher et al., "Minimization of non-common path aberrations at the Palomar telescope using a self-coherent camera." Astronomy & Astrophysics 631 (2019): A143.
+	
 	Parameters
 	----------
 	normalized : boolean

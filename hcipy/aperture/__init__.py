@@ -15,7 +15,6 @@ __all__ = [
 	'make_gmt_aperture',
 	'make_tmt_aperture',
 	'make_hexagonal_segmented_aperture',
-    'make_hexagonal_segmented_aperture',
     'make_magellan_aperture',
     'make_luvoir_a_aperture',
     'make_luvoir_a_lyot_stop',

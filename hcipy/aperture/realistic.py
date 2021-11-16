@@ -180,15 +180,18 @@ def make_hale_aperture(normalized=False, with_spiders=True):
 	spider_width = 2 * 0.024 # meter
 	central_obscuration_ratio = central_obscuration_diameter / pupil_diameter
 
-	if normalized:
-		spider_width /= pupil_diameter
-		pupil_diameter = 1.0
-
 	# Attachement points of the spiders at the central obscuration
 	box_heigth = 2 * 0.06
 	box_width = 2 * 0.0932 + central_obscuration_diameter
+
+	if normalized:
+		spider_width /= pupil_diameter
+		box_heigth /= pupil_diameter
+		box_width /= pupil_diameter
+		pupil_diameter = 1.0
+
 	box1 = rectangular_aperture([box_width, box_heigth])
-	box2 = rectangular_aperture([box_heigth, box_width])
+	box2 = rectangular_aperture([box_heigth, box_width])		
 
 	if not with_spiders:
 		obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio)

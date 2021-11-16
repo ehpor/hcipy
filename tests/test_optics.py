@@ -660,7 +660,7 @@ def test_thin_lens():
 	pupil_diameter = 5e-2
 	num_steps = 20
 
-	grid = make_pupil_grid(513, 2 * pupil_diameter)
+	grid = make_pupil_grid(256, 2 * pupil_diameter)
 
 	focal_length = 300e-1
 	lens = ThinLens(focal_length, lambda x: 1.5, 1e-6)

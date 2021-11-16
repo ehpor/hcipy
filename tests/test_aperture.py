@@ -120,6 +120,14 @@ def test_magellan_aperture():
 
 	check_aperture_against_reference(make_magellan_aperture, 'magellan', 6.5, options)
 
+def test_hale_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_spiders': [(True, ''), (False, '_without_spiders')]
+	}
+
+	check_aperture_against_reference(make_hale_aperture, 'hale', 5.08, options)
+
 def test_luvoir_a_aperture():
 	check_against_reference(make_luvoir_a_aperture(), 15.0, 'luvoir_a/pupil')
 

@@ -173,7 +173,6 @@ def make_hale_aperture(normalized=False, with_spiders=True):
 	'''
 	pupil_diameter = 5.08 # meter
 	central_obscuration_diameter = 1.86 # meter
-
 	spider_width = 2 * 0.024 # meter
 	central_obscuration_ratio = central_obscuration_diameter / pupil_diameter
 
@@ -193,7 +192,7 @@ def make_hale_aperture(normalized=False, with_spiders=True):
 		obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio, num_spiders=4, spider_width=spider_width)
 		
 	def func(grid):
-		return Field(obstructed_aperture(grid) * (1-box1(grid)) * (1-box2(grid)), grid)
+		return Field(obstructed_aperture(grid) * (1 - box1(grid)) * (1 - box2(grid)), grid)
 
 	return func
 

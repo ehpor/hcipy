@@ -155,6 +155,54 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 		return obstructed_aperture(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
 	return func
 
+def make_hale_aperture(normalized=False, with_spiders=True):
+	'''Make the Hale Telescope aperture.
+
+	The size of the spiders and the attachements were based on the actual pupil measurements from Figure 2 of [Galicher2019]_
+
+	.. [Galicher2019] Raphael Galicher et al., "Minimization of non-common path aberrations at the Palomar telescope using a self-coherent camera." Astronomy & Astrophysics 631 (2019): A143.
+	
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 5.08 meters.
+	with_spiders: boolean
+		If this is False, the spiders will be left out.
+
+	Returns
+	-------
+	Field generator
+		The Hale Telescope aperture.
+	'''
+	pupil_diameter = 5.08 # meter
+	central_obscuration_diameter = 1.86 # meter
+	spider_width = 2 * 0.024 # meter
+	central_obscuration_ratio = central_obscuration_diameter / pupil_diameter
+
+	# Attachement points of the spiders at the central obscuration
+	box_heigth = 2 * 0.06
+	box_width = 2 * 0.0932 + central_obscuration_diameter
+
+	if normalized:
+		spider_width /= pupil_diameter
+		box_heigth /= pupil_diameter
+		box_width /= pupil_diameter
+		pupil_diameter = 1.0
+
+	box1 = rectangular_aperture([box_width, box_heigth])
+	box2 = rectangular_aperture([box_heigth, box_width])		
+
+	if not with_spiders:
+		obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio)
+	else:
+		obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio, num_spiders=4, spider_width=spider_width)
+		
+	def func(grid):
+		return Field(obstructed_aperture(grid) * (1 - box1(grid)) * (1 - box2(grid)), grid)
+
+	return func
+
 def make_keck_aperture():
 	pass
 

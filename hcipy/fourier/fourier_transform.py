@@ -76,17 +76,35 @@ class FourierTransform(object):
 
 		return A
 
-def _time_it(function, t_max=1, n_max=100):
+def _time_it_iterative(function, num_iterations):
 	import time
 
-	start = time.time()
-	times = []
-
-	while (time.time() < start + t_max) and (len(times) < n_max):
-		t1 = time.time()
+	start = time.perf_counter()
+	for _ in range(num_iterations):
 		function()
-		t2 = time.time()
-		times.append(t2 - t1)
+	end = time.perf_counter()
+
+	return (end - start) / num_iterations
+
+def _time_it(function, t_max=0.1, repeat_max=5):
+	num_iterations = 1
+
+	while True:
+		time_per_iteration = _time_it_iterative(function, num_iterations)
+
+		if time_per_iteration * num_iterations > t_max:
+			break
+		else:
+			num_iterations *= 2
+
+	# Shortcut if one iteration of the function itself takes longer than repeat_max * t_max.
+	if num_iterations == 1 and time_per_iteration > (repeat_max * t_max):
+		return time_per_iteration
+
+	times = [time_per_iteration]
+
+	for _ in range(repeat_max - 1):
+		times.append(_time_it_iterative(function, num_iterations))
 
 	return np.median(times)
 

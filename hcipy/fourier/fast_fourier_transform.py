@@ -90,24 +90,29 @@ def get_fft_parameters(fft_grid, input_grid):
 	if not fft_grid.is_regular:
 		raise ValueError('The fft grid is not regular and therefore cannot be an fft grid.')
 
-	epsilon = np.finfo(float).eps
-
 	q = (2 * np.pi / (input_grid.delta * input_grid.dims)) / fft_grid.delta
+
+	if np.any(q < 1):
+		raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} would be < 1.')
 
 	# Check that the calculated q corresponds to an integer zeropadding.
 	zeropadded_dims = q * input_grid.dims
 	if np.any(np.abs(zeropadded_dims - np.round(zeropadded_dims)) > 1e-10):
 		raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} does not correspond to an integer zeropadding.')
 
-	fov = (fft_grid.dims / (input_grid.dims * q)) * (1 + epsilon)
-	shift = fft_grid.zero - fft_grid.delta * (-fft_grid.dims / 2 + np.mod(fft_grid.dims, 2) * 0.5)
-
-	if np.any(q < 1):
-		raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} would be < 1.')
-
-	if np.any(fov > (1 + 2 * epsilon)):
+	# Check if fov would be < 1.
+	if np.any(fft_grid.dims > (zeropadded_dims + 0.5).astype('int')):
 		raise ValueError(f'fft_grid is not an FFT grid of input_grid: fov of {fov} would be > 1 .')
 
+	# Compute fov.
+	fov = (fft_grid.dims / (input_grid.dims * q))
+
+	# Correct fov for rounding errors (floating point errors would lead to a different dims).
+	dummy_fft_grid = make_fft_grid(input_grid, q, fov)
+	wrong_dims = fft_grid.dims != dummy_fft_grid.dims
+	fov[wrong_dims] = ((fft_grid.dims + 0.5) / (input_grid.dims * q))[wrong_dims]
+
+	shift = fft_grid.zero - fft_grid.delta * (-fft_grid.dims / 2 + np.mod(fft_grid.dims, 2) * 0.5)
 	return q, fov, shift
 
 def is_fft_grid(grid, input_grid):
@@ -202,8 +207,6 @@ class FastFourierTransform(FourierTransform):
 		If q < 1 or fov < 0 or fov > 1, both of which are impossible for an FFT to calculate.
 	'''
 	def __init__(self, input_grid, q=1, fov=1, shift=0, emulate_fftshifts=None):
-		epsilon = np.finfo(float).eps
-
 		# Check assumptions
 		if not input_grid.is_regular:
 			raise ValueError('The input_grid must be regular.')
@@ -212,8 +215,9 @@ class FastFourierTransform(FourierTransform):
 
 		if np.any(q < 1):
 			raise ValueError('The amount of zeropadding (q) must be larger than 1.')
-		if np.any(fov > (1 + 2 * epsilon)) or np.any(fov < 0):
-			raise ValueError('The amount of cropping (fov) must be between 0 and 1.')
+
+		if np.any(fov < 0):
+			raise ValueError('The amount of cropping (fov) must be positive.')
 
 		self.input_grid = input_grid
 
@@ -229,6 +233,9 @@ class FastFourierTransform(FourierTransform):
 
 		self.output_grid = make_fft_grid(input_grid, q, fov, shift)
 		self.internal_grid = make_fft_grid(input_grid, q, 1)
+
+		if np.any(self.output_grid.dims > self.internal_grid.dims):
+			raise ValueError('The amount of cropping (fov) must be smaller than 1.')
 
 		self.shape_out = self.output_grid.shape
 		self.internal_shape = self.internal_grid.shape

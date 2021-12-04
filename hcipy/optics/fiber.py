@@ -2,7 +2,7 @@ import numpy as np
 from .detector import Detector
 from .optical_element import OpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from .wavefront import Wavefront
-from ..mode_basis import ModeBasis, make_LP_modes
+from ..mode_basis import ModeBasis, make_lp_modes
 from ..field import Field
 
 class StepIndexFiber(AgnosticOpticalElement):
@@ -29,7 +29,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		monochromatic_V = self.V(wavelength)
 		instance_data.NA = self.evaluate_parameter(self._NA, input_grid, output_grid, wavelength)
-		instance_data.fiber_modes, instance_data.beta = make_LP_modes(input_grid, monochromatic_V, self.core_radius, return_betas=True)
+		instance_data.fiber_modes, instance_data.beta = make_lp_modes(input_grid, monochromatic_V, self.core_radius, return_betas=True)
 
 	def num_modes(self, wavelength):
 		'''The approximate amount of modes of the fiber.

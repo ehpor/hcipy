@@ -14,6 +14,6 @@ jobs:
     - name: Install dependencies
       run: pip install flake8 lintly pep8-naming
     - name: Lint with flake8
-      run: flake8 | lintly --no-post-status
+      run: flake8 | lintly --no-post-status --use-checks --commit-sha ${{ github.event.pull_request.head.sha }}
       env:
         LINTLY_API_KEY: ${{ secrets.GITHUB_TOKEN }}

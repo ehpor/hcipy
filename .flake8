@@ -1,0 +1,36 @@
+[flake8]
+ignore = E,W,F,N
+
+select =
+    E101
+    E128
+    E131
+    E201
+    E202
+    E203
+    E225
+    E226
+    E231
+    E241
+    E261
+    E262
+    E265
+    E271
+    W291
+    W292
+    W293
+    F401
+    F841
+    N801
+    N802
+    N804
+    N805
+
+exclude =
+    .git
+    __pycache__
+    doc
+    build
+    dist
+    .eggs
+    examples

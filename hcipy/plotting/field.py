@@ -134,7 +134,7 @@ def imshow_field(
 		ax.add_patch(patch)
 		im.set_clip_path(patch)
 
-		ax.images.append(im)
+		ax.add_image(im)
 
 	ax.set_xlim(min_x, max_x)
 	ax.set_ylim(min_y, max_y)

@@ -25,11 +25,14 @@ class SVD(object):
 		and `matrix` is not sparse, all modes will be computed. If this is None and
 		`matrix` is sparse, all but one mode will be computed.
 	'''
-	def __init__(self, matrix, num_modes=None, M=None):
-		if M is not None:
+	def __init__(self, matrix=None, num_modes=None, M=None):
+		if matrix is None:
 			import warnings
 			warnings.warn('Deprecated: use "matrix" instead of "M".', DeprecationWarning, stacklevel=2)
 			matrix = M
+
+		if matrix is None:
+			raise ValueError('You need to supply a matrix.')
 
 		self._matrix = matrix
 		self._num_modes = num_modes

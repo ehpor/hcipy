@@ -43,7 +43,6 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 	if fov == 1:
 		# When the full fov is retained, the pattern should be the same and energy should
 		# be conserved. We use different accuracy limits based on bit depth.
-		#print(np.max(patterns_match))
 		if np.dtype(dtype) == np.dtype('complex128'):
 			assert np.all(patterns_match < 1e-13)
 			assert np.all(np.abs(energy_ratios - 1) < 1e-14)
@@ -181,8 +180,10 @@ def test_mft_precomputations():
 
 	for precompute_matrices in [True, False]:
 		for allocate_intermediate in [True, False]:
-			mft = MatrixFourierTransform(input_grid, output_grid,
-				precompute_matrices=precompute_matrices, allocate_intermediate=allocate_intermediate)
+			mft = MatrixFourierTransform(
+				input_grid, output_grid,
+				precompute_matrices=precompute_matrices, allocate_intermediate=allocate_intermediate
+			)
 
 			mft.forward(input_grid.zeros())
 			mft.forward(input_grid.ones())

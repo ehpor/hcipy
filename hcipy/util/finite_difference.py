@@ -6,14 +6,14 @@ def generate_convolution_matrix(grid, kernel):
 	'''Create the matrix that applies a convolution with kernel.
 
 	The created matrix is a sparse matrix.
-	
+
 	Parameters
 	----------
 	grid : Grid
 		The :class:`Grid` for which the convolution matrix will be created.
 	kernel : Field or array_like
 		The convolution kernel
-	
+
 	Returns
 	-------
 	array_like
@@ -32,7 +32,7 @@ def generate_convolution_matrix(grid, kernel):
 			kernel = kernel.ravel()
 		elif kernel.ndim == 1:
 			raise NotImplementedError("Can not create a convolution kernel from a 1D array.")
-		
+
 	index_y, index_x = np.indices((num_y, num_x))
 	offsets = ((index_x - num_x // 2) + (index_y - num_y // 2) * grid.shape[0]).ravel()
 	convolution_matrix = sparse.diags(kernel, offsets, shape=(grid.size, grid.size))
@@ -40,12 +40,12 @@ def generate_convolution_matrix(grid, kernel):
 
 def make_laplacian_matrix(grid):
 	'''Make the Laplacian operator using the 5-point stencil approximation
-	
+
 	Parameters
 	----------
 	grid : Grid
 		The grid for which the derivative matrix is calculated.
-	
+
 	Returns
 	-------
 	array_like

@@ -1,7 +1,6 @@
 from hcipy import *
 import numpy as np
 import scipy
-import matplotlib.pyplot as plt
 
 def test_zernike_modes():
 	grid = make_pupil_grid(256)
@@ -15,11 +14,11 @@ def test_zernike_modes():
 		assert np.abs(np.std(m[aperture_mask]) - 1) < 2e-2
 
 	for i, m in enumerate(modes):
-		zn, zm = noll_to_zernike(i+1)
+		zn, zm = noll_to_zernike(i + 1)
 		assert np.allclose(m, zernike(zn, zm, grid=grid))
 
 def test_zernike_indices():
-	for i in range(1,500):
+	for i in range(1, 500):
 		n, m = noll_to_zernike(i)
 		assert i == zernike_to_noll(n, m)
 
@@ -38,17 +37,17 @@ def test_disk_harmonic_modes():
 		for i, m1 in enumerate(modes):
 			for j, m2 in enumerate(modes):
 				product = np.sum((m1 * m2)[aperture_mask])
-				assert np.abs(product - np.eye(num_modes)[i,j]) < 1e-2
+				assert np.abs(product - np.eye(num_modes)[i, j]) < 1e-2
 
-def test_LP_modes():
+def test_lp_modes():
 	grid = make_pupil_grid(128)
 
 	# Test for single-mode
-	modes = make_LP_modes(grid, 2.4, 0.1, return_betas=False)
+	modes = make_lp_modes(grid, 2.4, 0.1, return_betas=False)
 	assert len(modes) == 1
 
 	# Test orthogonality
-	modes = make_LP_modes(grid, 25, 0.1, return_betas=False)
+	modes = make_lp_modes(grid, 25, 0.1, return_betas=False)
 	for i, m1 in enumerate(modes):
 		for j, m2 in enumerate(modes):
 			product = np.real(np.sum(m1 * m2.conj() * grid.weights))
@@ -119,8 +118,6 @@ def test_gaussian_hermite_modes():
 
 def test_fourier_modes():
 	grid = make_pupil_grid(32)
-	aperture_mask = circular_aperture(1)(grid) > 0
-
 	fourier_grid = make_fft_grid(grid, 1, 0.2)
 
 	# Cosine modes

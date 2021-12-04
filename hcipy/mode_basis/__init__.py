@@ -11,6 +11,7 @@ __all__ = [
     'make_cosine_basis',
     'make_fourier_basis',
     'make_complex_fourier_basis',
+    'make_lp_modes',
     'make_LP_modes',
     'make_zernike_basis',
     'zernike',
@@ -30,5 +31,5 @@ from .gaussian_laguerre import *
 from .gaussian_pokes import *
 from .karhunen_loeve import *
 from .mode_basis import *
-from .LP_fiber_modes import *
+from .lp_fiber_modes import *
 from .zernike import *

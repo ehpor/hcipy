@@ -29,7 +29,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 		self._make_stencils()
 		self._make_covariance_matrices()
-		self._make_AB_matrices()
+		self._make_ab_matrices()
 		self._make_initial_phase_screen()
 
 		self.center = np.zeros(2)
@@ -40,7 +40,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 	def _recalculate_matrices(self):
 		if self._initialized:
 			self._make_covariance_matrices()
-			self._make_AB_matrices()
+			self._make_ab_matrices()
 
 	def _make_stencils(self):
 		# Vertical
@@ -48,10 +48,10 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		self.new_grid_bottom = CartesianGrid(RegularCoords(self.input_grid.delta, [self.input_grid.dims[0], 1], zero))
 
 		self.stencil_bottom = Field(np.zeros(self.input_grid.size, dtype='bool'), self.input_grid).shaped
-		self.stencil_bottom[:self.stencil_length,:] = True
+		self.stencil_bottom[:self.stencil_length, :] = True
 
 		for i, n in enumerate(np.random.geometric(0.5, self.input_grid.dims[0])):
-			self.stencil_bottom[(n + self.stencil_length - 1) % self.input_grid.dims[1],i] = True
+			self.stencil_bottom[(n + self.stencil_length - 1) % self.input_grid.dims[1], i] = True
 
 		self.stencil_bottom = self.stencil_bottom.ravel()
 		self.num_stencils_vertical = np.sum(self.stencil_bottom)
@@ -61,10 +61,10 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		self.new_grid_left = CartesianGrid(RegularCoords(self.input_grid.delta, [1, self.input_grid.dims[1]], zero))
 
 		self.stencil_left = Field(np.zeros(self.input_grid.size, dtype='bool'), self.input_grid).shaped
-		self.stencil_left[:,:self.stencil_length] = True
+		self.stencil_left[:, :self.stencil_length] = True
 
 		for i, n in enumerate(np.random.geometric(0.5, self.input_grid.dims[1])):
-			self.stencil_left[i,(n + self.stencil_length - 1) % self.input_grid.dims[0]] = True
+			self.stencil_left[i, (n + self.stencil_length - 1) % self.input_grid.dims[0]] = True
 
 		self.stencil_left = self.stencil_left.ravel()
 		self.num_stencils_horizontal = np.sum(self.stencil_left)
@@ -92,10 +92,10 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		n = self.new_grid_left.size + self.num_stencils_horizontal
 		self.cov_matrix_horizontal = phase_covariance(separations).reshape((n, n))
 
-	def _make_AB_matrices(self):
+	def _make_ab_matrices(self):
 		# Vertical
 		n = self.num_stencils_vertical
-		cov_zz = self.cov_matrix_vertical[:n,:n]
+		cov_zz = self.cov_matrix_vertical[:n, :n]
 		cov_xz = self.cov_matrix_vertical[n:, :n]
 		cov_zx = self.cov_matrix_vertical[:n, n:]
 		cov_xx = self.cov_matrix_vertical[n:, n:]
@@ -114,7 +114,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 		# Horizontal
 		n = self.num_stencils_horizontal
-		cov_zz = self.cov_matrix_horizontal[:n,:n]
+		cov_zz = self.cov_matrix_horizontal[:n, :n]
 		cov_xz = self.cov_matrix_horizontal[n:, :n]
 		cov_zx = self.cov_matrix_horizontal[:n, n:]
 		cov_xx = self.cov_matrix_horizontal[n:, n:]
@@ -162,14 +162,14 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		screen = screen.shaped
 
 		if horizontal:
-			screen = np.hstack((new_slice[:,np.newaxis], screen[:,:-1]))
+			screen = np.hstack((new_slice[:, np.newaxis], screen[:, :-1]))
 		else:
-			screen = np.vstack((new_slice[np.newaxis,:], screen[:-1,:]))
+			screen = np.vstack((new_slice[np.newaxis, :], screen[:-1, :]))
 
 		screen = Field(screen, self.input_grid)
 
 		if flipped:
-			self._achromatic_screen = screen[::-1,::-1].ravel()
+			self._achromatic_screen = screen[::-1, ::-1].ravel()
 		else:
 			self._achromatic_screen = screen.ravel()
 
@@ -220,17 +220,17 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 				warnings.filterwarnings('ignore', message='The behaviour of affine_transform')
 				warnings.filterwarnings('ignore', message='The behavior of affine_transform')
 
-				screen = affine_transform(ps, np.array([1,1]), (sub_delta / self.input_grid.delta)[::-1], mode='nearest', order=5)
+				screen = affine_transform(ps, np.array([1, 1]), (sub_delta / self.input_grid.delta)[::-1], mode='nearest', order=5)
 				self._shifted_achromatic_screen = Field(screen.ravel(), self._achromatic_screen.grid)
 		else:
 			self._shifted_achromatic_screen = self._achromatic_screen
 
 	@property
-	def Cn_squared(self):
+	def Cn_squared(self):  # noqa: N802
 		return self._Cn_squared
 
 	@Cn_squared.setter
-	def Cn_squared(self, Cn_squared):
+	def Cn_squared(self, Cn_squared):  # noqa: N802
 		self._Cn_squared = Cn_squared
 
 	@property
@@ -238,7 +238,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		return self._L0
 
 	@outer_scale.setter
-	def L0(self, L0):
+	def L0(self, L0):  # noqa: N802
 		self._L0 = L0
 
 		self._recalculate_matrices()

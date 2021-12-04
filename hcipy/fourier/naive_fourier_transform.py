@@ -45,8 +45,8 @@ class NaiveFourierTransform(FourierTransform):
 		self.input_grid = input_grid
 		self.output_grid = output_grid
 
-		self._T_forward = None
-		self._T_backward = None
+		self._matrix_forward = None
+		self._matrix_backward = None
 
 		if precompute_matrices is None:
 			precompute_matrices = Configuration().fourier.nft.precompute_matrices
@@ -56,28 +56,28 @@ class NaiveFourierTransform(FourierTransform):
 		self.coords_out = np.array(self.output_grid.as_('cartesian').coords)
 
 	@property
-	def T_forward(self):
+	def matrix_forward(self):
 		'''The cached forward propagation matrix.
 		'''
 		if not self.precompute_matrices:
 			return self.get_transformation_matrix_forward()
 
-		if self._T_forward is None:
-			self._T_forward = self.get_transformation_matrix_forward()
+		if self._matrix_forward is None:
+			self._matrix_forward = self.get_transformation_matrix_forward()
 
-		return self._T_forward
+		return self._matrix_forward
 
 	@property
-	def T_backward(self):
+	def matrix_backward(self):
 		'''The cached backward propagation matrix.
 		'''
 		if not self.precompute_matrices:
 			return self.get_transformation_matrix_backward()
 
-		if self._T_backward is None:
-			self._T_backward = self.get_transformation_matrix_backward()
+		if self._matrix_backward is None:
+			self._matrix_backward = self.get_transformation_matrix_backward()
 
-		return self._T_backward
+		return self._matrix_backward
 
 	@multiplex_for_tensor_fields
 	def forward(self, field):
@@ -94,7 +94,7 @@ class NaiveFourierTransform(FourierTransform):
 			The Fourier transform of the field.
 		'''
 		if self.precompute_matrices:
-			res = self.T_forward.dot(field.ravel())
+			res = self.matrix_forward.dot(field.ravel())
 		else:
 			res = np.array([(field * self.input_grid.weights).dot(np.exp(-1j * np.dot(p, self.coords_in))) for p in self.coords_out.T])
 
@@ -116,7 +116,7 @@ class NaiveFourierTransform(FourierTransform):
 			The inverse Fourier transform of the field.
 		'''
 		if self.precompute_matrices:
-			res = self.T_backward.dot(field.ravel())
+			res = self.matrix_backward.dot(field.ravel())
 		else:
 			res = np.array([(field * self.output_grid.weights).dot(np.exp(1j * np.dot(p, self.coords_out))) for p in self.coords_in.T])
 			res /= (2 * np.pi)**self.input_grid.ndim

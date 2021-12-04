@@ -95,9 +95,11 @@ class Field(np.ndarray):
 		tuple
 			The reduced version of the Field.
 		'''
-		return (_field_reconstruct,
+		return (
+			_field_reconstruct,
 			(self.__class__, np.ndarray, (0,), 'b',),
-			self.__getstate__())
+			self.__getstate__()
+		)
 
 	@property
 	def tensor_order(self):

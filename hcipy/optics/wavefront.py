@@ -101,7 +101,7 @@ class Wavefront(object):
 
 	@wavenumber.setter
 	def wavenumber(self, wavenumber):
-		self.wavelength = 2 * np.pi / wavenumber
+		self.wavelength = 2 * npf.pi / wavenumber
 
 	@property
 	def grid(self):
@@ -110,7 +110,7 @@ class Wavefront(object):
 		return self.electric_field.grid
 
 	@property
-	def I(self):
+	def I(self):  # noqa: N802
 		'''The I-component of the Stokes vector as function of 2D position
 		in the plane.
 		'''
@@ -135,13 +135,15 @@ class Wavefront(object):
 			M14 = '2 * (-real(x) * imag(y) + imag(x) * real(y) - real(z) * imag(w) + imag(z) * real(w))'
 
 			res = '0.5 * ((' + M11 + ') * a + (' + M12 + ') * b + (' + M13 + ') * c +  (' + M14 + ') * d)'
-			return Field(ne.evaluate(res), self.electric_field.grid)
+			local_dict = {'x': x, 'y': y, 'z': z, 'w': w, 'a': a, 'b': b, 'c': c, 'd': d}
+
+			return Field(ne.evaluate(res, local_dict=local_dict), self.electric_field.grid)
 		else:
 			# This is a vector field.
 			return np.sum(np.abs(self.electric_field)**2, axis=0)
 
 	@property
-	def Q(self):
+	def Q(self):  # noqa: N802
 		'''The Q-component of the Stokes vector as function of 2D position
 		in the plane.
 		'''
@@ -163,13 +165,15 @@ class Wavefront(object):
 			M24 = '2 * (-real(x) * imag(y) + imag(x) * real(y) + real(z) * imag(w) - imag(z) * real(w))'
 
 			res = '0.5 * ((' + M21 + ') * a + (' + M22 + ') * b + (' + M23 + ') * c +  (' + M24 + ') * d)'
-			return Field(ne.evaluate(res), self.electric_field.grid)
+			local_dict = {'x': x, 'y': y, 'z': z, 'w': w, 'a': a, 'b': b, 'c': c, 'd': d}
+
+			return Field(ne.evaluate(res, local_dict=local_dict), self.electric_field.grid)
 		else:
 			# This is a vector field.
-			return np.abs(self.electric_field[0,:])**2 - np.abs(self.electric_field[1,:])**2
+			return np.abs(self.electric_field[0, :])**2 - np.abs(self.electric_field[1, :])**2
 
 	@property
-	def U(self):
+	def U(self):  # noqa: N802
 		'''The U-component of the Stokes vector as function of 2D position
 		in the plane.
 		'''
@@ -191,13 +195,15 @@ class Wavefront(object):
 			M34 = '2 * (imag(x) * real(w) - real(x) * imag(w) + real(y) * imag(z) - imag(y) * real(z))'
 
 			res = '0.5 * ((' + M31 + ') * a + (' + M32 + ') * b + (' + M33 + ') * c +  (' + M34 + ') * d)'
-			return Field(ne.evaluate(res), self.electric_field.grid)
+			local_dict = {'x': x, 'y': y, 'z': z, 'w': w, 'a': a, 'b': b, 'c': c, 'd': d}
+
+			return Field(ne.evaluate(res, local_dict=local_dict), self.electric_field.grid)
 		else:
 			# This is a vector field.
-			return 2 * np.real(self.electric_field[0,:] * self.electric_field[1,:].conj())
+			return 2 * np.real(self.electric_field[0, :] * self.electric_field[1, :].conj())
 
 	@property
-	def V(self):
+	def V(self):  # noqa: N802
 		'''The V-component of the Stokes vector as function of 2D position
 		in the plane.
 		'''
@@ -219,10 +225,11 @@ class Wavefront(object):
 			M44 = '2 * (real(x) * real(w) + imag(x) * imag(w) - real(y) * real(z) - imag(y) * imag(z))'
 
 			res = '0.5 * ((' + M41 + ') * a + (' + M42 + ') * b + (' + M43 + ') * c +  (' + M44 + ') * d)'
-			return Field(ne.evaluate(res), self.electric_field.grid)
+			local_dict = {'x': x, 'y': y, 'z': z, 'w': w, 'a': a, 'b': b, 'c': c, 'd': d}
+			return Field(ne.evaluate(res, local_dict=local_dict), self.electric_field.grid)
 		else:
 			# This is a vector field.
-			return -2 * np.imag(self.electric_field[0,:] * self.electric_field[1,:].conj())
+			return -2 * np.imag(self.electric_field[0, :] * self.electric_field[1, :].conj())
 
 	@property
 	def stokes_vector(self):
@@ -230,7 +237,7 @@ class Wavefront(object):
 		'''
 		if self.is_scalar:
 			# This is a scalar field and thus we return an unpolarized Stokes vector.
-			stokes_vector = Field(np.zeros((4,self.grid.size)), self.grid)
+			stokes_vector = Field(np.zeros((4, self.grid.size)), self.grid)
 			stokes_vector[0, :] = np.abs(self.electric_field)**2
 
 			return stokes_vector
@@ -241,7 +248,7 @@ class Wavefront(object):
 			return field_dot(mueller_matrix, self._input_stokes_vector)
 		else:
 			# This is a vector field and thus we return a fully polarized Stokes vector.
-			stokes_vector = Field(np.zeros((4,self.grid.size)), self.grid)
+			stokes_vector = Field(np.zeros((4, self.grid.size)), self.grid)
 
 			stokes_vector[0, :] = self.I
 			stokes_vector[1, :] = self.Q

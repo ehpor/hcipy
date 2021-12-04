@@ -2,7 +2,7 @@ from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
 from ..aperture import circular_aperture
 from ..optics import SurfaceApodizer, Apodizer, TipTiltMirror
-from ..field import make_pupil_grid, make_focal_grid, Field, CartesianGrid, UnstructuredCoords
+from ..field import make_pupil_grid, Field, CartesianGrid, UnstructuredCoords
 
 import numpy as np
 
@@ -94,8 +94,9 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		# Create the intermediate focal grid
 		# Oversampling is necessary to see all frequencies in the output wavefront sensor plane
 		# and we require at least 2 pixels per spatial resolution element for the default case.
-		qmin = max( (output_grid.delta * output_grid.dims) / (input_grid.delta * input_grid.dims) )
+		qmin = max((output_grid.delta * output_grid.dims) / (input_grid.delta * input_grid.dims))
 		qmin = np.ceil(max(qmin, 2))
+
 		if q is None:
 			q = qmin
 		elif q < qmin:
@@ -201,9 +202,9 @@ class PyramidWavefrontSensorEstimator(WavefrontSensorEstimator):
 
 		# Subpupils
 		I_a = image[:sub_shape[0], :sub_shape[1]]
-		I_b = image[sub_shape[0]:2*sub_shape[0], :sub_shape[1]]
-		I_c = image[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
-		I_d = image[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
+		I_b = image[sub_shape[0]:2 * sub_shape[0], :sub_shape[1]]
+		I_c = image[sub_shape[0]:2 * sub_shape[0], sub_shape[1]:2 * sub_shape[1]]
+		I_d = image[:sub_shape[0], sub_shape[1]:2 * sub_shape[1]]
 
 		norm = I_a + I_b + I_c + I_d
 		inv_norm = np.zeros_like(norm)

@@ -63,7 +63,7 @@ def elliptical_aperture(diameters, center=None, angle=0):
 	# Pre-calculate the minor and major axes dimensions after rotation
 	major_axis = diameters[0] / 2
 	minor_axis = diameters[1] / 2
-	
+
 	cos_angle_major = np.cos(angle) / major_axis
 	cos_angle_minor = np.cos(angle) / minor_axis
 
@@ -298,7 +298,7 @@ def make_spider_infinite(p, angle, spider_width):
 	spider_angle = np.radians(angle)
 
 	def func(grid):
-		x,y = grid.shifted(p).coords
+		x, y = grid.shifted(p).coords
 
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
@@ -333,7 +333,7 @@ def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,
 		pupil_inner = circular_aperture(central_obscuration_diameter)(grid)
 		spiders = 1
 
-		spider_angles = np.linspace(0, 2*np.pi, num_spiders, endpoint=False)
+		spider_angles = np.linspace(0, 2 * np.pi, num_spiders, endpoint=False)
 
 		for angle in spider_angles:
 			x = pupil_diameter * np.cos(angle)

@@ -91,7 +91,7 @@ def field_einsum(subscripts, *operands, **kwargs):
 	unused_index = [a for a in string.ascii_lowercase if a not in subscripts][0]
 
 	# Add the field dimension to the input field operands.
-	ss = [s + unused_index if is_field[i] else s for i,s in enumerate(ss)]
+	ss = [s + unused_index if is_field[i] else s for i, s in enumerate(ss)]
 
 	# Recombine all operands into the final subscripts
 	if len(splitted_string) == 2:
@@ -370,18 +370,17 @@ def field_conjugate_transpose(a):
 
 	# first we test if it's a field
 	if hasattr(a, 'tensor_order'):
-
-	    # if its a field, it must have a rank of 2
+		# if its a field, it must have a rank of 2
 		if a.tensor_order != 2:
 			raise ValueError('Need a tensor field of rank 2.')
 
-		return Field(np.swapaxes(a.conj(),0,1), a.grid)
+		return Field(np.swapaxes(a.conj(), 0, 1), a.grid)
 	else:
 		# if its an array, it must be two dimensional
 		if len(a.shape) != 2:
 			raise ValueError('Need a two dimensional array.')
 
-		return np.swapaxes(a.conj(),0,1)
+		return np.swapaxes(a.conj(), 0, 1)
 
 def field_transpose(a):
 	'''Performs the transpose of a rank 2 tensor field or two dimensional array.
@@ -398,18 +397,17 @@ def field_transpose(a):
 	'''
 	# first we test if it's a field
 	if hasattr(a, 'tensor_order'):
-
 		# if its a field, it must have a rank of 2
 		if a.tensor_order != 2:
 			raise ValueError('Need a tensor field of rank 2.')
 
-		return Field(np.swapaxes(a,0,1), a.grid)
+		return Field(np.swapaxes(a, 0, 1), a.grid)
 	else:
 		# if its an array, it must be two dimensional
 		if len(a.shape) != 2:
 			raise ValueError('Need a two dimensional array.')
 
-		return np.swapaxes(a,0,1)
+		return np.swapaxes(a, 0, 1)
 
 def field_determinant(a):
 	'''Calculates the determinant of a tensor field.
@@ -433,7 +431,7 @@ def field_determinant(a):
 	if not np.all(a.tensor_shape == a.tensor_shape[0]):
 		raise ValueError('Need square matrix for determinant.')
 
-	#First we need to swap the axes in order to use np.linalg.det
+	# First we need to swap the axes in order to use np.linalg.det
 	Temp = np.swapaxes(a, 0, 2)
 
 	return Field(np.linalg.det(Temp), a.grid)
@@ -454,13 +452,13 @@ def field_adjoint(a):
 	if a.tensor_order != 2:
 		raise ValueError('Only tensor fields of order 2 can be inverted.')
 
-	#Calculating the determinant.
+	# Calculating the determinant.
 	determinant = field_determinant(a)
 
 	if np.any(np.isclose(determinant, 0)):
 		raise ValueError('Matrix is non-invertible due to zero determinant.')
 
-	return Field(determinant[np.newaxis,np.newaxis,:] * field_inv(a), a.grid)
+	return Field(determinant[np.newaxis, np.newaxis, :] * field_inv(a), a.grid)
 
 def field_cross(a, b):
 	'''Calculates the cross product of two vector fields.

@@ -36,11 +36,11 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
 		self._achromatic_screen = None
 
 	@property
-	def Cn_squared(self):
+	def Cn_squared(self):  # noqa: N802
 		return self._Cn_squared
 
 	@Cn_squared.setter
-	def Cn_squared(self, Cn_squared):
+	def Cn_squared(self, Cn_squared):  # noqa: N802
 		self._Cn_squared = Cn_squared
 		self._dirty = True
 
@@ -49,6 +49,6 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
 		return self._L0
 
 	@outer_scale.setter
-	def L0(self, L0):
+	def L0(self, L0):  # noqa: N802
 		self._L0 = L0
 		self._dirty = True

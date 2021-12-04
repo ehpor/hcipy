@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import os
 import pytest
 import shutil
-from subprocess import Popen
 
 def is_ffmpeg_installed():
 	ffmpeg_path = Configuration().plotting.ffmpeg_path
@@ -54,7 +53,7 @@ def test_ffmpeg_writer():
 
 	check_animation(mw)
 
-	html = mw._repr_html_()
+	assert mw._repr_html_()
 
 	assert os.path.isfile('test.mp4')
 	os.remove('test.mp4')

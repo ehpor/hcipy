@@ -48,7 +48,7 @@ def binned_profile(y, x, bins=20, statistic='mean'):
 			raise RuntimeError('The number of bins should be positive.')
 
 		# Equally space the bins.
-		bins = np.linspace(np.min(x), np.max(x), bins+1)
+		bins = np.linspace(np.min(x), np.max(x), bins + 1)
 
 	bin_centers = (bins[1:] + bins[:-1]) / 2
 	num_bins = len(bin_centers)

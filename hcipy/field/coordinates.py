@@ -68,12 +68,12 @@ class Coords(object):
 	def __div__(self, f):
 		'''Divide each coordinate with `f` separately and return the result.
 		'''
-		return self * (1./f)
+		return self * (1 / f)
 
 	def __idiv__(self, f):
 		'''Divide each coordinate with `f` separately in-place.
 		'''
-		self *= (1./f)
+		self *= 1 / f
 		return self
 
 	def __getitem__(self, i):
@@ -350,14 +350,14 @@ class RegularCoords(Coords):
 			self.dims = np.array(dims).astype('int')
 
 		if np.isscalar(delta):
-			self.delta = np.array([delta]*len(self.dims))
+			self.delta = np.array([delta] * len(self.dims))
 		else:
 			self.delta = np.array(delta)
 
 		if zero is None:
 			self.zero = np.zeros(len(self.dims))
 		elif np.isscalar(zero):
-			self.zero = np.array([zero]*len(self.dims))
+			self.zero = np.array([zero] * len(self.dims))
 		else:
 			self.zero = np.array(zero)
 

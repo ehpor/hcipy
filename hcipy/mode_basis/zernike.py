@@ -78,7 +78,7 @@ def zernike_to_noll(n, m):
 	Nn = (n + 1) * (n + 2) // 2 + 1
 
 	# Brute force search
-	for j in range(i, i+Nn):
+	for j in range(i, i + Nn):
 		nn, mm = noll_to_zernike(j)
 		if nn == n and mm == m:
 			return j

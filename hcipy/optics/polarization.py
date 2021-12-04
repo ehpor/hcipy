@@ -17,7 +17,7 @@ def rotation_matrix(angle):
 	ndarray
 		The rotation matrix.
 	'''
-	return np.array([[np.cos(angle),  np.sin(angle)],[-np.sin(angle), np.cos(angle)]])
+	return np.array([[np.cos(angle), np.sin(angle)], [-np.sin(angle), np.cos(angle)]])
 
 class JonesMatrixOpticalElement(AgnosticOpticalElement):
 	'''A general Jones Matrix.
@@ -283,7 +283,7 @@ class LinearPolarizer(JonesMatrixOpticalElement):
 			c = np.cos(angle)
 			s = np.sin(angle)
 
-			return np.array([[c**2, c * s],[c * s, s**2]])
+			return np.array([[c**2, c * s], [c * s, s**2]])
 
 		return self.construct_function(jones, self.polarization_angle)
 
@@ -416,6 +416,6 @@ class CircularPolarizingBeamSplitter(OpticalElement):
 		'''Returns the Mueller matrices of the two Jones matrices.
 		'''
 		qwp_mueller = self.quarter_wave_plate.mueller_matrix
-		lin_pol_bs_mueller_1 , lin_pol_bs_mueller_2 = self.linear_polarizing_beam_splitter.mueller_matrices
+		lin_pol_bs_mueller_1, lin_pol_bs_mueller_2 = self.linear_polarizing_beam_splitter.mueller_matrices
 
 		return np.dot(lin_pol_bs_mueller_1, qwp_mueller), np.dot(lin_pol_bs_mueller_2, qwp_mueller)

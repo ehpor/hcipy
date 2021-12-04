@@ -25,7 +25,7 @@ def _get_rotation_matrix(ndim, angle, axis=None):
 			raise ValueError('The axis must be a 3-vector.')
 		axis /= np.sqrt(axis.dot(axis))
 
-		K = np.array([[0, -axis[2], axis[1]],[axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
+		K = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
 		return np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * K.dot(K)
 
 class CartesianGrid(Grid):

@@ -163,10 +163,10 @@ def _numexpr_grid_shift(shift, grid, out=None):
 	coords = grid.coords
 
 	for i in range(grid.ndim):
-		variables['a%d' % i] = shift[i]
-		variables['b%d' % i] = coords[i]
+		variables[f'a{i}'] = shift[i]
+		variables[f'b{i}'] = coords[i]
 
-		command.append('a%d * b%d' % (i,i))
+		command.append(f'a{i} * b{i}')
 
 	command = 'exp(1j * (' + '+'.join(command) + '))'
 	return ne.evaluate(command, local_dict=variables, out=out)

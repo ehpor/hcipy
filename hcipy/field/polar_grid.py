@@ -41,7 +41,7 @@ class PolarGrid(Grid):
 		'''Shift the grid in-place.
 
 		.. caution::
-		   All structure in the coordinates will be destroyed.
+			All structure in the coordinates will be destroyed.
 
 		Parameters
 		----------
@@ -62,7 +62,7 @@ class PolarGrid(Grid):
 		'''A shifted copy of this grid.
 
 		.. caution::
-		   The returned grid is a Cartesian grid.
+			The returned grid is a Cartesian grid.
 
 		Parameters
 		----------

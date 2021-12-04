@@ -3,7 +3,6 @@ import numpy as np
 from math import *
 import mpmath
 import scipy
-import matplotlib.pyplot as plt
 
 import pytest
 
@@ -30,23 +29,22 @@ def zernike_variance_von_karman(n, m, R, k0, Cn_squared, wavelength):
 	scalar
 		The variance of the specific Zernike mode.
 	'''
-	A = 0.00969 * (2*np.pi / wavelength)**2 * Cn_squared
-	coeffs_all = (-1)**(n - m) * 2 * (2 * np.pi)**(11./3) * (n + 1) * A * R**(5./3) / (sqrt(np.pi) * np.sin(np.pi * (n + 1./6)))
+	A = 0.00969 * (2 * np.pi / wavelength)**2 * Cn_squared
+	coeffs_all = (-1)**(n - m) * 2 * (2 * np.pi)**(11 / 3) * (n + 1) * A * R**(5 / 3) / (sqrt(np.pi) * np.sin(np.pi * (n + 1 / 6)))
 
-	term11 = mpmath.hyper([n + (3./2), n + 2, n + 1],[n + (1./6), n + 2, n + 2, 2 * n + 3], (2*np.pi * R * k0)**2)
-	term12 = sqrt(np.pi) * (2*np.pi * R * k0)**(2 * n - 5./3) * scipy.special.gamma(n + 1) / (2**(2 * n + 3) * scipy.special.gamma(11./6) * scipy.special.gamma(n + 1./6) * scipy.special.gamma(n + 2)**2)
-	term21 = -1 * scipy.special.gamma(7./3) * scipy.special.gamma(17./6) / (2 * scipy.special.gamma(-n + 11./6) * scipy.special.gamma(17./6)**2 * scipy.special.gamma(n + 23./6))
-	term22 = mpmath.hyper([11./6, 7./3, 17./6], [-n + 11./6, 17./6, 17./6, n + 23./6], (2*np.pi * R * k0)**2)
+	term11 = mpmath.hyper([n + (3 / 2), n + 2, n + 1], [n + (1 / 6), n + 2, n + 2, 2 * n + 3], (2 * np.pi * R * k0)**2)
+	term12 = sqrt(np.pi) * (2 * np.pi * R * k0)**(2 * n - 5 / 3) * scipy.special.gamma(n + 1) / (2**(2 * n + 3) * scipy.special.gamma(11 / 6) * scipy.special.gamma(n + 1 / 6) * scipy.special.gamma(n + 2)**2)
+	term21 = -1 * scipy.special.gamma(7 / 3) * scipy.special.gamma(17 / 6) / (2 * scipy.special.gamma(-n + 11 / 6) * scipy.special.gamma(17 / 6)**2 * scipy.special.gamma(n + 23 / 6))
+	term22 = mpmath.hyper([11 / 6, 7 / 3, 17 / 6], [-n + 11 / 6, 17 / 6, 17 / 6, n + 23 / 6], (2 * np.pi * R * k0)**2)
 
 	return coeffs_all * (term11 * term12 + term21 * term22)
 
 def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propagate_phase_screen):
-	velocity = 10.0 # meters/sec
+	velocity = 10.0  # meters/sec
 	num_modes = 1000
 
 	pupil_grid = make_pupil_grid(64, D_tel)
 	aperture = circular_aperture(D_tel)(pupil_grid)
-	wf = Wavefront(aperture, wavelength)
 
 	Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
 	layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, [velocity / np.sqrt(2), velocity / np.sqrt(2)], use_interpolation=False)
@@ -60,7 +58,7 @@ def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propag
 			layer.t = np.sqrt(2) * D_tel / velocity
 
 		phase = layer.phase_for(wavelength)
-		total_variance.append(np.var(phase[aperture>0]))
+		total_variance.append(np.var(phase[aperture > 0]))
 
 	variance_measured = np.mean(total_variance)
 
@@ -72,11 +70,10 @@ def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propag
 	assert (variance_measured / variance_theory - 1) < 0.1
 
 def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, propagate_phase_screen):
-	velocity = 10.0 # meters/sec
+	velocity = 10.0  # meters/sec
 	num_modes = 50
 
 	pupil_grid = make_pupil_grid(128, D_tel)
-	aperture = circular_aperture(D_tel)(pupil_grid)
 
 	Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
 	layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, [velocity / np.sqrt(2), velocity / np.sqrt(2)], use_interpolation=False)
@@ -199,7 +196,7 @@ def test_multi_layer_atmosphere():
 
 	# Trying to get the phase for a model with scintillation should throw an exception
 	with pytest.raises(ValueError):
-		phase = atmospheric_model.phase_for(wavelength)
+		atmospheric_model.phase_for(wavelength)
 
 	# Evolving a wavefront should modify the underlying layers
 	atmospheric_model.evolve_until(1)
@@ -226,7 +223,7 @@ def test_las_campanas_atmosphere():
 
 def test_fried_parameter_seeing():
 	for i in range(10):
-		seeing = np.random.uniform(0.5, 2) # arcsec
+		seeing = np.random.uniform(0.5, 2)  # arcsec
 		wavelength = np.random.uniform(500e-9, 800e-9)
 
 		fried_parameter = seeing_to_fried_parameter(seeing, wavelength)

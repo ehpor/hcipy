@@ -174,7 +174,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 
 		# Make all the optical elements
 		self.filter_size = self.num_airy * wavelength_0 / D
-		focal_plane_mask = optical_differentiation_surface(self.filter_size, amplitude_filter, separation * np.sqrt(2), wavelength_0, refractive_index, orientation=np.pi/4)
+		focal_plane_mask = optical_differentiation_surface(self.filter_size, amplitude_filter, separation * np.sqrt(2), wavelength_0, refractive_index, orientation=np.pi / 4)
 		self.focal_mask = focal_plane_mask(self.focal_grid)
 
 		# Make the propagators
@@ -263,15 +263,15 @@ class OpticalDifferentiationWavefrontSensorEstimator(WavefrontSensorEstimator):
 
 		# Subpupils
 		I_a = image[:sub_shape[0], :sub_shape[1]]
-		I_b = image[sub_shape[0]:2*sub_shape[0], :sub_shape[1]]
-		I_c = image[sub_shape[0]:2*sub_shape[0], sub_shape[1]:2*sub_shape[1]]
-		I_d = image[:sub_shape[0], sub_shape[1]:2*sub_shape[1]]
+		I_b = image[sub_shape[0]:2 * sub_shape[0], :sub_shape[1]]
+		I_c = image[sub_shape[0]:2 * sub_shape[0], sub_shape[1]:2 * sub_shape[1]]
+		I_d = image[:sub_shape[0], sub_shape[1]:2 * sub_shape[1]]
 
 		I_x = (I_a - I_c) / (I_a + I_c)
 		I_y = (I_b - I_d) / (I_b + I_d)
 
-		I_x = I_x.ravel()[self.pupil_mask>0]
-		I_y = I_y.ravel()[self.pupil_mask>0]
+		I_x = I_x.ravel()[self.pupil_mask > 0]
+		I_y = I_y.ravel()[self.pupil_mask > 0]
 
 		slopes = np.vstack((I_x, I_y))
 		return slopes

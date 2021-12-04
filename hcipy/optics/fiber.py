@@ -37,7 +37,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 		V = self.V(wavelength)
 		return V**2 / 2
 
-	def V(self, wavelength):
+	def V(self, wavelength):  # noqa: N802
 		'''The normalized frequency parameter for step-index fibers.
 		'''
 		return 2 * np.pi / wavelength * self.core_radius * self.NA
@@ -65,15 +65,17 @@ class StepIndexFiber(AgnosticOpticalElement):
 		self.clear_cache()
 
 	@property
-	def NA(self):
+	def NA(self):  # noqa: N802
 		'''The numerical aperture of this fiber.
 		'''
 		return self._NA
 
 	@NA.setter
-	def NA(self, NA):
+	def NA(self, NA):  # noqa: N802
 		self._NA = NA
 		self.clear_cache()
+
+	numerical_aperture = NA
 
 	def get_input_grid(self, output_grid, wavelength):
 		return output_grid

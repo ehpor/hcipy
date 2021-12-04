@@ -82,7 +82,7 @@ def test_hexagonal_segmented_aperture():
 		'num_rings': [(3, '_3rings'), (5, '_5rings')],
 		'segment_flat_to_flat': [(0.04, '_smallsegment'), (0.07, '_largesegment')],
 		'gap_size': [(0.01, '_smallgap'), (0.02, '_largegap')],
-		'starting_ring': [(0, '_withcenter'),  (2, '_withoutcenter')]
+		'starting_ring': [(0, '_withcenter'), (2, '_withoutcenter')]
 	}
 
 	check_aperture_against_reference(make_hexagonal_segmented_aperture, 'hexagonal_segmented', 1, options, segmented=True)
@@ -107,10 +107,10 @@ def test_vlt_aperture():
 
 	for telescope in ['ut1', 'ut2', 'ut3']:
 		with pytest.warns(UserWarning, match='Using the M3 cover on a telescope other than UT4 is not realistic.'):
-			aper = make_vlt_aperture(telescope=telescope, with_M3_cover=True)
+			make_vlt_aperture(telescope=telescope, with_M3_cover=True)
 
 	with pytest.raises(ValueError):
-		aper = make_vlt_aperture(telescope='nonexistent_vlt_telescope')
+		make_vlt_aperture(telescope='nonexistent_vlt_telescope')
 
 def test_magellan_aperture():
 	options = {
@@ -191,7 +191,7 @@ def test_elt_aperture():
 	}
 
 	check_aperture_against_reference(make_elt_aperture, 'elt', 39.14634, options)
-	
+
 	check_segmentation(make_elt_aperture)
 
 def test_tmt_aperture():
@@ -201,7 +201,7 @@ def test_tmt_aperture():
 	}
 
 	check_aperture_against_reference(make_tmt_aperture, 'tmt', 30.0, options)
-	
+
 	check_segmentation(make_tmt_aperture)
 
 def test_gmt_aperture():
@@ -211,7 +211,7 @@ def test_gmt_aperture():
 	}
 
 	check_aperture_against_reference(make_gmt_aperture, 'gmt', 25.448, options)
-	
+
 	check_segmentation(make_gmt_aperture)
 
 def test_shifted_aperture():

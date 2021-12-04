@@ -157,9 +157,9 @@ def find_illuminated_actuators(basis, aperture, power_cutoff=0.1):
 		The illuminated influence functions.
 	'''
 	total_power = np.sum(abs(basis._transformation_matrix)**2, axis=0)
-	masked_power = np.sum( abs(basis._transformation_matrix[aperture>0])**2, axis=0)
-	illuminated_actuator_mask = masked_power >= power_cutoff * total_power
-	
+	masked_power = np.sum(abs(basis._transformation_matrix[aperture > 0])**2, axis=0)
+	illuminated_actuator_mask = masked_power >= (power_cutoff * total_power)
+
 	return ModeBasis(basis._transformation_matrix[:, illuminated_actuator_mask], basis.grid)
 
 class DeformableMirror(OpticalElement):
@@ -288,7 +288,7 @@ class DeformableMirror(OpticalElement):
 		Field
 			The calculated phase deformation.
 		'''
-		return 2 * self.surface * 2*np.pi / wavelength
+		return 2 * self.surface * 2 * np.pi / wavelength
 
 	def flatten(self):
 		'''Flatten the DM by setting all actuators to zero.

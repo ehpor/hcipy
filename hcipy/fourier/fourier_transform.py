@@ -72,7 +72,7 @@ class FourierTransform(object):
 
 		A = np.exp(1j * np.dot(np.array(coords_in).T, coords_out))
 		A *= self.output_grid.weights
-		A /= (2*np.pi)**self.input_grid.ndim
+		A /= (2 * np.pi)**self.input_grid.ndim
 
 		return A
 
@@ -154,7 +154,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 		if not (input_grid.is_regular and input_grid.is_('cartesian')):
 			raise ValueError('For non-regular non-cartesian Grids, a Fourier transform is required to have an output_grid.')
 
-		if input_grid.ndim not in [1,2]:
+		if input_grid.ndim not in [1, 2]:
 			method = 'fft'
 		else:
 			output_grid = make_fft_grid(input_grid, q, fov)
@@ -191,7 +191,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 					method = 'fft'
 	else:
 		# Choose between MFT and Naive
-		if input_grid.is_separated and input_grid.is_('cartesian') and output_grid.is_separated and output_grid.is_('cartesian') and input_grid.ndim in [1,2]:
+		if input_grid.is_separated and input_grid.is_('cartesian') and output_grid.is_separated and output_grid.is_('cartesian') and input_grid.ndim in [1, 2]:
 			method = 'mft'
 		else:
 			method = 'naive'
@@ -218,7 +218,7 @@ def multiplex_for_tensor_fields(func):
 		if field.is_scalar_field:
 			return func(self, field)
 		else:
-			f = field.reshape((-1,field.grid.size))
+			f = field.reshape((-1, field.grid.size))
 			res = [func(self, ff) for ff in f]
 			new_shape = np.concatenate((field.tensor_shape, [-1]))
 			return Field(np.array(res).reshape(new_shape), res[0].grid)

@@ -29,11 +29,11 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 		self.corrected_coeffs.append(coeffs)
 
 	@property
-	def Cn_squared(self):
+	def Cn_squared(self):  # noqa: N802
 		return self.layer.Cn_squared
 
 	@Cn_squared.setter
-	def Cn_squared(self, Cn_squared):
+	def Cn_squared(self, Cn_squared):  # noqa: N802
 		self.layer.Cn_squared = Cn_squared
 
 	@property
@@ -41,7 +41,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 		return self.layer.L0
 
 	@outer_scale.setter
-	def L0(self, L0):
+	def L0(self, L0):  # noqa: N802
 		self.layer.L0 = L0
 
 	def reset(self):

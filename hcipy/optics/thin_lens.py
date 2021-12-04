@@ -15,7 +15,6 @@ class ThinLens(SurfaceApodizer):
 
 	'''
 	def __init__(self, focal_length, refractive_index, reference_wavelength):
-		
 		self._focal_length = focal_length
 		self._refractive_index = refractive_index
 		self._reference_wavelength = reference_wavelength
@@ -24,13 +23,13 @@ class ThinLens(SurfaceApodizer):
 		radius_of_curvature = focal_length * (n0 - 1)
 		sag = parabolic_surface_sag(-radius_of_curvature)
 		super().__init__(sag, refractive_index)
-	
+
 	@property
 	def focal_length(self):
 		'''The focal length of the lens.
 		'''
 		return self._focal_length
-	
+
 	@focal_length.setter
 	def focal_length(self, focal_length):
 		self._focal_length = focal_length

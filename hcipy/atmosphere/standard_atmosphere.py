@@ -26,8 +26,8 @@ def make_las_campanas_atmospheric_layers(input_grid, r0=0.16, L0=25, wavelength=
 		arXiv:1101.2340 (2011).
 
 	.. [Males2019] Jared Males et al. "Ground-based adaptive optics coronagraphic performance
-		 under closed-loop predictive control", JATIS, Volume 4, id. 019001 (2018).
-	
+		under closed-loop predictive control", JATIS, Volume 4, id. 019001 (2018).
+
 	Parameters
 	----------
 	input_grid : Grid
@@ -38,7 +38,7 @@ def make_las_campanas_atmospheric_layers(input_grid, r0=0.16, L0=25, wavelength=
 		The outer scale of the atmosphere
 	wavelength : scalar
 		The wavelength in meters at which to calculate the Fried parameter (default: 550nm).
-	
+
 	Returns
 	-------
 	list
@@ -46,10 +46,10 @@ def make_las_campanas_atmospheric_layers(input_grid, r0=0.16, L0=25, wavelength=
 	'''
 	heights = np.array([250, 500, 1000, 2000, 4000, 8000, 16000])
 	velocities = np.array([10, 10, 20, 20, 25, 30, 25])
-	
+
 	integrated_cn_squared = Cn_squared_from_fried_parameter(r0, wavelength=500e-9)
 	Cn_squared = np.array([0.42, 0.03, 0.06, 0.16, 0.11, 0.10, 0.12]) * integrated_cn_squared
-			
+
 	layers = []
 	for h, v, cn in zip(heights, velocities, Cn_squared):
 		layers.append(InfiniteAtmosphericLayer(input_grid, cn, L0, v, h, 2))

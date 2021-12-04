@@ -70,8 +70,8 @@ class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
 
 		self.period = output_grid.coords.delta * output_grid.coords.shape
 
-		# * (2*np.pi)**self.input_grid.ndim is due to conversion from PSD from "per Hertz" to "per radian", which yields a factor of 2pi per dimension
-		self.C = np.sqrt(self.psd(self.input_grid, *psd_args, **psd_kwargs) / self.input_grid.weights * (2*np.pi)**self.input_grid.ndim)
+		# * (2 * np.pi)**self.input_grid.ndim is due to conversion from PSD from "per Hertz" to "per radian", which yields a factor of 2pi per dimension
+		self.C = np.sqrt(self.psd(self.input_grid, *psd_args, **psd_kwargs) / self.input_grid.weights * (2 * np.pi)**self.input_grid.ndim)
 
 	def make_random(self):
 		N = self.input_grid.size
@@ -91,8 +91,7 @@ class SpectralNoiseFFT(SpectralNoise):
 		self.coords = C.grid.separated_coords
 
 	def shift(self, shift):
-		s = shift#np.mod(shift + self.factory.period / 2, self.factory.period) - self.factory.period / 2
-		S = [s[i] * self.coords[i] for i in range(len(self.coords))]
+		S = [shift[i] * self.coords[i] for i in range(len(self.coords))]
 		S = np.add.reduce(np.ix_(*S))
 		self.C *= np.exp(-1j * S.ravel())
 
@@ -129,9 +128,9 @@ class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 		mask_2 = self.input_grid_2.as_('polar').r >= boundary
 
 		# * (2*np.pi)**self.input_grid.ndim is due to conversion from PSD from "per Hertz" to "per radian", which yields a factor of 2pi per dimension
-		self.C_1 = np.sqrt(psd(self.input_grid_1, *psd_args, **psd_kwargs) / self.input_grid_1.weights * (2*np.pi)**self.input_grid_1.ndim)
+		self.C_1 = np.sqrt(psd(self.input_grid_1, *psd_args, **psd_kwargs) / self.input_grid_1.weights * (2 * np.pi)**self.input_grid_1.ndim)
 		self.C_1[mask_1] = 0
-		self.C_2 = np.sqrt(psd(self.input_grid_2, *psd_args, **psd_kwargs) / self.input_grid_2.weights * (2*np.pi)**self.input_grid_1.ndim)
+		self.C_2 = np.sqrt(psd(self.input_grid_2, *psd_args, **psd_kwargs) / self.input_grid_2.weights * (2 * np.pi)**self.input_grid_1.ndim)
 		self.C_2[mask_2] = 0
 
 	def make_random(self):

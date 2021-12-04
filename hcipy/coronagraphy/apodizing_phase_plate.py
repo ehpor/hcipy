@@ -116,7 +116,7 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 	M_max = propagator_max.get_transformation_matrix_forward(wavefront.electric_field.grid, wavefront.wavelength)
 
 	wf_0 = propagator.forward(wavefront).electric_field
-	M /= wf_0[:,np.newaxis]
+	M /= wf_0[:, np.newaxis]
 
 	M *= wavefront.electric_field
 	M_max *= wavefront.electric_field
@@ -137,8 +137,8 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 	obj = gp.quicksum((x[i] * M_max[i] for i in range(n)))
 	model.setObjective(obj, gp.GRB.MAXIMIZE)
 
-	for i in range(n//2):
-		r2 = x[i]*x[i] + x[i+n//2]*x[i+n//2]
+	for i in range(n // 2):
+		r2 = x[i] * x[i] + x[i + n // 2] * x[i + n // 2]
 		model.addQConstr(r2 <= 1)
 
 	for i, ee in enumerate(M):
@@ -149,7 +149,7 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
 	model.optimize()
 
 	solution = np.array([x[i].x for i in range(n)])
-	solution = solution[:n//2] + 1j * solution[n//2:]
+	solution = solution[:n // 2] + 1j * solution[n // 2:]
 
 	return Field(solution, wavefront.electric_field.grid)
 

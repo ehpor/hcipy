@@ -1,4 +1,3 @@
-import glob
 import os
 import shutil
 import base64
@@ -231,29 +230,34 @@ class FFMpegWriter(object):
 			if preset is None:
 				preset = 'veryslow'
 
-			command = [ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
-				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-i', '-',
+			command = [
+				ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
+				'-vcodec', 'png', '-r', str(framerate), '-threads', '0', '-i', '-',
 				'-vcodec', 'libx264', '-pix_fmt', 'yuv420p', '-preset', preset, '-r',
-				str(framerate), '-crf', str(quality), filename]
+				str(framerate), '-crf', str(quality), filename
+			]
 		elif codec == 'mpeg4':
 			if quality is None:
 				quality = 4
 
-			command = [ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
-				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-i', '-',
-				'-vcodec', 'mpeg4', '-q:v', str(quality), '-r', str(framerate), filename]
+			command = [
+				ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
+				'-vcodec', 'png', '-r', str(framerate), '-threads', '0', '-i', '-',
+				'-vcodec', 'mpeg4', '-q:v', str(quality), '-r', str(framerate), filename
+			]
 		elif codec == 'libvpx-vp9':
 			if quality is None:
 				quality = 30
 
-			command = [ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
-				'-vcodec','png', '-r', str(framerate), '-threads', '0', '-i', '-']
+			command = [
+				ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
+				'-vcodec', 'png', '-r', str(framerate), '-threads', '0', '-i', '-'
+			]
+
 			if quality < 0:
-				command.extend(['-vcodec', 'libvpx-vp9', '-lossless', '1',
-					'-r', str(framerate), filename])
+				command.extend(['-vcodec', 'libvpx-vp9', '-lossless', '1', '-r', str(framerate), filename])
 			else:
-				command.extend(['-vcodec', 'libvpx-vp9', '-crf', str(quality),
-					'-b:v', '0', '-r', str(framerate), filename])
+				command.extend(['-vcodec', 'libvpx-vp9', '-crf', str(quality), '-b:v', '0', '-r', str(framerate), filename])
 		else:
 			raise ValueError('Codec unknown.')
 

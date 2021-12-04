@@ -110,7 +110,7 @@ def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length
 		warnings.warn('Focal grid is larger than the maximum allowed angle (fov=%.03f). You may see wrapping when doing propagations.' % np.max(fov), stacklevel=2)
 
 	uv = make_fft_grid(pupil_grid, q, fov)
-	focal_grid = uv.scaled(f_lambda / (2*np.pi))
+	focal_grid = uv.scaled(f_lambda / (2 * np.pi))
 
 	return focal_grid
 
@@ -216,7 +216,7 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
 	r = [0]
 
 	for n in range(1, n_rings + 1):
-		#top
+		# top
 		q += list(range(n, 0, -1))
 		r += list(range(0, n))
 		# right top
@@ -390,8 +390,8 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 		'max': np.max,
 		'min': np.min,
 		'sum': np.sum,
-		'median' : np.median,
-		'nanmedian' : np.nanmedian
+		'median': np.median,
+		'nanmedian': np.nanmedian
 	}
 
 	if statistic not in available_statistics:

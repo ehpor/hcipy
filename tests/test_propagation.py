@@ -31,14 +31,15 @@ def test_fraunhofer_propagation_circular():
 					elif num_pix == 1024:
 						assert np.abs(img - reference).max() < 1e-5
 					else:
-						assert False # This should never happen.
+						# This should never happen.
+						assert False
 
 def test_fraunhofer_propagation_rectangular():
 	for num_pix in [512, 1024]:
 		pupil_grid = make_pupil_grid(num_pix)
 		focal_grid = make_focal_grid(16, 8)
 
-		for size in [[1,1], [0.75,1], [0.75,0.75]]:
+		for size in [[1, 1], [0.75, 1], [0.75, 0.75]]:
 			aperture = evaluate_supersampled(rectangular_aperture(size), pupil_grid, 8)
 
 			for focal_length in [1, 1.3]:
@@ -57,7 +58,8 @@ def test_fraunhofer_propagation_rectangular():
 					elif num_pix == 1024:
 						assert np.abs(img - reference).max() < 2e-5
 					else:
-						assert False # This should never happen.
+						# This should never happen.
+						assert False
 
 def single_propagation_test(propagator, number_of_pixels, wavelength, a, b, relative_distance, error_threshold):
 	wavenumber = 2 * np.pi / wavelength
@@ -118,17 +120,17 @@ def single_propagation_test(propagator, number_of_pixels, wavelength, a, b, rela
 	assert absolute_error_backward < error_threshold
 
 def test_fresnel_propagation_rectangular_quick():
-	for num_pix in [512,]:
-		for wavelength in [500e-9,]:
-			for a, b in [[0.001, 0.001],]:
-				for relative_distance, error_threshold in zip([0.2, 5],[0.02, 0.01]):
+	for num_pix in [512]:
+		for wavelength in [500e-9]:
+			for a, b in [[0.001, 0.001]]:
+				for relative_distance, error_threshold in zip([0.2, 5], [0.02, 0.01]):
 					single_propagation_test(FresnelPropagator, num_pix, wavelength, a, b, relative_distance, error_threshold)
 
 def test_asp_propagation_rectangular_quick():
-	for num_pix in [512,]:
-		for wavelength in [500e-9,]:
-			for a, b in [[0.001, 0.001],]:
-				for relative_distance, error_threshold in zip([0.2, 5],[0.02, 0.01]):
+	for num_pix in [512]:
+		for wavelength in [500e-9]:
+			for a, b in [[0.001, 0.001]]:
+				for relative_distance, error_threshold in zip([0.2, 5], [0.02, 0.01]):
 					single_propagation_test(AngularSpectrumPropagator, num_pix, wavelength, a, b, relative_distance, error_threshold)
 
 @pytest.mark.slow
@@ -136,7 +138,7 @@ def test_fresnel_propagation_rectangular():
 	for num_pix in [512, 1024]:
 		for wavelength in [500e-9, 700e-9]:
 			for a, b in [[0.001, 0.001], [0.0015, 0.001]]:
-				for relative_distance, error_threshold in zip([0.2, 1, 5],[0.02, 0.01, 0.01]):
+				for relative_distance, error_threshold in zip([0.2, 1, 5], [0.02, 0.01, 0.01]):
 					single_propagation_test(FresnelPropagator, num_pix, wavelength, a, b, relative_distance, error_threshold)
 
 @pytest.mark.slow
@@ -144,5 +146,5 @@ def test_asp_propagation_rectangular():
 	for num_pix in [512, 1024]:
 		for wavelength in [500e-9, 700e-9]:
 			for a, b in [[0.001, 0.001], [0.0015, 0.001]]:
-				for relative_distance, error_threshold in zip([0.2, 1, 5],[0.02, 0.01, 0.01]):
+				for relative_distance, error_threshold in zip([0.2, 1, 5], [0.02, 0.01, 0.01]):
 					single_propagation_test(AngularSpectrumPropagator, num_pix, wavelength, a, b, relative_distance, error_threshold)

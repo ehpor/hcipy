@@ -30,13 +30,13 @@ class GaussianBeam(object):
 		self.w0 = w0
 
 	@property
-	def zR(self):
+	def zR(self):  # noqa: N802
 		'''The Rayleight distance of the Gaussian beam.
 		'''
 		return np.pi * self.w0**2 / self.wavelength
 
 	@zR.setter
-	def zR(self, zR):
+	def zR(self, zR):  # noqa: N802
 		self.w0 = np.sqrt(zR * self.wavelength / np.pi)
 
 	rayleigh_distance = zR
@@ -67,7 +67,7 @@ class GaussianBeam(object):
 	beam_divergence = theta
 
 	@property
-	def R(self):
+	def R(self):  # noqa: N802
 		'''The current radius of curvature of the Gaussian beam.
 		'''
 		epsilon = 1e-16
@@ -95,7 +95,7 @@ class GaussianBeam(object):
 	beam_radius = w
 
 	@property
-	def FWHM(self):
+	def FWHM(self):  # noqa: N802
 		'''The current FWHM of the Gaussian beam.
 		'''
 		return self.w * np.sqrt(2 * np.log(2))

@@ -1,4 +1,3 @@
-from .mode_basis import ModeBasis
 from ..field import evaluate_supersampled
 import numpy as np
 from scipy.sparse import csr_matrix

@@ -3,7 +3,7 @@ name: Lint
 on: [pull_request]
 
 jobs:
-  lint:
+  flake8:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -14,6 +14,6 @@ jobs:
     - name: Install dependencies
       run: pip install flake8 lintly pep8-naming
     - name: Lint with flake8
-      run: flake8 | lintly --context=flake8 --commit-sha=${{ github.event.pull_request.head.sha }} --use-checks
+      run: flake8 | lintly --log --no-post-status
       env:
         LINTLY_API_KEY: ${{ secrets.GITHUB_TOKEN }}

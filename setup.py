@@ -16,7 +16,7 @@ setup(
 	author='Emiel Por',
 	author_email='epor@stsci.edu',
 	packages=find_packages(),
-	package_data={'hcipy': ['*.yaml', '*.csv', '.fits']},
+	package_data={'hcipy': ['**.yaml', '**.csv', '**.fits']},
 	setup_requires=[
 		'setuptools_scm'
 	],

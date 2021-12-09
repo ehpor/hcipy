@@ -14,11 +14,12 @@ setup(
 	long_description_content_type='text/markdown',
 	url='https://github.com/ehpor/hcipy/',
 	author='Emiel Por',
-	author_email='por@strw.leidenuniv.nl',
+	author_email='epor@stsci.edu',
 	packages=find_packages(),
 	package_data={'hcipy': ['*.yaml', '*.csv', '.fits']},
 	setup_requires=[
-		'setuptools_scm'],
+		'setuptools_scm'
+	],
 	install_requires=[
 		"numpy",
 		"scipy",
@@ -39,7 +40,8 @@ setup(
 			"codecov",
 			"coverage",
 			"mpmath",
-			"dill"],
+			"dill",
+			"flake8"],
 		"doc": [
 			"numpydoc",
 			"sphinx_rtd_theme",
@@ -61,6 +63,7 @@ setup(
 		"Programming Language :: Python :: 3.6",
 		"Programming Language :: Python :: 3.7",
 		"Programming Language :: Python :: 3.8",
+		"Programming Language :: Python :: 3.9",
 		"Topic :: Scientific/Engineering :: Astronomy"],
-	license_file="LICENSE"
+	license_files=["LICENSE"]
 )

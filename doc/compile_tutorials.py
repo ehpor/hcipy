@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+import sys
 
 from nbclient import NotebookClient
 from nbclient.exceptions import CellExecutionError
@@ -59,7 +60,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 				print('  Already compiled. Recompiling anyway...')
 			else:
 				print('  Already compiled. Skipping compilation...')
-				return title, level, description, thumb_dest.split('/', 1)[-1]
+				return title, level, description, thumb_dest.split('/', 1)[-1], False
 
 	# Execute notebook if not already executed
 	already_executed = any(c.get('outputs') or c.get('execution_count') for c in notebook.cells if c.cell_type == 'code')
@@ -92,6 +93,8 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 
 		client = NotebookClient(nb=notebook, resources=resources, timeout=585, kernel_name='python3')
 
+		with_errors = False
+
 		try:
 			with client.setup_kernel():
 				for i, cell in enumerate(notebook.cells):
@@ -103,6 +106,8 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 		except CellExecutionError as err:
 			print('  Error while processing notebook:')
 			print('  ', err)
+
+			with_errors = True
 
 		print('')
 
@@ -152,7 +157,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 
 	print('  Done!')
 
-	return title, level, description, thumb_dest.split('/', 1)[-1]
+	return title, level, description, thumb_dest.split('/', 1)[-1], with_errors
 
 index_preamble = '''
 Tutorials
@@ -224,8 +229,12 @@ def compile_all_tutorials():
 	tutorial_names = sorted(os.listdir('tutorial_notebooks/'))
 	tutorial_names = [name for name in tutorial_names if 'checkpoint' not in name]
 
+	with_errors = False
+
 	for name in tutorial_names:
 		tutorials[name] = compile_tutorial(name)
+
+		with_errors = with_errors or tutorials[name][-1]
 
 	# Sort by level
 	levels = ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Unknown']
@@ -234,28 +243,28 @@ def compile_all_tutorials():
 	for name in tutorial_names:
 		tutorial_names_by_level[levels.index(tutorials[name][1])].append(name)
 
-	f = open('tutorials/index.rst', 'w')
-	f.write(index_preamble)
+	with open('tutorials/index.rst', 'w') as f:
+		f.write(index_preamble)
 
-	for preamble, names in zip(level_preambles, tutorial_names_by_level):
-		# Don't write this level if there are no tutorials in it.
-		if len(names) == 0:
-			continue
+		for preamble, names in zip(level_preambles, tutorial_names_by_level):
+			# Don't write this level if there are no tutorials in it.
+			if len(names) == 0:
+				continue
 
-		f.write(preamble)
+			f.write(preamble)
 
-		# Write toctree
-		f.write('\n.. toctree::\n    :maxdepth: 1\n    :hidden:\n\n')
-		for name in names:
-			f.write('    ' + name + '/' + name + '\n')
-		f.write('\n\n')
+			# Write toctree
+			f.write('\n.. toctree::\n    :maxdepth: 1\n    :hidden:\n\n')
+			for name in names:
+				f.write('    ' + name + '/' + name + '\n')
+			f.write('\n\n')
 
-		# Write list
-		for name in names:
-			title, level, desc, thumb = tutorials[name]
-			f.write(entry_template.format(thumbnail_file=thumb, title=title, level=level, description=desc, name=name))
+			# Write list
+			for name in names:
+				title, level, desc, thumb, _ = tutorials[name]
+				f.write(entry_template.format(thumbnail_file=thumb, title=title, level=level, description=desc, name=name))
 
-	f.close()
+	return with_errors
 
 if __name__ == '__main__':
 	# Compile all tutorials
@@ -265,4 +274,7 @@ if __name__ == '__main__':
 	import sys
 	sys.path.insert(0, '.')
 
-	compile_all_tutorials()
+	with_errors = compile_all_tutorials()
+
+	if with_errors:
+		sys.exit(1)

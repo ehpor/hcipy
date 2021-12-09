@@ -119,7 +119,7 @@ def _build_glass_catalogue():
 	catalogues = ['schott_glass_catalogue_2018_09.csv', 'ohara_glass_catalogue_2019_08.csv']
 
 	for fname in catalogues:
-		catalogue = files(__package__).joinpath(fname)
+		catalogue = files('hcipy.optics').joinpath(fname)
 		with catalogue.open() as f:
 			_glass_catalogue.update(_parse_sellmeier_glass_catalogue(f))
 

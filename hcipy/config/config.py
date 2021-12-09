@@ -99,7 +99,7 @@ class Configuration(object):
 		'''
 		Configuration._config = _ConfigurationItem({})
 
-		default_config = files(__package__).joinpath('default_config.yaml')
+		default_config = files('hcipy.config').joinpath('default_config.yaml')
 		user_config = Path(os.path.expanduser('~/.hcipy/hcipy_config.yaml'))
 		current_working_directory = Path('./hcipy_config.yaml')
 

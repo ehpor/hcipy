@@ -126,7 +126,7 @@ def make_xinetics_influence_functions(pupil_grid, num_actuators_across_pupil, ac
 	evaluated_grid = pupil_grid.scaled(1 / np.cos([y_tilt, x_tilt])).rotated(-z_tilt)
 
 	# Read in actuator shape from file.
-	f = files(__package__).joinpath('influence_dm5v2.fits')
+	f = files('hcipy.optics').joinpath('influence_dm5v2.fits')
 	with f.open('rb') as fp:
 		actuator = np.squeeze(read_fits(fp))
 	actuator /= actuator.max()

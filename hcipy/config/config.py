@@ -1,6 +1,10 @@
 import os
 import yaml
-import pkg_resources
+
+try:
+	from importlib.resources import files
+except ImportError:
+	from importlib_resources import files
 
 class _ConfigurationItem(object):
 	def __init__(self, val):
@@ -94,7 +98,7 @@ class Configuration(object):
 		'''
 		Configuration._config = _ConfigurationItem({})
 
-		default_config = pkg_resources.resource_stream('hcipy', 'data/default_config.yaml')
+		default_config = files(__package__).joinpath('default_config.yaml')
 		user_config = os.path.expanduser('~/.hcipy/hcipy_config.yaml')
 		current_working_directory = './hcipy_config.yaml'
 

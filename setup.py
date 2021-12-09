@@ -16,7 +16,7 @@ setup(
 	author='Emiel Por',
 	author_email='por@strw.leidenuniv.nl',
 	packages=find_packages(),
-	package_data={'hcipy': ['data/*']},
+	package_data={'hcipy': ['*.yaml', '*.csv', '.fits']},
 	setup_requires=[
 		'setuptools_scm'],
 	install_requires=[
@@ -29,7 +29,10 @@ setup(
 		"imageio",
 		"xxhash",
 		"numexpr",
-		"asdf"],
+		"asdf",
+		"importlib_metadata ; python_version<'3.7'",
+		"importlib_resources>=1.4 ; python_version<'3.9'"
+	],
 	extras_require={
 		"dev": [
 			"pytest",

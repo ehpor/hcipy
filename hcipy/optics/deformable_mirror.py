@@ -1,7 +1,11 @@
 import numpy as np
 from scipy.sparse import csr_matrix
-import pkg_resources
 import numexpr as ne
+
+try:
+	from importlib.resources import files
+except ImportError:
+	from importlib_resources import files
 
 from .optical_element import OpticalElement
 from ..field import make_uniform_grid, evaluate_supersampled
@@ -122,7 +126,9 @@ def make_xinetics_influence_functions(pupil_grid, num_actuators_across_pupil, ac
 	evaluated_grid = pupil_grid.scaled(1 / np.cos([y_tilt, x_tilt])).rotated(-z_tilt)
 
 	# Read in actuator shape from file.
-	actuator = np.squeeze(read_fits(pkg_resources.resource_stream('hcipy', 'data/influence_dm5v2.fits')))
+	f = files(__package__).joinpath('influence_dm5v2.fits')
+	with f.open('rb') as fp:
+		actuator = np.squeeze(read_fits(fp))
 	actuator /= actuator.max()
 
 	# Convert actuator into linear interpolator.

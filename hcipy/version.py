@@ -1,13 +1,17 @@
+try:
+    from importlib.metadata import version, PackageNotFoundError
+except ImportError:
+    # Try backported to PY<37 importlib_metadata.
+    from importlib_metadata import version, PackageNotFoundError
+
 def get_version():
-	if get_version._version is None:
-		from pkg_resources import get_distribution, DistributionNotFound
+    if get_version._version is None:
+        try:
+            get_version._version = version('hcipy')
+        except PackageNotFoundError:
+            # package is not installed
+            pass
 
-		try:
-			get_version._version = get_distribution('hcipy').version
-		except DistributionNotFound:
-			# package is not installed
-			pass
-
-	return get_version._version
+    return get_version._version
 
 get_version._version = None

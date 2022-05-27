@@ -133,7 +133,7 @@ def read_grid(filename, fmt=None):
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
 	if fmt in ['asdf', 'fits']:
-		import asdf
+		import asdf.fits_embed
 
 		if fmt == 'fits':
 			f = asdf.fits_embed.AsdfInFits.open(filename)
@@ -186,7 +186,7 @@ def write_grid(grid, filename, fmt=None, overwrite=True):
 		target.write_to(filename, all_array_compression='zlib')
 	elif fmt == 'fits':
 		from astropy.io import fits
-		import asdf
+		import asdf.fits_embed
 
 		hdulist = fits.HDUList()
 
@@ -239,7 +239,7 @@ def read_field(filename, fmt=None):
 
 		return field
 	elif fmt == 'fits':
-		import asdf
+		import asdf.fits_embed
 		from ..field import Grid
 
 		f = asdf.fits_embed.AsdfInFits.open(filename)
@@ -297,7 +297,7 @@ def write_field(field, filename, fmt=None, overwrite=True):
 		target.write_to(filename, all_array_compression='zlib')
 	elif fmt == 'fits':
 		from astropy.io import fits
-		import asdf
+		import asdf.fits_embed
 
 		hdulist = fits.HDUList()
 
@@ -365,7 +365,7 @@ def read_mode_basis(filename, fmt=None):
 
 		return mode_basis
 	elif fmt == 'fits':
-		import asdf
+		import asdf.fits_embed
 		from ..field import Grid
 
 		f = asdf.fits_embed.AsdfInFits.open(filename)
@@ -426,7 +426,7 @@ def write_mode_basis(mode_basis, filename, fmt=None, overwrite=True):
 		target.write_to(filename, all_array_compression='zlib')
 	elif fmt == 'fits':
 		from astropy.io import fits
-		import asdf
+		import asdf.fits_embed
 		from astropy import wcs
 
 		hdulist = fits.HDUList()

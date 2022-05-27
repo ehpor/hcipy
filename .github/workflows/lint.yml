@@ -6,14 +6,13 @@ jobs:
   flake8:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
-    - name: Install dependencies
-      run: pip install flake8 lintly pep8-naming
-    - name: Lint with flake8
-      run: flake8 | lintly --no-post-status --use-checks --commit-sha ${{ github.event.pull_request.head.sha }}
-      env:
-        LINTLY_API_KEY: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check out source repository
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Lint with flake8
+        uses: reviewdog/action-flake8@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -18,7 +18,7 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 	num_steps : int
 		The number of steps per modulation cycle.
 	'''
-	def __init__(self, pyramid_wavefront_sensor, modulation, num_steps=12):
+	def __init__(self, pyramid_wavefront_sensor, modulation, num_steps=12, use_new_method=False):
 		self.modulation = modulation
 		self.pyramid_wavefront_sensor = pyramid_wavefront_sensor
 		self.tip_tilt_mirror = TipTiltMirror(self.pyramid_wavefront_sensor.input_grid)
@@ -28,6 +28,23 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		y_modulation = modulation / 2 * np.sin(theta)
 
 		self.modulation_positions = CartesianGrid(UnstructuredCoords((x_modulation, y_modulation)))
+
+		separation = self.pyramid_wavefront_sensor._separation
+		refractive_index = self.pyramid_wavefront_sensor._refractive_index
+		wavelength_0 = self.pyramid_wavefront_sensor._wavelength_0
+
+		self._pyramid_apodizers = []
+		for p in self.modulation_positions:
+			shifted_grid = self.pyramid_wavefront_sensor.focal_grid.shifted(-p)
+			pyramid_surface = -separation / (2 * (refractive_index(wavelength_0) - 1)) * (np.abs(shifted_grid.x) + np.abs(shifted_grid.y))
+			pyramid_apodizer = SurfaceApodizer(Field(pyramid_surface, self.focal_grid), refractive_index)
+			
+			self._pyramid_apodizers.append(pyramid_apodizer)
+
+		self.pupil_to_focal = self.pyramid_wavefront_sensor.pupil_to_focal
+		self.focal_to_pupil = self.pyramid_wavefront_sensor.focal_to_pupil
+
+		self._use_new_method = use_new_method
 
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the modulated pyramid wavefront sensor.
@@ -42,13 +59,18 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		wf_modulated : list
 			A list of wavefronts for each modulation position.
 		'''
-		wf_modulated = []
+		if self._use_new_method:
+			wf_foc = self.pyramid_wavefront_sensor.spatial_filter( self.pupil_to_focal(wavefront) )
+			wf_modulated = [self.focal_to_pupil( apod(wf_foc) ) for apod in self._pyramid_apodizers]
 
-		for point in self.modulation_positions.points:
-			self.tip_tilt_mirror.actuators = point
-			modulated_wavefront = self.tip_tilt_mirror.forward(wavefront)
+		else:
+			wf_modulated = []
 
-			wf_modulated.append(self.pyramid_wavefront_sensor.forward(modulated_wavefront))
+			for point in self.modulation_positions.points:
+				self.tip_tilt_mirror.actuators = point
+				modulated_wavefront = self.tip_tilt_mirror.forward(wavefront)
+
+				wf_modulated.append(self.pyramid_wavefront_sensor.forward(modulated_wavefront))
 
 		return wf_modulated
 
@@ -110,6 +132,10 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		num_pixels = 2 * int(self.num_airy * q)
 		spatial_resolution = wavelength_0 / pupil_diameter
 		self.focal_grid = make_pupil_grid(num_pixels, 2 * spatial_resolution * self.num_airy)
+		
+		self._separation = separation
+		self._refractive_index = refractive_index
+		self._wavelength_0 = wavelength_0
 
 		# Make all the optical elements
 		self.spatial_filter = Apodizer(circular_aperture(2 * self.num_airy * wavelength_0 / pupil_diameter)(self.focal_grid))

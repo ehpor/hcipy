@@ -25,6 +25,9 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		The grid of the wavefront that is to be propagated.
 	q : scalar
 		The amount of oversampling used for the knife edge.
+	direction : string
+		The direction of the transmissive part of the knife edge. This
+		has to be one of {'+x', '-x', '+y', '-y'}.
 	apodizer : OpticalElement or Field or None
 		The pre-apodizer in the pupil before the focal-plane mask.
 		If this is a Field, it will be converted into an apodizer.
@@ -34,16 +37,23 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		this is a Field, it will be converted to an apodizer.
 		If this is None, no Lyot stop will be used.
 	'''
-	def __init__(self, input_grid, q=8, apodizer=None, lyot_stop=None):
+	def __init__(self, input_grid, q=8, direction='+x', apodizer=None, lyot_stop=None):
+		self.direction = direction
+
 		fft = FastFourierTransform(input_grid, q, 1)
-		self.cutout_input = (Ellipsis, fft.cutout_input[1])
-		self.internal_shape = input_grid.shape[0], fft.internal_shape[1]
+
+		if 'x' in self.direction:
+			self.cutout_input = (Ellipsis, fft.cutout_input[1])
+			self.internal_shape = input_grid.shape[0], fft.internal_shape[1]
+		else:
+			self.cutout_input = (fft.cutout_input[0], Ellipsis)
+			self.internal_shape = fft.internal_shape.shape[0], input_grid.shape[1]
 
 		# Create the knife-edge focal-plane mask along the x-axis.
 		focal_mask_grid = make_fft_grid(input_grid, q).scaled(1.0 / (2 * np.pi))
-		x = focal_mask_grid.separated_coords[0]
-		self.focal_mask = (x > 0).astype('float')
-		self.focal_mask[np.abs(x) < 1e-9] = 0.5
+
+		x = focal_mask_grid.separated_coords[0 if 'x' in self.direction else 1]
+		self.focal_mask = 0.5 + 0.5 * np.sign(x) * (-1 if '-' in self.direction else 1)
 
 		# Pre-shift the mask to speed up propagations
 		# FIXME: not necessary when 1D FFTs on 2D grids are implemented.
@@ -77,7 +87,14 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		ap[tuple(self.cutout_input)] = wavefront.electric_field.shaped
 
 		# FIXME: use 1D FFTs on 2D grids implementation when available, instead of this.
-		post_coro = _fft_module.ifft(_fft_module.fft(ap, axis=1) * self.focal_mask[np.newaxis, :], axis=1)
+		if 'x' in self.direction:
+			axis = 1
+			focal_mask = self.focal_mask[np.newaxis, :]
+		else:
+			axis = 0
+			focal_mask = self.focal_mask[:, np.newaxis]
+
+		post_coro = _fft_module.ifft(_fft_module.fft(ap, axis=axis) * focal_mask, axis=axis)
 		post_coro = Field(post_coro[self.cutout_input].ravel(), wavefront.electric_field.grid)
 
 		wavefront = Wavefront(post_coro, wavefront.wavelength)
@@ -107,7 +124,14 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		ap[tuple(self.cutout_input)] = wavefront.electric_field.shaped
 
 		# FIXME: use 1D FFTs on 2D grids implementation when available, instead of this.
-		post_coro = _fft_module.ifft(_fft_module.fft(ap, axis=1) * self.focal_mask[np.newaxis, :], axis=1)
+		if 'x' in self.direction:
+			axis = 1
+			focal_mask = self.focal_mask[np.newaxis, :]
+		else:
+			axis = 0
+			focal_mask = self.focal_mask[:, np.newaxis]
+
+		post_coro = _fft_module.ifft(_fft_module.fft(ap, axis=axis) * focal_mask, axis=axis)
 		post_coro = Field(post_coro[self.cutout_input].ravel(), wavefront.electric_field.grid)
 
 		wavefront = Wavefront(post_coro, wavefront.wavelength)

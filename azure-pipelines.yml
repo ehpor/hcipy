@@ -30,7 +30,6 @@ jobs:
       source activate test-environment
       pip install pytest pytest-azurepipelines
       pip install ".[dev]"
-      rm -rf hcipy
     displayName: Install HCIPy
 
   - bash: |
@@ -90,7 +89,6 @@ jobs:
       source activate test-environment
       pip install pytest pytest-azurepipelines
       pip install ".[dev]"
-      rm -rf hcipy
     displayName: Install HCIPy
 
   - bash: |
@@ -147,7 +145,6 @@ jobs:
       call activate test-environment
       pip install pytest pytest-azurepipelines
       pip install ".[dev]"
-      rm -rf hcipy
     displayName: Install HCIPy
 
   - script: |
@@ -196,7 +193,6 @@ jobs:
       sudo apt-get -y install pandoc
       pip install awscli
       pip install ".[doc]"
-      rm -rf hcipy
     displayName: Install HCIPy
 
   - bash: |

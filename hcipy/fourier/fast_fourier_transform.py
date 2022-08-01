@@ -100,12 +100,12 @@ def get_fft_parameters(fft_grid, input_grid):
 	if np.any(np.abs(zeropadded_dims - np.round(zeropadded_dims)) > 1e-10):
 		raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} does not correspond to an integer zeropadding.')
 
+	# Compute fov.
+	fov = fft_grid.dims / zeropadded_dims
+
 	# Check if fov would be < 1.
 	if np.any(fft_grid.dims > (zeropadded_dims + 0.5).astype('int')):
 		raise ValueError(f'fft_grid is not an FFT grid of input_grid: fov of {fov} would be > 1 .')
-
-	# Compute fov.
-	fov = (fft_grid.dims / (input_grid.dims * q))
 
 	# Correct fov for rounding errors (floating point errors would lead to a different dims).
 	dummy_fft_grid = make_fft_grid(input_grid, q, fov)

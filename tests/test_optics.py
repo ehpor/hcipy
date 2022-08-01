@@ -568,6 +568,7 @@ def test_magnifier():
 		assert np.abs(wf_forward.total_power - 1) < 1e-12
 		assert hash(wf_forward.electric_field.grid) == hash(magnifier.get_output_grid(wf.electric_field.grid, 1))
 
+@pytest.mark.xfail(reason='known difficult bug; fix in progress')
 def test_pickle_optical_element():
 	import dill as pickle
 

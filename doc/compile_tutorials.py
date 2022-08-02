@@ -67,6 +67,8 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 
 	resources = {'metadata': {'path': os.path.dirname(notebook_path)}}
 
+	with_errors = False
+
 	if not already_executed:
 		print('  Executing', end='')
 		start = time.time()
@@ -92,8 +94,6 @@ def compile_tutorial(tutorial_name, force_recompile=False):
 		notebook.cells.insert(2, nbformat.from_dict(additional_cell_2))
 
 		client = NotebookClient(nb=notebook, resources=resources, timeout=585, kernel_name='python3')
-
-		with_errors = False
 
 		try:
 			with client.setup_kernel():

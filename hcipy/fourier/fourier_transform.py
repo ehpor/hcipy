@@ -20,7 +20,7 @@ class FourierTransform(object):
 			The field to Fourier transform.
 
 		Returns
-		--------
+		-------
 		Field
 			The Fourier transform of the field.
 		'''
@@ -35,7 +35,7 @@ class FourierTransform(object):
 			The field to inverse Fourier transform.
 
 		Returns
-		--------
+		-------
 		Field
 			The inverse Fourier transform of the field.
 		'''
@@ -46,7 +46,7 @@ class FourierTransform(object):
 		Fourier transform.
 
 		Returns
-		--------
+		-------
 		ndarray
 			A matrix representing the Fourier transform.
 		'''
@@ -63,7 +63,7 @@ class FourierTransform(object):
 		Fourier transform.
 
 		Returns
-		--------
+		-------
 		ndarray
 			A matrix representing the Fourier transform.
 		'''

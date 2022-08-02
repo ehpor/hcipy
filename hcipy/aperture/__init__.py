@@ -22,7 +22,9 @@ __all__ = [
 	'make_hale_aperture',
 	'make_hicat_aperture',
 	'make_hicat_lyot_stop',
-	'make_vlt_aperture'
+	'make_vlt_aperture',
+	'make_habex_aperture',
+	'make_hst_aperture',
 ]
 
 from .generic import *

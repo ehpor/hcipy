@@ -1003,3 +1003,84 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 		return tmt_aperture_with_spiders, tmt_segments
 	else:
 		return tmt_aperture_with_spiders
+
+def make_habex_aperture(normalized=False):
+	'''Make the HabEx aperture.
+
+	This aperture is based on the HabEx final report 2019. As the HabEx is unobscured,
+	there is no option to exclude spiders.
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 4.0 meters.
+
+	Returns
+	-------
+	Field generator
+		The HabEx telescope aperture.
+	'''
+	pupil_diameter = 4.0  # meter
+
+	if normalized:
+		pupil_diameter = 1
+
+	return circular_aperture(pupil_diameter)
+
+def make_hst_aperture(normalized=False, with_spiders=True, with_pads=True):
+	'''Make the Hubble Space Telescope aperture.
+
+	This function uses values from TinyTim [Krist2011]_.
+
+	.. [Krist2011] Krist, Hook and Stoehr, "20 years of Hubble Space Telescope optical modelling using Tiny Tim" Proc. SPIE 8127 (2011).
+
+	.. note::
+		This aperture only includes the primary and secondary masks, not any masks
+		internal to the instruments.
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 2.4 meters.
+	with_spiders: boolean
+		If this is False, the spiders will be left out.
+
+	Returns
+	-------
+	Field generator
+		The Hubble Space Telescope aperture.
+	'''
+	pupil_diameter = 2.4  # meter
+
+	# All these values are relative to the pupil diameter.
+	secondary_obscuration_ratio = 0.330
+	spider_width = 0.022 / 2
+
+	pad_v3 = np.array([0.8921, -0.4615, -0.4564]) / 2
+	pad_v2 = np.array([0.0000, 0.7555, -0.7606]) / 2
+	pad_radii = np.array([0.065, 0.065, 0.065]) / 2
+
+	if normalized:
+		pupil_diameter = 1
+	else:
+		spider_width *= pupil_diameter
+
+		pad_v3 *= pupil_diameter
+		pad_v2 *= pupil_diameter
+		pad_radii *= pupil_diameter
+
+	num_spiders = 4 if with_spiders else 0
+
+	ota = make_obstructed_circular_aperture(pupil_diameter, secondary_obscuration_ratio, num_spiders, spider_width)
+
+	if not with_pads:
+		return ota
+
+	pads = [make_obstruction(circular_aperture(2 * r, [-v2, v3])) for v3, v2, r in zip(pad_v3, pad_v2, pad_radii)]
+
+	def func(grid):
+		return ota(grid) * pads[0](grid) * pads[1](grid) * pads[2](grid)
+
+	return func

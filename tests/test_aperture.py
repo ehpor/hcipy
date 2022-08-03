@@ -214,6 +214,22 @@ def test_gmt_aperture():
 
 	check_segmentation(make_gmt_aperture)
 
+def test_habex_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')]
+	}
+
+	check_aperture_against_reference(make_habex_aperture, 'habex', 4.0, options)
+
+def test_hst_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_spiders': [(True, ''), (False, '_without_spiders')],
+		'with_pads': [(True, ''), (False, '_without_pads')]
+	}
+
+	check_aperture_against_reference(make_hst_aperture, 'hst', 2.4, options)
+
 def test_shifted_aperture():
 	grid = make_pupil_grid(256, 2.0)
 	aperture1 = circular_aperture(1.0, center=[0.25, 0.25])(grid)

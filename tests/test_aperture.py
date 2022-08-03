@@ -6,11 +6,27 @@ import itertools
 import pytest
 import functools
 
-def check_against_reference(field_generator, diameter, baseline_name):
-	fname = os.path.join(os.path.dirname(__file__), 'baseline_for_apertures/' + baseline_name + '.fits.gz')
+def check_aperture(aperture_function, diameter, name, check_normalization=False, check_segmentation=False, **aperture_args):
+	fname = os.path.join(os.path.dirname(__file__), 'baseline_for_apertures/' + name + '.fits.gz')
 
 	grid = make_uniform_grid(256, [diameter, diameter])
-	field = evaluate_supersampled(field_generator, grid, 8)
+	field = evaluate_supersampled(aperture_function(**aperture_args), grid, 8)
+
+	if check_normalization:
+		grid_norm = grid.scaled(1 / diameter)
+		field_norm = evaluate_supersampled(aperture_function(normalized=True, **aperture_args), grid_norm, 8)
+
+		assert np.allclose(field, field_norm)
+
+	if check_segmentation:
+		aperture, segments = aperture_function(**aperture_args, return_segments=True)
+
+		aperture = evaluate_supersampled(aperture, grid, 1)
+		segments = evaluate_supersampled(segments, grid, 1)
+
+		aperture_from_segments = segments.linear_combination(np.ones(len(segments)))
+
+		assert np.allclose(aperture, aperture_from_segments)
 
 	if os.path.isfile(fname):
 		reference = read_fits(fname).ravel()
@@ -23,88 +39,76 @@ def check_against_reference(field_generator, diameter, baseline_name):
 			os.makedirs(os.path.dirname(fname))
 		write_fits(field, fname)
 
-def check_segmentation(aperture_function, segments=None):
-	grid = make_uniform_grid(256, [1, 1])
-
-	if segments is None:
-		aperture, segments = aperture_function(normalized=True, return_segments=True)
-	else:
-		aperture = aperture_function
-
-	aperture = evaluate_supersampled(aperture, grid, 2)
-	segments = evaluate_supersampled(segments, grid, 2)
-
-	aperture_from_segments = segments.linear_combination(np.ones(len(segments)))
-
-	assert np.allclose(aperture, aperture_from_segments)
-
-def check_aperture_against_reference(aperture_function, basename, diameter, options, segmented=False):
-	keys = sorted(options.keys())
-	vals = [value for key, value in sorted(options.items())]
-
-	for option in itertools.product(*vals):
-		fname = basename + '/pupil' + ''.join([o[1] for o in option])
-
-		kwargs = dict(zip(keys, [o[0] for o in option]))
-		aperture = aperture_function(**kwargs)
-
-		check_against_reference(aperture, 1 if kwargs.get('normalized', False) else diameter, fname)
-
-		if segmented:
-			check_segmentation(*aperture_function(return_segments=True, **kwargs))
-
 def test_regular_polygon_aperture():
-	options = {
-		'num_sides': [(6, '_hex'), (5, '_pent')],
-		'angle': [(0, ''), (15, '_rotated')]
-	}
+	pupil_diameter = 1
 
-	check_aperture_against_reference(functools.partial(regular_polygon_aperture, circum_diameter=1), 'polygon', 1, options)
+	for num_sides in [6, 5]:
+		for angle in [0, 15]:
+			name = 'polygon/pupil'
+			name += '_rotated' if angle != 0 else ''
+			name += '_hex' if num_sides == 6 else '_pent'
+
+			check_aperture(regular_polygon_aperture, pupil_diameter, name,
+				circum_diameter=pupil_diameter, num_sides=num_sides, angle=angle)
 
 def test_elliptical_aperture():
-	options = {
-		'diameters': [([0.5, 0.5], '_round'), ([1, 0.5], '_elongated')]
-	}
+	pupil_diameter = 1
 
-	check_aperture_against_reference(elliptical_aperture, 'ellipse', 1, options)
+	for diameters in [[0.5, 0.5], [1, 0.5]]:
+		name = 'ellipse/pupil'
+		name += '_round' if diameters[0] == diameters[1] else '_elongated'
+
+		check_aperture(elliptical_aperture, pupil_diameter, name, diameters=diameters)
 
 def test_obstructed_circular_aperture():
-	options = {
-		'central_obscuration_ratio': [(0.1, '_small_obscuration'), (0.3, '_large_obscuration')],
-		'num_spiders': [(3, '_3spiders'), (5, '_5spiders')],
-		'spider_width': [(0.01, '_thinspiders'), (0.03, '_thickspiders')]
-	}
+	pupil_diameter = 1
 
-	check_aperture_against_reference(functools.partial(make_obstructed_circular_aperture, pupil_diameter=1), 'obstructed_circular', 1, options)
+	for central_obscuration_ratio in [0.1, 0.3]:
+		for num_spiders in [3, 5]:
+			for spider_width in [0.01, 0.03]:
+				name = 'obstructed_circular/pupil'
+				name += '_small_obscuration' if central_obscuration_ratio < 0.2 else '_large_obscuration'
+				name += f'_{num_spiders}spiders'
+				name += '_thinspiders' if spider_width < 0.02 else '_thickspiders'
 
-def test_hexagonal_segmented_aperture():
-	options = {
-		'num_rings': [(3, '_3rings'), (5, '_5rings')],
-		'segment_flat_to_flat': [(0.04, '_smallsegment'), (0.07, '_largesegment')],
-		'gap_size': [(0.01, '_smallgap'), (0.02, '_largegap')],
-		'starting_ring': [(0, '_withcenter'), (2, '_withoutcenter')]
-	}
+				check_aperture(make_obstructed_circular_aperture, pupil_diameter, name,
+					pupil_diameter=pupil_diameter, central_obscuration_ratio=central_obscuration_ratio, num_spiders=num_spiders, spider_width=spider_width)
 
-	check_aperture_against_reference(make_hexagonal_segmented_aperture, 'hexagonal_segmented', 1, options, segmented=True)
+@pytest.mark.parametrize('num_rings', [3, 5])
+@pytest.mark.parametrize('segment_flat_to_flat', [0.04, 0.07])
+@pytest.mark.parametrize('gap_size', [0.01, 0.02])
+@pytest.mark.parametrize('starting_ring', [0, 2])
+def test_hexagonal_segmented_aperture(num_rings, segment_flat_to_flat, gap_size, starting_ring):
+	name = 'hexagonal_segmented/pupil'
+	name += '_smallgap' if gap_size < 0.015 else '_largegap'
+	name += f'_{num_rings}rings'
+	name += '_smallsegment' if segment_flat_to_flat < 0.05 else '_largesegment'
+	name += '_withcenter' if starting_ring == 0 else '_withoutcenter'
 
-def test_vlt_aperture():
-	options = {
-		'telescope': [('ut1', '_ut123'), ('ut2', '_ut123'), ('ut3', '_ut123'), ('antu', '_ut123'), ('kueyen', '_ut123'), ('melipal', '_ut123')],
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')]
-	}
+	check_aperture(make_hexagonal_segmented_aperture, 1, name, check_segmentation=True,
+		num_rings=num_rings, segment_flat_to_flat=segment_flat_to_flat, gap_size=gap_size, starting_ring=starting_ring)
 
-	check_aperture_against_reference(make_vlt_aperture, 'vlt', 8.1196, options)
+@pytest.mark.parametrize('telescope', ['ut1', 'ut2', 'ut3', 'antu', 'kueyen', 'melipal'])
+@pytest.mark.parametrize('with_spiders', [True, False])
+def test_vlt_ut_123_aperture(telescope, with_spiders):
+	name = 'vlt/pupil_ut123'
+	name += '_without_spiders' if not with_spiders else ''
 
-	options = {
-		'telescope': [('ut4', '_ut4'), ('yepun', '_ut4')],
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')],
-		'with_M3_cover': [(False, ''), (True, '_with_M3_cover')]
-	}
+	check_aperture(make_vlt_aperture, 8.0, name,
+		check_normalization=True, telescope=telescope, with_spiders=with_spiders)
 
-	check_aperture_against_reference(make_vlt_aperture, 'vlt', 8.1196, options)
+@pytest.mark.parametrize('telescope', ['ut4', 'yepun'])
+@pytest.mark.parametrize('with_spiders', [True, False])
+@pytest.mark.parametrize('with_M3_cover', [True, False])
+def test_vlt_ut_4_aperture(telescope, with_spiders, with_M3_cover):
+	name = 'vlt/pupil_ut4'
+	name += '_without_spiders' if not with_spiders else ''
+	name += '_with_M3_cover' if with_M3_cover else ''
 
+	check_aperture(make_vlt_aperture, 8.1196, name,
+		check_normalization=True, telescope=telescope, with_spiders=with_spiders, with_M3_cover=with_M3_cover)
+
+def test_invalid_vlt_apertures():
 	for telescope in ['ut1', 'ut2', 'ut3']:
 		with pytest.warns(UserWarning, match='Using the M3 cover on a telescope other than UT4 is not realistic.'):
 			make_vlt_aperture(telescope=telescope, with_M3_cover=True)
@@ -112,123 +116,96 @@ def test_vlt_aperture():
 	with pytest.raises(ValueError):
 		make_vlt_aperture(telescope='nonexistent_vlt_telescope')
 
-def test_magellan_aperture():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')]
-	}
+@pytest.mark.parametrize('with_spiders', [True, False])
+def test_magellan_aperture(with_spiders):
+	name = 'magellan/pupil'
+	name += '_without_spiders' if not with_spiders else ''
 
-	check_aperture_against_reference(make_magellan_aperture, 'magellan', 6.5, options)
+	check_aperture(make_magellan_aperture, 6.5, name,
+		check_normalization=True, with_spiders=with_spiders)
 
-def test_hale_aperture():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')]
-	}
+@pytest.mark.parametrize('with_spiders', [True, False])
+def test_hale_aperture(with_spiders):
+	name = 'hale/pupil'
+	name += '_without_spiders' if not with_spiders else ''
 
-	check_aperture_against_reference(make_hale_aperture, 'hale', 5.08, options)
+	check_aperture(make_hale_aperture, 5.08, name,
+		check_normalization=True, with_spiders=with_spiders)
 
-def test_luvoir_a_aperture():
-	check_against_reference(make_luvoir_a_aperture(), 15.0, 'luvoir_a/pupil')
+@pytest.mark.parametrize('with_spiders', [True, False])
+@pytest.mark.parametrize('with_segment_gaps', [True, False])
+def test_luvoir_a_aperture(with_spiders, with_segment_gaps):
+	name = 'luvoir_a/pupil'
+	name += '_without_spiders' if not with_spiders else ''
+	name += '_without_segment_gaps' if not with_segment_gaps else ''
 
-	check_segmentation(make_luvoir_a_aperture)
+	check_aperture(make_luvoir_a_aperture, 15, name,
+		check_normalization=True, check_segmentation=True, with_spiders=with_spiders, with_segment_gaps=with_segment_gaps)
 
-@pytest.mark.slow
-def test_luvoir_a_aperture_all():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')],
-		'with_segment_gaps': [(True, ''), (False, '_without_segment_gaps')]
-	}
+@pytest.mark.parametrize('with_segment_gaps', [True, False])
+def test_luvoir_b_aperture(with_segment_gaps):
+	name = 'luvoir_b/pupil'
+	name += '_without_segment_gaps' if not with_segment_gaps else ''
 
-	check_aperture_against_reference(make_luvoir_a_aperture, 'luvoir_a', 15, options)
+	check_aperture(make_luvoir_b_aperture, 8, name,
+		check_normalization=True, check_segmentation=True, with_segment_gaps=with_segment_gaps)
 
-def test_luvoir_a_lyot_stop():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')]
-	}
+@pytest.mark.parametrize('with_spiders', [True, False])
+@pytest.mark.parametrize('with_segment_gaps', [True, False])
+def test_hicat_aperture(with_spiders, with_segment_gaps):
+	name = 'hicat_pupil/pupil'
+	name += '_without_spiders' if not with_spiders else ''
+	name += '_without_segment_gaps' if not with_segment_gaps else ''
 
-	check_aperture_against_reference(make_luvoir_a_lyot_stop, 'luvoir_a_lyot', 15, options)
+	check_aperture(make_hicat_aperture, 0.019725, name,
+		check_normalization=True, check_segmentation=True, with_spiders=with_spiders, with_segment_gaps=with_segment_gaps)
 
-def test_luvoir_b_aperture():
-	check_against_reference(make_luvoir_b_aperture(), 8.0, 'luvoir_b/pupil')
-	check_segmentation(make_luvoir_b_aperture)
+@pytest.mark.parametrize('with_spiders', [True, False])
+def test_hicat_lyot(with_spiders):
+	name = 'hicat_lyot/pupil'
+	name += '_without_spiders' if not with_spiders else ''
 
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_segment_gaps': [(True, ''), (False, '_without_segment_gaps')]
-	}
-	check_aperture_against_reference(make_luvoir_b_aperture, 'luvoir_b', 8, options)
+	check_aperture(make_hicat_lyot_stop, 0.01915751488095238, name,
+		check_normalization=True, with_spiders=with_spiders)
 
-def test_hicat_aperture():
-	check_against_reference(make_hicat_aperture(), 0.019725, 'hicat_pupil/pupil')
+@pytest.mark.parametrize('with_spiders', [True, pytest.param(False, marks=pytest.mark.slow)])
+def test_elt_aperture(with_spiders):
+	name = 'elt/pupil'
+	name += '_without_spiders' if not with_spiders else ''
 
-	check_segmentation(make_hicat_aperture)
+	check_aperture(make_elt_aperture, 39.14634, name,
+		check_normalization=True, check_segmentation=True, with_spiders=with_spiders)
 
-@pytest.mark.slow
-def test_hicat_aperture_all():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')],
-		'with_segment_gaps': [(True, ''), (False, '_without_segment_gaps')]
-	}
+@pytest.mark.parametrize('with_spiders', [True, pytest.param(False, marks=pytest.mark.slow)])
+def test_tmt_aperture(with_spiders):
+	name = 'tmt/pupil'
+	name += '_without_spiders' if not with_spiders else ''
 
-	check_aperture_against_reference(make_hicat_aperture, 'hicat_pupil', 0.019725, options)
+	check_aperture(make_tmt_aperture, 30.0, name,
+		check_normalization=True, check_segmentation=True, with_spiders=with_spiders)
 
-def test_hicat_lyot_stop():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')]
-	}
+@pytest.mark.parametrize('with_spiders', [True, False])
+def test_gmt_aperture(with_spiders):
+	name = 'gmt/pupil'
+	name += '_without_spiders' if not with_spiders else ''
 
-	check_aperture_against_reference(make_hicat_lyot_stop, 'hicat_lyot', 19.9e-3, options)
-
-def test_elt_aperture():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')]
-	}
-
-	check_aperture_against_reference(make_elt_aperture, 'elt', 39.14634, options)
-
-	check_segmentation(make_elt_aperture)
-
-def test_tmt_aperture():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')]
-	}
-
-	check_aperture_against_reference(make_tmt_aperture, 'tmt', 30.0, options)
-
-	check_segmentation(make_tmt_aperture)
-
-def test_gmt_aperture():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')]
-	}
-
-	check_aperture_against_reference(make_gmt_aperture, 'gmt', 25.448, options)
-
-	check_segmentation(make_gmt_aperture)
+	check_aperture(make_gmt_aperture, 25.448, name,
+		check_normalization=True, check_segmentation=True, with_spiders=with_spiders)
 
 def test_habex_aperture():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')]
-	}
+	name = 'habex/pupil'
 
-	check_aperture_against_reference(make_habex_aperture, 'habex', 4.0, options)
+	check_aperture(make_habex_aperture, 4.0, name)
 
-def test_hst_aperture():
-	options = {
-		'normalized': [(False, ''), (True, '_normalized')],
-		'with_spiders': [(True, ''), (False, '_without_spiders')],
-		'with_pads': [(True, ''), (False, '_without_pads')]
-	}
+@pytest.mark.parametrize('with_spiders', [True, False])
+@pytest.mark.parametrize('with_pads', [True, False])
+def test_hst_aperture(with_spiders, with_pads):
+	name = 'hst/pupil'
+	name += '_without_spiders' if not with_spiders else ''
+	name += '_without_pads' if not with_pads else ''
 
-	check_aperture_against_reference(make_hst_aperture, 'hst', 2.4, options)
+	check_aperture(make_hst_aperture, 2.4, name,
+		check_normalization=True, with_spiders=with_spiders, with_pads=with_pads)
 
 def test_shifted_aperture():
 	grid = make_pupil_grid(256, 2.0)

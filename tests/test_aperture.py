@@ -162,6 +162,21 @@ def test_luvoir_a_aperture(with_spiders, with_segment_gaps):
 		with_spiders=with_spiders, with_segment_gaps=with_segment_gaps
 	)
 
+def test_luvoir_a_lyot_stop():
+	for with_spiders in [True, False]:
+		for spider_oversize in [1, 3]:
+			for outer_diameter_fraction in [0.8, 0.9]:
+				name = 'luvoir_a_lyot/pupil'
+				name += '_withoutspiders' if not with_spiders else ''
+				name += f'_{spider_oversize}spideroversize'
+				name += f'_{int(outer_diameter_fraction * 100)}od'
+
+				check_aperture(
+					make_luvoir_a_lyot_stop, 15, name,
+					check_normalization=True,
+					with_spiders=with_spiders, spider_oversize=spider_oversize, outer_diameter_fraction=outer_diameter_fraction
+				)
+
 @pytest.mark.parametrize('with_segment_gaps', [True, False])
 def test_luvoir_b_aperture(with_segment_gaps):
 	name = 'luvoir_b/pupil'

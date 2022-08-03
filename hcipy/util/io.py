@@ -1,20 +1,32 @@
-import numpy as np
+import datetime
+import pickle
 
-def read_fits(filename):
+import numpy as np
+import asdf
+import asdf.fits_embed
+from astropy import wcs
+from astropy.io import fits
+
+from ..version import get_version
+from ..field import Grid, Field
+from ..mode_basis import ModeBasis
+
+def read_fits(filename, extension=0):
 	'''Read an array from a fits file.
 
 	Parameters
 	----------
 	filename : string
 		The filename of the file to read. This can include a path.
+	extension : integer
+		The extension of the fits file that is being read.
 
 	Returns
 	-------
 	ndarray
 		The ndarray read from the fits file.
 	'''
-	from astropy.io import fits
-	return fits.getdata(filename).copy()
+	return fits.getdata(filename, extension).copy()
 
 def write_fits(data, filename, shape=None, overwrite=True):
 	'''Write the data to a fits-file.
@@ -34,8 +46,6 @@ def write_fits(data, filename, shape=None, overwrite=True):
 	overwrite : boolean
 		Whether to overwrite the fits-file if it already exists.
 	'''
-	from astropy.io import fits
-
 	hdu = None
 
 	if shape is not None:
@@ -87,9 +97,6 @@ def _make_metadata(file_type):
 	dictionary
 		The metadata.
 	'''
-	from ..version import get_version
-	import datetime
-
 	tree = {
 		'meta': {
 			'author': 'HCIPy %s' % get_version(),
@@ -122,8 +129,6 @@ def read_grid(filename, fmt=None):
 	NotImplementedError
 		If the file format was not yet implemented.
 	'''
-	from ..field import Grid
-
 	if fmt is None:
 		fmt = _guess_file_format(filename)
 
@@ -131,16 +136,15 @@ def read_grid(filename, fmt=None):
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
 	if fmt in ['asdf', 'fits']:
-		import asdf
-
-		f = asdf.open(filename)
+		if fmt == 'fits':
+			f = asdf.fits_embed.AsdfInFits.open(filename)
+		else:
+			f = asdf.open(filename)
 		grid = Grid.from_dict(f.tree['grid'])
 		f.close()
 
 		return grid
 	elif fmt == 'pickle':
-		import pickle
-
 		with open(filename, 'rb') as f:
 			return pickle.load(f)
 	else:
@@ -175,21 +179,14 @@ def write_grid(grid, filename, fmt=None, overwrite=True):
 	tree['grid'] = grid.to_dict()
 
 	if fmt == 'asdf':
-		import asdf
-
 		target = asdf.AsdfFile(tree)
 		target.write_to(filename, all_array_compression='zlib')
 	elif fmt == 'fits':
-		from astropy.io import fits
-		import asdf
-
 		hdulist = fits.HDUList()
 
 		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
 		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
 	elif fmt == 'pickle':
-		import pickle
-
 		with open(filename, 'wb') as f:
 			pickle.dump(grid, f)
 	else:
@@ -217,8 +214,6 @@ def read_field(filename, fmt=None):
 	NotImplementedError
 		If the file format was not yet implemented.
 	'''
-	from ..field import Field
-
 	if fmt is None:
 		fmt = _guess_file_format(filename)
 
@@ -226,18 +221,13 @@ def read_field(filename, fmt=None):
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
 	if fmt == 'asdf':
-		import asdf
-
 		f = asdf.open(filename)
 		field = Field.from_dict(f.tree['field'])
 		f.close()
 
 		return field
 	elif fmt == 'fits':
-		import asdf
-		from ..field import Grid
-
-		f = asdf.open(filename)
+		f = asdf.fits_embed.AsdfInFits.open(filename)
 		tree = f.tree['field']
 
 		if 'grid' in tree:
@@ -250,8 +240,6 @@ def read_field(filename, fmt=None):
 
 		return field
 	elif fmt == 'pickle':
-		import pickle
-
 		with open(filename, 'rb') as f:
 			return pickle.load(f)
 	else:
@@ -286,14 +274,9 @@ def write_field(field, filename, fmt=None, overwrite=True):
 	tree['field'] = field.to_dict()
 
 	if fmt == 'asdf':
-		import asdf
-
 		target = asdf.AsdfFile(tree)
 		target.write_to(filename, all_array_compression='zlib')
 	elif fmt == 'fits':
-		from astropy.io import fits
-		import asdf
-
 		hdulist = fits.HDUList()
 
 		if field.grid.is_separated:
@@ -301,8 +284,6 @@ def write_field(field, filename, fmt=None, overwrite=True):
 			tree['field']['values'] = hdulist[0].data
 
 		if field.grid.is_regular:
-			from astropy import wcs
-
 			w = wcs.WCS(naxis=field.grid.ndim)
 			w.wcs.crpix = np.ones(field.grid.ndim)
 			w.wcs.cdelt = field.grid.delta
@@ -314,8 +295,6 @@ def write_field(field, filename, fmt=None, overwrite=True):
 		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
 		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
 	elif fmt == 'pickle':
-		import pickle
-
 		with open(filename, 'wb') as f:
 			pickle.dump(field, f)
 	else:
@@ -343,8 +322,6 @@ def read_mode_basis(filename, fmt=None):
 	NotImplementedError
 		If the file format was not yet implemented.
 	'''
-	from ..mode_basis import ModeBasis
-
 	if fmt is None:
 		fmt = _guess_file_format(filename)
 
@@ -352,18 +329,13 @@ def read_mode_basis(filename, fmt=None):
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
 	if fmt == 'asdf':
-		import asdf
-
 		f = asdf.open(filename)
 		mode_basis = ModeBasis.from_dict(f.tree['mode_basis'])
 		f.close()
 
 		return mode_basis
 	elif fmt == 'fits':
-		import asdf
-		from ..field import Grid
-
-		f = asdf.open(filename)
+		f = asdf.fits_embed.AsdfInFits.open(filename)
 		tree = f.tree['mode_basis']
 
 		if 'modes' in tree:
@@ -379,8 +351,6 @@ def read_mode_basis(filename, fmt=None):
 
 		return mode_basis
 	elif fmt == 'pickle':
-		import pickle
-
 		with open(filename, 'rb') as f:
 			return pickle.load(f)
 	else:
@@ -415,15 +385,9 @@ def write_mode_basis(mode_basis, filename, fmt=None, overwrite=True):
 	tree['mode_basis'] = mode_basis.to_dict()
 
 	if fmt == 'asdf':
-		import asdf
-
 		target = asdf.AsdfFile(tree)
 		target.write_to(filename, all_array_compression='zlib')
 	elif fmt == 'fits':
-		from astropy.io import fits
-		import asdf
-		from astropy import wcs
-
 		hdulist = fits.HDUList()
 
 		if mode_basis.grid and mode_basis.grid.is_separated:
@@ -446,8 +410,6 @@ def write_mode_basis(mode_basis, filename, fmt=None, overwrite=True):
 		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
 		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
 	elif fmt == 'pickle':
-		import pickle
-
 		with open(filename, 'wb') as f:
 			pickle.dump(mode_basis, f)
 	else:

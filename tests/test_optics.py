@@ -5,7 +5,6 @@ import pytest
 import os
 
 def test_agnostic_apodizer():
-	wavelength = 0.2
 	aperture_achromatic = circular_aperture(1)
 	aperture_chromatic = lambda input_grid, wavelength: circular_aperture(wavelength)(input_grid)
 
@@ -48,7 +47,7 @@ def test_statistics_noisy_detector():
 
 	field = Field(np.ones(N**2), grid)
 
-	#First we test photon noise, dark current noise and read noise.
+	# First we test photon noise, dark current noise and read noise.
 	flat_field = 0
 	dark_currents = np.logspace(1, 6, 6)
 	read_noises = np.logspace(1, 6, 6)
@@ -56,11 +55,11 @@ def test_statistics_noisy_detector():
 
 	for dc in dark_currents:
 		for rn in read_noises:
-			#The test detector.
+			# The test detector.
 			detector = NoisyDetector(detector_grid=grid, include_photon_noise=photon_noise, flat_field=flat_field, dark_current_rate=dc, read_noise=rn)
 
-			#The integration times we will test.
-			integration_time = np.logspace(1,6,6)
+			# The integration times we will test.
+			integration_time = np.logspace(1, 6, 6)
 
 			for t in integration_time:
 				# integration
@@ -77,7 +76,7 @@ def test_statistics_noisy_detector():
 
 				assert np.isclose(expected_std, std_measurement, rtol=2e-02, atol=1e-05)
 
-	#Now we test the flat field separately.
+	# Now we test the flat field separately.
 	flat_fields = np.linspace(0, 1, 100)
 	dark_current = 0
 	read_noise = 0
@@ -264,11 +263,11 @@ def test_wavefront_stokes():
 	N = 4
 	grid = make_pupil_grid(N)
 
-	stokes = np.random.uniform(-1,1,4)
-	stokes[0] = np.abs(stokes[0])+np.linalg.norm(stokes[1:])
+	stokes = np.random.uniform(-1, 1, 4)
+	stokes[0] = np.abs(stokes[0]) + np.linalg.norm(stokes[1:])
 
-	amplitude = np.random.uniform(0, 1, (2,2,N**2))
-	phase = np.random.uniform(0, 2 * np.pi, (2,2,N**2))
+	amplitude = np.random.uniform(0, 1, (2, 2, N**2))
+	phase = np.random.uniform(0, 2 * np.pi, (2, 2, N**2))
 
 	jones_field = Field(amplitude * np.exp(1j * phase), grid)
 
@@ -357,7 +356,7 @@ def mueller_matrix_for_general_linear_retarder(theta, delta):
 	retarder[0, 0] = 1
 
 	retarder[1, 1] = np.cos(2 * theta)**2 + np.sin(2 * theta)**2 * np.cos(delta)
-	retarder[1, 2] = np.cos(2 * theta) * np.sin(2*theta) * (1 - np.cos(delta))
+	retarder[1, 2] = np.cos(2 * theta) * np.sin(2 * theta) * (1 - np.cos(delta))
 	retarder[1, 3] = np.sin(2 * theta) * np.sin(delta)
 
 	retarder[2, 1] = np.cos(2 * theta) * np.sin(2 * theta) * (1 - np.cos(delta))
@@ -386,7 +385,7 @@ def mueller_matrix_for_general_linear_polarizer(theta):
 
 	polarizer[1, 0] = np.cos(2 * theta)
 	polarizer[1, 1] = np.cos(2 * theta)**2
-	polarizer[1, 2] = 0.5 * np.sin(4*theta)
+	polarizer[1, 2] = 0.5 * np.sin(4 * theta)
 
 	polarizer[2, 0] = np.sin(2 * theta)
 	polarizer[2, 1] = 0.5 * np.sin(4 * theta)
@@ -403,16 +402,17 @@ def test_polarization_elements():
 	# Stokes vectors used for testing.
 	stokes_vectors = [
 		None,
-		np.array([1, 0, 0, 0]), # unpolarized
-		np.array([1, 1, 0, 0]), # +Q polarized
-		np.array([1, -1, 0, 0]), # -Q polarized
-		np.array([1, 0, 1, 0]), # +U polarized
-		np.array([1, 0, -1, 0]), # -U polarized
-		np.array([1, 0, 0, 1]), # +V polarized
-		np.array([1, 0, 0, -1])] # -V polarized
+		np.array([1, 0, 0, 0]),  # unpolarized
+		np.array([1, 1, 0, 0]),  # +Q polarized
+		np.array([1, -1, 0, 0]),  # -Q polarized
+		np.array([1, 0, 1, 0]),  # +U polarized
+		np.array([1, 0, -1, 0]),  # -U polarized
+		np.array([1, 0, 0, 1]),  # +V polarized
+		np.array([1, 0, 0, -1])  # -V polarized
+	]
 
 	# Angles of the optics that will be tested.
-	angles = [-45, -22.5, 0, 22.5, 45, 90] # degrees
+	angles = [-45, -22.5, 0, 22.5, 45, 90]  # degrees
 
 	# Test QWPs, HWPs, polarizers and PBSs
 	for stokes_vector in stokes_vectors:
@@ -460,7 +460,7 @@ def test_polarization_elements():
 
 			# Test backward propagation.
 			wf_forward_backward_HWP = HWP_hcipy.backward(wf_forward_HWP)
-			assert np.allclose(wf_forward_backward_HWP.stokes_vector[:,0], stokes_vector)
+			assert np.allclose(wf_forward_backward_HWP.stokes_vector[:, 0], stokes_vector)
 
 			# Test power conservation.
 			assert np.allclose(wf_forward_HWP.I, test_wf.I)
@@ -531,9 +531,9 @@ def test_polarization_elements():
 		# Test if Mueller matrices are the same as reference.
 		circ_polarizer_1_ref = mueller_matrix_for_general_linear_polarizer(0)
 		circ_polarizer_2_ref = mueller_matrix_for_general_linear_polarizer(np.radians(90))
-		QWP_1_ref = mueller_matrix_for_general_linear_retarder(np.pi/4, -np.pi / 2)
-		CP_1_ref = np.dot(circ_polarizer_1_ref,QWP_1_ref)
-		CP_2_ref = np.dot(circ_polarizer_2_ref,QWP_1_ref)
+		QWP_1_ref = mueller_matrix_for_general_linear_retarder(np.pi / 4, -np.pi / 2)
+		CP_1_ref = np.dot(circ_polarizer_1_ref, QWP_1_ref)
+		CP_2_ref = np.dot(circ_polarizer_2_ref, QWP_1_ref)
 
 		assert np.allclose(CPBS_hcipy.mueller_matrices[0], CP_1_ref)
 		assert np.allclose(CPBS_hcipy.mueller_matrices[1], CP_2_ref)
@@ -568,6 +568,7 @@ def test_magnifier():
 		assert np.abs(wf_forward.total_power - 1) < 1e-12
 		assert hash(wf_forward.electric_field.grid) == hash(magnifier.get_output_grid(wf.electric_field.grid, 1))
 
+@pytest.mark.xfail(reason='known difficult bug; fix in progress')
 def test_pickle_optical_element():
 	import dill as pickle
 
@@ -596,12 +597,12 @@ def test_pickle_optical_element():
 		os.remove(fname)
 
 def test_step_index_fiber():
-	core_radius_multimode = 25e-6 # m
-	core_radius_singlemode = 2e-6 # m
+	core_radius_multimode = 25e-6  # m
+	core_radius_singlemode = 2e-6  # m
 	fiber_na = 0.13
-	fiber_length = 10 # m
-	D_pupil = 1 # m
-	wavelength = 1e-6 # m
+	fiber_length = 10  # m
+	D_pupil = 1  # m
+	wavelength = 1e-6  # m
 
 	multimode_fiber = StepIndexFiber(core_radius_multimode, fiber_na, fiber_length)
 	singlemode_fiber = StepIndexFiber(core_radius_singlemode, fiber_na, fiber_length)
@@ -634,3 +635,51 @@ def test_step_index_fiber():
 
 		assert forward_wf.total_power <= img.total_power * (1 + 1e-4)
 		assert backward_wf.total_power <= forward_wf.total_power * (1 + 1e-4)
+
+def check_thin_lens(wf, lens, num_steps, focal_length):
+	dz = focal_length / (num_steps / 2)
+	prop = FresnelPropagator(wf.electric_field.grid, dz)
+
+	wavefront = lens(wf)
+
+	z = [0]
+	peak = [wavefront.power.max()]
+
+	for i in range(num_steps):
+		wavefront = prop(wavefront)
+
+		z.append(z[-1] + dz)
+		peak.append(wavefront.power.max())
+
+	print('z', z)
+	print('peak', peak)
+
+	return z, peak
+
+def test_thin_lens():
+	wavelength = 1e-6
+	pupil_diameter = 5e-2
+	num_steps = 20
+
+	grid = make_pupil_grid(256, 2 * pupil_diameter)
+
+	focal_length = 300e-1
+	lens = ThinLens(focal_length, lambda x: 1.5, 1e-6)
+
+	aperture = evaluate_supersampled(circular_aperture(pupil_diameter), grid, 8)
+	assert abs((lens.focal_length - focal_length) / focal_length) < 1e-10
+
+	wf = Wavefront(aperture, wavelength)
+	wf.total_power = 1
+
+	z1, peak1 = check_thin_lens(wf, lens, num_steps, focal_length)
+
+	lens.focal_length = 2 * focal_length
+	z2, peak2 = check_thin_lens(wf, lens, num_steps, 2 * focal_length)
+
+	lens.focal_length = 0.75 * focal_length
+	z3, peak3 = check_thin_lens(wf, lens, num_steps, 0.75 * focal_length)
+
+	assert abs(z1[np.argmax(peak1)] / focal_length - 1.0) < 0.01
+	assert abs(z2[np.argmax(peak2)] / (2 * focal_length) - 1.0) < 0.01
+	assert abs(z3[np.argmax(peak3)] / (0.75 * focal_length) - 1.0) < 0.01

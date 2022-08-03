@@ -108,15 +108,15 @@ def test_app_keller():
 	img_ref = propagator.forward(wavefront)
 
 	# small rectangular dark zone with 1e-7 contrast
-	mask = rectangular_aperture(size=(6,2), center=(9,0))(focal_grid)
+	mask = rectangular_aperture(size=(6, 2), center=(9, 0))(focal_grid)
 	contrast = 1 - mask + 1e-7
 
 	# APP with aggressive acceleration
 	app = generate_app_keller(wavefront, propagator, contrast, num_iterations=150, beta=0.98)
 	img = propagator.forward(app)
 
-	assert np.abs(img.intensity.max() / img_ref.intensity.max() - 0.947) < 0.01 # Strehl
-	assert np.mean(img.intensity * mask) / np.mean(mask) < 1.6e-8 # contrast
+	assert np.abs(img.intensity.max() / img_ref.intensity.max() - 0.947) < 0.01  # Strehl
+	assert np.mean(img.intensity * mask) / np.mean(mask) < 1.6e-8  # contrast
 
 def test_perfect_coronagraph():
 	pupil_grid = make_pupil_grid(256)
@@ -145,3 +145,33 @@ def test_perfect_coronagraph():
 		# Do a linear fit on the log-log data to get the power-law coefficient
 		beta = ((x * y).sum() - x.sum() * y.sum() / n) / ((x * x).sum() - x.sum()**2 / n)
 		assert np.abs(beta - order) / order < 1e-3
+
+def test_lyot_coronagraph():
+	pupil_grid = make_pupil_grid(128, 1.1)
+	aperture = evaluate_supersampled(circular_aperture(1.0), pupil_grid, 8)
+	lyot_stop = evaluate_supersampled(circular_aperture(0.95), pupil_grid, 8)
+
+	# Coronagraph 1 with the default internal focal length
+	fpm_grid = make_focal_grid(q=32, num_airy=3)
+	fpm = 1 - evaluate_supersampled(circular_aperture(5), fpm_grid, 8)
+	cor = LyotCoronagraph(pupil_grid, fpm, lyot_stop)
+
+	# Coronagraph 2 with a large focal length
+	focal_length = 10.0
+	fpm_grid2 = make_focal_grid(q=32, num_airy=3, spatial_resolution=focal_length)
+	fpm2 = 1 - evaluate_supersampled(circular_aperture(5 * focal_length), fpm_grid2, 8)
+	cor2 = LyotCoronagraph(pupil_grid, fpm2, lyot_stop, focal_length=focal_length)
+
+	# The grid on which the performance is evaluated
+	focal_grid = make_focal_grid(q=3, num_airy=25)
+	prop = FraunhoferPropagator(pupil_grid, focal_grid)
+
+	wf = Wavefront(aperture)
+	wf.total_power = 1
+	norm = prop(wf).power.max()
+	wf_foc = prop(cor(wf))
+	wf_foc2 = prop(cor2(wf))
+
+	# Checks performance of the coronagraph and if the focal length does not introduce artifacts
+	assert (wf_foc.power.max() / norm) < 5e-3
+	np.testing.assert_allclose(wf_foc.power, wf_foc2.power)

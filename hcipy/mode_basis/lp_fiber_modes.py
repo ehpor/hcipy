@@ -57,8 +57,7 @@ def find_branch_cuts(m, V):
 	else:
 		return None
 
-
-def LP_radial(m, u, w, r):
+def lp_radial(m, u, w, r):
 	'''Evaluates the radial profile of the LP modes.
 
 	Parameters
@@ -78,7 +77,7 @@ def LP_radial(m, u, w, r):
 		An array that contains the radial profile.
 	'''
 	# The scaling factor for the continuity condition
-	scaling_factor = jv(m,u) /kn(m, w)
+	scaling_factor = jv(m, u) / kn(m, w)
 
 	# Find the grid inside and outside the core radius
 	mask = r < 1
@@ -90,7 +89,7 @@ def LP_radial(m, u, w, r):
 
 	return mode_field
 
-def LP_azimuthal(m, theta):
+def lp_azimuthal(m, theta):
 	'''Evaluates the azimuthal profile of the LP modes.
 
 	Parameters
@@ -110,7 +109,7 @@ def LP_azimuthal(m, theta):
 	else:
 		return np.sin(m * theta)
 
-def make_LP_modes(grid, V_number, core_radius, return_betas=False):
+def make_lp_modes(grid, V_number, core_radius, return_betas=False):
 	'''Make a ModeBasis out of the guided modes that are supported by a step-index fiber.
 
 	This function solves the eigenvalue equation of for a radial step-index profile fiber.
@@ -138,7 +137,7 @@ def make_LP_modes(grid, V_number, core_radius, return_betas=False):
 	num_modes = 0
 
 	# scaled grid
-	R, Theta = grid.scaled(1/core_radius).as_('polar').coords
+	R, Theta = grid.scaled(1 / core_radius).as_('polar').coords
 	modes = []
 	betas = []
 	while finding_new_modes:
@@ -147,12 +146,12 @@ def make_LP_modes(grid, V_number, core_radius, return_betas=False):
 		if solutions is not None:
 			for ui, wi in zip(solutions[0], solutions[1]):
 
-				radial_prodile = LP_radial(m, ui, wi, R)
+				radial_prodile = lp_radial(m, ui, wi, R)
 				beta = np.sqrt((V_number**2 + wi**2 - ui**2) / (2 * core_radius**2))
 
-				ms = [m,-m] if m > 0 else [m,]
+				ms = [m, -m] if m > 0 else [m]
 				for mi in ms:
-					azimutal_profile = LP_azimuthal(mi, Theta)
+					azimutal_profile = lp_azimuthal(mi, Theta)
 					mode_profile = radial_prodile * azimutal_profile
 
 					# Normalize the mode numerically as there is no analytical normalization
@@ -176,3 +175,9 @@ def make_LP_modes(grid, V_number, core_radius, return_betas=False):
 		return ModeBasis(modes, grid), np.array(betas)
 	else:
 		return ModeBasis(modes, grid)
+
+def make_LP_modes(*args, **kwargs):  # noqa: N802
+	import warnings
+	warnings.warn('Use the lower-case version "make_lp_modes" instead.', DeprecationWarning, stacklevel=2)
+
+	return make_lp_modes(*args, **kwargs)

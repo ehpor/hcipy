@@ -2,7 +2,7 @@ import numpy as np
 from .detector import Detector
 from .optical_element import OpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from .wavefront import Wavefront
-from ..mode_basis import ModeBasis, make_LP_modes
+from ..mode_basis import ModeBasis, make_lp_modes
 from ..field import Field
 
 class StepIndexFiber(AgnosticOpticalElement):
@@ -29,7 +29,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		monochromatic_V = self.V(wavelength)
 		instance_data.NA = self.evaluate_parameter(self._NA, input_grid, output_grid, wavelength)
-		instance_data.fiber_modes, instance_data.beta = make_LP_modes(input_grid, monochromatic_V, self.core_radius, return_betas=True)
+		instance_data.fiber_modes, instance_data.beta = make_lp_modes(input_grid, monochromatic_V, self.core_radius, return_betas=True)
 
 	def num_modes(self, wavelength):
 		'''The approximate amount of modes of the fiber.
@@ -37,7 +37,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 		V = self.V(wavelength)
 		return V**2 / 2
 
-	def V(self, wavelength):
+	def V(self, wavelength):  # noqa: N802
 		'''The normalized frequency parameter for step-index fibers.
 		'''
 		return 2 * np.pi / wavelength * self.core_radius * self.NA
@@ -65,15 +65,17 @@ class StepIndexFiber(AgnosticOpticalElement):
 		self.clear_cache()
 
 	@property
-	def NA(self):
+	def NA(self):  # noqa: N802
 		'''The numerical aperture of this fiber.
 		'''
 		return self._NA
 
 	@NA.setter
-	def NA(self, NA):
+	def NA(self, NA):  # noqa: N802
 		self._NA = NA
 		self.clear_cache()
+
+	numerical_aperture = NA
 
 	def get_input_grid(self, output_grid, wavelength):
 		return output_grid

@@ -302,7 +302,7 @@ class ModeBasis(object):
 		else:
 			# We are returning a single mode; return just this.
 			if self.is_sparse:
-				T = T.toarray()[...,0]
+				T = T.toarray()[..., 0]
 
 			if self.grid is None:
 				return T

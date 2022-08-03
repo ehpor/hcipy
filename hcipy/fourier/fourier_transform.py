@@ -20,7 +20,7 @@ class FourierTransform(object):
 			The field to Fourier transform.
 
 		Returns
-		--------
+		-------
 		Field
 			The Fourier transform of the field.
 		'''
@@ -35,7 +35,7 @@ class FourierTransform(object):
 			The field to inverse Fourier transform.
 
 		Returns
-		--------
+		-------
 		Field
 			The inverse Fourier transform of the field.
 		'''
@@ -46,7 +46,7 @@ class FourierTransform(object):
 		Fourier transform.
 
 		Returns
-		--------
+		-------
 		ndarray
 			A matrix representing the Fourier transform.
 		'''
@@ -63,7 +63,7 @@ class FourierTransform(object):
 		Fourier transform.
 
 		Returns
-		--------
+		-------
 		ndarray
 			A matrix representing the Fourier transform.
 		'''
@@ -72,21 +72,39 @@ class FourierTransform(object):
 
 		A = np.exp(1j * np.dot(np.array(coords_in).T, coords_out))
 		A *= self.output_grid.weights
-		A /= (2*np.pi)**self.input_grid.ndim
+		A /= (2 * np.pi)**self.input_grid.ndim
 
 		return A
 
-def _time_it(function, t_max=1, n_max=100):
+def _time_it_iterative(function, num_iterations):
 	import time
 
-	start = time.time()
-	times = []
-
-	while (time.time() < start + t_max) and (len(times) < n_max):
-		t1 = time.time()
+	start = time.perf_counter()
+	for _ in range(num_iterations):
 		function()
-		t2 = time.time()
-		times.append(t2 - t1)
+	end = time.perf_counter()
+
+	return (end - start) / num_iterations
+
+def _time_it(function, t_max=0.1, repeat_max=5):
+	num_iterations = 1
+
+	while True:
+		time_per_iteration = _time_it_iterative(function, num_iterations)
+
+		if time_per_iteration * num_iterations > t_max:
+			break
+		else:
+			num_iterations *= 2
+
+	# Shortcut if one iteration of the function itself takes longer than repeat_max * t_max.
+	if num_iterations == 1 and time_per_iteration > (repeat_max * t_max):
+		return time_per_iteration
+
+	times = [time_per_iteration]
+
+	for _ in range(repeat_max - 1):
+		times.append(_time_it_iterative(function, num_iterations))
 
 	return np.median(times)
 
@@ -115,24 +133,37 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 	FourierTransform
 		The Fourier transform that was requested.
 	'''
-	from .fast_fourier_transform import FastFourierTransform, make_fft_grid
+	from .fast_fourier_transform import FastFourierTransform, make_fft_grid, get_fft_parameters
 	from .matrix_fourier_transform import MatrixFourierTransform
 	from .naive_fourier_transform import NaiveFourierTransform
+
+	if output_grid is not None:
+		# Try to detect if the grid is compatible with an FFT grid.
+		try:
+			q, fov, shift = get_fft_parameters(output_grid, input_grid)
+
+			# If we got this far, the output grid is a native FFT grid.
+			# Remove output grid as its now completely defined by q, fov and shift parameters.
+			output_grid = None
+		except ValueError:
+			# The grid is not a native FFT grid.
+			pass
 
 	if output_grid is None:
 		# Choose between FFT and MFT
 		if not (input_grid.is_regular and input_grid.is_('cartesian')):
 			raise ValueError('For non-regular non-cartesian Grids, a Fourier transform is required to have an output_grid.')
 
-		if input_grid.ndim not in [1,2]:
+		if input_grid.ndim not in [1, 2]:
 			method = 'fft'
 		else:
 			output_grid = make_fft_grid(input_grid, q, fov)
 
 			if planner == 'estimate':
-				# Estimate analytically from complexities
-				N_in = input_grid.shape * q
-				N_out = output_grid.shape
+				# Estimate analytically from complexities.
+				# Convert shapes to float to avoid potential overflows.
+				N_in = input_grid.shape.astype('float') * q
+				N_out = output_grid.shape.astype('float')
 
 				if input_grid.ndim == 1:
 					fft = 4 * N_in[0] * np.log2(N_in)
@@ -140,12 +171,13 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 				else:
 					fft = 4 * np.prod(N_in) * np.log2(np.prod(N_in))
 					mft = 4 * (np.prod(input_grid.shape) * N_out[1] + np.prod(N_out) * input_grid.shape[0])
+
 				if fft > mft:
 					method = 'mft'
 				else:
 					method = 'fft'
 			elif planner == 'measure':
-				# Measure directly
+				# Measure directly.
 				fft = FastFourierTransform(input_grid, q, fov)
 				mft = MatrixFourierTransform(input_grid, output_grid)
 
@@ -159,7 +191,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 					method = 'fft'
 	else:
 		# Choose between MFT and Naive
-		if input_grid.is_separated and input_grid.is_('cartesian') and output_grid.is_separated and output_grid.is_('cartesian') and input_grid.ndim in [1,2]:
+		if input_grid.is_separated and input_grid.is_('cartesian') and output_grid.is_separated and output_grid.is_('cartesian') and input_grid.ndim in [1, 2]:
 			method = 'mft'
 		else:
 			method = 'naive'
@@ -186,7 +218,7 @@ def multiplex_for_tensor_fields(func):
 		if field.is_scalar_field:
 			return func(self, field)
 		else:
-			f = field.reshape((-1,field.grid.size))
+			f = field.reshape((-1, field.grid.size))
 			res = [func(self, ff) for ff in f]
 			new_shape = np.concatenate((field.tensor_shape, [-1]))
 			return Field(np.array(res).reshape(new_shape), res[0].grid)

@@ -6,18 +6,20 @@ this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md')) as f:
 	long_description = f.read()
 
-setup(name='hcipy',
+setup(
+	name='hcipy',
 	use_scm_version=True,
 	description='A framework for performing optical propagation simulations, meant for high contrast imaging, in Python.',
 	long_description=long_description,
 	long_description_content_type='text/markdown',
 	url='https://github.com/ehpor/hcipy/',
 	author='Emiel Por',
-	author_email='por@strw.leidenuniv.nl',
+	author_email='epor@stsci.edu',
 	packages=find_packages(),
-	package_data={'hcipy': ['data/*']},
+	package_data={'hcipy': ['**/*.yaml', '**/*.csv', '**/*.fits']},
 	setup_requires=[
-		'setuptools_scm'],
+		'setuptools_scm'
+	],
 	install_requires=[
 		"numpy",
 		"scipy",
@@ -28,14 +30,18 @@ setup(name='hcipy',
 		"imageio",
 		"xxhash",
 		"numexpr",
-		"asdf"],
+		"asdf",
+		"importlib_metadata ; python_version<'3.7'",
+		"importlib_resources>=1.4 ; python_version<'3.9'"
+	],
 	extras_require={
 		"dev": [
 			"pytest",
 			"codecov",
 			"coverage",
 			"mpmath",
-			"dill"],
+			"dill",
+			"flake8"],
 		"doc": [
 			"numpydoc",
 			"sphinx_rtd_theme",
@@ -54,9 +60,10 @@ setup(name='hcipy',
 		"License :: OSI Approved :: MIT License",
 		"Operating System :: OS Independent",
 		"Programming Language :: Python :: 3",
-		"Programming Language :: Python :: 3.5",
-		"Programming Language :: Python :: 3.6",
 		"Programming Language :: Python :: 3.7",
+		"Programming Language :: Python :: 3.8",
+		"Programming Language :: Python :: 3.9",
+		"Programming Language :: Python :: 3.10",
 		"Topic :: Scientific/Engineering :: Astronomy"],
-	license_file="LICENSE"
+	license_files=["LICENSE"]
 )

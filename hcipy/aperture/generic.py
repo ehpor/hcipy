@@ -39,7 +39,7 @@ def circular_aperture(diameter, center=None):
 
 	return func
 
-def elliptical_aperture(diameters, center=None):
+def elliptical_aperture(diameters, center=None, angle=0):
 	'''Makes a Field generator for an elliptical aperture.
 
 	Parameters
@@ -48,8 +48,9 @@ def elliptical_aperture(diameters, center=None):
 		The diameters of the aperture in the two directions.
 	center : array_like or None
 		The center of the aperture.
+	angle : scalar
+		The orientation of the ellipse in radians.
 
-	Returns
 	-------
 	Field generator
 		This function can be evaluated on a grid to get a Field.
@@ -59,14 +60,27 @@ def elliptical_aperture(diameters, center=None):
 	else:
 		shift = center * np.ones(2)
 
+	# Pre-calculate the minor and major axes dimensions after rotation
+	major_axis = diameters[0] / 2
+	minor_axis = diameters[1] / 2
+
+	cos_angle_major = np.cos(angle) / major_axis
+	cos_angle_minor = np.cos(angle) / minor_axis
+
+	sin_angle_major = np.sin(angle) / major_axis
+	sin_angle_minor = np.sin(angle) / minor_axis
+
 	def func(grid):
 		if grid.is_separated:
-			x, y = grid.separated_coords
-			f = ((((x - shift[0]) / (diameters[0] / 2))**2)[np.newaxis, :] + (((y - shift[1]) / (diameters[1] / 2))**2)[:, np.newaxis] <= 1).ravel()
+			x, y = grid.shifted(shift).separated_coords
+			term1 = ((x * cos_angle_major)[np.newaxis, :] - (y * sin_angle_major)[:, np.newaxis])**2
+			term2 = ((x * sin_angle_minor)[np.newaxis, :] + (y *  cos_angle_minor)[:, np.newaxis])**2
+			f = (term1 + term2 <= 1).ravel()
 		else:
-			x, y = grid.as_('cartesian').coords
-			f = (((x - shift[0]) / (diameters[0] / 2))**2 + ((y - shift[1]) / (diameters[1] / 2))**2) <= 1
-
+			x, y = grid.as_('cartesian').shifted(shift).coords
+			x_transformed = (x * cos_angle_major - y * sin_angle_major)
+			y_transformed = (x * sin_angle_minor + y * cos_angle_minor)
+			f = (x_transformed**2 + y_transformed**2) <= 1
 		return Field(f.astype('float'), grid)
 
 	return func
@@ -284,7 +298,7 @@ def make_spider_infinite(p, angle, spider_width):
 	spider_angle = np.radians(angle)
 
 	def func(grid):
-		x,y = grid.shifted(p).coords
+		x, y = grid.shifted(p).coords
 
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
@@ -319,7 +333,7 @@ def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,
 		pupil_inner = circular_aperture(central_obscuration_diameter)(grid)
 		spiders = 1
 
-		spider_angles = np.linspace(0, 2*np.pi, num_spiders, endpoint=False)
+		spider_angles = np.linspace(0, 2 * np.pi, num_spiders, endpoint=False)
 
 		for angle in spider_angles:
 			x = pupil_diameter * np.cos(angle)
@@ -361,6 +375,23 @@ def make_rotated_aperture(aperture, angle):
 		The rotated aperture.
 	'''
 	return lambda grid: Field(aperture(grid.rotated(-angle)), grid)
+
+def make_shifted_aperture(aperture, shift):
+	'''Create a shifted version of `aperture`.
+
+	Parameters
+	----------
+	aperture : Field generator
+		The aperture to rotate.
+	shift : array_like
+		The shift of the aperture.
+
+	Returns
+	-------
+	Field generator
+		The shifted aperture.
+	'''
+	return lambda grid: Field(aperture(grid.shifted(-np.array(shift))), grid)
 
 def make_segmented_aperture(segment_shape, segment_positions, segment_transmissions=1, return_segments=False):
 	'''Create a segmented aperture.

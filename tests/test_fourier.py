@@ -1,5 +1,6 @@
 from hcipy import *
 import numpy as np
+import pytest
 
 def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims):
 	grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
@@ -42,7 +43,6 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 	if fov == 1:
 		# When the full fov is retained, the pattern should be the same and energy should
 		# be conserved. We use different accuracy limits based on bit depth.
-		#print(np.max(patterns_match))
 		if np.dtype(dtype) == np.dtype('complex128'):
 			assert np.all(patterns_match < 1e-13)
 			assert np.all(np.abs(energy_ratios - 1) < 1e-14)
@@ -59,10 +59,10 @@ def test_fourier_energy_conservation_1d():
 	np.random.seed(0)
 
 	for dtype in ['complex128', 'complex64']:
-		for shift_input in [0,0.1]:
-			for scale in [1,2]:
-				for shift_output in [0,0.1]:
-					for q in [1,3,4]:
+		for shift_input in [0, 0.1]:
+			for scale in [1, 2]:
+				for shift_output in [0, 0.1]:
+					for q in [1, 1.23, 3, 4]:
 						for fov in [1, 0.5, 0.8]:
 							for dims in [64, 65]:
 								check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
@@ -71,22 +71,22 @@ def test_fourier_energy_conservation_2d():
 	np.random.seed(0)
 
 	for dtype in ['complex128', 'complex64']:
-		for shift_input in [[0,0],[0.1]]:
-			for scale in [1,2]:
-				for shift_output in [[0,0], [0.1]]:
-					for q in [1,3,4]:
-						for fov in [1,0.5,0.8]:
-							for dims in [[8,8],[8,16],[9,9],[9,18]]:
+		for shift_input in [[0, 0], [0.1]]:
+			for scale in [1, 2]:
+				for shift_output in [[0, 0], [0.1]]:
+					for q in [1, 1.23, 3, 4]:
+						for fov in [1, 0.5, 0.8]:
+							for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
 								check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
 
 def check_symmetry(scale, q, fov, dims):
 	pass
 
 def test_fourier_symmetries_2d():
-	for scale in [1,2]:
-		for q in [1,3,4]:
-			for fov in [1,0.5,0.8]:
-				for dims in [[8,8],[8,16],[9,9],[9,18]]:
+	for scale in [1, 2]:
+		for q in [1, 3, 4]:
+			for fov in [1, 0.5, 0.8]:
+				for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
 					check_symmetry(scale, q, fov, dims)
 
 def test_make_fourier_transform():
@@ -95,7 +95,15 @@ def test_make_fourier_transform():
 	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='estimate')
 	assert type(ft) == FastFourierTransform
 
+	fft_grid = make_fft_grid(input_grid, q=1, fov=1)
+	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
+	assert type(ft) == FastFourierTransform
+
 	ft = make_fourier_transform(input_grid, q=8, fov=0.3, planner='estimate')
+	assert type(ft) == MatrixFourierTransform
+
+	fft_grid = make_fft_grid(input_grid, q=8, fov=0.3)
+	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
 	assert type(ft) == MatrixFourierTransform
 
 	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='measure')
@@ -105,14 +113,77 @@ def test_make_fourier_transform():
 	ft = make_fourier_transform(input_grid, output_grid)
 	assert type(ft) == NaiveFourierTransform
 
+def test_fft_grid_reconstruction():
+	for shift_input in [[0, 0], [0.1]]:
+			for scale in [1, 2]:
+				for shift_output in [[0, 0], [0.1]]:
+					for q in [1, 1.234, 3, 4]:
+						for fov in [1, 0.5, 0.8, [0.3, 0.23]]:
+							for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
+								input_grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
+
+								fft_grid = make_fft_grid(input_grid, q, fov, shift_output)
+
+								assert is_fft_grid(fft_grid, input_grid)
+
+								q_recon, fov_recon, shift_output_recon = get_fft_parameters(fft_grid, input_grid)
+								fft_grid_recon = make_fft_grid(input_grid, q_recon, fov_recon, shift_output_recon)
+
+								print(q, fov, shift_output)
+								print(q_recon, fov_recon, shift_output_recon)
+
+								assert np.allclose(fft_grid.x, fft_grid_recon.x)
+								assert np.allclose(fft_grid.y, fft_grid_recon.y)
+
+	# Check raising behaviour.
+	input_grid = make_uniform_grid([128, 128], 1)
+	output_grid = CartesianGrid(SeparatedCoords(input_grid.separated_coords))
+
+	with pytest.raises(ValueError):
+		get_fft_parameters(output_grid, input_grid)
+	with pytest.raises(ValueError):
+		get_fft_parameters(input_grid, output_grid)
+
+	assert not is_fft_grid(output_grid, input_grid)
+	assert not is_fft_grid(input_grid, output_grid)
+
+	output_grid = make_fft_grid(input_grid, 1, 0.5).scaled(1.001)
+
+	with pytest.raises(ValueError):
+		get_fft_parameters(output_grid, input_grid)
+
+	assert not is_fft_grid(output_grid, input_grid)
+
+def test_fft_exceptions():
+	regular_grid = make_uniform_grid([128, 128], 1)
+	irregular_cartesian_grid = CartesianGrid(UnstructuredCoords([np.random.randn(1024), np.random.randn(1024)]))
+	irregular_polar_grid = irregular_cartesian_grid.as_('polar')
+
+	with pytest.raises(ValueError):
+		FastFourierTransform(regular_grid, 0.9, 0.5)
+
+	with pytest.raises(ValueError):
+		FastFourierTransform(regular_grid, 2, 1.1)
+
+	with pytest.raises(ValueError):
+		FastFourierTransform(regular_grid, 2, -0.1)
+
+	with pytest.raises(ValueError):
+		FastFourierTransform(irregular_cartesian_grid, 2, 0.5)
+
+	with pytest.raises(ValueError):
+		FastFourierTransform(irregular_polar_grid, 2, 10.5)
+
 def test_mft_precomputations():
 	input_grid = make_pupil_grid(128)
 	output_grid = make_fft_grid(input_grid, 1, 0.25)
 
 	for precompute_matrices in [True, False]:
 		for allocate_intermediate in [True, False]:
-			mft = MatrixFourierTransform(input_grid, output_grid,
-				precompute_matrices=precompute_matrices, allocate_intermediate=allocate_intermediate)
+			mft = MatrixFourierTransform(
+				input_grid, output_grid,
+				precompute_matrices=precompute_matrices, allocate_intermediate=allocate_intermediate
+			)
 
 			mft.forward(input_grid.zeros())
 			mft.forward(input_grid.ones())
@@ -123,7 +194,7 @@ def test_mft_precomputations():
 def test_fourier_filter():
 	for n in [16, 17, [16, 17]]:
 		for q in [1, 2, 3]:
-			for tensor_shape in [(), (3,), (3,3)]:
+			for tensor_shape in [(), (3,), (3, 3)]:
 				for scale in [1, 2]:
 					input_grid = make_pupil_grid(n, scale)
 

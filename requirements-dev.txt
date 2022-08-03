@@ -1,5 +1,0 @@
-pytest
-codecov
-coverage
-mpmath
-dill

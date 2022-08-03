@@ -2,6 +2,8 @@ __all__ = [
     'make_fourier_transform',
     'FourierTransform',
     'make_fft_grid',
+    'get_fft_parameters',
+    'is_fft_grid',
     'FastFourierTransform',
     'FourierFilter',
     'MatrixFourierTransform',

@@ -1,10 +1,14 @@
+# flake8: noqa
+
 # Import all submodules.
 from . import aperture
 from . import atmosphere
+from . import config
 from . import coronagraphy
 from . import field
 from . import fourier
 from . import interpolation
+from . import metrics
 from . import mode_basis
 from . import optics
 from . import plotting

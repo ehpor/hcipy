@@ -1,5 +1,9 @@
 import numpy as np
-import pkg_resources
+
+try:
+	from importlib.resources import files
+except ImportError:
+	from importlib_resources import files
 
 def make_sellmeier_glass(A, K, L):
 	r'''The Sellmeier equation for the dispersion of the refractive index of materials.
@@ -107,17 +111,23 @@ def _build_glass_catalogue():
 
 	_glass_catalogue = {
 		'IP_DIP': make_cauchy_glass([1.5273, 6.5456E-3, 2.5345E-4]),
-		'SILICA' : make_sellmeier_glass(1, [0.6961663, 0.4079426, 0.8974794], [0.0684043**2, 0.1162414**2, 9.896161**2])
+		'SILICA': make_sellmeier_glass(1, [0.6961663, 0.4079426, 0.8974794], [0.0684043**2, 0.1162414**2, 9.896161**2]),
+		'SAPPHIRE': make_sellmeier_glass(1, [1.4313493, 0.65054713, 5.3414021], [0.0726631**2, 0.1193242**2, 18.028251**2]),
+		'CAF2': make_sellmeier_glass(1.33973, [0.69913, 0.11994, 4.35181], [0.09374**2, 21.18**2, 38.46**2]),
 	}
 
-	_glass_catalogue.update(_parse_sellmeier_glass_catalogue(pkg_resources.resource_stream('hcipy', 'data/schott_glass_catalogue_2018_09.csv')))
-	_glass_catalogue.update(_parse_sellmeier_glass_catalogue(pkg_resources.resource_stream('hcipy', 'data/ohara_glass_catalogue_2019_08.csv')))
+	catalogues = ['schott_glass_catalogue_2018_09.csv', 'ohara_glass_catalogue_2019_08.csv']
 
-def _parse_sellmeier_glass_catalogue(filename):
-	data = np.loadtxt(filename, dtype=np.str, delimiter=',', skiprows=1)
+	for fname in catalogues:
+		catalogue = files('hcipy.optics').joinpath(fname)
+		with catalogue.open() as f:
+			_glass_catalogue.update(_parse_sellmeier_glass_catalogue(f))
+
+def _parse_sellmeier_glass_catalogue(catalogue_file):
+	data = np.loadtxt(catalogue_file, dtype=str, delimiter=',', skiprows=1)
 
 	database = {}
 	for di in data:
-		database[di[0].replace(" ", "")] = make_sellmeier_glass(1, di[1:4].astype(np.float), di[4::].astype(np.float))
+		database[di[0].replace(" ", "")] = make_sellmeier_glass(1, di[1:4].astype('float'), di[4::].astype('float'))
 
 	return database

@@ -77,7 +77,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		ap[tuple(self.cutout_input)] = wavefront.electric_field.shaped
 
 		# FIXME: use 1D FFTs on 2D grids implementation when available, instead of this.
-		post_coro = _fft_module.ifft(_fft_module.fft(ap, axis=1) * self.focal_mask[np.newaxis,:], axis=1)
+		post_coro = _fft_module.ifft(_fft_module.fft(ap, axis=1) * self.focal_mask[np.newaxis, :], axis=1)
 		post_coro = Field(post_coro[self.cutout_input].ravel(), wavefront.electric_field.grid)
 
 		wavefront = Wavefront(post_coro, wavefront.wavelength)
@@ -107,7 +107,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 		ap[tuple(self.cutout_input)] = wavefront.electric_field.shaped
 
 		# FIXME: use 1D FFTs on 2D grids implementation when available, instead of this.
-		post_coro = _fft_module.ifft(_fft_module.fft(ap, axis=1) * self.focal_mask[np.newaxis,:], axis=1)
+		post_coro = _fft_module.ifft(_fft_module.fft(ap, axis=1) * self.focal_mask[np.newaxis, :], axis=1)
 		post_coro = Field(post_coro[self.cutout_input].ravel(), wavefront.electric_field.grid)
 
 		wavefront = Wavefront(post_coro, wavefront.wavelength)

@@ -5,14 +5,14 @@ jobs:
     vmImage: ubuntu-latest
   strategy:
     matrix:
-      Python36:
-        python.version: '3.6'
       Python37:
         python.version: '3.7'
       Python38:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
+      Python310:
+        python.version: '3.10'
 
   steps:
   - bash: |
@@ -23,8 +23,7 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
-      sudo apt-get -y install ffmpeg
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy ffmpeg
     displayName: Set up Anaconda environment
 
   - bash: |
@@ -63,14 +62,14 @@ jobs:
     vmImage: 'macOS-latest'
   strategy:
     matrix:
-      Python36:
-        python.version: '3.6'
       Python37:
         python.version: '3.7'
       Python38:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
+      Python310:
+        python.version: '3.10'
 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
@@ -83,8 +82,7 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
-      brew install ffmpeg
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy ffmpeg
     displayName: Set up Anaconda environment
 
   - bash: |
@@ -123,14 +121,14 @@ jobs:
     vmImage: 'windows-latest'
   strategy:
     matrix:
-      Python36:
-        python.version: '3.6'
       Python37:
         python.version: '3.7'
       Python38:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
+      Python310:
+        python.version: '3.10'
 
   steps:
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
@@ -140,8 +138,7 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy
-      choco install ffmpeg -y
+      conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy ffmpeg
     displayName: Set up Anaconda environment
 
   - script: |
@@ -188,8 +185,7 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy
-      sudo apt-get -y install ffmpeg
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy ffmpeg
     displayName: Set up Anaconda environment
 
   - bash: |

@@ -111,7 +111,7 @@ def get_disk_harmonic_orders_sorted(num_modes, bc='dirichlet'):
 	list of tuples
 		A list of orders (n, m).
 	'''
-	orders = [(1,0)]
+	orders = [(1, 0)]
 	energies = [disk_harmonic_energy(1, 0, bc)]
 
 	results = []

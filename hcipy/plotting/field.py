@@ -3,7 +3,8 @@ import numpy as np
 
 from ..field import Field
 
-def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None,
+def imshow_field(
+		field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None,
 		non_linear_axes=False, cmap=None, mask=None, mask_color='k', grid_units=1, *args, **kwargs):
 	'''Display a two-dimensional image on a matplotlib figure.
 
@@ -125,7 +126,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		im = ax.pcolormesh(X, Y, z, *args, norm=norm, rasterized=True, cmap=cmap, **kwargs)
 	else:
 		# Use NonUniformImage to display
-		im = NonUniformImage(ax, extent=(min_x, max_x, min_y, max_y), interpolation=interpolation , norm=norm, cmap=cmap, *args, **kwargs)
+		im = NonUniformImage(ax, extent=(min_x, max_x, min_y, max_y), interpolation=interpolation, norm=norm, cmap=cmap, *args, **kwargs)
 		im.set_data(x, y, z)
 
 		from matplotlib.patches import Rectangle
@@ -133,7 +134,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		ax.add_patch(patch)
 		im.set_clip_path(patch)
 
-		ax.images.append(im)
+		ax.add_image(im)
 
 	ax.set_xlim(min_x, max_x)
 	ax.set_ylim(min_y, max_y)
@@ -147,7 +148,7 @@ def imshow_field(field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal'
 		imshow_field(m, grid, ax=ax)
 
 	num_rows, num_cols = field.grid.shape
-	def format_coord(x, y): # pragma: no cover
+	def format_coord(x, y):  # pragma: no cover
 		col = int(np.round((x - min_x) / (max_x - min_x) * (num_cols - 1)))
 		row = int(np.round((y - min_y) / (max_y - min_y) * (num_rows - 1)))
 
@@ -412,7 +413,7 @@ def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
 		hsv[..., 2] = t
 
 	rgb = mpl.colors.hsv_to_rgb(hsv)
-	alpha = np.isfinite(field)[:,np.newaxis]
+	alpha = np.isfinite(field)[:, np.newaxis]
 
 	res = np.concatenate((rgb, alpha), axis=1)
 

@@ -4,7 +4,8 @@ from ..config import Configuration
 
 import numpy as np
 
-def imshow_psf(psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',
+def imshow_psf(
+		psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',
 		cmap=None, title=None, normalization='none',
 		crosshairs=False, mark_centroid=False, colorbar=True,
 		colorbar_orientation='vertical', spatial_resolution=1,
@@ -87,8 +88,10 @@ def imshow_psf(psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',
 	else:
 		raise ValueError('Scale needs to be one of ["linear", "log", "logarithmic"].')
 
-	im = imshow_field(img, norm=norm, cmap=cmap,
-		grid_units=spatial_resolution, ax=ax, **kwargs)
+	im = imshow_field(
+		img, norm=norm, cmap=cmap,
+		grid_units=spatial_resolution, ax=ax, **kwargs
+	)
 
 	if crosshairs:
 		ax.axhline(0, ls=':', color='k')
@@ -121,7 +124,8 @@ def imshow_psf(psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',
 
 	return im
 
-def imshow_pupil_phase(pupil_phase, grid=None, phase_limits=None, vmin=None, vmax=None, cmap=None,
+def imshow_pupil_phase(
+		pupil_phase, grid=None, phase_limits=None, vmin=None, vmax=None, cmap=None,
 		colorbar=True, colorbar_orientation='vertical', title=None, crosshairs=False,
 		remove_piston=False, ax=None, **kwargs):
 	'''Display a pupil phase pattern in a nice, consistent format.

@@ -11,17 +11,19 @@ try:
 except ImportError:
 	_fft_module = np.fft
 
-def make_fft_grid(input_grid, q=1, fov=1):
+def make_fft_grid(input_grid, q=1, fov=1, shift=0):
 	'''Calculate the grid returned by a Fast Fourier Transform.
 
 	Parameters
 	----------
 	input_grid : Grid
 		The grid defining the sampling in the real domain..
-	q : scalar
+	q : scalar or array_like
 		The amount of zeropadding to perform. A value of 1 denotes no zeropadding.
-	fov : scalar
+	fov : scalar or array_like
 		The amount of cropping to perform in the Fourier domain.
+	shift : scalar or array_like
+		The shift to apply on the output grid.
 
 	Returns
 	-------
@@ -30,6 +32,10 @@ def make_fft_grid(input_grid, q=1, fov=1):
 	'''
 	q = np.ones(input_grid.ndim, dtype='float') * q
 	fov = np.ones(input_grid.ndim, dtype='float') * fov
+	shift = np.ones(input_grid.ndim, dtype='float') * shift
+
+	# Correct q for a discrete zero padding of the input grid.
+	q = np.round(q * input_grid.dims) / input_grid.dims
 
 	# Check assumptions
 	if not input_grid.is_regular:
@@ -39,9 +45,99 @@ def make_fft_grid(input_grid, q=1, fov=1):
 
 	delta = (2 * np.pi / (input_grid.delta * input_grid.dims)) / q
 	dims = (input_grid.dims * fov * q).astype('int')
-	zero = delta * (-dims / 2 + np.mod(dims, 2) * 0.5)
+	zero = delta * (-dims / 2 + np.mod(dims, 2) * 0.5) + shift
 
 	return CartesianGrid(RegularCoords(delta, dims, zero))
+
+def get_fft_parameters(fft_grid, input_grid):
+	'''Try to reconstruct the FFT parameters of a grid.
+
+	.. note::
+		Not every grid is an FFT grid. This function will raise a
+		ValueError if this is the case. You can alternatively use
+		`is_fft_grid()` to check if a grid is an FFT grid or not.
+
+	.. note::
+		The parameters that this function outputs might not
+		correspond perfectly to the original FFT parameters you used.
+		However, it guarantees that an FFT grid generated with these
+		reconstructed parameters will create the same FFT grid as an
+		FFT generated with the original parameters.
+
+	Parameters
+	----------
+	fft_grid : Grid
+		A grid that corresponds to a native FFT grid of `input_grid`.
+	input_grid : Grid
+		The grid defining the sampling in the real domain.
+
+	Returns
+	-------
+	q : ndarray
+		The amount of zeropadding detected in the real domain.
+	fov : ndarray
+		The amount of cropping detected in the Fourier domain.
+	shift : ndarray
+		The amount of shifting detected in the Fourier domain.
+
+	Raises
+	------
+	ValueError
+		If `fft_grid` does not correspond to an FFT grid of `input_grid`.
+	'''
+	if not input_grid.is_regular:
+		raise ValueError('The input grid must be regular to reconstruct an fft grid.')
+	if not fft_grid.is_regular:
+		raise ValueError('The fft grid is not regular and therefore cannot be an fft grid.')
+
+	q = (2 * np.pi / (input_grid.delta * input_grid.dims)) / fft_grid.delta
+
+	if np.any(q < 1):
+		raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} would be < 1.')
+
+	# Check that the calculated q corresponds to an integer zeropadding.
+	zeropadded_dims = q * input_grid.dims
+	if np.any(np.abs(zeropadded_dims - np.round(zeropadded_dims)) > 1e-10):
+		raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} does not correspond to an integer zeropadding.')
+
+	# Compute fov.
+	fov = fft_grid.dims / zeropadded_dims
+
+	# Check if fov would be < 1.
+	if np.any(fft_grid.dims > (zeropadded_dims + 0.5).astype('int')):
+		raise ValueError(f'fft_grid is not an FFT grid of input_grid: fov of {fov} would be > 1 .')
+
+	# Correct fov for rounding errors (floating point errors would lead to a different dims).
+	dummy_fft_grid = make_fft_grid(input_grid, q, fov)
+	wrong_dims = fft_grid.dims != dummy_fft_grid.dims
+	fov[wrong_dims] = ((fft_grid.dims + 0.5) / (input_grid.dims * q))[wrong_dims]
+
+	shift = fft_grid.zero - fft_grid.delta * (-fft_grid.dims / 2 + np.mod(fft_grid.dims, 2) * 0.5)
+	return q, fov, shift
+
+def is_fft_grid(grid, input_grid):
+	'''Returns whether `grid` is a native FFT grid of `input_grid` or not.
+
+	.. note::
+		The function get_fft_parameters() can be used
+
+	Parameters
+	----------
+	grid : Grid
+		The grid in the Fourier domain. This grid is checked.
+	input_grid : Grid
+		The grid in the real domain of the FFT.
+
+	Returns
+	-------
+	boolean
+		Whether `grid` is a native FFT grid of `input_grid` for some q, fov and shift.
+	'''
+	try:
+		get_fft_parameters(grid, input_grid)
+	except ValueError:
+		return False
+	return True
 
 def _numexpr_grid_shift(shift, grid, out=None):
 	'''Fast evaluation of np.exp(1j * np.dot(shift, grid.coords)) using NumExpr.
@@ -67,10 +163,10 @@ def _numexpr_grid_shift(shift, grid, out=None):
 	coords = grid.coords
 
 	for i in range(grid.ndim):
-		variables['a%d' % i] = shift[i]
-		variables['b%d' % i] = coords[i]
+		variables[f'a{i}'] = shift[i]
+		variables[f'b{i}'] = coords[i]
 
-		command.append('a%d * b%d' % (i,i))
+		command.append(f'a{i} * b{i}')
 
 	command = 'exp(1j * (' + '+'.join(command) + '))'
 	return ne.evaluate(command, local_dict=variables, out=out)
@@ -86,12 +182,17 @@ class FastFourierTransform(FourierTransform):
 	----------
 	input_grid : Grid
 		The grid that is expected for the input field.
-	q : scalar
-		The amount of zeropadding to perform. A value of 1 denotes no zeropadding.
-	fov : scalar
-		The amount of cropping to perform in the Fourier domain.
+	q : scalar or array_like
+		The amount of zeropadding to perform. A value of 1 denotes no zeropadding. A value of
+		2 indicates zeropadding to twice the dimensions of the input grid. Note: as
+		zeropadding has to be done by an integer number of pixels, the q will be rounded to
+		the closest possible number to satisfy this constraint.
+	fov : scalar or array_like
+		The amount of cropping to perform in the Fourier domain. A value of 1 indicates that
+		no cropping will be performed.
 	shift : array_like or scalar
-		The amount by which to shift the output grid.
+		The amount by which to shift the output grid. If this is a scalar, the same shift will
+		be used for all dimensions.
 	emulate_fftshifts : boolean or None
 		Whether to emulate FFTshifts normally used in the FFT by multiplications in the
 		opposite domain. Enabling this increases performance by 3x, but degrades accuracy of
@@ -102,6 +203,8 @@ class FastFourierTransform(FourierTransform):
 	------
 	ValueError
 		If the input grid is not regular or Cartesian.
+	ValueError
+		If q < 1 or fov < 0 or fov > 1, both of which are impossible for an FFT to calculate.
 	'''
 	def __init__(self, input_grid, q=1, fov=1, shift=0, emulate_fftshifts=None):
 		# Check assumptions
@@ -109,6 +212,12 @@ class FastFourierTransform(FourierTransform):
 			raise ValueError('The input_grid must be regular.')
 		if not input_grid.is_('cartesian'):
 			raise ValueError('The input_grid must be Cartesian.')
+
+		if np.any(q < 1):
+			raise ValueError('The amount of zeropadding (q) must be larger than 1.')
+
+		if np.any(fov < 0):
+			raise ValueError('The amount of cropping (fov) must be positive.')
 
 		self.input_grid = input_grid
 
@@ -122,11 +231,14 @@ class FastFourierTransform(FourierTransform):
 			emulate_fftshifts = Configuration().fourier.fft.emulate_fftshifts
 		self.emulate_fftshifts = emulate_fftshifts
 
-		self.output_grid = make_fft_grid(input_grid, q, fov).shifted(shift)
+		self.output_grid = make_fft_grid(input_grid, q, fov, shift)
 		self.internal_grid = make_fft_grid(input_grid, q, 1)
 
+		if np.any(self.output_grid.dims > self.internal_grid.dims):
+			raise ValueError('The amount of cropping (fov) must be smaller than 1.')
+
 		self.shape_out = self.output_grid.shape
-		self.internal_shape = (self.shape_in * q).astype('int')
+		self.internal_shape = self.internal_grid.shape
 		self.internal_array = np.zeros(self.internal_shape, 'complex')
 
 		# Calculate the part of the array in which to insert the input field (for zeropadding).

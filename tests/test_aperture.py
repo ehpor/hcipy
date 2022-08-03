@@ -82,7 +82,7 @@ def test_hexagonal_segmented_aperture():
 		'num_rings': [(3, '_3rings'), (5, '_5rings')],
 		'segment_flat_to_flat': [(0.04, '_smallsegment'), (0.07, '_largesegment')],
 		'gap_size': [(0.01, '_smallgap'), (0.02, '_largegap')],
-		'starting_ring': [(0, '_withcenter'),  (2, '_withoutcenter')]
+		'starting_ring': [(0, '_withcenter'), (2, '_withoutcenter')]
 	}
 
 	check_aperture_against_reference(make_hexagonal_segmented_aperture, 'hexagonal_segmented', 1, options, segmented=True)
@@ -107,10 +107,10 @@ def test_vlt_aperture():
 
 	for telescope in ['ut1', 'ut2', 'ut3']:
 		with pytest.warns(UserWarning, match='Using the M3 cover on a telescope other than UT4 is not realistic.'):
-			aper = make_vlt_aperture(telescope=telescope, with_M3_cover=True)
+			make_vlt_aperture(telescope=telescope, with_M3_cover=True)
 
 	with pytest.raises(ValueError):
-		aper = make_vlt_aperture(telescope='nonexistent_vlt_telescope')
+		make_vlt_aperture(telescope='nonexistent_vlt_telescope')
 
 def test_magellan_aperture():
 	options = {
@@ -119,6 +119,14 @@ def test_magellan_aperture():
 	}
 
 	check_aperture_against_reference(make_magellan_aperture, 'magellan', 6.5, options)
+
+def test_hale_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_spiders': [(True, ''), (False, '_without_spiders')]
+	}
+
+	check_aperture_against_reference(make_hale_aperture, 'hale', 5.08, options)
 
 def test_luvoir_a_aperture():
 	check_against_reference(make_luvoir_a_aperture(), 15.0, 'luvoir_a/pupil')
@@ -143,6 +151,16 @@ def test_luvoir_a_lyot_stop():
 
 	check_aperture_against_reference(make_luvoir_a_lyot_stop, 'luvoir_a_lyot', 15, options)
 
+def test_luvoir_b_aperture():
+	check_against_reference(make_luvoir_b_aperture(), 8.0, 'luvoir_b/pupil')
+	check_segmentation(make_luvoir_b_aperture)
+
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_segment_gaps': [(True, ''), (False, '_without_segment_gaps')]
+	}
+	check_aperture_against_reference(make_luvoir_b_aperture, 'luvoir_b', 8, options)
+
 def test_hicat_aperture():
 	check_against_reference(make_hicat_aperture(), 0.019725, 'hicat_pupil/pupil')
 
@@ -165,3 +183,56 @@ def test_hicat_lyot_stop():
 	}
 
 	check_aperture_against_reference(make_hicat_lyot_stop, 'hicat_lyot', 19.9e-3, options)
+
+def test_elt_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_spiders': [(True, ''), (False, '_without_spiders')]
+	}
+
+	check_aperture_against_reference(make_elt_aperture, 'elt', 39.14634, options)
+
+	check_segmentation(make_elt_aperture)
+
+def test_tmt_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_spiders': [(True, ''), (False, '_without_spiders')]
+	}
+
+	check_aperture_against_reference(make_tmt_aperture, 'tmt', 30.0, options)
+
+	check_segmentation(make_tmt_aperture)
+
+def test_gmt_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_spiders': [(True, ''), (False, '_without_spiders')]
+	}
+
+	check_aperture_against_reference(make_gmt_aperture, 'gmt', 25.448, options)
+
+	check_segmentation(make_gmt_aperture)
+
+def test_habex_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')]
+	}
+
+	check_aperture_against_reference(make_habex_aperture, 'habex', 4.0, options)
+
+def test_hst_aperture():
+	options = {
+		'normalized': [(False, ''), (True, '_normalized')],
+		'with_spiders': [(True, ''), (False, '_without_spiders')],
+		'with_pads': [(True, ''), (False, '_without_pads')]
+	}
+
+	check_aperture_against_reference(make_hst_aperture, 'hst', 2.4, options)
+
+def test_shifted_aperture():
+	grid = make_pupil_grid(256, 2.0)
+	aperture1 = circular_aperture(1.0, center=[0.25, 0.25])(grid)
+	aperture2 = make_shifted_aperture(circular_aperture(1.0), np.array([0.25, 0.25]))(grid)
+
+	assert np.allclose(aperture1, aperture2)

@@ -22,7 +22,7 @@ def errorfill(x, y, y_err_pos, y_err_neg=None, color=None, alpha_fill=0.25, ax=N
 		l = ax.plot(x, y, color=color, **kwargs)
 
 	facecolor = mpl.colors.colorConverter.to_rgba(color, alpha=alpha_fill)
-	edgecolor = (0,0,0,0)
+	edgecolor = (0, 0, 0, 0)
 	ax.fill_between(x, y_max, y_min, edgecolor=edgecolor, facecolor=facecolor)
 
 	return l

@@ -12,10 +12,11 @@ This section explains the content of the repository:
 * **doc**. This folder contains the full documentation.
 * **tests**. This folder contains the unit tests, separated by submodule.
 * **examples**. This folder contains old examples. These examples should be rewritten into tutorials for the documentation. Do not add new examples here.
-* **setup.py**, **requirements.txt** and **requirements-dev.txt**. These files are necessary for pip installation.
+* **setup.py**. This file is necessary for pip installation.
 * **README.md**. Main repository readme file.
 * **LICENSE**. A copy of the MIT license, which should be redistributed with any copy of HCIPy.
-* **.travis.yml** and **appveyor.yml**. Configuration files for the continuous integration services.
+* **.azure-pipelines.yml**. Configuration file for the continuous integration service.
+* **.flake8**. Configuration file for the Python linting.
 * **.coveragerc**. Configuration file for test coverage.
 * **.gitignore**. List of files to ignore for the version control system.
 

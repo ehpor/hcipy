@@ -40,14 +40,14 @@ class PerfectCoronagraph(OpticalElement):
 		modes = []
 
 		if coeffs is not None:
-			order = int(2 * np.ceil(0.5 * (np.sqrt(8*len(coeffs) + 1) - 1)))
+			order = int(2 * np.ceil(0.5 * (np.sqrt(8 * len(coeffs) + 1) - 1)))
 			self.coeffs = coeffs
 		else:
 			self.coeffs = np.ones(int(order * (order / 2 + 1) / 4))
 
 		for i in range(order // 2):
 			for j in range(i + 1):
-				modes.append(aperture * self.pupil_grid.x**j * self.pupil_grid.y**(i-j))
+				modes.append(aperture * self.pupil_grid.x**j * self.pupil_grid.y**(i - j))
 
 		self.mode_basis = ModeBasis(modes).orthogonalized
 
@@ -71,8 +71,14 @@ class PerfectCoronagraph(OpticalElement):
 
 		# Project the wavefront onto the pupil modes and attenuate by coeffs, then transform back to the pupil.
 		# This is done for each polarization separately.
-		correction = np.einsum('kj,j,ji,...i->...k',
-			self.transformation, self.coeffs, self.transformation_inverse, wf.electric_field, optimize='optimal')
+		correction = np.einsum(
+			'kj,j,ji,...i->...k',
+			self.transformation,
+			self.coeffs,
+			self.transformation_inverse,
+			wf.electric_field,
+			optimize='optimal'
+		)
 
 		# Then subtract this from the original wavefront to compute the post-coronagraphic field.
 		wf.electric_field -= correction

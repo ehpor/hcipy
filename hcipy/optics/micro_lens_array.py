@@ -41,8 +41,8 @@ class MicroLensArray(OpticalElement):
 			self.mla_index = Field(-np.ones(self.input_grid.size), self.input_grid)
 			self.mla_opd = Field(np.zeros(self.input_grid.size), self.input_grid)
 
-			for i, (x,y) in enumerate(lenslet_grid.as_('cartesian').points):
-				shifted_grid = input_grid.shifted((x,y))
+			for i, (x, y) in enumerate(lenslet_grid.as_('cartesian').points):
+				shifted_grid = input_grid.shifted((x, y))
 				mask = lenslet_shape(shifted_grid) != 0
 
 				self.mla_opd[mask] = (-1 / (2 * focal_length)) * (shifted_grid.x[mask]**2 + shifted_grid.y[mask]**2)
@@ -88,8 +88,8 @@ class SphericalMicroLensArray(OpticalElement):
 		self.mla_opd = self.input_grid.zeros()
 		self.surface_sag = spherical_surface_sag(radius_of_curvature)
 
-		for i, (x,y) in enumerate(lenslet_grid.as_('cartesian').points):
-			shifted_grid = input_grid.shifted((x,y))
+		for i, (x, y) in enumerate(lenslet_grid.as_('cartesian').points):
+			shifted_grid = input_grid.shifted((x, y))
 			mask = lenslet_shape(shifted_grid) != 0
 			subset_grid = shifted_grid.subset(mask)
 
@@ -141,8 +141,8 @@ class EvenAsphereMicroLensArray(OpticalElement):
 		self.mla_opd = self.input_grid.zeros()
 		self.surface_sag = even_aspheric_surface_sag(radius_of_curvature, conic_constant, aspheric_coefficients)
 
-		for i, (x,y) in enumerate(lenslet_grid.as_('cartesian').points):
-			shifted_grid = input_grid.shifted((x,y))
+		for i, (x, y) in enumerate(lenslet_grid.as_('cartesian').points):
+			shifted_grid = input_grid.shifted((x, y))
 			mask = lenslet_shape(shifted_grid) != 0
 			subset_grid = shifted_grid.subset(mask)
 

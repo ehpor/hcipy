@@ -51,7 +51,7 @@ class Detector(object):
 		No noise will be added to the image.
 
 		Returns
-		----------
+		-------
 		Field
 			The final detector image.
 		'''
@@ -73,7 +73,7 @@ class Detector(object):
 			Weight of every unit of integration time.
 
 		Returns
-		----------
+		-------
 		Field
 			The final detector image.
 		'''
@@ -128,7 +128,7 @@ class NoiselessDetector(Detector):
 		No noise will be added to the image.
 
 		Returns
-		----------
+		-------
 		Field
 			The final detector image.
 		'''
@@ -235,7 +235,7 @@ class NoisyDetector(Detector):
 		read-out noise are applied. After the read out the power is reset.
 
 		Returns
-		----------
+		-------
 		Field
 			The final detector image.
 		'''

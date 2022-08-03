@@ -49,5 +49,5 @@ class ShackHartmannWavefrontSensorEstimator(WavefrontSensorEstimator):
 		centroid_x = sum_x / fluxes
 		centroid_y = sum_y / fluxes
 
-		centroids = np.array((centroid_x, centroid_y)) - np.array(self.mla_grid.points[self.estimation_subapertures,:]).T
+		centroids = np.array((centroid_x, centroid_y)) - np.array(self.mla_grid.points[self.estimation_subapertures, :]).T
 		return Field(centroids, self.estimation_grid)

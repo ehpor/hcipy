@@ -82,13 +82,13 @@ class AtmosphericLayer(OpticalElement):
 		self.evolve_until(t)
 
 	@property
-	def Cn_squared(self):
+	def Cn_squared(self):  # noqa: N802
 		'''The integrated value of Cn^2 for the layer.
 		'''
 		return self._Cn_squared
 
 	@Cn_squared.setter
-	def Cn_squared(self, Cn_squared):
+	def Cn_squared(self, Cn_squared):  # noqa: N802
 		raise NotImplementedError()
 
 	@property
@@ -102,13 +102,13 @@ class AtmosphericLayer(OpticalElement):
 		raise NotImplementedError()
 
 	@property
-	def L0(self):
+	def L0(self):  # noqa: N802
 		'''The outer scale of the phase structure function.
 		'''
 		return self.outer_scale
 
 	@L0.setter
-	def L0(self, L0):
+	def L0(self, L0):  # noqa: N802
 		self.outer_scale = L0
 
 	@property
@@ -275,13 +275,13 @@ class MultiLayerAtmosphere(OpticalElement):
 		self._t = t
 
 	@property
-	def Cn_squared(self):
+	def Cn_squared(self):  # noqa: N802
 		'''The total Cn^2 value of the simulated atmosphere.
 		'''
 		return np.sum([l.Cn_squared for l in self.layers])
 
 	@Cn_squared.setter
-	def Cn_squared(self, Cn_squared):
+	def Cn_squared(self, Cn_squared):  # noqa: N802
 		old_Cn_squared = self.Cn_squared
 		for l in self.layers:
 			l.Cn_squared = l.Cn_squared / old_Cn_squared * Cn_squared
@@ -405,7 +405,7 @@ def power_spectral_density_von_karman(r0, L0):
 		return Field(res, grid)
 	return func
 
-def Cn_squared_from_fried_parameter(r0, wavelength=500e-9):
+def Cn_squared_from_fried_parameter(r0, wavelength=500e-9):  # noqa: N802
 	'''Calculate the integrated Cn^2 for a certain Fried parameter.
 
 	Parameters
@@ -423,7 +423,7 @@ def Cn_squared_from_fried_parameter(r0, wavelength=500e-9):
 	k = 2 * np.pi / wavelength
 	return r0**(-5. / 3) / (0.423 * k**2)
 
-def fried_parameter_from_Cn_squared(Cn_squared, wavelength=500e-9):
+def fried_parameter_from_Cn_squared(Cn_squared, wavelength=500e-9):  # noqa: N802
 	'''Calculate the Fried parameter from the integrated Cn^2.
 
 	Parameters

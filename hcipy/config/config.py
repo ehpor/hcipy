@@ -1,6 +1,11 @@
 import os
 import yaml
-import pkg_resources
+from pathlib import Path
+
+try:
+	from importlib.resources import files
+except ImportError:
+	from importlib_resources import files
 
 class _ConfigurationItem(object):
 	def __init__(self, val):
@@ -94,24 +99,21 @@ class Configuration(object):
 		'''
 		Configuration._config = _ConfigurationItem({})
 
-		default_config = pkg_resources.resource_stream('hcipy', 'data/default_config.yaml')
-		user_config = os.path.expanduser('~/.hcipy/hcipy_config.yaml')
-		current_working_directory = './hcipy_config.yaml'
+		default_config = files('hcipy.config').joinpath('default_config.yaml')
+		user_config = Path(os.path.expanduser('~/.hcipy/hcipy_config.yaml'))
+		current_working_directory = Path('./hcipy_config.yaml')
 
 		paths = [default_config, user_config, current_working_directory]
 
 		for path in paths:
 			try:
-				contents = path.read()
-			except AttributeError:
-				try:
-					with open(path) as f:
-						contents = f.read()
-				except IOError:
-					continue
+				contents = path.read_text()
+				new_config = yaml.safe_load(contents)
 
-			new_config = yaml.safe_load(contents)
-			self.update(new_config)
+				self.update(new_config)
+			except FileNotFoundError:
+				# If a configuration file is not found, just ignore.
+				pass
 
 	def update(self, b):
 		'''Update the configuration with the configuration `b`, as a dictionary.

@@ -1,4 +1,5 @@
 [![PyPI Status](https://img.shields.io/pypi/v/hcipy.svg?logo=pypi&logoColor=white)](https://pypi.org/project/hcipy/)
+[![Conda Status](https://img.shields.io/conda/vn/conda-forge/hcipy?logo=anaconda&logoColor=white)](https://anaconda.org/conda-forge/hcipy)
 [![Build Status](https://img.shields.io/azure-devops/build/ehpor/hcipy/1/master?logo=azure-pipelines)](https://dev.azure.com/ehpor/hcipy/_build?definitionId=1)
 [![Coverage Status](https://img.shields.io/codecov/c/gh/ehpor/hcipy?logo=codecov&logoColor=white)](https://codecov.io/gh/ehpor/hcipy)
 [![Documentation Status](https://img.shields.io/badge/docs-latest%20build-brightgreen?logo=read-the-docs&logoColor=white)](https://docs.hcipy.org/dev)

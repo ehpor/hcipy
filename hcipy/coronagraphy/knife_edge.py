@@ -47,7 +47,7 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
 			self.internal_shape = input_grid.shape[0], fft.internal_shape[1]
 		else:
 			self.cutout_input = (fft.cutout_input[0], Ellipsis)
-			self.internal_shape = fft.internal_shape.shape[0], input_grid.shape[1]
+			self.internal_shape = fft.internal_shape[0], input_grid.shape[1]
 
 		# Create the knife-edge focal-plane mask along the x-axis.
 		focal_mask_grid = make_fft_grid(input_grid, q).scaled(1.0 / (2 * np.pi))

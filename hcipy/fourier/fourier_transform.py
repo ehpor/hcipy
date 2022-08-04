@@ -157,7 +157,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 		if input_grid.ndim not in [1, 2]:
 			method = 'fft'
 		else:
-			output_grid = make_fft_grid(input_grid, q, fov)
+			output_grid = make_fft_grid(input_grid, q, fov, shift)
 
 			if planner == 'estimate':
 				# Estimate analytically from complexities.

@@ -268,8 +268,11 @@ def test_jwst_aperture(with_spiders):
 	name = 'jwst/pupil'
 	name += '_without_spiders' if not with_spiders else ''
 
-	check_aperture(make_jwst_aperture, 6.603464, name,
-		check_normalization=True, check_segmentation=True, with_spiders=with_spiders)
+	check_aperture(
+		make_jwst_aperture, 6.603464, name,
+		check_normalization=True, check_segmentation=True,
+		with_spiders=with_spiders
+	)
 
 def test_shifted_aperture():
 	grid = make_pupil_grid(256, 2.0)

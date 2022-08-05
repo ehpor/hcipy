@@ -108,7 +108,7 @@ def _time_it(function, t_max=0.1, repeat_max=5):
 
 	return np.median(times)
 
-def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='estimate'):
+def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, shift=0, planner='estimate'):
 	'''Construct a FourierTransform object.
 
 	The most time-efficient Fourier transform method will be chosen according to actual or estimated performance.
@@ -119,10 +119,12 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 		The grid that will be used for the Field passed to the Fourier transform.
 	output_grid : None or Grid
 		The grid of the resulting field. If it is None, a optimal grid will be chosen, according to `q` and `fov`.
-	q : scalar
+	q : scalar or ndarray
 		Describes how many samples to take in the Fourier domain. A value of 1 means critcally sampled in the Fourier domain.
-	fov : scalar
+	fov : scalar or ndarray
 		Describes how far out the Fourier domain extends. A value of 1 means the same amount of samples as the spatial domain.
+	shift : scalar or ndarray
+		Describes by how much the Fourier domain should be shifted compared to the native sampling of FFT.
 	planner : string
 		If it is 'estimate', performance of the different methods will be estimated from theoretical complexity estimates.
 		If it is 'measure', actual Fourier transforms will be performed to get the actual performance. The latter takes longer,
@@ -157,7 +159,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 		if input_grid.ndim not in [1, 2]:
 			method = 'fft'
 		else:
-			output_grid = make_fft_grid(input_grid, q, fov)
+			output_grid = make_fft_grid(input_grid, q, fov, shift)
 
 			if planner == 'estimate':
 				# Estimate analytically from complexities.
@@ -198,7 +200,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, planner='es
 
 	# Make the Fourier transform
 	if method == 'fft':
-		return FastFourierTransform(input_grid, q, fov)
+		return FastFourierTransform(input_grid, q, fov, shift)
 	elif method == 'mft':
 		return MatrixFourierTransform(input_grid, output_grid)
 	elif method == 'naive':

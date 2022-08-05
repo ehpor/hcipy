@@ -92,22 +92,22 @@ def test_fourier_symmetries_2d():
 def test_make_fourier_transform():
 	input_grid = make_pupil_grid(128)
 
-	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='estimate')
+	ft = make_fourier_transform(input_grid, q=1, fov=1, shift=0.1, planner='estimate')
 	assert type(ft) == FastFourierTransform
 
-	fft_grid = make_fft_grid(input_grid, q=1, fov=1)
+	fft_grid = make_fft_grid(input_grid, q=1, fov=1, shift=0.1)
 	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
 	assert type(ft) == FastFourierTransform
 
-	ft = make_fourier_transform(input_grid, q=8, fov=0.3, planner='estimate')
+	ft = make_fourier_transform(input_grid, q=8, fov=0.3, shift=0.1, planner='estimate')
 	assert type(ft) == MatrixFourierTransform
 
-	fft_grid = make_fft_grid(input_grid, q=8, fov=0.3)
+	fft_grid = make_fft_grid(input_grid, q=8, fov=0.3, shift=0.1)
 	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
 	assert type(ft) == MatrixFourierTransform
 
-	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='measure')
-	ft = make_fourier_transform(input_grid, q=8, fov=0.1, planner='measure')
+	ft = make_fourier_transform(input_grid, q=1, fov=1, shift=0.1, planner='measure')
+	ft = make_fourier_transform(input_grid, q=8, fov=0.1, shift=0.1, planner='measure')
 
 	output_grid = CartesianGrid(UnstructuredCoords([np.random.randn(100), np.random.randn(100)]))
 	ft = make_fourier_transform(input_grid, output_grid)

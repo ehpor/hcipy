@@ -476,7 +476,7 @@ class Grid(object):
 		boolean
 			Whether the two objects are identical.
 		'''
-		if type(self) != type(other):
+		if not isinstance(other, Grid):
 			return False
 
 		if self._coordinate_system != other._coordinate_system:

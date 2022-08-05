@@ -459,6 +459,31 @@ class Grid(object):
 
 		return h.intdigest()
 
+	def __eq__(self, other):
+		'''Check equality of two grids.
+
+		.. note::
+			This will return False if the two grids have different coordinate systems or coordinate types,
+			even if the underlying points are identical
+
+		Parameters
+		----------
+		other : object
+			The object to which to compare to.
+
+		Returns
+		-------
+		boolean
+			Whether the two objects are identical.
+		'''
+		if type(self) != type(other):
+			return False
+
+		if self._coordinate_system != other._coordinate_system:
+			return False
+
+		return self.coords == other.coords
+
 	def closest_to(self, p):
 		'''Get the index of the point closest to point `p`.
 

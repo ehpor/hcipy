@@ -200,6 +200,8 @@ def test_grid_hashing_and_comparison():
 	assert hash(grid1) != hash(grid3)
 	assert grid1 != grid3
 	assert grid3 != grid1
+	assert grid2 != grid3
+	assert grid3 != grid2
 
 	grid4 = make_pupil_grid(128)
 	print('start')

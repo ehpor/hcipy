@@ -26,6 +26,7 @@ __all__ = [
 	'make_vlt_aperture',
 	'make_habex_aperture',
 	'make_hst_aperture',
+	'make_jwst_aperture',
 ]
 
 from .generic import *

@@ -1300,13 +1300,13 @@ def make_jwst_aperture(normalized=False, with_spiders=True, return_segments=Fals
 	struts = [make_obstruction(irregular_polygon_aperture(vertices)) for vertices in strut_parameters.values()]
 
 	def func(grid):
-		ota = sum((segment(grid) for segment in segments))
+		res = sum((segment(grid) for segment in segments))
 
 		if with_spiders:
 			for strut in struts:
-				ota *= strut(grid)
+				res *= strut(grid)
 
-		return ota
+		return res
 
 	if not return_segments:
 		return func

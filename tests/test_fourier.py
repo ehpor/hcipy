@@ -94,17 +94,25 @@ def test_make_fourier_transform():
 
 	ft = make_fourier_transform(input_grid, q=1, fov=1, shift=0.1, planner='estimate')
 	assert type(ft) == FastFourierTransform
+	assert ft.input_grid == input_grid
+	assert ft.output_grid == make_fft_grid(input_grid, q=1, fov=1)
 
 	fft_grid = make_fft_grid(input_grid, q=1, fov=1, shift=0.1)
 	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
 	assert type(ft) == FastFourierTransform
+	assert ft.input_grid == input_grid
+	assert ft.output_grid == fft_grid
 
 	ft = make_fourier_transform(input_grid, q=8, fov=0.3, shift=0.1, planner='estimate')
 	assert type(ft) == MatrixFourierTransform
+	assert ft.input_grid == input_grid
+	assert ft.output_grid == make_fft_grid(input_grid, q=8, fov=0.3)
 
 	fft_grid = make_fft_grid(input_grid, q=8, fov=0.3, shift=0.1)
 	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
 	assert type(ft) == MatrixFourierTransform
+	assert ft.input_grid == input_grid
+	assert ft.output_grid == fft_grid
 
 	ft = make_fourier_transform(input_grid, q=1, fov=1, shift=0.1, planner='measure')
 	ft = make_fourier_transform(input_grid, q=8, fov=0.1, shift=0.1, planner='measure')
@@ -112,6 +120,8 @@ def test_make_fourier_transform():
 	output_grid = CartesianGrid(UnstructuredCoords([np.random.randn(100), np.random.randn(100)]))
 	ft = make_fourier_transform(input_grid, output_grid)
 	assert type(ft) == NaiveFourierTransform
+	assert ft.input_grid == input_grid
+	assert ft.output_grid == output_grid
 
 def test_fft_grid_reconstruction():
 	for shift_input in [[0, 0], [0.1]]:

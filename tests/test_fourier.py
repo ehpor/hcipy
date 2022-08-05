@@ -55,29 +55,29 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 		assert np.allclose(energy_ratios, energy_ratios[0, 0])
 		assert np.allclose(patterns_match, patterns_match[0, 0])
 
-def test_fourier_energy_conservation_1d():
+@pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
+def test_fourier_energy_conservation_1d(dtype):
 	np.random.seed(0)
 
-	for dtype in ['complex128', 'complex64']:
-		for shift_input in [0, 0.1]:
-			for scale in [1, 2]:
-				for shift_output in [0, 0.1]:
-					for q in [1, 1.23, 3, 4]:
-						for fov in [1, 0.5, 0.8]:
-							for dims in [64, 65]:
-								check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
+	for shift_input in [0, 0.1]:
+		for scale in [1, 2]:
+			for shift_output in [0, 0.1]:
+				for q in [1, 1.23, 3, 4]:
+					for fov in [1, 0.5, 0.8]:
+						for dims in [64, 65]:
+							check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
 
-def test_fourier_energy_conservation_2d():
+@pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
+def test_fourier_energy_conservation_2d(dtype):
 	np.random.seed(0)
 
-	for dtype in ['complex128', 'complex64']:
-		for shift_input in [[0, 0], [0.1]]:
-			for scale in [1, 2]:
-				for shift_output in [[0, 0], [0.1]]:
-					for q in [1, 1.23, 3, 4]:
-						for fov in [1, 0.5, 0.8]:
-							for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
-								check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
+	for shift_input in [[0, 0], [0.1]]:
+		for scale in [1, 2]:
+			for shift_output in [[0, 0], [0.1]]:
+				for q in [1, 1.23, 3, 4]:
+					for fov in [1, 0.5, 0.8]:
+						for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
+							check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
 
 def check_symmetry(scale, q, fov, dims):
 	pass

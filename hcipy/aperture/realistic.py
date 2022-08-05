@@ -595,37 +595,23 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 
 	segment = hexagonal_aperture(p3_apodizer_segment_circumdiameter, np.pi / 2)
 	segment_positions = make_hexagonal_grid(p3_irisao_distance_between_segments, 3, False)
-	segmentation = make_segmented_aperture(segment, segment_positions, return_segments=return_segments)
-
-	if return_segments:
-		segmentation, segments = segmentation
+	segmentation = make_segmented_aperture(segment, segment_positions)
 
 	segment = hexagonal_aperture(p3_apodizer_size / 7 / np.sqrt(3) * 2, np.pi / 2)
 	distance_between_segments = p3_apodizer_size / 7
 	segment_positions = make_hexagonal_grid(distance_between_segments, 3)
-	contour = make_segmented_aperture(segment, segment_positions)
-
-	central_segment = hexagonal_aperture(p3_apodizer_mask_central_segment_size, np.pi / 2)
+	contour = make_segmented_aperture(segment, segment_positions, return_segments=return_segments)
 
 	if return_segments:
-		# Use function to return the lambda, to avoid incorrect binding of variables
-		def segment_obstructed(segment):
-			return lambda grid: segment(grid) * (contour(grid) - central_segment(grid))
+		contour, segments = contour
 
-		segments = [segment_obstructed(s) for s in segments]
+	central_segment = hexagonal_aperture(p3_apodizer_mask_central_segment_size, np.pi / 2)
 
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 60, p3_apodizer_mask_spiders_thickness)
 		spider2 = make_spider_infinite([0, 0], 120, p3_apodizer_mask_spiders_thickness)
 		spider3 = make_spider_infinite([0, 0], -60, p3_apodizer_mask_spiders_thickness)
 		spider4 = make_spider_infinite([0, 0], -120, p3_apodizer_mask_spiders_thickness)
-
-	if with_spiders and return_segments:
-		# Use function to return the lambda, to avoid incorrect binding of variables
-		def segment_with_spider(segment):
-			return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
-
-		segments = [segment_with_spider(s) for s in segments]
 
 	def func(grid):
 		res = contour(grid) - central_segment(grid)
@@ -637,6 +623,15 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
 
 		return Field(res, grid)
+
+	if return_segments:
+		def segment_with_obstructions(seg):
+			def func2(grid):
+				return Field(func(grid) * seg(grid), grid)
+
+			return func2
+
+		segments = [segment_with_obstructions(s) for s in segments]
 
 	if return_header:
 		if return_segments:

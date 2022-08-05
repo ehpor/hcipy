@@ -2,6 +2,8 @@ from __future__ import division
 import functools
 
 import numpy as np
+from matplotlib.path import Path
+
 from ..field import Field, CartesianGrid, UnstructuredCoords, make_hexagonal_grid
 
 def circular_aperture(diameter, center=None):
@@ -116,6 +118,37 @@ def rectangular_aperture(size, center=None):
 			f = (np.abs(x - shift[0]) <= (dim[0] / 2)) * (np.abs(y - shift[1]) <= (dim[1] / 2))
 
 		return Field(f.astype('float'), grid)
+
+	return func
+
+def irregular_polygon_aperture(vertices):
+	'''Make an irregular polygonal aperture.
+
+	Parameters
+	----------
+	vertices : iterable of length 2 iterables
+		The vertices of the polygon.
+
+	Returns
+	-------
+	Field generator
+		The generator for the polygonal aperture.
+	'''
+	p = Path(vertices)
+
+	bounding_box_min = np.min(vertices, axis=0)
+	bounding_box_max = np.max(vertices, axis=0)
+
+	size = bounding_box_max - bounding_box_min
+	center = (bounding_box_min + bounding_box_max) / 2
+
+	def func(grid):
+		res = grid.zeros()
+
+		mask = rectangular_aperture(size, center=center)(grid).astype('bool')
+		res[mask] = p.contains_points(grid.points[mask])
+
+		return res
 
 	return func
 

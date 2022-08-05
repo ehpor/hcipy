@@ -194,18 +194,22 @@ def test_grid_hashing_and_comparison():
 	grid2 = CartesianGrid(SeparatedCoords(copy.deepcopy(grid1.separated_coords)))
 	assert hash(grid1) != hash(grid2)
 	assert grid1 != grid2
+	assert grid2 != grid1
 
 	grid3 = CartesianGrid(UnstructuredCoords(copy.deepcopy(grid1.coords)))
 	assert hash(grid1) != hash(grid3)
 	assert grid1 != grid3
+	assert grid3 != grid1
 
 	grid4 = make_pupil_grid(128)
+	print('start')
 	assert hash(grid1) == hash(grid4)
 	assert grid1 == grid4
 
 	grid5 = PolarGrid(grid1.coords)
 	assert hash(grid1) != hash(grid5)
 	assert grid1 != grid5
+	assert grid5 != grid1
 
 	grid6 = CartesianGrid(copy.deepcopy(grid1.coords))
 	assert hash(grid1) == hash(grid6)
@@ -224,6 +228,13 @@ def test_grid_hashing_and_comparison():
 	grid9 = make_pupil_grid(256)
 	assert hash(grid1) != hash(grid9)
 	assert grid1 != grid9
+
+	grid10 = CartesianGrid(SeparatedCoords(copy.deepcopy(grid2.separated_coords)))
+	assert hash(grid2) == hash(grid10)
+	assert grid2 == grid10
+
+	assert grid1 != 0
+	assert grid1 != 'string'
 
 def test_grid_supersampled():
 	g = make_uniform_grid(128, [1, 1])

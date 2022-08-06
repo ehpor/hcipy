@@ -263,6 +263,17 @@ def test_hst_aperture(with_spiders, with_pads):
 		with_spiders=with_spiders, with_pads=with_pads
 	)
 
+@pytest.mark.parametrize('with_spiders', [True, False])
+def test_jwst_aperture(with_spiders):
+	name = 'jwst/pupil'
+	name += '_without_spiders' if not with_spiders else ''
+
+	check_aperture(
+		make_jwst_aperture, 6.603464, name,
+		check_normalization=True, check_segmentation=True,
+		with_spiders=with_spiders
+	)
+
 def test_shifted_aperture():
 	grid = make_pupil_grid(256, 2.0)
 	aperture1 = circular_aperture(1.0, center=[0.25, 0.25])(grid)

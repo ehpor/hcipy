@@ -2,6 +2,7 @@ __all__ = [
 	'circular_aperture',
 	'elliptical_aperture',
 	'rectangular_aperture',
+	'irregular_polygon_aperture',
 	'regular_polygon_aperture',
 	'hexagonal_aperture',
 	'make_spider',
@@ -25,6 +26,7 @@ __all__ = [
 	'make_vlt_aperture',
 	'make_habex_aperture',
 	'make_hst_aperture',
+	'make_jwst_aperture',
 ]
 
 from .generic import *

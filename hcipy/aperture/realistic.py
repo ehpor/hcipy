@@ -1,6 +1,6 @@
 import numpy as np
 from ..field import make_hexagonal_grid, Field
-from .generic import elliptical_aperture, make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction, regular_polygon_aperture
+from .generic import elliptical_aperture, make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction, regular_polygon_aperture, irregular_polygon_aperture
 
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
@@ -1079,3 +1079,249 @@ def make_hst_aperture(normalized=False, with_spiders=True, with_pads=True):
 		return ota(grid) * pads[0](grid) * pads[1](grid) * pads[2](grid)
 
 	return func
+
+def make_jwst_aperture(normalized=False, with_spiders=True, return_segments=False):
+	'''Make James Webb Space Telescope (JWST) aperture.
+
+	This function uses coordinates from [WebbPSF]_ v1.0.0. WebbPSF itself got the
+	coordinate values from an internal spreadsheet by Paul Lightsey "2010.03.16
+	Transmission X Area Budget.xls", which was based in turn on Ball Aerospace
+	drawing # 2220169 Rev B and the OTE Cryogenic Optics Interface Control Document,
+	Ball Aerospace doc # C327693.
+
+	.. [WebbPSF] The James Webb Space Telescope PSF simulation tool.
+		(https://github.com/spacetelescope/webbpsf)
+
+	.. note::
+		This function uses the pre-launch aperture for JWST and does not include
+		any optical difference maps, filter transmission curves or any internal
+		masks in any of the instruments. Use WebbPSF for more complete simulations.
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 6.603464 meters.
+	with_spiders : boolean
+		If this is False, the spiders will be left out. Default: True.
+	return_segments : boolean
+		If this is True, the segments will also be returned as a list of Field generators.
+
+	Returns
+	-------
+	aperture : Field generator
+		The JWST aperture.
+	segments : list of Field generators
+		The segments. Only returned when `return_segments` is True.
+	'''
+	pupil_diameter = 6.603464  # meter
+
+	segment_parameters = {
+		'A1-1': np.array([
+			[-0.38101, 0.667604],
+			[-0.758826, 1.321999],
+			[-0.38101, 1.976407],
+			[0.38101, 1.976407],
+			[0.758826, 1.321999],
+			[0.38101, 0.667604]]),
+		'A2-2': np.array([
+			[0.38765702, 0.66376634],
+			[0.76547172, 1.31816209],
+			[1.52111367, 1.31816784],
+			[1.90212367, 0.65823916],
+			[1.52429772, 0.00383691],
+			[0.76866702, 0.00383766]]),
+		'A3-3': np.array([
+			[0.76866702, -0.00383766],
+			[1.52429772, -0.00383691],
+			[1.90212367, -0.65823916],
+			[1.52111367, -1.31816784],
+			[0.76547172, -1.31816209],
+			[0.38765702, -0.66376634]]),
+		'A4-4': np.array([
+			[0.38101, -0.667604],
+			[0.758826, -1.321999],
+			[0.38101, -1.976407],
+			[-0.38101, -1.976407],
+			[-0.758826, -1.321999],
+			[-0.38101, -0.667604]]),
+		'A5-5': np.array([
+			[-0.38765702, -0.66376634],
+			[-0.76547172, -1.31816209],
+			[-1.52111367, -1.31816784],
+			[-1.90212367, -0.65823916],
+			[-1.52429772, -0.00383691],
+			[-0.76866702, -0.00383766]]),
+		'A6-6': np.array([
+			[-0.76866702, 0.00383766],
+			[-1.52429772, 0.00383691],
+			[-1.90212367, 0.65823916],
+			[-1.52111367, 1.31816784],
+			[-0.76547172, 1.31816209],
+			[-0.38765702, 0.66376634]]),
+		'B1-7': np.array([
+			[0.38101, 3.279674],
+			[0.758826, 2.631791],
+			[0.38101, 1.98402],
+			[-0.38101, 1.98402],
+			[-0.758826, 2.631791],
+			[-0.38101, 3.279674]]),
+		'B2-9': np.array([
+			[3.030786, 1.30987266],
+			[2.65861086, 0.65873291],
+			[1.90871672, 0.66204566],
+			[1.52770672, 1.32197434],
+			[1.89978486, 1.97305809],
+			[2.649776, 1.96980134]]),
+		'B3-11': np.array([
+			[2.649776, -1.96980134],
+			[1.89978486, -1.97305809],
+			[1.52770672, -1.32197434],
+			[1.90871672, -0.66204566],
+			[2.65861086, -0.65873291],
+			[3.030786, -1.30987266]]),
+		'B4-13': np.array([
+			[-0.38101, -3.279674],
+			[-0.758826, -2.631791],
+			[-0.38101, -1.98402],
+			[0.38101, -1.98402],
+			[0.758826, -2.631791],
+			[0.38101, -3.279674]]),
+		'B5-15': np.array([
+			[-3.030786, -1.30987266],
+			[-2.65861086, -0.65873291],
+			[-1.90871672, -0.66204566],
+			[-1.52770672, -1.32197434],
+			[-1.89978486, -1.97305809],
+			[-2.649776, -1.96980134]]),
+		'B6-17': np.array([
+			[-2.649776, 1.96980134],
+			[-1.89978486, 1.97305809],
+			[-1.52770672, 1.32197434],
+			[-1.90871672, 0.66204566],
+			[-2.65861086, 0.65873291],
+			[-3.030786, 1.30987266]]),
+		'C1-8': np.array([
+			[0.765201, 2.627516],
+			[1.517956, 2.629178],
+			[1.892896, 1.976441],
+			[1.521076, 1.325812],
+			[0.765454, 1.325807],
+			[0.387649, 1.980196]]),
+		'C2-10': np.array([
+			[2.6580961, 0.651074495],
+			[3.03591294, 5.42172989e-07],
+			[2.65809612, -0.651075523],
+			[1.90872487, -0.654384457],
+			[1.53090954, 8.90571587e-07],
+			[1.90872454, .654384118]]),
+		'C3-12': np.array([
+			[1.8928951, -1.97644151],
+			[1.51795694, -2.62917746],
+			[0.76520012, -2.62751652],
+			[0.38764887, -1.98019646],
+			[0.76545554, -1.32580611],
+			[1.52107554, -1.32581188]]),
+		'C4-14': np.array([
+			[-0.765201, -2.627516],
+			[-1.517956, -2.629178],
+			[-1.892896, -1.976441],
+			[-1.521076, -1.325812],
+			[-0.765454, -1.325807],
+			[-0.387649, -1.980196]]),
+		'C5-16': np.array([
+			[-2.6580961, -.651074495],
+			[-3.03591294, -5.42172990e-07],
+			[-2.65809612, .651075523],
+			[-1.90872487, .654384457],
+			[-1.53090954, -8.90571587e-07],
+			[-1.90872454, -.654384118]]),
+		'C6-18': np.array([
+			[-1.8928951, 1.97644151],
+			[-1.51795694, 2.62917746],
+			[-0.76520012, 2.62751652],
+			[-0.38764887, 1.98019646],
+			[-0.76545554, 1.32580611],
+			[-1.52107554, 1.32581188]]),
+	}
+
+	strut_parameters = {
+		"strut1": np.array([
+			[-0.05301375, -0.0306075],
+			[1.59698625, -2.88849133],
+			[1.70301375, -2.82727633],
+			[0.05301375, 0.0306075],
+			[-0.05301375, -0.0306075]]),
+		"strut2": np.array([
+			[-0.05301375, 0.0306075],
+			[-1.70301375, -2.82727633],
+			[-1.59698625, -2.88849133],
+			[0.05301375, -0.0306075],
+			[-0.05301375, 0.0306075]]),
+		"strut3": np.array([
+			[5.94350000e-02, -1.45573765e-17],
+			[5.94350000e-02, 3.30000000e+00],
+			[-5.94350000e-02, 3.30000000e+00],
+			[-5.94350000e-02, 1.45573765e-17],
+			[5.94350000e-02, -1.45573765e-17]]),
+		"strut3_bumps": np.array([
+			[0.059435, 0.666],
+			[0.059435, 2.14627],
+			[0.082595, 2.14627],
+			[0.082595, 2.3645],
+			[0.059435, 2.3645],
+			[0.059435, 2.48335],
+			[0.069795, 2.48335],
+			[0.069795, 2.54445],
+			[0.059435, 2.54445],
+			[0.059435, 3.279674],
+			[-0.059435, 3.279674],
+			[-0.059435, 2.54445],
+			[-0.069795, 2.54445],
+			[-0.069795, 2.48335],
+			[-0.059435, 2.48335],
+			[-0.059435, 2.3645],
+			[-0.082595, 2.3645],
+			[-0.082595, 2.14627],
+			[-0.059435, 2.14627],
+			[-0.059435, 0.666]])
+	}
+
+	if normalized:
+		for val in segment_parameters.values():
+			val /= pupil_diameter
+
+		for val in strut_parameters.values():
+			val /= pupil_diameter
+
+		pupil_diameter = 1
+
+	segments = [irregular_polygon_aperture(vertices) for vertices in segment_parameters.values()]
+	struts = [make_obstruction(irregular_polygon_aperture(vertices)) for vertices in strut_parameters.values()]
+
+	def func(grid):
+		res = sum((segment(grid) for segment in segments))
+
+		if with_spiders:
+			for strut in struts:
+				res *= strut(grid)
+
+		return res
+
+	if not return_segments:
+		return func
+
+	if with_spiders:
+		def segment_with_strut(segment):
+			def func(grid):
+				res = segment(grid)
+
+				for strut in struts:
+					res *= strut(grid)
+
+				return res
+			return func
+
+		segments = [segment_with_strut(segment) for segment in segments]
+
+	return func, segments

@@ -302,13 +302,27 @@ def make_spider(p1, p2, spider_width):
 	spider = rectangular_aperture((spider_length, spider_width))
 
 	def func(grid):
-		x, y = grid.shifted(-shift).coords
+		g = grid.as_('cartesian')
+
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
+		else:
+			x, y = g.coords
+
+		x = x - shift[0]
+		y = y - shift[1]
 
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
-		spider_grid = CartesianGrid(UnstructuredCoords([x_new, y_new]))
 
-		return 1 - spider(spider_grid)
+		spider = x_new <= (spider_length / 2)
+		spider *= x_new >= (-spider_length / 2)
+		spider *= y_new <= (spider_width / 2)
+		spider *= y_new >= (-spider_width / 2)
+
+		return Field(1 - spider.ravel(), grid)
 	return func
 
 def make_spider_infinite(p, angle, spider_width):
@@ -331,13 +345,26 @@ def make_spider_infinite(p, angle, spider_width):
 	spider_angle = np.radians(angle)
 
 	def func(grid):
-		x, y = grid.shifted(p).coords
+		g = grid.as_('cartesian')
+
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
+		else:
+			x, y = g.coords
+
+		x = x + p[0]
+		y = y + p[1]
 
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
-		infinite_spider = np.logical_and(np.abs(y_new) <= (spider_width / 2), x_new >= 0)
 
-		return Field(1 - infinite_spider, grid)
+		infinite_spider = y_new <= (spider_width / 2)
+		infinite_spider *= y_new >= (-spider_width / 2)
+		infinite_spider *= x_new >= 0
+
+		return Field(1 - infinite_spider.ravel(), grid)
 	return func
 
 def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio, num_spiders=0, spider_width=0.01):

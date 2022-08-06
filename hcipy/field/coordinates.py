@@ -76,6 +76,21 @@ class Coords(object):
 		self *= 1 / f
 		return self
 
+	def __eq__(self, other):
+		'''Check if the coordinates are identical.
+
+		Parameters
+		----------
+		other : object
+			The object to which to compare.
+
+		Returns
+		-------
+		boolean
+			Whether the two objects are identical.
+		'''
+		return NotImplemented
+
 	def __getitem__(self, i):
 		'''The `i`-th point for these coordinates.
 		'''
@@ -201,6 +216,24 @@ class UnstructuredCoords(Coords):
 			self.coords[i] *= f[i]
 		return self
 
+	def __eq__(self, other):
+		'''Check if the coordinates are identical.
+
+		Parameters
+		----------
+		other : object
+			The object to which to compare.
+
+		Returns
+		-------
+		boolean
+			Whether the two objects are identical.
+		'''
+		if type(self) != type(other):
+			return False
+
+		return np.array_equal(self.coords, other.coords)
+
 	def reverse(self):
 		'''Reverse the ordering of points in-place.
 		'''
@@ -314,6 +347,24 @@ class SeparatedCoords(Coords):
 			for i in range(len(self)):
 				self.separated_coords[i] *= f[i]
 		return self
+
+	def __eq__(self, other):
+		'''Check if the coordinates are identical.
+
+		Parameters
+		----------
+		other : object
+			The object to which to compare.
+
+		Returns
+		-------
+		boolean
+			Whether the two objects are identical.
+		'''
+		if type(self) != type(other):
+			return False
+
+		return np.array_equal(self.separated_coords, other.separated_coords)
 
 	def reverse(self):
 		'''Reverse the ordering of points in-place.
@@ -454,6 +505,24 @@ class RegularCoords(Coords):
 		self.delta *= f
 		self.zero *= f
 		return self
+
+	def __eq__(self, other):
+		'''Check if the coordinates are identical.
+
+		Parameters
+		----------
+		other : object
+			The object to which to compare.
+
+		Returns
+		-------
+		boolean
+			Whether the two objects are identical.
+		'''
+		if type(self) != type(other):
+			return False
+
+		return np.array_equal(self.regular_coords, other.regular_coords)
 
 	def reverse(self):
 		'''Reverse the ordering of points in-place.

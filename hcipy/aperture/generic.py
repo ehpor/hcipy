@@ -30,12 +30,14 @@ def circular_aperture(diameter, center=None):
 		if grid.is_('cartesian'):
 			if grid.is_separated:
 				x, y = grid.separated_coords
-				f = ((((x - shift[0])**2)[np.newaxis, :] + ((y - shift[1])**2)[:, np.newaxis]) <= (diameter / 2)**2).ravel()
+				x = x[np.newaxis, :]
+				y = y[:, np.newaxis]
 			else:
 				x, y = grid.coords
-				f = ((x - shift[0])**2 + (y - shift[1])**2) <= (diameter / 2)**2
+
+			f = (((x - shift[0])**2 + (y - shift[1])**2) <= (diameter / 2)**2).ravel()
 		else:
-			f = grid.r <= (diameter / 2)
+			f = grid.as_('polar').r <= (diameter / 2)
 
 		return Field(f.astype('float'), grid)
 
@@ -73,17 +75,20 @@ def elliptical_aperture(diameters, center=None, angle=0):
 	sin_angle_minor = np.sin(angle) / minor_axis
 
 	def func(grid):
-		if grid.is_separated:
-			x, y = grid.shifted(shift).separated_coords
-			term1 = ((x * cos_angle_major)[np.newaxis, :] - (y * sin_angle_major)[:, np.newaxis])**2
-			term2 = ((x * sin_angle_minor)[np.newaxis, :] + (y *  cos_angle_minor)[:, np.newaxis])**2
-			f = (term1 + term2 <= 1).ravel()
+		g = grid.as_('cartesian').shifted(shift)
+
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
 		else:
-			x, y = grid.as_('cartesian').shifted(shift).coords
-			x_transformed = (x * cos_angle_major - y * sin_angle_major)
-			y_transformed = (x * sin_angle_minor + y * cos_angle_minor)
-			f = (x_transformed**2 + y_transformed**2) <= 1
-		return Field(f.astype('float'), grid)
+			x, y = g.coords
+
+		term1 = ((x * cos_angle_major) - (y * sin_angle_major))**2
+		term2 = ((x * sin_angle_minor) + (y *  cos_angle_minor))**2
+		f = (term1 + term2) <= 1
+
+		return Field(f.ravel().astype('float'), grid)
 
 	return func
 
@@ -102,7 +107,7 @@ def rectangular_aperture(size, center=None):
 	Field generator
 		This function can be evaluated on a grid to get a Field.
 	'''
-	dim = size * np.ones(2)
+	half_dim = size * np.ones(2) / 2
 
 	if center is None:
 		shift = np.zeros(2)
@@ -110,14 +115,18 @@ def rectangular_aperture(size, center=None):
 		shift = center * np.ones(2)
 
 	def func(grid):
-		if grid.is_('cartesian') and grid.is_separated:
-			x, y = grid.separated_coords
-			f = ((np.abs(x - shift[0]) <= (dim[0] / 2))[np.newaxis, :] * (np.abs(y - shift[1]) <= (dim[1] / 2))[:, np.newaxis]).ravel()
-		else:
-			x, y = grid.as_('cartesian').coords
-			f = (np.abs(x - shift[0]) <= (dim[0] / 2)) * (np.abs(y - shift[1]) <= (dim[1] / 2))
+		g = grid.as_('cartesian')
 
-		return Field(f.astype('float'), grid)
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
+		else:
+			x, y = g.coords
+
+		f = (np.abs(x - shift[0]) <= half_dim[0]) * (np.abs(y - shift[1]) <= half_dim[1])
+
+		return Field(f.ravel().astype('float'), grid)
 
 	return func
 

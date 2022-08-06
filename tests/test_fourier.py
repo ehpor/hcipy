@@ -95,7 +95,7 @@ def test_make_fourier_transform():
 	ft = make_fourier_transform(input_grid, q=1, fov=1, shift=0.1, planner='estimate')
 	assert type(ft) == FastFourierTransform
 	assert ft.input_grid == input_grid
-	assert ft.output_grid == make_fft_grid(input_grid, q=1, fov=1)
+	assert ft.output_grid == make_fft_grid(input_grid, q=1, fov=1, shift=0.1)
 
 	fft_grid = make_fft_grid(input_grid, q=1, fov=1, shift=0.1)
 	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
@@ -106,7 +106,7 @@ def test_make_fourier_transform():
 	ft = make_fourier_transform(input_grid, q=8, fov=0.3, shift=0.1, planner='estimate')
 	assert type(ft) == MatrixFourierTransform
 	assert ft.input_grid == input_grid
-	assert ft.output_grid == make_fft_grid(input_grid, q=8, fov=0.3)
+	assert ft.output_grid == make_fft_grid(input_grid, q=8, fov=0.3, shift=0.1)
 
 	fft_grid = make_fft_grid(input_grid, q=8, fov=0.3, shift=0.1)
 	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')

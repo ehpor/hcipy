@@ -3,6 +3,7 @@ import numpy as np
 import os
 import warnings
 import pytest
+import functools
 
 def check_aperture(aperture_function, diameter, name, check_normalization=False, check_segmentation=False, **aperture_args):
 	fname = os.path.join(os.path.dirname(__file__), 'baseline_for_apertures/' + name + '.fits.gz')
@@ -50,6 +51,25 @@ def test_regular_polygon_aperture():
 				regular_polygon_aperture, pupil_diameter, name,
 				circum_diameter=pupil_diameter, num_sides=num_sides, angle=angle
 			)
+
+def test_circular_aperture():
+	pupil_diameter = 1
+
+	for diameter in [1, 0.5]:
+		name = 'circular/pupil'
+		name += '_small' if diameter < 0.7 else '_large'
+
+		# Use a functools.partial() here to avoid the name collision of the diameter argument.
+		check_aperture(functools.partial(circular_aperture, diameter=diameter), pupil_diameter, name)
+
+def test_rectangular_aperture():
+	pupil_diameter = 1
+
+	for size in [[0.5, 0.5], [1, 0.5]]:
+		name = 'rectangular/pupil'
+		name += '_square' if size[0] == size[1] else '_elongated'
+
+		check_aperture(rectangular_aperture, pupil_diameter, name, size=size)
 
 def test_elliptical_aperture():
 	pupil_diameter = 1

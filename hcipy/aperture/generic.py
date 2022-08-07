@@ -1,5 +1,6 @@
 from __future__ import division
 import functools
+import inspect
 
 import numpy as np
 from matplotlib.path import Path
@@ -206,7 +207,7 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 
 	mask = rectangular_aperture(circum_diameter)
 
-	def func(grid):
+	def func(grid, return_with_mask=False):
 		g = grid.as_('cartesian')
 
 		if g.is_separated:
@@ -238,28 +239,36 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 				for theta in thetas:
 					f_sub *= (np.abs(np.sin(theta) * x)[np.newaxis, :] - (np.cos(theta) * y)[:, np.newaxis]) <= apothem
 
+			if return_with_mask:
+				return f_sub, (m_y, m_x)
+
 			f = np.zeros(g.shape)
 			f[m_y, m_x] = f_sub
 
 			return Field(f.ravel(), grid)
 
 		# Slow backup method
-		f = np.ones(grid.size, dtype='float')
 		m = mask(g) != 0
 
 		x, y = g.coords
 		x = x[m] - shift[0]
 		y = y[m] - shift[1]
 
-		f[~m] = 0
+		f_sub = np.ones(x.size, dtype='float')
 
 		# Make use of symmetry
 		if num_sides % 2 == 0:
 			for theta in thetas:
-				f[m] *= (np.cos(theta) * x + np.sin(theta) * y)**2 <= apothem**2
+				f_sub *= (np.cos(theta) * x + np.sin(theta) * y)**2 <= apothem**2
 		else:
 			for theta in thetas:
-				f[m] *= (np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem
+				f_sub *= (np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem
+
+		if return_with_mask:
+			return f_sub, m
+
+		f = grid.zeros()
+		f[m] = f_sub
 
 		return Field(f, grid)
 
@@ -485,12 +494,23 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 	'''
 	segment_transmissions = np.ones(segment_positions.size) * segment_transmissions
 
+	mask_available = 'return_with_mask' in inspect.signature(segment_shape).parameters
+
 	def func(grid):
-		res = np.zeros(grid.size, dtype=segment_transmissions.dtype)
+		res = grid.zeros(dtype=segment_transmissions.dtype)
 
 		for p, t in zip(segment_positions.points, segment_transmissions):
-			segment = segment_shape(grid.shifted(-p))
-			res[segment > 0.5] = t
+			if mask_available:
+				# Use the masked version of the segment shape.
+				segment_sub, mask = segment_shape(grid.shifted(-p), return_with_mask=True)
+
+				if isinstance(mask, tuple):
+					res.shaped[mask][segment_sub > 0.5] = t
+				else:
+					res[mask][segment_sub] = t
+			else:
+				segment = segment_shape(grid.shifted(-p))
+				res[segment > 0.5] = t
 
 		return Field(res, grid)
 

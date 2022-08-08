@@ -4,7 +4,7 @@ import scipy
 
 def test_zernike_modes():
 	grid = make_pupil_grid(256)
-	aperture_mask = circular_aperture(1)(grid) > 0
+	aperture_mask = make_circular_aperture(1)(grid) > 0
 
 	modes = make_zernike_basis(200, 1, grid)
 
@@ -27,7 +27,7 @@ def test_zernike_indices():
 
 def test_disk_harmonic_modes():
 	grid = make_pupil_grid(128)
-	aperture_mask = circular_aperture(1)(grid) > 0
+	aperture_mask = make_circular_aperture(1)(grid) > 0
 
 	num_modes = 20
 

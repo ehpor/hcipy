@@ -22,7 +22,7 @@ def test_grid_io():
 
 def test_field_io():
 	grid = make_pupil_grid(128)
-	field = circular_aperture(1)(grid)
+	field = make_circular_aperture(1)(grid)
 
 	formats = ['asdf', 'fits', 'fits.gz', 'pkl', 'pickle']
 	filenames = ['field_test.' + fmt for fmt in formats]

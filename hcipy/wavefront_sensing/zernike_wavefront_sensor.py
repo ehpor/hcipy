@@ -1,7 +1,7 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
 from ..optics import PhaseApodizer, LinearRetarder, Wavefront
-from ..aperture import circular_aperture
+from ..aperture import make_circular_aperture
 from ..field import make_uniform_grid, Field
 
 import numpy as np
@@ -41,7 +41,7 @@ class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		# Make the phase dot
 		phase_dot_diameter *= reference_wavelength / pupil_diameter
 		focal_grid = make_uniform_grid([num_pix, num_pix], phase_dot_diameter)
-		self.phase_dot = PhaseApodizer(circular_aperture(phase_dot_diameter)(focal_grid) * phase_step)
+		self.phase_dot = PhaseApodizer(make_circular_aperture(phase_dot_diameter)(focal_grid) * phase_step)
 
 		# Make the propagator
 		self.prop = FraunhoferPropagator(input_grid, focal_grid)
@@ -181,7 +181,7 @@ class VectorZernikeWavefrontSensorOptics(WavefrontSensorOptics):
 		# Make the vector-Zernike wavefront sensor mask
 		phase_dot_diameter *= reference_wavelength / pupil_diameter
 		focal_grid = make_uniform_grid([num_pix, num_pix], phase_dot_diameter)
-		phase_dot = circular_aperture(phase_dot_diameter)(focal_grid) * phase_step
+		phase_dot = make_circular_aperture(phase_dot_diameter)(focal_grid) * phase_step
 
 		self.vZWFS_mask = LinearRetarder(phase_retardation, phase_dot / 2)
 

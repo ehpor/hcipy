@@ -48,7 +48,7 @@ def test_regular_polygon_aperture():
 			name += '_hex' if num_sides == 6 else '_pent'
 
 			check_aperture(
-				regular_polygon_aperture, pupil_diameter, name,
+				make_regular_polygon_aperture, pupil_diameter, name,
 				circum_diameter=pupil_diameter, num_sides=num_sides, angle=angle
 			)
 
@@ -78,7 +78,7 @@ def test_elliptical_aperture():
 		name = 'ellipse/pupil'
 		name += '_round' if diameters[0] == diameters[1] else '_elongated'
 
-		check_aperture(elliptical_aperture, pupil_diameter, name, diameters=diameters)
+		check_aperture(make_elliptical_aperture, pupil_diameter, name, diameters=diameters)
 
 def test_obstructed_circular_aperture():
 	pupil_diameter = 1
@@ -296,7 +296,7 @@ def test_jwst_aperture(with_spiders):
 
 def test_shifted_aperture():
 	grid = make_pupil_grid(256, 2.0)
-	aperture1 = circular_aperture(1.0, center=[0.25, 0.25])(grid)
-	aperture2 = make_shifted_aperture(circular_aperture(1.0), np.array([0.25, 0.25]))(grid)
+	aperture1 = make_circular_aperture(1.0, center=[0.25, 0.25])(grid)
+	aperture2 = make_shifted_aperture(make_circular_aperture(1.0), np.array([0.25, 0.25]))(grid)
 
 	assert np.allclose(aperture1, aperture2)

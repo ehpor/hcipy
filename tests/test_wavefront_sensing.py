@@ -11,7 +11,7 @@ def test_optical_differentiation_wavefront_sensor():
 	zernike_modes = make_zernike_basis(20, 1, pupil_grid)
 	aberration = zernike_modes.linear_combination(np.random.randn(20)) * 0.1
 
-	wf = Wavefront(circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
+	wf = Wavefront(make_circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
 	odwfs(wf).intensity
 
 def test_pyramid_wavefront_sensor():
@@ -23,7 +23,7 @@ def test_pyramid_wavefront_sensor():
 	zernike_modes = make_zernike_basis(20, 1, pupil_grid)
 	aberration = zernike_modes.linear_combination(np.random.randn(20)) * 0.1
 
-	wf = Wavefront(circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
+	wf = Wavefront(make_circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
 	pywfs(wf).intensity
 
 def test_modulated_pyramid_wavefront_sensor():
@@ -38,7 +38,7 @@ def test_modulated_pyramid_wavefront_sensor():
 	zernike_modes = make_zernike_basis(20, 1, pupil_grid)
 	aberration = zernike_modes.linear_combination(np.random.randn(20)) * 0.1
 
-	wf = Wavefront(circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
+	wf = Wavefront(make_circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
 	imgs = mpywfs(wf)
 
 	assert len(imgs) == num_steps
@@ -51,7 +51,7 @@ def test_zernike_wavefront_sensor():
 	zernike_modes = make_zernike_basis(20, 1, pupil_grid)
 	aberration = zernike_modes.linear_combination(np.random.randn(20)) * 0.1
 
-	wf = Wavefront(circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
+	wf = Wavefront(make_circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
 	zwfs(wf).intensity
 
 def test_vector_zernike_wavefront_sensor():
@@ -65,7 +65,7 @@ def test_vector_zernike_wavefront_sensor():
 	zernike_modes = make_zernike_basis(20, 1, pupil_grid)
 	aberration = zernike_modes.linear_combination(np.random.randn(20)) * 0.1
 
-	wf = Wavefront(circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
+	wf = Wavefront(make_circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
 
 	vector_img = vzwfs(wf).intensity
 	ref_img = (zwfs_plus(wf).intensity + zwfs_neg(wf).intensity) / 2

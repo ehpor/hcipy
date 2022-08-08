@@ -44,7 +44,7 @@ def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propag
 	num_modes = 1000
 
 	pupil_grid = make_pupil_grid(64, D_tel)
-	aperture = circular_aperture(D_tel)(pupil_grid)
+	aperture = make_circular_aperture(D_tel)(pupil_grid)
 
 	Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
 	layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, [velocity / np.sqrt(2), velocity / np.sqrt(2)], use_interpolation=False)
@@ -80,7 +80,7 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
 
 	zernike_modes = make_zernike_basis(num_modes + 20, D_tel, pupil_grid, starting_mode=2, radial_cutoff=False)
 
-	weights = evaluate_supersampled(circular_aperture(D_tel), pupil_grid, 32)
+	weights = evaluate_supersampled(make_circular_aperture(D_tel), pupil_grid, 32)
 	zernike_modes = ModeBasis([z * np.sqrt(weights) for z in zernike_modes])
 
 	transformation_matrix = zernike_modes.transformation_matrix

@@ -6,7 +6,7 @@ def test_pupil_plane_wavefront_sensors():
 	# Create the input grid
 	D = 1
 	pupil_grid = make_pupil_grid(128, D)
-	aperture = circular_aperture(D)
+	aperture = make_circular_aperture(D)
 
 	# Make zernike basis
 	num_zernike = 3

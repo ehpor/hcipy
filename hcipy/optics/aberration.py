@@ -4,7 +4,7 @@ from ..field import Field
 from ..util import SpectralNoiseFactoryFFT, inverse_tikhonov
 from .apodization import SurfaceApodizer
 from ..propagation import FresnelPropagator
-from ..aperture import circular_aperture
+from ..aperture import make_circular_aperture
 from .optical_element import OpticalElement
 
 def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None, remove_modes=None):
@@ -39,7 +39,7 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
 		return res
 
 	if aperture is None:
-		aperture = circular_aperture(diameter)(pupil_grid)
+		aperture = make_circular_aperture(diameter)(pupil_grid)
 
 	screen = SpectralNoiseFactoryFFT(psd, pupil_grid).make_random()()
 	screen *= ptv / np.ptp(screen[aperture != 0])

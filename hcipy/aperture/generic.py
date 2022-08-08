@@ -6,8 +6,9 @@ import numpy as np
 from matplotlib.path import Path
 
 from ..field import Field, CartesianGrid, UnstructuredCoords, make_hexagonal_grid
+from ..dev import deprecated_name_changed
 
-def circular_aperture(diameter, center=None):
+def make_circular_aperture(diameter, center=None):
 	'''Makes a Field generator for a circular aperture.
 
 	Parameters
@@ -44,7 +45,7 @@ def circular_aperture(diameter, center=None):
 
 	return func
 
-def elliptical_aperture(diameters, center=None, angle=0):
+def make_elliptical_aperture(diameters, center=None, angle=0):
 	'''Makes a Field generator for an elliptical aperture.
 
 	Parameters
@@ -93,7 +94,7 @@ def elliptical_aperture(diameters, center=None, angle=0):
 
 	return func
 
-def rectangular_aperture(size, center=None):
+def make_rectangular_aperture(size, center=None):
 	'''Makes a Field generator for a rectangular aperture.
 
 	Parameters
@@ -131,7 +132,7 @@ def rectangular_aperture(size, center=None):
 
 	return func
 
-def irregular_polygon_aperture(vertices):
+def make_irregular_polygon_aperture(vertices):
 	'''Make an irregular polygonal aperture.
 
 	Parameters
@@ -162,7 +163,7 @@ def irregular_polygon_aperture(vertices):
 
 	return func
 
-def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
+def make_regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	'''Makes a Field generator for a regular-polygon-shaped aperture.
 
 	Parameters
@@ -275,7 +276,7 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	return func
 
 # Convenience function
-def hexagonal_aperture(circum_diameter, angle=0, center=None):
+def make_hexagonal_aperture(circum_diameter, angle=0, center=None):
 	'''Makes a Field generator for a hexagon aperture.
 
 	Parameters
@@ -575,3 +576,27 @@ def make_hexagonal_segmented_aperture(num_rings, segment_flat_to_flat, gap_size,
 		segment_positions = segment_positions.subset(mask)
 
 	return make_segmented_aperture(segment, segment_positions, return_segments=return_segments)
+
+@deprecated_name_changed(make_circular_aperture)
+def circular_aperture():
+	pass
+
+@deprecated_name_changed(make_elliptical_aperture)
+def elliptical_aperture():
+	pass
+
+@deprecated_name_changed(make_rectangular_aperture)
+def rectangular_aperture():
+	pass
+
+@deprecated_name_changed(make_hexagonal_aperture)
+def hexagonal_aperture():
+	pass
+
+@deprecated_name_changed(make_regular_polygon_aperture)
+def regular_polygon_aperture():
+	pass
+
+@deprecated_name_changed(make_irregular_polygon_aperture)
+def irregular_polygon_aperture():
+	pass

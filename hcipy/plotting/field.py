@@ -4,7 +4,7 @@ import numpy as np
 from ..field import Field
 
 def imshow_field(
-		field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation=None,
+		field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation='nearest',
 		non_linear_axes=False, cmap=None, mask=None, mask_color='k', grid_units=1, *args, **kwargs):
 	'''Display a two-dimensional image on a matplotlib figure.
 

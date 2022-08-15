@@ -194,9 +194,9 @@ def test_knife_edge_coronagraph():
 	for direction in directions:
 		knife_left = KnifeEdgeLyotCoronagraph(grid, direction=direction, apodizer=None, lyot_stop=lyot_stop)
 		wf_cor = prop(knife_left(wf))
-		
+
 		assert (wf_cor.power.max() / norm) < 0.25
-		
+
 	directions = ['+x', '-x', '+y', '-y']
 	knife_edge_shifts = [-1.0 * grid.x, 1.0 * grid.x, -1.0 * grid.y, 1.0 * grid.y]
 	for shift, direction in zip(knife_edge_shifts, directions):

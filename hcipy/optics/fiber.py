@@ -24,14 +24,14 @@ class StepIndexFiber(AgnosticOpticalElement):
 		self._NA = NA
 		self.fiber_length = fiber_length
 
-		self._center = np.zeros((2,)) if center is None else center
+		self._center = np.zeros((2,)) if center is None else np.array(center)
 
 		AgnosticOpticalElement.__init__(self, False, True)
 
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		monochromatic_V = self.V(wavelength)
 		instance_data.NA = self.evaluate_parameter(self._NA, input_grid, output_grid, wavelength)
-		instance_data.fiber_modes, instance_data.beta = make_lp_modes(input_grid.shifted(self._center), monochromatic_V, self.core_radius, return_betas=True)
+		instance_data.fiber_modes, instance_data.beta = make_lp_modes(input_grid.shifted(-self._center), monochromatic_V, self.core_radius, return_betas=True)
 
 	def num_modes(self, wavelength):
 		'''The approximate amount of modes of the fiber.
@@ -74,7 +74,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 
 	@position.setter
 	def position(self, center):
-		self._center = center
+		self._center = np.array(center)
 		self.clear_cache()
 
 	@property

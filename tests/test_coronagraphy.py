@@ -175,3 +175,35 @@ def test_lyot_coronagraph():
 	# Checks performance of the coronagraph and if the focal length does not introduce artifacts
 	assert (wf_foc.power.max() / norm) < 5e-3
 	np.testing.assert_allclose(wf_foc.power, wf_foc2.power)
+
+
+def test_knife_edge_coronagraph():
+	grid = make_pupil_grid(64, 1.1)
+	aperture = circular_aperture(1)(grid)
+
+	focal_grid = make_focal_grid(q=5, num_airy=3)
+
+	prop = FraunhoferPropagator(grid, focal_grid)
+	lyot_stop = circular_aperture(0.95)(grid)
+
+	wf = Wavefront(aperture)
+	wf.total_power = 1.0
+	norm = prop(wf).power.max()
+
+	directions = ['+x', '-x', '+y', '-y']
+	for shift, direction in zip(knife_edge_shifts, directions):
+		pre_apodizer = np.exp(1j * 2 * np.pi * 0 * grid.x)
+		knife_left = KnifeEdgeLyotCoronagraph(grid, direction=direction, apodizer=pre_apodizer, lyot_stop=lyot_stop * np.conj(pre_apodizer))
+		wf_cor = prop(knife_left(wf))
+
+		assert (wf_cor.power.max() / norm) < 0.25
+		
+	directions = ['+x', '-x', '+y', '-y']
+	knife_edge_shifts = [-1.0 * grid.x, 1.0 * grid.x, -1.0 * grid.y, 1.0 * grid.y]
+	
+	for shift, direction in zip(knife_edge_shifts, directions):
+		pre_apodizer = np.exp(1j * 2 * np.pi * shift)
+		knife_left = KnifeEdgeLyotCoronagraph(grid, direction=direction, apodizer=pre_apodizer, lyot_stop=lyot_stop * np.conj(pre_apodizer))
+		wf_cor = prop(knife_left(wf))
+
+		assert (wf_cor.power.max() / norm) < 1e-2

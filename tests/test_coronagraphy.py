@@ -191,16 +191,14 @@ def test_knife_edge_coronagraph():
 	norm = prop(wf).power.max()
 
 	directions = ['+x', '-x', '+y', '-y']
-	for shift, direction in zip(knife_edge_shifts, directions):
-		pre_apodizer = np.exp(1j * 2 * np.pi * 0 * grid.x)
-		knife_left = KnifeEdgeLyotCoronagraph(grid, direction=direction, apodizer=pre_apodizer, lyot_stop=lyot_stop * np.conj(pre_apodizer))
+	for direction in directions:
+		knife_left = KnifeEdgeLyotCoronagraph(grid, direction=direction, apodizer=None, lyot_stop=lyot_stop)
 		wf_cor = prop(knife_left(wf))
-
+		
 		assert (wf_cor.power.max() / norm) < 0.25
 		
 	directions = ['+x', '-x', '+y', '-y']
 	knife_edge_shifts = [-1.0 * grid.x, 1.0 * grid.x, -1.0 * grid.y, 1.0 * grid.y]
-	
 	for shift, direction in zip(knife_edge_shifts, directions):
 		pre_apodizer = np.exp(1j * 2 * np.pi * shift)
 		knife_left = KnifeEdgeLyotCoronagraph(grid, direction=direction, apodizer=pre_apodizer, lyot_stop=lyot_stop * np.conj(pre_apodizer))

@@ -178,7 +178,7 @@ def test_lyot_coronagraph():
 
 
 def test_knife_edge_coronagraph():
-	grid = make_pupil_grid(128, 1.1)
+	grid = make_pupil_grid(64, 1.1)
 	aperture = circular_aperture(1)(grid)
 
 	focal_grid = make_focal_grid(q=5, num_airy=5)
@@ -232,5 +232,5 @@ def test_knife_edge_coronagraph():
 	flipped_psf = np.roll(wf_up.power.shaped[::-1, :], 1, axis=0)
 	flipped_psf = Field(flipped_psf.ravel(), focal_grid)
 
-	# Ignore the first column in the evaluation because of the roll over effect.
+	# Ignore the first row in the evaluation because of the roll over effect.
 	assert (abs(wf_down.power.shaped[1::, :] - flipped_psf.shaped[1::,:]).max() / norm) < 1e-12

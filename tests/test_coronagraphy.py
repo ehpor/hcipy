@@ -220,3 +220,17 @@ def test_knife_edge_coronagraph():
 
 	# Ignore the first column in the evaluation because of the roll over effect.
 	assert (abs(wf_left.power.shaped[:, 1::] - flipped_psf.shaped[:, 1::]).max() / norm) < 1e-12
+
+	# Test for symmetry between a left and right knige edge
+	knife_edge_down = KnifeEdgeLyotCoronagraph(grid, direction='+y', lyot_stop=lyot_aperture)
+	wf_down = prop(knife_edge_down(wf))
+
+	knife_edge_up = KnifeEdgeLyotCoronagraph(grid, direction='-y', lyot_stop=lyot_aperture)
+	wf_up = prop(knife_edge_up(wf))
+
+	# The PSF needs to be flipped and shifted by 1 pixel because the focal grid is odd
+	flipped_psf = np.roll(wf_up.power.shaped[::-1, :], 1, axis=0)
+	flipped_psf = Field(flipped_psf.ravel(), focal_grid)
+
+	# Ignore the first column in the evaluation because of the roll over effect.
+	assert (abs(wf_down.power.shaped[1::, :] - flipped_psf.shaped[1::,:]).max() / norm) < 1e-12

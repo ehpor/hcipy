@@ -221,7 +221,7 @@ def test_knife_edge_coronagraph():
 	# Ignore the first column in the evaluation because of the roll over effect.
 	assert (abs(wf_left.power.shaped[:, 1::] - flipped_psf.shaped[:, 1::]).max() / norm) < 1e-12
 
-	# Test for symmetry between a left and right knige edge
+	# Test for symmetry between an up and down knige edge
 	knife_edge_down = KnifeEdgeLyotCoronagraph(grid, direction='+y', lyot_stop=lyot_aperture)
 	wf_down = prop(knife_edge_down(wf))
 

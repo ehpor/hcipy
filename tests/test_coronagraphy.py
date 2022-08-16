@@ -196,7 +196,7 @@ def test_knife_edge_coronagraph():
 		knife_edge = KnifeEdgeLyotCoronagraph(grid, direction=direction, apodizer=None, lyot_stop=lyot_aperture)
 		wf_cor = prop(knife_edge(wf))
 
-		assert (wf_cor.power.max() / norm) < 0.3 
+		assert (wf_cor.power.max() / norm) < 0.3
 
 	directions = ['+x', '-x', '+y', '-y']
 	knife_edge_shifts = [-1.0 * grid.x, 1.0 * grid.x, -1.0 * grid.y, 1.0 * grid.y]
@@ -233,4 +233,4 @@ def test_knife_edge_coronagraph():
 	flipped_psf = Field(flipped_psf.ravel(), focal_grid)
 
 	# Ignore the first row in the evaluation because of the roll over effect.
-	assert (abs(wf_down.power.shaped[1::, :] - flipped_psf.shaped[1::,:]).max() / norm) < 1e-12
+	assert (abs(wf_down.power.shaped[1::, :] - flipped_psf.shaped[1::, :]).max() / norm) < 1e-12

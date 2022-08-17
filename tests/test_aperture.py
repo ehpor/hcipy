@@ -148,6 +148,28 @@ def test_invalid_vlt_apertures():
 		make_vlt_aperture(telescope='nonexistent_vlt_telescope')
 
 @pytest.mark.parametrize('with_spiders', [True, False])
+def test_lbt_aperture(with_spiders):
+	name = 'lbt/pupil'
+	name += '_without_spiders' if not with_spiders else ''
+
+	check_aperture(
+		make_lbt_aperture, 8.408, name,
+		check_normalization=True,
+		with_spiders=with_spiders
+	)
+
+@pytest.mark.parametrize('with_spiders', [True, False])
+def test_lbti_aperture(with_spiders):
+	name = 'lbti/pupil'
+	name += '_without_spiders' if not with_spiders else ''
+
+	check_aperture(
+		make_lbti_aperture, 23.5, name,
+		check_normalization=False, check_segmentation=True,
+		with_spiders=with_spiders
+	)
+
+@pytest.mark.parametrize('with_spiders', [True, False])
 def test_magellan_aperture(with_spiders):
 	name = 'magellan/pupil'
 	name += '_without_spiders' if not with_spiders else ''

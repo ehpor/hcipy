@@ -127,7 +127,7 @@ def make_lbt_aperture(normalized=False, with_spiders=True):
 	truss_height_2 = 0.057
 
 	central_obscuration_ratio = 0.889 / pupil_diameter
-	spider_opening_angle = np.deg2rad(36.0)
+	spider_opening_angle = 36.0
 
 	if normalized:
 		spider_width /= pupil_diameter
@@ -138,15 +138,13 @@ def make_lbt_aperture(normalized=False, with_spiders=True):
 		pupil_diameter /= pupil_diameter
 
 	p1 = np.array([0., 0.])
-	p2 = np.array([np.sin(spider_opening_angle/2) * pupil_diameter/2, np.cos(spider_opening_angle/2) * pupil_diameter/2])
-	p3 = np.array([-np.sin(spider_opening_angle/2) * pupil_diameter/2, np.cos(spider_opening_angle/2) * pupil_diameter/2])
-	spiders = [make_spider(p1, p2, spider_width), make_spider(p1, p3, spider_width)]
+	spiders = [make_spider_infinite(p1, spider_opening_angle/2 + 270.0, spider_width), make_spider_infinite(p1, -spider_opening_angle/2 + 270.0, spider_width)]
 	
-	truss_width_1 = 2 * truss_offset_1 * np.tan(spider_opening_angle/2)
-	truss_1 = rectangular_aperture([truss_width_1, truss_height_1], center=[0.0, truss_offset_1])
+	truss_width_1 = 2 * truss_offset_1 * np.tan(np.deg2rad(spider_opening_angle)/2)
+	truss_1 = rectangular_aperture([truss_width_1, truss_height_1], center=[0.0, -truss_offset_1])
 
-	truss_width_2 = 2 * truss_offset_2 * np.tan(spider_opening_angle/2)
-	truss_2 = rectangular_aperture([truss_width_2, truss_height_2], center=[0.0, truss_offset_2])
+	truss_width_2 = 2 * truss_offset_2 * np.tan(np.deg2rad(spider_opening_angle)/2)
+	truss_2 = rectangular_aperture([truss_width_2, truss_height_2], center=[0.0, -truss_offset_2])
 	
 	obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio)
 

@@ -103,8 +103,70 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 def make_subaru_aperture():
 	pass
 
-def make_lbt_aperture():
-	pass
+def make_lbt_aperture(normalized=False, with_spiders=True):
+	'''Make the Large Binocular Telescope aperture.
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 8.4 meters.
+	with_spiders: boolean
+		If this is False, the spiders will be left out.
+
+	Returns
+	-------
+	Field generator
+		The LBT aperture.
+	'''
+	pupil_diameter = 8.408  # meter
+	spider_width = 0.130
+	truss_offset_1 = 1.150
+	truss_height_1 = 0.085
+	truss_offset_2 = 2.250
+	truss_height_2 = 0.057
+
+	central_obscuration_ratio = 0.889 / pupil_diameter
+	spider_opening_angle = np.deg2rad(36.0)
+
+	if normalized:
+		spider_width /= pupil_diameter
+		truss_offset_1 /= pupil_diameter
+		truss_height_1 /= pupil_diameter
+		truss_offset_2 /= pupil_diameter
+		truss_height_2 /= pupil_diameter
+		pupil_diameter /= pupil_diameter
+
+	p1 = np.array([0., 0.])
+	p2 = np.array([np.sin(spider_opening_angle/2) * pupil_diameter/2, np.cos(spider_opening_angle/2) * pupil_diameter/2])
+	p3 = np.array([-np.sin(spider_opening_angle/2) * pupil_diameter/2, np.cos(spider_opening_angle/2) * pupil_diameter/2])
+	spiders = [make_spider(p1, p2, spider_width), make_spider(p1, p3, spider_width)]
+	
+	truss_width_1 = 2 * truss_offset_1 * np.tan(spider_opening_angle/2)
+	truss_1 = rectangular_aperture([truss_width_1, truss_height_1], center=[0.0, truss_offset_1])
+
+	truss_width_2 = 2 * truss_offset_2 * np.tan(spider_opening_angle/2)
+	truss_2 = rectangular_aperture([truss_width_2, truss_height_2], center=[0.0, truss_offset_2])
+	
+	obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio)
+
+	def func(grid):
+		if with_spiders:
+			return obstructed_aperture(grid) * spiders[0](grid) * spiders[1](grid) * (1 - truss_1(grid)) * (1 - truss_2(grid))
+		else:
+			return obstructed_aperture(grid)
+
+	return func
+
+def make_lbti_aperture():
+	baseline = 14.40
+
+	def func(grid):
+		res = make_shifted_aperture(make_lbt_aperture(), shift=[-baseline/2, 0])(grid)
+		res += make_shifted_aperture(make_lbt_aperture(), shift=[baseline/2, 0])(grid)
+		return res
+
+	return func
 
 def make_magellan_aperture(normalized=False, with_spiders=True):
 	'''Make the Magellan aperture.

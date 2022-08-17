@@ -23,6 +23,8 @@ __all__ = [
 	'make_tmt_aperture',
 	'make_hexagonal_segmented_aperture',
 	'make_magellan_aperture',
+	'make_lbt_aperture',
+	'make_lbti_aperture',
 	'make_luvoir_a_aperture',
 	'make_luvoir_a_lyot_stop',
 	'make_luvoir_b_aperture',

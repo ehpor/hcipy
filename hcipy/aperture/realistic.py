@@ -174,27 +174,27 @@ def make_vlti_aperture(with_spiders=True, return_segments=False):
 	Field generator
 		The VLTI aperture.
 	segments : list of Field generators
-		The individual telescopes. Only returned when `return_segments` is True.	
+		The individual telescopes. Only returned when `return_segments` is True.
 	'''
 
 	# UT1 is taken as a reference
 	baseline_UT12 = np.array([24.8, 50.8])
 	baseline_UT13 = np.array([54.8, 86.5])
 	baseline_UT14 = np.array([113.2, 64.3])
-	
-	relative_position = np.array([[0,0], baseline_UT12, baseline_UT13, baseline_UT14])
+
+	relative_position = np.array([[0, 0], baseline_UT12, baseline_UT13, baseline_UT14])
 
 	# Calculate the middle between the extremes of the 4 telescopes
 	reference_position = (np.max(relative_position, axis=0) + np.min(relative_position, axis=0)) / 2
 
 	telescope_positions = np.array([-reference_position, baseline_UT12 - reference_position, baseline_UT13 - reference_position, baseline_UT14 - reference_position])
-	telescope_apertures = [make_shifted_aperture(make_vlt_aperture(telescope='ut{:d}'.format(i+1), with_spiders=with_spiders), shift=telescope_positions[i]) for i in range(4)]
+	telescope_apertures = [make_shifted_aperture(make_vlt_aperture(telescope='ut{:d}'.format(i + 1), with_spiders=with_spiders), shift=telescope_positions[i]) for i in range(4)]
 
 	def func(grid):
 		res = 0
 		for ap in telescope_apertures:
 			res += ap(grid)
-		return res 
+		return res
 
 	if return_segments:
 		return func, telescope_apertures

@@ -149,6 +149,18 @@ def test_invalid_vlt_apertures():
 	with pytest.raises(ValueError):
 		make_vlt_aperture(telescope='nonexistent_vlt_telescope')
 
+
+@pytest.mark.parametrize('with_spiders', [True, False])
+def test_vlti_aperture(with_spiders):
+	name = 'vlti/pupil'
+	name += '_without_spiders' if not with_spiders else ''
+
+	check_aperture(
+		make_vlti_aperture, 125.0, name,
+		check_normalization=False, check_segmentation=True,
+		with_spiders=with_spiders
+	)
+
 @pytest.mark.parametrize('with_spiders', [True, False])
 def test_magellan_aperture(with_spiders):
 	name = 'magellan/pupil'

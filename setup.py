@@ -30,7 +30,8 @@ setup(
 		"imageio",
 		"xxhash",
 		"numexpr",
-		"asdf",
+		"asdf<=2.10 ; python_version<='3.7'",
+		"asdf ; python_version>'3.7'",
 		"importlib_metadata ; python_version<'3.7'",
 		"importlib_resources>=1.4 ; python_version<'3.9'"
 	],

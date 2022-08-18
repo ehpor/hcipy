@@ -13,7 +13,7 @@ focal_grid = make_focal_grid(pupil_grid, 8, 5)
 prop = FraunhoferPropagator(pupil_grid, focal_grid)
 
 #Aperture function
-aperture = circular_aperture(1)(pupil_grid)
+aperture = make_circular_aperture(1)(pupil_grid)
 
 #The wavefront in the pupil.
 pupil_wavefront = Wavefront(aperture)

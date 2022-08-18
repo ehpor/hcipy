@@ -66,7 +66,7 @@ def test_imshow_field():
 	imshow_field(field)
 	plt.clf()
 
-	mask = circular_aperture(1)(grid)
+	mask = make_circular_aperture(1)(grid)
 
 	imshow_field(field, mask=mask)
 	plt.clf()

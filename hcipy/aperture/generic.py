@@ -6,8 +6,9 @@ import numpy as np
 from matplotlib.path import Path
 
 from ..field import Field, CartesianGrid, UnstructuredCoords, make_hexagonal_grid
+from ..dev import deprecated_name_changed
 
-def circular_aperture(diameter, center=None):
+def make_circular_aperture(diameter, center=None):
 	'''Makes a Field generator for a circular aperture.
 
 	Parameters
@@ -44,7 +45,7 @@ def circular_aperture(diameter, center=None):
 
 	return func
 
-def elliptical_aperture(diameters, center=None, angle=0):
+def make_elliptical_aperture(diameters, center=None, angle=0):
 	'''Makes a Field generator for an elliptical aperture.
 
 	Parameters
@@ -93,7 +94,7 @@ def elliptical_aperture(diameters, center=None, angle=0):
 
 	return func
 
-def rectangular_aperture(size, center=None):
+def make_rectangular_aperture(size, center=None):
 	'''Makes a Field generator for a rectangular aperture.
 
 	Parameters
@@ -131,7 +132,7 @@ def rectangular_aperture(size, center=None):
 
 	return func
 
-def irregular_polygon_aperture(vertices):
+def make_irregular_polygon_aperture(vertices):
 	'''Make an irregular polygonal aperture.
 
 	Parameters
@@ -155,14 +156,14 @@ def irregular_polygon_aperture(vertices):
 	def func(grid):
 		res = grid.zeros()
 
-		mask = rectangular_aperture(size, center=center)(grid).astype('bool')
+		mask = make_rectangular_aperture(size, center=center)(grid).astype('bool')
 		res[mask] = p.contains_points(grid.points[mask])
 
 		return res
 
 	return func
 
-def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
+def make_regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	'''Makes a Field generator for a regular-polygon-shaped aperture.
 
 	Parameters
@@ -205,7 +206,7 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	else:
 		thetas = np.arange(int(num_sides / 2) + 1) * (num_sides - 2) * np.pi / (num_sides / 2) + angle
 
-	mask = rectangular_aperture(circum_diameter)
+	mask = make_rectangular_aperture(circum_diameter)
 
 	def func(grid, return_with_mask=False):
 		g = grid.as_('cartesian')
@@ -275,7 +276,7 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	return func
 
 # Convenience function
-def hexagonal_aperture(circum_diameter, angle=0, center=None):
+def make_hexagonal_aperture(circum_diameter, angle=0, center=None):
 	'''Makes a Field generator for a hexagon aperture.
 
 	Parameters
@@ -292,7 +293,7 @@ def hexagonal_aperture(circum_diameter, angle=0, center=None):
 	Field generator
 		This function can be evaluated on a grid to get a Field.
 	'''
-	return regular_polygon_aperture(6, circum_diameter, angle, center)
+	return make_regular_polygon_aperture(6, circum_diameter, angle, center)
 
 def make_spider(p1, p2, spider_width):
 	'''Make a rectangular obstruction from `p1` to `p2`.
@@ -316,8 +317,6 @@ def make_spider(p1, p2, spider_width):
 
 	spider_angle = np.arctan2(delta[1], delta[0])
 	spider_length = np.linalg.norm(delta)
-
-	spider = rectangular_aperture((spider_length, spider_width))
 
 	def func(grid):
 		g = grid.as_('cartesian')
@@ -411,8 +410,8 @@ def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,
 	central_obscuration_diameter = pupil_diameter * central_obscuration_ratio
 
 	def func(grid):
-		pupil_outer = circular_aperture(pupil_diameter)(grid)
-		pupil_inner = circular_aperture(central_obscuration_diameter)(grid)
+		pupil_outer = make_circular_aperture(pupil_diameter)(grid)
+		pupil_inner = make_circular_aperture(central_obscuration_diameter)(grid)
 		spiders = 1
 
 		spider_angles = np.linspace(0, 2 * np.pi, num_spiders, endpoint=False)
@@ -561,7 +560,7 @@ def make_hexagonal_segmented_aperture(num_rings, segment_flat_to_flat, gap_size,
 		The segments. Only returned if return_segments is True.
 	'''
 	segment_circum_diameter = segment_flat_to_flat * 2 / np.sqrt(3)
-	segment = hexagonal_aperture(segment_circum_diameter, np.pi / 2)
+	segment = make_hexagonal_aperture(segment_circum_diameter, np.pi / 2)
 
 	segment_pitch = segment_flat_to_flat + gap_size
 	segment_positions = make_hexagonal_grid(segment_pitch, num_rings, pointy_top=False)
@@ -575,3 +574,27 @@ def make_hexagonal_segmented_aperture(num_rings, segment_flat_to_flat, gap_size,
 		segment_positions = segment_positions.subset(mask)
 
 	return make_segmented_aperture(segment, segment_positions, return_segments=return_segments)
+
+@deprecated_name_changed(make_circular_aperture)
+def circular_aperture():
+	pass
+
+@deprecated_name_changed(make_elliptical_aperture)
+def elliptical_aperture():
+	pass
+
+@deprecated_name_changed(make_rectangular_aperture)
+def rectangular_aperture():
+	pass
+
+@deprecated_name_changed(make_hexagonal_aperture)
+def hexagonal_aperture():
+	pass
+
+@deprecated_name_changed(make_regular_polygon_aperture)
+def regular_polygon_aperture():
+	pass
+
+@deprecated_name_changed(make_irregular_polygon_aperture)
+def irregular_polygon_aperture():
+	pass

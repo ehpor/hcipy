@@ -2,7 +2,7 @@ import numpy as np
 from scipy.special import jv, jn_zeros, jnp_zeros
 
 from .mode_basis import ModeBasis
-from ..aperture import circular_aperture
+from ..aperture import make_circular_aperture
 from ..field import Field
 
 def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
@@ -54,7 +54,7 @@ def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
 		z = norm * jv(m, lambda_mn * r) * np.cos(m * theta)
 
 	# Do manual normalization for now...
-	mask = circular_aperture(D)(grid) > 0.5
+	mask = make_circular_aperture(D)(grid) > 0.5
 	norm = np.sqrt(np.sum(z[mask]**2))
 
 	return Field(z * mask / norm, grid)

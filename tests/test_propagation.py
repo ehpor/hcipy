@@ -11,7 +11,7 @@ def test_fraunhofer_propagation_circular():
 		ind = focal_grid.closest_to((0, 0))
 
 		for diameter in [1, 0.7]:
-			aperture = evaluate_supersampled(circular_aperture(diameter), pupil_grid, 8)
+			aperture = evaluate_supersampled(make_circular_aperture(diameter), pupil_grid, 8)
 
 			for focal_length in [1, 0.8]:
 				prop = FraunhoferPropagator(pupil_grid, focal_grid, focal_length=focal_length)
@@ -40,7 +40,7 @@ def test_fraunhofer_propagation_rectangular():
 		focal_grid = make_focal_grid(16, 8)
 
 		for size in [[1, 1], [0.75, 1], [0.75, 0.75]]:
-			aperture = evaluate_supersampled(rectangular_aperture(size), pupil_grid, 8)
+			aperture = evaluate_supersampled(make_rectangular_aperture(size), pupil_grid, 8)
 
 			for focal_length in [1, 1.3]:
 				prop = FraunhoferPropagator(pupil_grid, focal_grid, focal_length=focal_length)
@@ -71,7 +71,7 @@ def single_propagation_test(propagator, number_of_pixels, wavelength, a, b, rela
 	prop_pos = propagator(pupil_grid, distance, num_oversampling=2)
 	prop_neg = propagator(pupil_grid, -distance, num_oversampling=2)
 
-	aperture = evaluate_supersampled(rectangular_aperture([2 * a, 2 * b]), pupil_grid, 2)
+	aperture = evaluate_supersampled(make_rectangular_aperture([2 * a, 2 * b]), pupil_grid, 2)
 
 	img_forward = prop_pos.forward(Wavefront(aperture, wavelength)).intensity
 	img_backward = prop_pos.backward(Wavefront(aperture, wavelength)).intensity

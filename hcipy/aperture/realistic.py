@@ -1,6 +1,6 @@
 import numpy as np
 from ..field import make_hexagonal_grid, Field
-from .generic import elliptical_aperture, make_spider, circular_aperture, hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, rectangular_aperture, make_obstruction, regular_polygon_aperture, irregular_polygon_aperture
+from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture
 
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
@@ -81,7 +81,7 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 		spider4 = make_spider(spider_start_4, spider_end_4, spider_width)
 
 	if with_M3_cover:
-		m3_cover = make_obstruction(rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))
+		m3_cover = make_obstruction(make_rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))
 
 	if with_spiders:
 		if with_M3_cover:
@@ -190,8 +190,8 @@ def make_hale_aperture(normalized=False, with_spiders=True):
 		box_width /= pupil_diameter
 		pupil_diameter = 1.0
 
-	box1 = rectangular_aperture([box_width, box_heigth])
-	box2 = rectangular_aperture([box_heigth, box_width])
+	box1 = make_rectangular_aperture([box_width, box_heigth])
+	box2 = make_rectangular_aperture([box_heigth, box_width])
 
 	if not with_spiders:
 		obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio)
@@ -293,10 +293,10 @@ def make_luvoir_a_aperture(
 	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
 
 	# clipping the "corner" segments of the outermost rings
-	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.98))
-	segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
+	segment_positions = segment_positions.subset(make_circular_aperture(pupil_diameter * 0.98))
+	segment_positions = segment_positions.subset(lambda grid: ~(make_circular_aperture(segment_circum_diameter)(grid) > 0))
 
-	segment = hexagonal_aperture(segment_circum_diameter, np.pi / 2)
+	segment = make_hexagonal_aperture(segment_circum_diameter, np.pi / 2)
 
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 90, spider_width)
@@ -396,8 +396,8 @@ def make_luvoir_a_lyot_stop(
 		pad_spid_width /= pupil_diameter
 		spid_start /= pupil_diameter
 
-	outer_diameter = circular_aperture(outer_D)
-	central_obscuration = circular_aperture(inner_D)
+	outer_diameter = make_circular_aperture(outer_D)
+	central_obscuration = make_circular_aperture(inner_D)
 
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 90, pad_spid_width)
@@ -494,9 +494,9 @@ def make_luvoir_b_aperture(
 	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
 
 	# Clipping the "corner" segments of the outermost rings
-	segment_positions = segment_positions.subset(circular_aperture(pupil_diameter * 0.9))
+	segment_positions = segment_positions.subset(make_circular_aperture(pupil_diameter * 0.9))
 
-	segment = hexagonal_aperture(segment_circum_diameter, np.pi / 2)
+	segment = make_hexagonal_aperture(segment_circum_diameter, np.pi / 2)
 
 	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=return_segments)
 
@@ -593,11 +593,11 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 		p3_apodizer_mask_spiders_thickness /= p3_apodizer_size
 		p3_apodizer_size = 1
 
-	segment = hexagonal_aperture(p3_apodizer_segment_circumdiameter, np.pi / 2)
+	segment = make_hexagonal_aperture(p3_apodizer_segment_circumdiameter, np.pi / 2)
 	segment_positions = make_hexagonal_grid(p3_irisao_distance_between_segments, 3, False)
 	segmentation = make_segmented_aperture(segment, segment_positions)
 
-	segment = hexagonal_aperture(p3_apodizer_size / 7 / np.sqrt(3) * 2, np.pi / 2)
+	segment = make_hexagonal_aperture(p3_apodizer_size / 7 / np.sqrt(3) * 2, np.pi / 2)
 	distance_between_segments = p3_apodizer_size / 7
 	segment_positions = make_hexagonal_grid(distance_between_segments, 3)
 	contour = make_segmented_aperture(segment, segment_positions, return_segments=return_segments)
@@ -605,7 +605,7 @@ def make_hicat_aperture(normalized=False, with_spiders=True, with_segment_gaps=T
 	if return_segments:
 		contour, segments = contour
 
-	central_segment = hexagonal_aperture(p3_apodizer_mask_central_segment_size, np.pi / 2)
+	central_segment = make_hexagonal_aperture(p3_apodizer_mask_central_segment_size, np.pi / 2)
 
 	if with_spiders:
 		spider1 = make_spider_infinite([0, 0], 60, p3_apodizer_mask_spiders_thickness)
@@ -689,8 +689,8 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter_fra
 		p5_lyot_stop_mask_central_segment_size /= p5_apodizer_size
 		p5_lyot_stop_mask_spiders_thickness /= p5_apodizer_size
 
-	central_obscuration = circular_aperture(p5_lyot_stop_mask_central_segment_size)
-	outer_diameter = circular_aperture(p5_lyot_stop_size)
+	central_obscuration = make_circular_aperture(p5_lyot_stop_mask_central_segment_size)
+	outer_diameter = make_circular_aperture(p5_lyot_stop_size)
 
 	header = {
 		'TELESCOP': 'HiCAT',
@@ -760,7 +760,7 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3) / 2 + segment_gap, 17, pointy_top=False)
 
 	# remove the inner segments
-	central_obscuration_mask = (1 - hexagonal_aperture(inner_diameter * 2 / np.sqrt(3))(segment_positions)) > 0
+	central_obscuration_mask = (1 - make_hexagonal_aperture(inner_diameter * 2 / np.sqrt(3))(segment_positions)) > 0
 	segment_positions = segment_positions.subset(central_obscuration_mask)
 
 	# remove the pointy tops for a more circular aperture
@@ -771,7 +771,7 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 
 	segment_positions = segment_positions.subset(all_edge_masks)
 
-	segment_shape = hexagonal_aperture(segment_size, angle=np.pi / 2)
+	segment_shape = make_hexagonal_aperture(segment_size, angle=np.pi / 2)
 
 	if return_segments:
 		elt_aperture_function, elt_segments = make_segmented_aperture(segment_shape, segment_positions, return_segments=return_segments)
@@ -870,7 +870,7 @@ def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	def make_central_gmt_segment(grid):
 		center_segment = make_obstructed_circular_aperture(segment_size, central_hole_size)(grid)
 		if with_spiders:
-			spider_attachement_mask = 1 - regular_polygon_aperture(3, truss_size, angle=np.pi, center=None)(grid)
+			spider_attachement_mask = 1 - make_regular_polygon_aperture(3, truss_size, angle=np.pi, center=None)(grid)
 
 			spider_mask = grid.ones()
 			for i in range(3):
@@ -892,7 +892,7 @@ def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False
 		xc = segment_distance * np.cos(rotation_angle)
 		yc = segment_distance * np.sin(rotation_angle)
 
-		aperture = elliptical_aperture([off_axis_segment_size * np.cos(off_axis_tilt), off_axis_segment_size], center=[xc, yc], angle=-rotation_angle)
+		aperture = make_elliptical_aperture([off_axis_segment_size * np.cos(off_axis_tilt), off_axis_segment_size], center=[xc, yc], angle=-rotation_angle)
 		segment_functions.append(aperture)
 
 	# Center segment obscurations
@@ -951,14 +951,14 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	segment_positions = make_hexagonal_grid(segment_size * np.sqrt(3) / 2 + segment_gap, 13, pointy_top=False)
 
 	# remove the first ring and the central segment
-	missing_segments_mask = (1 - hexagonal_aperture(inner_diameter * 2 / np.sqrt(3))(segment_positions)) > 0
+	missing_segments_mask = (1 - make_hexagonal_aperture(inner_diameter * 2 / np.sqrt(3))(segment_positions)) > 0
 	segment_positions = segment_positions.subset(missing_segments_mask)
 
 	# Clip the outer segments
-	inscribed_circle = circular_aperture(0.98 * tmt_outer_diameter)(segment_positions) > 0
+	inscribed_circle = make_circular_aperture(0.98 * tmt_outer_diameter)(segment_positions) > 0
 	segment_positions = segment_positions.subset(inscribed_circle)
 
-	segment_shape = hexagonal_aperture(segment_size, angle=np.pi / 2)
+	segment_shape = make_hexagonal_aperture(segment_size, angle=np.pi / 2)
 
 	if return_segments:
 		tmt_aperture_function, tmt_segments = make_segmented_aperture(segment_shape, segment_positions, return_segments=return_segments)
@@ -968,7 +968,7 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	spiders = [make_spider_infinite([0, 0], 60 * i + 30, spider_width) for i in range(6)]
 
 	def tmt_aperture_with_spiders(grid):
-		aperture = tmt_aperture_function(grid) * (1 - circular_aperture(central_obscuration)(grid))
+		aperture = tmt_aperture_function(grid) * (1 - make_circular_aperture(central_obscuration)(grid))
 
 		if with_spiders:
 			for spider in spiders:
@@ -985,12 +985,12 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 			return spider_aperture
 
 		def segment_with_spider(segment):
-			return lambda grid: segment(grid) * spider_func(grid) * (1 - circular_aperture(central_obscuration)(grid))
+			return lambda grid: segment(grid) * spider_func(grid) * (1 - make_circular_aperture(central_obscuration)(grid))
 
 		tmt_segments = [segment_with_spider(s) for s in tmt_segments]
 	elif not with_spiders and return_segments:
 		def segment_with_central_obscuration(segment):
-			return lambda grid: segment(grid) * (1 - circular_aperture(central_obscuration)(grid))
+			return lambda grid: segment(grid) * (1 - make_circular_aperture(central_obscuration)(grid))
 
 		tmt_segments = [segment_with_central_obscuration(s) for s in tmt_segments]
 
@@ -1021,7 +1021,7 @@ def make_habex_aperture(normalized=False):
 	if normalized:
 		pupil_diameter = 1
 
-	return circular_aperture(pupil_diameter)
+	return make_circular_aperture(pupil_diameter)
 
 def make_hst_aperture(normalized=False, with_spiders=True, with_pads=True):
 	'''Make the Hubble Space Telescope aperture.
@@ -1073,7 +1073,7 @@ def make_hst_aperture(normalized=False, with_spiders=True, with_pads=True):
 	if not with_pads:
 		return ota
 
-	pads = [make_obstruction(circular_aperture(2 * r, [-v2, v3])) for v3, v2, r in zip(pad_v3, pad_v2, pad_radii)]
+	pads = [make_obstruction(make_circular_aperture(2 * r, [-v2, v3])) for v3, v2, r in zip(pad_v3, pad_v2, pad_radii)]
 
 	def func(grid):
 		return ota(grid) * pads[0](grid) * pads[1](grid) * pads[2](grid)
@@ -1296,8 +1296,8 @@ def make_jwst_aperture(normalized=False, with_spiders=True, return_segments=Fals
 
 		pupil_diameter = 1
 
-	segments = [irregular_polygon_aperture(vertices) for vertices in segment_parameters.values()]
-	struts = [make_obstruction(irregular_polygon_aperture(vertices)) for vertices in strut_parameters.values()]
+	segments = [make_irregular_polygon_aperture(vertices) for vertices in segment_parameters.values()]
+	struts = [make_obstruction(make_irregular_polygon_aperture(vertices)) for vertices in strut_parameters.values()]
 
 	def func(grid):
 		res = sum((segment(grid) for segment in segments))

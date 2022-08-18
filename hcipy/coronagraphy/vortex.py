@@ -4,7 +4,7 @@ from scipy.signal import windows
 from ..optics import OpticalElement, LinearRetarder, Apodizer, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward, Wavefront
 from ..propagation import FraunhoferPropagator
 from ..field import make_focal_grid, Field, field_dot
-from ..aperture import circular_aperture
+from ..aperture import make_circular_aperture
 from ..fourier import FastFourierTransform, MatrixFourierTransform, FourierFilter
 
 class VortexCoronagraph(OpticalElement):
@@ -67,7 +67,7 @@ class VortexCoronagraph(OpticalElement):
 			focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
 			focal_mask = Field(np.exp(1j * charge * focal_grid.as_('polar').theta), focal_grid)
 
-			focal_mask *= 1 - circular_aperture(1e-9)(focal_grid)
+			focal_mask *= 1 - make_circular_aperture(1e-9)(focal_grid)
 
 			if i != levels - 1:
 				wx = windows.tukey(window_size, 1, False)
@@ -237,7 +237,7 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 			focal_mask_raw = LinearRetarder(retardance, fast_axis_orientation)
 			jones_matrix = focal_mask_raw.jones_matrix
 
-			jones_matrix *= 1 - circular_aperture(1e-9)(focal_grid)
+			jones_matrix *= 1 - make_circular_aperture(1e-9)(focal_grid)
 
 			if i != levels - 1:
 				wx = windows.tukey(self.window_size, 1, False)
@@ -417,13 +417,13 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_unders
 		t1 = 1 - 0.25 * (R0**2 + R0 * np.sqrt(R0**2 + 8))
 		R1 = R0 / np.sqrt(1 - t1)
 
-		pupil1 = circular_aperture(pupil_diameter)
-		pupil2 = circular_aperture(pupil_diameter * R1)
-		co = circular_aperture(central_obscuration)
+		pupil1 = make_circular_aperture(pupil_diameter)
+		pupil2 = make_circular_aperture(pupil_diameter * R1)
+		co = make_circular_aperture(central_obscuration)
 		pupil_mask = lambda grid: (pupil1(grid) * t1 + pupil2(grid) * (1 - t1)) * (1 - co(grid))
 
-		lyot1 = circular_aperture(pupil_diameter * R1 + pupil_diameter * lyot_undersize)
-		lyot2 = circular_aperture(pupil_diameter * (1 - lyot_undersize))
+		lyot1 = make_circular_aperture(pupil_diameter * R1 + pupil_diameter * lyot_undersize)
+		lyot2 = make_circular_aperture(pupil_diameter * (1 - lyot_undersize))
 		lyot_stop = lambda grid: lyot2(grid) - lyot1(grid)
 	elif charge == 4:
 		R1 = np.sqrt(np.sqrt(R0**2 * (R0**2 + 4)) - 2 * R0**2)
@@ -431,15 +431,15 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_unders
 		t1 = 0
 		t2 = (R1**2 - R0**2) / (R1**2 + R0**2)
 
-		pupil1 = circular_aperture(pupil_diameter)
-		pupil2 = circular_aperture(pupil_diameter * R1)
-		pupil3 = circular_aperture(pupil_diameter * R2)
-		co = circular_aperture(central_obscuration)
+		pupil1 = make_circular_aperture(pupil_diameter)
+		pupil2 = make_circular_aperture(pupil_diameter * R1)
+		pupil3 = make_circular_aperture(pupil_diameter * R2)
+		co = make_circular_aperture(central_obscuration)
 
 		pupil_mask = lambda grid: (pupil1(grid) * t2 + pupil3(grid) * (t1 - t2) + pupil2(grid) * (1 - t1)) * (1 - co(grid))
 
-		lyot1 = circular_aperture(pupil_diameter * R2 + pupil_diameter * lyot_undersize)
-		lyot2 = circular_aperture(pupil_diameter * (1 - lyot_undersize))
+		lyot1 = make_circular_aperture(pupil_diameter * R2 + pupil_diameter * lyot_undersize)
+		lyot2 = make_circular_aperture(pupil_diameter * (1 - lyot_undersize))
 		lyot_stop = lambda grid: lyot2(grid) - lyot1(grid)
 	else:
 		raise NotImplementedError()

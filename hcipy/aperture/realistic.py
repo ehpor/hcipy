@@ -119,7 +119,6 @@ def make_vlti_aperture(with_spiders=True, return_segments=False):
 	segments : list of Field generators
 		The individual telescopes. Only returned when `return_segments` is True.
 	'''
-
 	# UT1 is taken as a reference
 	baseline_UT12 = np.array([24.8, 50.8])
 	baseline_UT13 = np.array([54.8, 86.5])
@@ -131,7 +130,10 @@ def make_vlti_aperture(with_spiders=True, return_segments=False):
 	reference_position = (np.max(relative_position, axis=0) + np.min(relative_position, axis=0)) / 2
 
 	telescope_positions = np.array([-reference_position, baseline_UT12 - reference_position, baseline_UT13 - reference_position, baseline_UT14 - reference_position])
-	telescope_apertures = [make_shifted_aperture(make_vlt_aperture(telescope='ut{:d}'.format(i + 1), with_spiders=with_spiders), shift=telescope_positions[i]) for i in range(4)]
+	telescope_apertures = []
+	for telescope_name, position in zip(['ut1', 'ut2', 'ut3', 'ut4'], telescope_positions):
+		single_ut = make_shifted_aperture(make_vlt_aperture(telescope=telescope_name, with_spiders=with_spiders), shift=position)
+		telescope_apertures.append(single_ut)
 
 	def func(grid):
 		res = 0

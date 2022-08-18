@@ -1,5 +1,6 @@
 from __future__ import division
 import functools
+import inspect
 
 import numpy as np
 from matplotlib.path import Path
@@ -30,12 +31,14 @@ def circular_aperture(diameter, center=None):
 		if grid.is_('cartesian'):
 			if grid.is_separated:
 				x, y = grid.separated_coords
-				f = ((((x - shift[0])**2)[np.newaxis, :] + ((y - shift[1])**2)[:, np.newaxis]) <= (diameter / 2)**2).ravel()
+				x = x[np.newaxis, :]
+				y = y[:, np.newaxis]
 			else:
 				x, y = grid.coords
-				f = ((x - shift[0])**2 + (y - shift[1])**2) <= (diameter / 2)**2
+
+			f = (((x - shift[0])**2 + (y - shift[1])**2) <= (diameter / 2)**2).ravel()
 		else:
-			f = grid.r <= (diameter / 2)
+			f = grid.as_('polar').r <= (diameter / 2)
 
 		return Field(f.astype('float'), grid)
 
@@ -73,17 +76,20 @@ def elliptical_aperture(diameters, center=None, angle=0):
 	sin_angle_minor = np.sin(angle) / minor_axis
 
 	def func(grid):
-		if grid.is_separated:
-			x, y = grid.shifted(shift).separated_coords
-			term1 = ((x * cos_angle_major)[np.newaxis, :] - (y * sin_angle_major)[:, np.newaxis])**2
-			term2 = ((x * sin_angle_minor)[np.newaxis, :] + (y *  cos_angle_minor)[:, np.newaxis])**2
-			f = (term1 + term2 <= 1).ravel()
+		g = grid.as_('cartesian').shifted(shift)
+
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
 		else:
-			x, y = grid.as_('cartesian').shifted(shift).coords
-			x_transformed = (x * cos_angle_major - y * sin_angle_major)
-			y_transformed = (x * sin_angle_minor + y * cos_angle_minor)
-			f = (x_transformed**2 + y_transformed**2) <= 1
-		return Field(f.astype('float'), grid)
+			x, y = g.coords
+
+		term1 = ((x * cos_angle_major) - (y * sin_angle_major))**2
+		term2 = ((x * sin_angle_minor) + (y *  cos_angle_minor))**2
+		f = (term1 + term2) <= 1
+
+		return Field(f.ravel().astype('float'), grid)
 
 	return func
 
@@ -102,7 +108,7 @@ def rectangular_aperture(size, center=None):
 	Field generator
 		This function can be evaluated on a grid to get a Field.
 	'''
-	dim = size * np.ones(2)
+	half_dim = size * np.ones(2) / 2
 
 	if center is None:
 		shift = np.zeros(2)
@@ -110,14 +116,18 @@ def rectangular_aperture(size, center=None):
 		shift = center * np.ones(2)
 
 	def func(grid):
-		if grid.is_('cartesian') and grid.is_separated:
-			x, y = grid.separated_coords
-			f = ((np.abs(x - shift[0]) <= (dim[0] / 2))[np.newaxis, :] * (np.abs(y - shift[1]) <= (dim[1] / 2))[:, np.newaxis]).ravel()
-		else:
-			x, y = grid.as_('cartesian').coords
-			f = (np.abs(x - shift[0]) <= (dim[0] / 2)) * (np.abs(y - shift[1]) <= (dim[1] / 2))
+		g = grid.as_('cartesian')
 
-		return Field(f.astype('float'), grid)
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
+		else:
+			x, y = g.coords
+
+		f = (np.abs(x - shift[0]) <= half_dim[0]) * (np.abs(y - shift[1]) <= half_dim[1])
+
+		return Field(f.ravel().astype('float'), grid)
 
 	return func
 
@@ -197,7 +207,7 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 
 	mask = rectangular_aperture(circum_diameter)
 
-	def func(grid):
+	def func(grid, return_with_mask=False):
 		g = grid.as_('cartesian')
 
 		if g.is_separated:
@@ -229,28 +239,36 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 				for theta in thetas:
 					f_sub *= (np.abs(np.sin(theta) * x)[np.newaxis, :] - (np.cos(theta) * y)[:, np.newaxis]) <= apothem
 
+			if return_with_mask:
+				return f_sub, (m_y, m_x)
+
 			f = np.zeros(g.shape)
 			f[m_y, m_x] = f_sub
 
 			return Field(f.ravel(), grid)
 
 		# Slow backup method
-		f = np.ones(grid.size, dtype='float')
 		m = mask(g) != 0
 
 		x, y = g.coords
 		x = x[m] - shift[0]
 		y = y[m] - shift[1]
 
-		f[~m] = 0
+		f_sub = np.ones(x.size, dtype='float')
 
 		# Make use of symmetry
 		if num_sides % 2 == 0:
 			for theta in thetas:
-				f[m] *= (np.cos(theta) * x + np.sin(theta) * y)**2 <= apothem**2
+				f_sub *= (np.cos(theta) * x + np.sin(theta) * y)**2 <= apothem**2
 		else:
 			for theta in thetas:
-				f[m] *= (np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem
+				f_sub *= (np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem
+
+		if return_with_mask:
+			return f_sub, m
+
+		f = grid.zeros()
+		f[m] = f_sub
 
 		return Field(f, grid)
 
@@ -302,13 +320,29 @@ def make_spider(p1, p2, spider_width):
 	spider = rectangular_aperture((spider_length, spider_width))
 
 	def func(grid):
-		x, y = grid.shifted(-shift).coords
+		g = grid.as_('cartesian')
+
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
+		else:
+			x, y = g.coords
+
+		x = x - shift[0]
+		y = y - shift[1]
 
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
-		spider_grid = CartesianGrid(UnstructuredCoords([x_new, y_new]))
 
-		return 1 - spider(spider_grid)
+		# Doing comparisons for each side separately is actually
+		# faster than doing abs(x_new) < (spider_length / 2).
+		spider = x_new <= (spider_length / 2)
+		spider *= x_new >= (-spider_length / 2)
+		spider *= y_new <= (spider_width / 2)
+		spider *= y_new >= (-spider_width / 2)
+
+		return Field(1 - spider.ravel(), grid)
 	return func
 
 def make_spider_infinite(p, angle, spider_width):
@@ -331,13 +365,28 @@ def make_spider_infinite(p, angle, spider_width):
 	spider_angle = np.radians(angle)
 
 	def func(grid):
-		x, y = grid.shifted(p).coords
+		g = grid.as_('cartesian')
+
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
+		else:
+			x, y = g.coords
+
+		x = x + p[0]
+		y = y + p[1]
 
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
-		infinite_spider = np.logical_and(np.abs(y_new) <= (spider_width / 2), x_new >= 0)
 
-		return Field(1 - infinite_spider, grid)
+		# Doing comparisons for each side separately is actually
+		# faster than doing abs(y_new) < (spider_length / 2).
+		infinite_spider = y_new <= (spider_width / 2)
+		infinite_spider *= y_new >= (-spider_width / 2)
+		infinite_spider *= x_new >= 0
+
+		return Field(1 - infinite_spider.ravel(), grid)
 	return func
 
 def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio, num_spiders=0, spider_width=0.01):
@@ -449,12 +498,23 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 	'''
 	segment_transmissions = np.ones(segment_positions.size) * segment_transmissions
 
+	mask_available = 'return_with_mask' in inspect.signature(segment_shape).parameters
+
 	def func(grid):
-		res = np.zeros(grid.size, dtype=segment_transmissions.dtype)
+		res = grid.zeros(dtype=segment_transmissions.dtype)
 
 		for p, t in zip(segment_positions.points, segment_transmissions):
-			segment = segment_shape(grid.shifted(-p))
-			res[segment > 0.5] = t
+			if mask_available:
+				# Use the masked version of the segment shape.
+				segment_sub, mask = segment_shape(grid.shifted(-p), return_with_mask=True)
+
+				if isinstance(mask, tuple):
+					res.shaped[mask][segment_sub > 0.5] = t
+				else:
+					res[mask][segment_sub] = t
+			else:
+				segment = segment_shape(grid.shifted(-p))
+				res[segment > 0.5] = t
 
 		return Field(res, grid)
 

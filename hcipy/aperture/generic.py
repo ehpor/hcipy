@@ -5,7 +5,7 @@ import inspect
 import numpy as np
 from matplotlib.path import Path
 
-from ..field import Field, CartesianGrid, UnstructuredCoords, make_hexagonal_grid
+from ..field import Field, make_hexagonal_grid
 from ..dev import deprecated_name_changed
 
 def make_circular_aperture(diameter, center=None):

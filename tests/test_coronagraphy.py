@@ -179,12 +179,12 @@ def test_lyot_coronagraph():
 
 def test_knife_edge_coronagraph():
 	grid = make_pupil_grid(64, 1.1)
-	aperture = circular_aperture(1)(grid)
+	aperture = make_circular_aperture(1)(grid)
 
 	focal_grid = make_focal_grid(q=5, num_airy=5)
 
 	prop = FraunhoferPropagator(grid, focal_grid)
-	lyot_aperture = circular_aperture(0.95)(grid)
+	lyot_aperture = make_circular_aperture(0.95)(grid)
 	lyot_stop = Apodizer(lyot_aperture)
 
 	wf = Wavefront(aperture)

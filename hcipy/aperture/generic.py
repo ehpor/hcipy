@@ -335,6 +335,8 @@ def make_spider(p1, p2, spider_width):
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
 
+		# Doing comparisons for each side separately is actually
+		# faster than doing abs(x_new) < (spider_length / 2).
 		spider = x_new <= (spider_length / 2)
 		spider *= x_new >= (-spider_length / 2)
 		spider *= y_new <= (spider_width / 2)
@@ -378,6 +380,8 @@ def make_spider_infinite(p, angle, spider_width):
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
 
+		# Doing comparisons for each side separately is actually
+		# faster than doing abs(y_new) < (spider_length / 2).
 		infinite_spider = y_new <= (spider_width / 2)
 		infinite_spider *= y_new >= (-spider_width / 2)
 		infinite_spider *= x_new >= 0

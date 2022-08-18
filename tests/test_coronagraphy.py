@@ -175,3 +175,62 @@ def test_lyot_coronagraph():
 	# Checks performance of the coronagraph and if the focal length does not introduce artifacts
 	assert (wf_foc.power.max() / norm) < 5e-3
 	np.testing.assert_allclose(wf_foc.power, wf_foc2.power)
+
+
+def test_knife_edge_coronagraph():
+	grid = make_pupil_grid(64, 1.1)
+	aperture = circular_aperture(1)(grid)
+
+	focal_grid = make_focal_grid(q=5, num_airy=5)
+
+	prop = FraunhoferPropagator(grid, focal_grid)
+	lyot_aperture = circular_aperture(0.95)(grid)
+	lyot_stop = Apodizer(lyot_aperture)
+
+	wf = Wavefront(aperture)
+	wf.total_power = 1.0
+	norm = prop(lyot_stop(wf)).power.max()
+
+	directions = ['+x', '-x', '+y', '-y']
+	for direction in directions:
+		knife_edge = KnifeEdgeLyotCoronagraph(grid, direction=direction, apodizer=None, lyot_stop=lyot_aperture)
+		wf_cor = prop(knife_edge(wf))
+
+		assert (wf_cor.power.max() / norm) < 0.3
+
+	directions = ['+x', '-x', '+y', '-y']
+	knife_edge_shifts = [-1.0 * grid.x, 1.0 * grid.x, -1.0 * grid.y, 1.0 * grid.y]
+	for shift, direction in zip(knife_edge_shifts, directions):
+		pre_apodizer = np.exp(1j * 2 * np.pi * shift)
+		knife_edge = KnifeEdgeLyotCoronagraph(grid, direction=direction, apodizer=pre_apodizer, lyot_stop=lyot_aperture * np.conj(pre_apodizer))
+		wf_cor = prop(knife_edge(wf))
+
+		assert (wf_cor.power.max() / norm) < 1e-2
+
+	# Test for symmetry between a left and right knige edge
+	knife_edge_left = KnifeEdgeLyotCoronagraph(grid, direction='+x', lyot_stop=lyot_aperture)
+	wf_left = prop(knife_edge_left(wf))
+
+	knife_edge_right = KnifeEdgeLyotCoronagraph(grid, direction='-x', lyot_stop=lyot_aperture)
+	wf_right = prop(knife_edge_right(wf))
+
+	# The PSF needs to be flipped and shifted by 1 pixel because the focal grid is odd
+	flipped_psf = np.roll(wf_right.power.shaped[:, ::-1], 1, axis=1)
+	flipped_psf = Field(flipped_psf.ravel(), focal_grid)
+
+	# Ignore the first column in the evaluation because of the roll over effect.
+	assert (abs(wf_left.power.shaped[:, 1::] - flipped_psf.shaped[:, 1::]).max() / norm) < 1e-12
+
+	# Test for symmetry between an up and down knige edge
+	knife_edge_down = KnifeEdgeLyotCoronagraph(grid, direction='+y', lyot_stop=lyot_aperture)
+	wf_down = prop(knife_edge_down(wf))
+
+	knife_edge_up = KnifeEdgeLyotCoronagraph(grid, direction='-y', lyot_stop=lyot_aperture)
+	wf_up = prop(knife_edge_up(wf))
+
+	# The PSF needs to be flipped and shifted by 1 pixel because the focal grid is odd
+	flipped_psf = np.roll(wf_up.power.shaped[::-1, :], 1, axis=0)
+	flipped_psf = Field(flipped_psf.ravel(), focal_grid)
+
+	# Ignore the first row in the evaluation because of the roll over effect.
+	assert (abs(wf_down.power.shaped[1::, :] - flipped_psf.shaped[1::, :]).max() / norm) < 1e-12

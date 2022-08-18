@@ -37,8 +37,13 @@ def deprecated_name_changed(new_func):  # pragma: no cover
         The new function that emits a DeprecationWarning upon use.
     '''
     def decorator(old_func):
-        f = new_func
-        f.__name__ = old_func.__name__
+        # I'm sure there is a way to use deprecated() above, but I can't figure that out right now.
+        @functools.wraps(new_func)
+        def wrapped(*args, **kwargs):
+            message = f'{old_func.__name__} is deprecated. Its new name is {new_func.__name__}.'
+            warnings.warn(message, DeprecationWarning, stacklevel=2)
 
-        return deprecated(f'Its new name is {new_func.__name__}.')(f)
+            return new_func(*args, **kwargs)
+
+        return wrapped
     return decorator

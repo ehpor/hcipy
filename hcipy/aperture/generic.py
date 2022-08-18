@@ -318,8 +318,6 @@ def make_spider(p1, p2, spider_width):
 	spider_angle = np.arctan2(delta[1], delta[0])
 	spider_length = np.linalg.norm(delta)
 
-	spider = make_rectangular_aperture((spider_length, spider_width))
-
 	def func(grid):
 		g = grid.as_('cartesian')
 

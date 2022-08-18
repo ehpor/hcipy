@@ -1,7 +1,7 @@
 Changelog
 =========
 
-0.5.0 (unreleased)
+0.5.0 (Aug 18, 2022)
 --------------------
 
 This HCIPy release provides further speed improvements for Fourier transforms, among some other minor improvements and bugfixes. See the list of all changes below for a summary. This release can now also be installed with Conda. We dropped support for Python 3.6. This version supports Python 3.7+.

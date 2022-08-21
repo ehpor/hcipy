@@ -1,6 +1,6 @@
 import numpy as np
 from ..field import make_hexagonal_grid, Field
-from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture
+from .generic import make_elliptical_aperture, make_shifted_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture
 
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
@@ -175,7 +175,7 @@ def make_lbti_aperture(with_spiders=True, return_segments=False):
 		The left and right LBT apertures. Only returned when `return_segments` is True.
 	'''
 	baseline = 14.40
-
+	
 	apertures = [make_shifted_aperture(make_lbt_aperture(with_spiders=with_spiders), shift=[-baseline / 2, 0]), make_shifted_aperture(make_lbt_aperture(with_spiders=with_spiders), shift=[baseline / 2, 0])]
 
 	def func(grid):

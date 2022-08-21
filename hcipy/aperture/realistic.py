@@ -141,10 +141,10 @@ def make_lbt_aperture(normalized=False, with_spiders=True):
 	spiders = [make_spider_infinite(p1, spider_opening_angle / 2 + 270.0, spider_width), make_spider_infinite(p1, -spider_opening_angle / 2 + 270.0, spider_width)]
 
 	truss_width_1 = 2 * truss_offset_1 * np.tan(np.deg2rad(spider_opening_angle) / 2)
-	truss_1 = rectangular_aperture([truss_width_1, truss_height_1], center=[0.0, -truss_offset_1])
+	truss_1 = make_rectangular_aperture([truss_width_1, truss_height_1], center=[0.0, -truss_offset_1])
 
 	truss_width_2 = 2 * truss_offset_2 * np.tan(np.deg2rad(spider_opening_angle) / 2)
-	truss_2 = rectangular_aperture([truss_width_2, truss_height_2], center=[0.0, -truss_offset_2])
+	truss_2 = make_rectangular_aperture([truss_width_2, truss_height_2], center=[0.0, -truss_offset_2])
 
 	obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio)
 

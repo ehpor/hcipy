@@ -8,7 +8,7 @@ import functools
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
 def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with_M3_cover=False
-		     ,with_segment_gaps=False, return_segments=False):
+		     , return_segments=False):
 	'''Make the VLT aperture.
 
 	This aperture is based on the ERIS pupil documentation: VLT-SPE-AES-11310-0006.
@@ -91,95 +91,9 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 		spider3 = make_spider(spider_start_3, spider_end_3, spider_width)
 		spider4 = make_spider(spider_start_4, spider_end_4, spider_width)
 	
-	if return_segments:
-		spider_slope_1 = (spider_start_1[1] - spider_end_1[1]) / (spider_start_1[0] - spider_end_1[0])
-		spider_yintercept_1 = spider_start_1[1] - spider_slope_1 * spider_start_1[0]
-		
-		spider_slope_2 = (spider_start_2[1] - spider_end_2[1]) / (spider_start_2[0] - spider_end_2[0])
-		spider_yintercept_2 = spider_start_2[1] - spider_slope_2 * spider_start_2[0]
-		
-		spider_slope_3 = (spider_start_3[1] - spider_end_3[1]) / (spider_start_3[0] - spider_end_3[0])
-		spider_yintercept_3 = spider_start_3[1] - spider_slope_3 * spider_start_3[0]
-		
-		spider_slope_4 = (spider_start_4[1] - spider_end_4[1]) / (spider_start_4[0] - spider_end_4[0])
-		spider_yintercept_4 = spider_start_4[1] - spider_slope_4 * spider_start_4[0]	
-		
-		spider_gap_offset_1 = 0
-		spider_gap_offset_2 = 0
-		spider_gap_offset_3 = 0
-		spider_gap_offset_4 = 0
-		
-		if with_segment_gaps:
-			spider_gap_offset_1 = np.abs((spider_width / 2) * np.sqrt(spider_slope_1**2 + 1))
-			spider_gap_offset_2 = np.abs((spider_width / 2) * np.sqrt(spider_slope_2**2 + 1))
-			spider_gap_offset_3 = np.abs((spider_width / 2) * np.sqrt(spider_slope_3**2 + 1))
-			spider_gap_offset_4 = np.abs((spider_width / 2) * np.sqrt(spider_slope_4**2 + 1))
-			
-		def func_northwest_aperture(grid):
-			if grid.is_separated:
-				x, y = grid.separated_coords
-				f = y[:, np.newaxis] > (spider_slope_1 * x[np.newaxis, :] + spider_yintercept_1 + spider_gap_offset_1)
-				f = f * (y[:, np.newaxis] < (spider_slope_4 * x[np.newaxis, :] + spider_yintercept_4 - spider_gap_offset_4))
-				f = f * (y[:, np.newaxis] > (((spider_start_1[1] - spider_start_4[1]) / (spider_start_1[0] - spider_start_4[0])) * x[np.newaxis, :]))
-				f = f.ravel() * obstructed_aperture(grid)
-			else:
-				x, y = grid.coords
-				f = y > (spider_slope_1 * x + spider_yintercept_1 + spider_gap_offset_1) 
-				f = f * (y < (spider_slope_4 * x + spider_yintercept_4 - spider_gap_offset_4))
-				f = f * (y > (((spider_start_1[1] - spider_start_4[1]) / (spider_start_1[0] - spider_start_4[0])) * x))
-				f = f * obstructed_aperture(grid)
-			return Field(f.astype('float'), grid)
-
-		def func_northeast_aperture(grid):
-			if grid.is_separated:
-				x, y = grid.separated_coords
-				f = y[:, np.newaxis] > (spider_slope_3 * x[np.newaxis, :] + spider_yintercept_3 + spider_gap_offset_3)
-				f = f * (y[:, np.newaxis] > (spider_slope_4 * x[np.newaxis, :] + spider_yintercept_4 + spider_gap_offset_4))
-				f = f.ravel() * obstructed_aperture(grid)
-			else:
-				x, y = grid.coords
-				f = y > (spider_slope_3 * x + spider_yintercept_3 + spider_gap_offset_3) 
-				f = f * (y > (spider_slope_4 * x + spider_yintercept_4 + spider_gap_offset_4))
-				f = f * obstructed_aperture(grid)
-			return Field(f.astype('float'), grid)
-
-		def func_southeast_aperture(grid):
-			if grid.is_separated:
-				x, y = grid.separated_coords
-				f = y[:, np.newaxis] > (spider_slope_2 * x[np.newaxis, :] + spider_yintercept_2 + spider_gap_offset_2) 
-				f = f * (y[:, np.newaxis] < (spider_slope_3 * x[np.newaxis, :] + spider_yintercept_3 - spider_gap_offset_3))
-				f = f * (y[:, np.newaxis] < (((spider_start_3[1] - spider_start_2[1]) / (spider_start_3[0] - spider_start_2[0])) * x[np.newaxis, :]))
-				f = f.ravel() * obstructed_aperture(grid)
-			else:
-				x, y = grid.coords
-				f = y > (spider_slope_2 * x + spider_yintercept_2 + spider_gap_offset_2) 
-				f = f * (y < (spider_slope_3 * x + spider_yintercept_3 - spider_gap_offset_3))
-				f = f * (y < (((spider_start_3[1] - spider_start_2[1]) / (spider_start_3[0] - spider_start_2[0])) * x))
-				f = f * obstructed_aperture(grid)
-			return Field(f.astype('float'), grid)
-
-		def func_southwest_aperture(grid):
-			if grid.is_separated:
-				x, y = grid.separated_coords
-				f = y[:, np.newaxis] < (spider_slope_1 * x[np.newaxis, :] + spider_yintercept_1 - spider_gap_offset_1) 
-				f = f * (y[:, np.newaxis] < (spider_slope_2 * x[np.newaxis, :] + spider_yintercept_2 - spider_gap_offset_2))
-				f = f.ravel() * obstructed_aperture(grid)
-			else:
-				x, y = grid.coords
-				f = y < (spider_slope_1 * x + spider_yintercept_1 - spider_gap_offset_1) 
-				f = f * (y < (spider_slope_2 * x + spider_yintercept_2 - spider_gap_offset_2))
-				f = f * obstructed_aperture(grid)
-			return Field(f.astype('float'), grid)
-		
-		segments=[]
-		segments.append(functools.partial(func_northwest_aperture))
-		segments.append(functools.partial(func_northeast_aperture))
-		segments.append(functools.partial(func_southeast_aperture))
-		segments.append(functools.partial(func_southwest_aperture))
-		
 	if with_M3_cover:
 		m3_cover = make_obstruction(rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))
-
+	
 	if with_spiders:
 		if with_M3_cover:
 			def func(grid):
@@ -194,7 +108,49 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 		else:
 			def func(grid):
 				return Field(obstructed_aperture(grid), grid)
-
+			
+	if return_segments:
+		n1 = (spider_end_1[1] - spider_start_1[1], spider_start_1[0] - spider_end_1[0])
+		c1 = np.dot(n1,spider_end_1)
+		
+		n2 = (spider_end_2[1] - spider_start_2[1], spider_start_2[0] - spider_end_2[0])
+		c2 = np.dot(n2,spider_end_2)
+		
+		n3 = (spider_end_3[1] - spider_start_3[1], spider_start_3[0] - spider_end_3[0])
+		c3 = np.dot(n3,spider_end_3)
+		
+		n4 = (spider_end_4[1] - spider_start_4[1], spider_start_4[0] - spider_end_4[0])
+		c4 = np.dot(n4,spider_end_4)
+		
+		ns = [n1,n4,n3,n2]
+		cs = [c1,c4,c3,c2]
+		
+		def segment(n1,c1,n2,c2,grid):
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = (np.dot(en1,np.array([x[np.newaxis, :],y[:, np.newaxis]])) > c1)*1.0
+				f *= (np.dot(en2,np.array([x[np.newaxis, :],y[:, np.newaxis]])) < c2)*1.0
+				intersection = np.array([c1, c2]).dot(np.linalg.inv(np.array([n1, n2])))
+				ni = np.array([-intersection[1], -intersection[0]])
+				f *= (np.dot(ni,np.array([x[np.newaxis, :], y[:, np.newaxis]])) < 0)*1.0
+			else:
+				x, y = grid.coords
+				f = (np.dot(n1, np.array([x, y])) > c1)*1.0
+				f *= (np.dot(n2, np.array([x, y])) < c2)*1.0
+				intersection = np.array([c1, c2]).dot(np.linalg.inv(np.array([n1, n2])))
+				ni = np.array([-intersection[1], -intersection[0]])
+				f *= (np.dot(ni, np.array([x,y])) < 0)*1.0
+			f *= func(grid)
+			f = f.ravel()
+			if with_M3_cover:
+				f *= m3_cover(grid)
+			return Field(f.astype('float'), grid)
+		
+		segments=[]
+		for i in range(4):
+			segments.append(functools.partial(segment, np.roll(ns,-i,axis=0)[0], np.roll(cs,-i,axis=0)[0], 
+									 np.roll(ns,-i,axis=0)[1], np.roll(cs,-i,axis=0)[1]))
+	
 	if return_segments:
 		return func, segments
 	else:

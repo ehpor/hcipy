@@ -13,6 +13,7 @@ __all__ = [
     'ModalAdaptiveOpticsLayer',
     'make_standard_atmospheric_layers',
     'make_las_campanas_atmospheric_layers'
+    'make_keck_atmospheric_layers'
 ]
 
 from .atmospheric_model import *

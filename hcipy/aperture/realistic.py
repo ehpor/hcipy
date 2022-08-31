@@ -127,11 +127,11 @@ def make_vlt_aperture(
 		def segment(n1, c1, n2, c2, grid):
 			if grid.is_separated:
 				x, y = grid.separated_coords
-				f = (np.dot(n1, np.array([x[np.newaxis, :], y[:, np.newaxis]])) > c1) * 1.0
-				f *= (np.dot(n2, np.array([x[np.newaxis, :], y[:, np.newaxis]])) < c2) * 1.0
+				f = (np.dot(n1, np.array([x[np.newaxis, :], y[:, np.newaxis]], dtype = object)) > c1) * 1.0
+				f *= (np.dot(n2, np.array([x[np.newaxis, :], y[:, np.newaxis]], dtype = object)) < c2) * 1.0
 				intersection = np.array([c1, c2]).dot(np.linalg.inv(np.array([n1, n2])))
 				ni = np.array([-intersection[1], -intersection[0]])
-				f *= (np.dot(ni, np.array([x[np.newaxis, :], y[:, np.newaxis]])) < 0) * 1.0
+				f *= (np.dot(ni, np.array([x[np.newaxis, :], y[:, np.newaxis]], dtype = object)) < 0) * 1.0
 			else:
 				x, y = grid.coords
 				f = (np.dot(n1, np.array([x, y])) > c1) * 1.0
@@ -139,8 +139,9 @@ def make_vlt_aperture(
 				intersection = np.array([c1, c2]).dot(np.linalg.inv(np.array([n1, n2])))
 				ni = np.array([-intersection[1], -intersection[0]])
 				f *= (np.dot(ni, np.array([x, y])) < 0) * 1.0
-			f *= func(grid)
 			f = f.ravel()
+			f *= func(grid)
+
 			if with_M3_cover:
 				f *= m3_cover(grid)
 			return Field(f.astype('float'), grid)
@@ -1140,3 +1141,4 @@ def make_hst_aperture(normalized=False, with_spiders=True, with_pads=True):
 		return ota(grid) * pads[0](grid) * pads[1](grid) * pads[2](grid)
 
 	return func
+

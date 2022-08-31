@@ -73,7 +73,7 @@ def make_keck_atmospheric_layers(input_grid):
     list
         A list of turbulence layers.
     '''
-    heights = np.array([0.0, 2.1, 4.1, 6.5, 9.0, 12.0, 14.8]) * 1000
+    heights = np.array([0, 2100, 4100, 6500, 9000, 12000, 14800])
     velocities = np.array([6.7, 13.9, 20.8, 29.0, 29.0, 29.0, 29.0])
     outer_scales = np.array([20, 20, 20, 20, 20, 20, 20])
     Cn_squared = np.array([0.369, 0.219, 0.127, 0.101, 0.046, 0.111, 0.027]) * 1e-12

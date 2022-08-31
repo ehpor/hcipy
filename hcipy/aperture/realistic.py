@@ -7,8 +7,9 @@ import functools
 
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
-def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with_M3_cover=False
-		     , return_segments=False):
+def make_vlt_aperture(
+		normalized=False, telescope='ut3', with_spiders=True, with_M3_cover=False,
+		return_segments=False):
 	'''Make the VLT aperture.
 
 	This aperture is based on the ERIS pupil documentation: VLT-SPE-AES-11310-0006.
@@ -26,8 +27,6 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 		If this is True, a cover will be created for the M3 in stowed position.
 		This M3 cover is only available on UT4, mimicking the ERIS pupil. A warning
 		will be emitted when using an M3 cover with other UTs. Default: False.
-	with_segment_gaps : boolean
-		Include the gaps due to the spiders between individual segments in the aperture.
 	return_segments : boolean
 		If this is True, the pupil quadrants (segments) will also be returned.
 
@@ -84,16 +83,16 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 
 		spider_start_4 = spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
 		spider_end_4 = spider_outer_radius * np.array([np.cos(np.pi / 2), np.sin(np.pi / 2)])
-		
+
 	if with_spiders:
 		spider1 = make_spider(spider_start_1, spider_end_1, spider_width)
 		spider2 = make_spider(spider_start_2, spider_end_2, spider_width)
 		spider3 = make_spider(spider_start_3, spider_end_3, spider_width)
 		spider4 = make_spider(spider_start_4, spider_end_4, spider_width)
-	
+
 	if with_M3_cover:
 		m3_cover = make_obstruction(rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))
-	
+
 	if with_spiders:
 		if with_M3_cover:
 			def func(grid):
@@ -108,7 +107,7 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 		else:
 			def func(grid):
 				return Field(obstructed_aperture(grid), grid)
-			
+
 	if return_segments:
 		n1 = (spider_end_1[1] - spider_start_1[1], spider_start_1[0] - spider_end_1[0])
 		c1 = np.dot(n1,spider_end_1)

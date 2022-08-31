@@ -110,46 +110,47 @@ def make_vlt_aperture(
 
 	if return_segments:
 		n1 = (spider_end_1[1] - spider_start_1[1], spider_start_1[0] - spider_end_1[0])
-		c1 = np.dot(n1,spider_end_1)
-		
+		c1 = np.dot(n1, spider_end_1)
+
 		n2 = (spider_end_2[1] - spider_start_2[1], spider_start_2[0] - spider_end_2[0])
-		c2 = np.dot(n2,spider_end_2)
-		
+		c2 = np.dot(n2, spider_end_2)
+
 		n3 = (spider_end_3[1] - spider_start_3[1], spider_start_3[0] - spider_end_3[0])
-		c3 = np.dot(n3,spider_end_3)
-		
+		c3 = np.dot(n3, spider_end_3)
+
 		n4 = (spider_end_4[1] - spider_start_4[1], spider_start_4[0] - spider_end_4[0])
-		c4 = np.dot(n4,spider_end_4)
-		
-		ns = [n1,n4,n3,n2]
-		cs = [c1,c4,c3,c2]
-		
-		def segment(n1,c1,n2,c2,grid):
+		c4 = np.dot(n4, spider_end_4)
+
+		ns = [n1, n4, n3, n2]
+		cs = [c1, c4, c3, c2]
+
+		def segment(n1, c1, n2, c2, grid):
 			if grid.is_separated:
 				x, y = grid.separated_coords
-				f = (np.dot(en1,np.array([x[np.newaxis, :],y[:, np.newaxis]])) > c1)*1.0
-				f *= (np.dot(en2,np.array([x[np.newaxis, :],y[:, np.newaxis]])) < c2)*1.0
+				f = (np.dot(n1, np.array([x[np.newaxis, :], y[:, np.newaxis]])) > c1) * 1.0
+				f *= (np.dot(n2, np.array([x[np.newaxis, :], y[:, np.newaxis]])) < c2) * 1.0
 				intersection = np.array([c1, c2]).dot(np.linalg.inv(np.array([n1, n2])))
 				ni = np.array([-intersection[1], -intersection[0]])
-				f *= (np.dot(ni,np.array([x[np.newaxis, :], y[:, np.newaxis]])) < 0)*1.0
+				f *= (np.dot(ni, np.array([x[np.newaxis, :], y[:, np.newaxis]])) < 0) * 1.0
 			else:
 				x, y = grid.coords
-				f = (np.dot(n1, np.array([x, y])) > c1)*1.0
-				f *= (np.dot(n2, np.array([x, y])) < c2)*1.0
+				f = (np.dot(n1, np.array([x, y])) > c1) * 1.0
+				f *= (np.dot(n2, np.array([x, y])) < c2) * 1.0
 				intersection = np.array([c1, c2]).dot(np.linalg.inv(np.array([n1, n2])))
 				ni = np.array([-intersection[1], -intersection[0]])
-				f *= (np.dot(ni, np.array([x,y])) < 0)*1.0
+				f *= (np.dot(ni, np.array([x, y])) < 0) * 1.0
 			f *= func(grid)
 			f = f.ravel()
 			if with_M3_cover:
 				f *= m3_cover(grid)
 			return Field(f.astype('float'), grid)
-		
-		segments=[]
+
+		segments = []
 		for i in range(4):
-			segments.append(functools.partial(segment, np.roll(ns,-i,axis=0)[0], np.roll(cs,-i,axis=0)[0], 
-									 np.roll(ns,-i,axis=0)[1], np.roll(cs,-i,axis=0)[1]))
-	
+			segments.append(functools.partial(
+				segment, np.roll(ns, -i, axis=0)[0], np.roll(cs, -i, axis=0)[0],
+				np.roll(ns, -i, axis=0)[1], np.roll(cs, -i, axis=0)[1]))
+
 	if return_segments:
 		return func, segments
 	else:

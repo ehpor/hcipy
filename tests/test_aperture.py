@@ -112,6 +112,8 @@ def test_vlt_aperture():
 	with pytest.raises(ValueError):
 		make_vlt_aperture(telescope='nonexistent_vlt_telescope')
 
+	check_segmentation(make_vlt_aperture)
+
 def test_magellan_aperture():
 	options = {
 		'normalized': [(False, ''), (True, '_normalized')],

@@ -115,27 +115,33 @@ def test_hexagonal_segmented_aperture(num_rings, segment_flat_to_flat, gap_size,
 
 @pytest.mark.parametrize('telescope', ['ut1', 'ut2', 'ut3', 'antu', 'kueyen', 'melipal'])
 @pytest.mark.parametrize('with_spiders', [True, False])
+@pytest.mark.parametrize('check_segmentation', [True, False])
 def test_vlt_ut_123_aperture(telescope, with_spiders):
 	name = 'vlt/pupil_ut123'
 	name += '_without_spiders' if not with_spiders else ''
+	name += '_segmented' if check_segmentation else ''
 
 	check_aperture(
 		make_vlt_aperture, 8.0, name,
 		check_normalization=True,
+		check_segmentation=check_segmentation,
 		telescope=telescope, with_spiders=with_spiders
 	)
 
 @pytest.mark.parametrize('telescope', ['ut4', 'yepun'])
 @pytest.mark.parametrize('with_spiders', [True, False])
+@pytest.mark.parametrize('check_segmentation', [True, False])
 @pytest.mark.parametrize('with_M3_cover', [True, False])
 def test_vlt_ut_4_aperture(telescope, with_spiders, with_M3_cover):
 	name = 'vlt/pupil_ut4'
 	name += '_without_spiders' if not with_spiders else ''
+	name += '_segmented' if check_segmentation else ''
 	name += '_with_M3_cover' if with_M3_cover else ''
 
 	check_aperture(
 		make_vlt_aperture, 8.1196, name,
 		check_normalization=True,
+		check_segmentation=check_segmentation,
 		telescope=telescope, with_spiders=with_spiders, with_M3_cover=with_M3_cover
 	)
 

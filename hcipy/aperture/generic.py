@@ -219,11 +219,17 @@ def make_regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=No
 
 			ind_x = np.flatnonzero(x**2 < ((circum_diameter / 2)**2))
 			if not len(ind_x):
-				return grid.zeros()
+				if return_with_mask:
+					return np.array([]), (slice(0, 0), slice(0, 0))
+				else:
+					return grid.zeros()
 
 			ind_y = np.flatnonzero(y**2 < ((circum_diameter / 2)**2))
 			if not len(ind_y):
-				return grid.zeros()
+				if return_with_mask:
+					return np.array([]), (slice(0, 0), slice(0, 0))
+				else:
+					return grid.zeros()
 
 			m_x = slice(ind_x[0], ind_x[-1] + 1)
 			m_y = slice(ind_y[0], ind_y[-1] + 1)

@@ -1,6 +1,17 @@
 Changelog
 =========
 
+0.5.1 (Oct 13, 2022)
+--------------------
+
+What's Changed
+~~~~~~~~~~~~~~
+
+* Return mask on all exit paths by `@ehpor <https://github.com/ehpor>`__ in `#156 <https://github.com/ehpor/hcipy/pull/156>`__
+
+
+**Full Changelog**: `v0.5.0...v0.5.1 <https://github.com/ehpor/hcipy/compare/v0.5.0...v0.5.1>`__
+
 0.5.0 (Aug 18, 2022)
 --------------------
 

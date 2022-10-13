@@ -720,7 +720,7 @@ def make_hicat_lyot_stop(normalized=False, with_spiders=True, inner_diameter_fra
 	else:
 		return func
 
-def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False):
+def make_elt_aperture(normalized=False, with_spiders=True, segment_transmissions=1, return_segments=False):
 	'''Make the European Extremely Large Telescope aperture.
 
 	This aperture is based on Figure 3.66 that describes the pupil in the E-ELT Construction Proposal:
@@ -733,6 +733,9 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 		diameter of the pupil will be 39.14634 meters.
 	with_spiders : boolean
 		If this is False, the spiders will be left out. Default: True.
+	segment_transmissions : scalar or array_like
+		The transmission for each of the segments. If this is a scalar, this transmission
+		will be used for all segments.
 	return_segments : boolean
 		If this is True, the segments will also be returned as a list of Field generators.
 
@@ -774,9 +777,9 @@ def make_elt_aperture(normalized=False, with_spiders=True, return_segments=False
 	segment_shape = make_hexagonal_aperture(segment_size, angle=np.pi / 2)
 
 	if return_segments:
-		elt_aperture_function, elt_segments = make_segmented_aperture(segment_shape, segment_positions, return_segments=return_segments)
+		elt_aperture_function, elt_segments = make_segmented_aperture(segment_shape, segment_positions, segment_transmissions, return_segments=return_segments)
 	else:
-		elt_aperture_function = make_segmented_aperture(segment_shape, segment_positions)
+		elt_aperture_function = make_segmented_aperture(segment_shape, segment_positions, segment_transmissions)
 
 	spiders = [make_spider_infinite([0, 0], 60 * i + 30, spider_width) for i in range(6)]
 
@@ -907,7 +910,7 @@ def make_gmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	else:
 		return make_aperture
 
-def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False):
+def make_tmt_aperture(normalized=False, with_spiders=True, segment_transmissions=1, return_segments=False):
 	'''Make the Thirty-Meter Telescope aperture.
 
 	The aperture is based on the description from https://www.tmt.org/page/optics. The size of
@@ -923,6 +926,9 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 		diameter of the pupil will be 30.0 meters.
 	with_spiders : boolean
 		If this is False, the spiders will be left out. Default: True.
+	segment_transmissions : scalar or array_like
+		The transmission for each of the segments. If this is a scalar, this transmission
+		will be used for all segments.
 	return_segments : boolean
 		If this is True, the segments will also be returned as a list of Field generators.
 
@@ -961,9 +967,9 @@ def make_tmt_aperture(normalized=False, with_spiders=True, return_segments=False
 	segment_shape = make_hexagonal_aperture(segment_size, angle=np.pi / 2)
 
 	if return_segments:
-		tmt_aperture_function, tmt_segments = make_segmented_aperture(segment_shape, segment_positions, return_segments=return_segments)
+		tmt_aperture_function, tmt_segments = make_segmented_aperture(segment_shape, segment_positions, segment_transmissions, return_segments=return_segments)
 	else:
-		tmt_aperture_function = make_segmented_aperture(segment_shape, segment_positions)
+		tmt_aperture_function = make_segmented_aperture(segment_shape, segment_positions, segment_transmissions)
 
 	spiders = [make_spider_infinite([0, 0], 60 * i + 30, spider_width) for i in range(6)]
 

@@ -5,8 +5,8 @@ import pytest
 import os
 
 def test_agnostic_apodizer():
-	aperture_achromatic = circular_aperture(1)
-	aperture_chromatic = lambda input_grid, wavelength: circular_aperture(wavelength)(input_grid)
+	aperture_achromatic = make_circular_aperture(1)
+	aperture_chromatic = lambda input_grid, wavelength: make_circular_aperture(wavelength)(input_grid)
 
 	apod_achromatic = Apodizer(aperture_achromatic)
 	apod_chromatic = Apodizer(aperture_chromatic)
@@ -100,7 +100,7 @@ def test_statistics_noisy_detector():
 
 			assert np.isclose(expected_std, std_measurement, rtol=2e-02, atol=1e-05)
 
-	aperture = circular_aperture(1)(grid)
+	aperture = make_circular_aperture(1)(grid)
 	subsamplings = [1, 2, 4, 8]
 
 	for subsampling in subsamplings:
@@ -213,7 +213,7 @@ def test_segmented_deformable_mirror():
 		num_segments_expected = 3 * (num_rings + 1) * num_rings + 1
 
 		segment_positions = make_hexagonal_grid(0.5 / num_rings * np.sqrt(3) / 2, num_rings)
-		aperture, segments = make_segmented_aperture(hexagonal_aperture(0.5 / num_rings - 0.003, np.pi / 2), segment_positions, return_segments=True)
+		aperture, segments = make_segmented_aperture(make_hexagonal_aperture(0.5 / num_rings - 0.003, np.pi / 2), segment_positions, return_segments=True)
 
 		aperture = evaluate_supersampled(aperture, grid, 2)
 		segments = evaluate_supersampled(segments, grid, 2)
@@ -552,7 +552,7 @@ def test_polarization_elements():
 
 def test_magnifier():
 	pupil_grid = make_pupil_grid(128)
-	wf = Wavefront(circular_aperture(1)(pupil_grid))
+	wf = Wavefront(make_circular_aperture(1)(pupil_grid))
 	wf.total_power = 1
 
 	magnifier = Magnifier(1.0)
@@ -626,7 +626,7 @@ def test_step_index_fiber():
 
 		prop = FraunhoferPropagator(pupil_grid, focal_grid, focal_length=focal_length)
 
-		wf = Wavefront(circular_aperture(D_pupil)(pupil_grid), wavelength)
+		wf = Wavefront(make_circular_aperture(D_pupil)(pupil_grid), wavelength)
 		wf.total_power = 1
 		img = prop(wf)
 
@@ -666,7 +666,7 @@ def test_thin_lens():
 	focal_length = 300e-1
 	lens = ThinLens(focal_length, lambda x: 1.5, 1e-6)
 
-	aperture = evaluate_supersampled(circular_aperture(pupil_diameter), grid, 8)
+	aperture = evaluate_supersampled(make_circular_aperture(pupil_diameter), grid, 8)
 	assert abs((lens.focal_length - focal_length) / focal_length) < 1e-10
 
 	wf = Wavefront(aperture, wavelength)

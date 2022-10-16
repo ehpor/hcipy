@@ -1,6 +1,6 @@
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
-from ..aperture import circular_aperture
+from ..aperture import make_circular_aperture
 from ..optics import SurfaceApodizer, Apodizer, TipTiltMirror
 from ..field import make_pupil_grid, Field, CartesianGrid, UnstructuredCoords
 
@@ -112,7 +112,7 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		self.focal_grid = make_pupil_grid(num_pixels, 2 * spatial_resolution * self.num_airy)
 
 		# Make all the optical elements
-		self.spatial_filter = Apodizer(circular_aperture(2 * self.num_airy * wavelength_0 / pupil_diameter)(self.focal_grid))
+		self.spatial_filter = Apodizer(make_circular_aperture(2 * self.num_airy * wavelength_0 / pupil_diameter)(self.focal_grid))
 		pyramid_surface = -separation / (2 * (refractive_index(wavelength_0) - 1)) * (np.abs(self.focal_grid.x) + np.abs(self.focal_grid.y))
 		self.pyramid = SurfaceApodizer(Field(pyramid_surface, self.focal_grid), refractive_index)
 

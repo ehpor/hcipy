@@ -55,29 +55,29 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 		assert np.allclose(energy_ratios, energy_ratios[0, 0])
 		assert np.allclose(patterns_match, patterns_match[0, 0])
 
-def test_fourier_energy_conservation_1d():
+@pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
+def test_fourier_energy_conservation_1d(dtype):
 	np.random.seed(0)
 
-	for dtype in ['complex128', 'complex64']:
-		for shift_input in [0, 0.1]:
-			for scale in [1, 2]:
-				for shift_output in [0, 0.1]:
-					for q in [1, 1.23, 3, 4]:
-						for fov in [1, 0.5, 0.8]:
-							for dims in [64, 65]:
-								check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
+	for shift_input in [0, 0.1]:
+		for scale in [1, 2]:
+			for shift_output in [0, 0.1]:
+				for q in [1, 1.23, 3, 4]:
+					for fov in [1, 0.5, 0.8]:
+						for dims in [64, 65]:
+							check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
 
-def test_fourier_energy_conservation_2d():
+@pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
+def test_fourier_energy_conservation_2d(dtype):
 	np.random.seed(0)
 
-	for dtype in ['complex128', 'complex64']:
-		for shift_input in [[0, 0], [0.1]]:
-			for scale in [1, 2]:
-				for shift_output in [[0, 0], [0.1]]:
-					for q in [1, 1.23, 3, 4]:
-						for fov in [1, 0.5, 0.8]:
-							for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
-								check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
+	for shift_input in [[0, 0], [0.1]]:
+		for scale in [1, 2]:
+			for shift_output in [[0, 0], [0.1]]:
+				for q in [1, 1.23, 3, 4]:
+					for fov in [1, 0.5, 0.8]:
+						for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
+							check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
 
 def check_symmetry(scale, q, fov, dims):
 	pass
@@ -92,26 +92,36 @@ def test_fourier_symmetries_2d():
 def test_make_fourier_transform():
 	input_grid = make_pupil_grid(128)
 
-	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='estimate')
+	ft = make_fourier_transform(input_grid, q=1, fov=1, shift=0.1, planner='estimate')
 	assert type(ft) == FastFourierTransform
+	assert ft.input_grid == input_grid
+	assert ft.output_grid == make_fft_grid(input_grid, q=1, fov=1, shift=0.1)
 
-	fft_grid = make_fft_grid(input_grid, q=1, fov=1)
+	fft_grid = make_fft_grid(input_grid, q=1, fov=1, shift=0.1)
 	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
 	assert type(ft) == FastFourierTransform
+	assert ft.input_grid == input_grid
+	assert ft.output_grid == fft_grid
 
-	ft = make_fourier_transform(input_grid, q=8, fov=0.3, planner='estimate')
+	ft = make_fourier_transform(input_grid, q=8, fov=0.3, shift=0.1, planner='estimate')
 	assert type(ft) == MatrixFourierTransform
+	assert ft.input_grid == input_grid
+	assert ft.output_grid == make_fft_grid(input_grid, q=8, fov=0.3, shift=0.1)
 
-	fft_grid = make_fft_grid(input_grid, q=8, fov=0.3)
+	fft_grid = make_fft_grid(input_grid, q=8, fov=0.3, shift=0.1)
 	ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
 	assert type(ft) == MatrixFourierTransform
+	assert ft.input_grid == input_grid
+	assert ft.output_grid == fft_grid
 
-	ft = make_fourier_transform(input_grid, q=1, fov=1, planner='measure')
-	ft = make_fourier_transform(input_grid, q=8, fov=0.1, planner='measure')
+	ft = make_fourier_transform(input_grid, q=1, fov=1, shift=0.1, planner='measure')
+	ft = make_fourier_transform(input_grid, q=8, fov=0.1, shift=0.1, planner='measure')
 
 	output_grid = CartesianGrid(UnstructuredCoords([np.random.randn(100), np.random.randn(100)]))
 	ft = make_fourier_transform(input_grid, output_grid)
 	assert type(ft) == NaiveFourierTransform
+	assert ft.input_grid == input_grid
+	assert ft.output_grid == output_grid
 
 def test_fft_grid_reconstruction():
 	for shift_input in [[0, 0], [0.1]]:

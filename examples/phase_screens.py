@@ -39,7 +39,7 @@ atmosphere = MultiLayerAtmosphere(layers, False)
 atmosphere.Cn_squared = Cn_squared_from_fried_parameter(1/40, wavelength)
 prop = FraunhoferPropagator(pupil_grid, focal_grid.scaled(wavelength))
 
-aperture = circular_aperture(1)(pupil_grid)
+aperture = make_circular_aperture(1)(pupil_grid)
 wf = Wavefront(Field(np.ones(pupil_grid.size), pupil_grid), wavelength)
 
 for t in np.linspace(0, 100, 5001):

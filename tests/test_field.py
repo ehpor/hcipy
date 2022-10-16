@@ -188,33 +188,55 @@ def test_field_svd():
 		assert np.allclose(s[..., i], svd2[1])
 		assert np.allclose(vh[..., i], svd2[2])
 
-def test_grid_hashing():
+def test_grid_hashing_and_comparison():
 	grid1 = make_pupil_grid(128)
 
 	grid2 = CartesianGrid(SeparatedCoords(copy.deepcopy(grid1.separated_coords)))
 	assert hash(grid1) != hash(grid2)
+	assert grid1 != grid2
+	assert grid2 != grid1
 
 	grid3 = CartesianGrid(UnstructuredCoords(copy.deepcopy(grid1.coords)))
 	assert hash(grid1) != hash(grid3)
+	assert grid1 != grid3
+	assert grid3 != grid1
+	assert grid2 != grid3
+	assert grid3 != grid2
 
 	grid4 = make_pupil_grid(128)
+	print('start')
 	assert hash(grid1) == hash(grid4)
+	assert grid1 == grid4
 
 	grid5 = PolarGrid(grid1.coords)
 	assert hash(grid1) != hash(grid5)
+	assert grid1 != grid5
+	assert grid5 != grid1
 
 	grid6 = CartesianGrid(copy.deepcopy(grid1.coords))
 	assert hash(grid1) == hash(grid6)
+	assert grid1 == grid6
 
 	grid7 = grid1.scaled(2)
 	assert hash(grid1) != hash(grid7)
+	assert grid1 != grid7
 
 	grid8 = grid1.scaled(2)
 	assert hash(grid1) != hash(grid8)
 	assert hash(grid7) == hash(grid8)
+	assert grid1 != grid8
+	assert grid7 == grid8
 
 	grid9 = make_pupil_grid(256)
 	assert hash(grid1) != hash(grid9)
+	assert grid1 != grid9
+
+	grid10 = CartesianGrid(SeparatedCoords(copy.deepcopy(grid2.separated_coords)))
+	assert hash(grid2) == hash(grid10)
+	assert grid2 == grid10
+
+	assert grid1 != 0
+	assert grid1 != 'string'
 
 def test_grid_supersampled():
 	g = make_uniform_grid(128, [1, 1])

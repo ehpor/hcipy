@@ -1,6 +1,46 @@
 Changelog
 =========
 
+0.5.1 (Oct 13, 2022)
+--------------------
+
+What's Changed
+~~~~~~~~~~~~~~
+
+* Return mask on all exit paths by `@ehpor <https://github.com/ehpor>`__ in `#156 <https://github.com/ehpor/hcipy/pull/156>`__
+
+
+**Full Changelog**: `v0.5.0...v0.5.1 <https://github.com/ehpor/hcipy/compare/v0.5.0...v0.5.1>`__
+
+0.5.0 (Aug 18, 2022)
+--------------------
+
+This HCIPy release provides further speed improvements for Fourier transforms, among some other minor improvements and bugfixes. See the list of all changes below for a summary. This release can now also be installed with Conda. We dropped support for Python 3.6. This version supports Python 3.7+.
+
+List of major changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Further speed improvements using NumExpr and in-place operations (`@ehpor <https://github.com/ehpor>`__).
+* Autodetect FFTs when doing general Fourier transforms (`@ehpor <https://github.com/ehpor>`__)
+* Renamed some of the aperture functions to be more uniform (`@ehpor <https://github.com/ehpor>`__)
+* Added file IO for Field, Grid and ModeBasis (`@ehpor <https://github.com/ehpor>`__)
+* Allow the use of 32bit floating point Wavefronts (`@ehpor <https://github.com/ehpor>`__)
+* Added the LUVOIR-B, GMT, TMT, ELT, Hale, HabEx, Hubble and JWST telescope apertures (`@ivalaginja <https://github.com/ivalaginja>`__, `@syhaffert <https://github.com/syhaffert>`__ & `@ehpor <https://github.com/ehpor>`__)
+* Improved the speed of spiders and segmented apertures by 4x (`@ehpor <https://github.com/ehpor>`__)
+* Knife edge coronagraph now works in all four directions (`@syhaffert <https://github.com/syhaffert>`__ & `@ehpor <https://github.com/ehpor>`__))
+* Improved support for animations (`@ehpor <https://github.com/ehpor>`__)
+* Added focal-length parameter to Lyot coronagraph (`@syhaffert <https://github.com/syhaffert>`__)
+* Added a telescope pupil introductory tutorial (`@ehpor <https://github.com/ehpor>`__)
+* Allow step-index fibers to be put at arbitrary positions (`@syhaffert <https://github.com/syhaffert>`__)
+* Fixed the PyWFS tutorial (`@syhaffert <https://github.com/syhaffert>`__)
+* Added CaF2 to the materials (`@syhaffert <https://github.com/syhaffert>`__)
+* Fixed deprecation warnings for Numpy 1.20 (`@ehpor <https://github.com/ehpor>`__)
+* Added release for Conda (`@ehpor <https://github.com/ehpor>`__)
+* Reading specific extensions of Fits files (`@syhaffert <https://github.com/syhaffert>`__)
+* CI and linting automation maintenance and upgrades (`@ehpor <https://github.com/ehpor>`__)
+* Added support for Python 3.10 and removed support for Python 3.6 (`@ehpor <https://github.com/ehpor>`__)
+* Added conda-forge installation (`@ehpor <https://github.com/ehpor>`__)
+
 0.4.0 (Feb 22, 2021)
 --------------------
 

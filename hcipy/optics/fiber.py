@@ -19,17 +19,19 @@ class StepIndexFiber(AgnosticOpticalElement):
 	fiber_length : scalar
 		The length of the optical fiber.
 	'''
-	def __init__(self, core_radius, NA, fiber_length):
+	def __init__(self, core_radius, NA, fiber_length, position=None):
 		self._core_radius = core_radius
 		self._NA = NA
 		self.fiber_length = fiber_length
+
+		self._position = np.zeros((2,)) if position is None else np.array(position)
 
 		AgnosticOpticalElement.__init__(self, False, True)
 
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		monochromatic_V = self.V(wavelength)
 		instance_data.NA = self.evaluate_parameter(self._NA, input_grid, output_grid, wavelength)
-		instance_data.fiber_modes, instance_data.beta = make_lp_modes(input_grid, monochromatic_V, self.core_radius, return_betas=True)
+		instance_data.fiber_modes, instance_data.beta = make_lp_modes(input_grid.shifted(-self._position), monochromatic_V, self.core_radius, return_betas=True)
 
 	def num_modes(self, wavelength):
 		'''The approximate amount of modes of the fiber.
@@ -62,6 +64,17 @@ class StepIndexFiber(AgnosticOpticalElement):
 	@core_radius.setter
 	def core_radius(self, core_radius):
 		self._core_radius = core_radius
+		self.clear_cache()
+
+	@property
+	def position(self):
+		'''The position of the fiber.
+		'''
+		return self._position
+
+	@position.setter
+	def position(self, position):
+		self._position = np.array(position)
 		self.clear_cache()
 
 	@property

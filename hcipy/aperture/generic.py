@@ -1,10 +1,14 @@
 from __future__ import division
 import functools
+import inspect
 
 import numpy as np
-from ..field import Field, CartesianGrid, UnstructuredCoords, make_hexagonal_grid
+from matplotlib.path import Path
 
-def circular_aperture(diameter, center=None):
+from ..field import Field, make_hexagonal_grid
+from ..dev import deprecated_name_changed
+
+def make_circular_aperture(diameter, center=None):
 	'''Makes a Field generator for a circular aperture.
 
 	Parameters
@@ -28,18 +32,20 @@ def circular_aperture(diameter, center=None):
 		if grid.is_('cartesian'):
 			if grid.is_separated:
 				x, y = grid.separated_coords
-				f = ((((x - shift[0])**2)[np.newaxis, :] + ((y - shift[1])**2)[:, np.newaxis]) <= (diameter / 2)**2).ravel()
+				x = x[np.newaxis, :]
+				y = y[:, np.newaxis]
 			else:
 				x, y = grid.coords
-				f = ((x - shift[0])**2 + (y - shift[1])**2) <= (diameter / 2)**2
+
+			f = (((x - shift[0])**2 + (y - shift[1])**2) <= (diameter / 2)**2).ravel()
 		else:
-			f = grid.r <= (diameter / 2)
+			f = grid.as_('polar').r <= (diameter / 2)
 
 		return Field(f.astype('float'), grid)
 
 	return func
 
-def elliptical_aperture(diameters, center=None, angle=0):
+def make_elliptical_aperture(diameters, center=None, angle=0):
 	'''Makes a Field generator for an elliptical aperture.
 
 	Parameters
@@ -71,21 +77,24 @@ def elliptical_aperture(diameters, center=None, angle=0):
 	sin_angle_minor = np.sin(angle) / minor_axis
 
 	def func(grid):
-		if grid.is_separated:
-			x, y = grid.shifted(shift).separated_coords
-			term1 = ((x * cos_angle_major)[np.newaxis, :] - (y * sin_angle_major)[:, np.newaxis])**2
-			term2 = ((x * sin_angle_minor)[np.newaxis, :] + (y *  cos_angle_minor)[:, np.newaxis])**2
-			f = (term1 + term2 <= 1).ravel()
+		g = grid.as_('cartesian').shifted(shift)
+
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
 		else:
-			x, y = grid.as_('cartesian').shifted(shift).coords
-			x_transformed = (x * cos_angle_major - y * sin_angle_major)
-			y_transformed = (x * sin_angle_minor + y * cos_angle_minor)
-			f = (x_transformed**2 + y_transformed**2) <= 1
-		return Field(f.astype('float'), grid)
+			x, y = g.coords
+
+		term1 = ((x * cos_angle_major) - (y * sin_angle_major))**2
+		term2 = ((x * sin_angle_minor) + (y *  cos_angle_minor))**2
+		f = (term1 + term2) <= 1
+
+		return Field(f.ravel().astype('float'), grid)
 
 	return func
 
-def rectangular_aperture(size, center=None):
+def make_rectangular_aperture(size, center=None):
 	'''Makes a Field generator for a rectangular aperture.
 
 	Parameters
@@ -100,7 +109,7 @@ def rectangular_aperture(size, center=None):
 	Field generator
 		This function can be evaluated on a grid to get a Field.
 	'''
-	dim = size * np.ones(2)
+	half_dim = size * np.ones(2) / 2
 
 	if center is None:
 		shift = np.zeros(2)
@@ -108,18 +117,53 @@ def rectangular_aperture(size, center=None):
 		shift = center * np.ones(2)
 
 	def func(grid):
-		if grid.is_('cartesian') and grid.is_separated:
-			x, y = grid.separated_coords
-			f = ((np.abs(x - shift[0]) <= (dim[0] / 2))[np.newaxis, :] * (np.abs(y - shift[1]) <= (dim[1] / 2))[:, np.newaxis]).ravel()
-		else:
-			x, y = grid.as_('cartesian').coords
-			f = (np.abs(x - shift[0]) <= (dim[0] / 2)) * (np.abs(y - shift[1]) <= (dim[1] / 2))
+		g = grid.as_('cartesian')
 
-		return Field(f.astype('float'), grid)
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
+		else:
+			x, y = g.coords
+
+		f = (np.abs(x - shift[0]) <= half_dim[0]) * (np.abs(y - shift[1]) <= half_dim[1])
+
+		return Field(f.ravel().astype('float'), grid)
 
 	return func
 
-def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
+def make_irregular_polygon_aperture(vertices):
+	'''Make an irregular polygonal aperture.
+
+	Parameters
+	----------
+	vertices : iterable of length 2 iterables
+		The vertices of the polygon.
+
+	Returns
+	-------
+	Field generator
+		The generator for the polygonal aperture.
+	'''
+	p = Path(vertices)
+
+	bounding_box_min = np.min(vertices, axis=0)
+	bounding_box_max = np.max(vertices, axis=0)
+
+	size = bounding_box_max - bounding_box_min
+	center = (bounding_box_min + bounding_box_max) / 2
+
+	def func(grid):
+		res = grid.zeros()
+
+		mask = make_rectangular_aperture(size, center=center)(grid).astype('bool')
+		res[mask] = p.contains_points(grid.points[mask])
+
+		return res
+
+	return func
+
+def make_regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	'''Makes a Field generator for a regular-polygon-shaped aperture.
 
 	Parameters
@@ -162,9 +206,9 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 	else:
 		thetas = np.arange(int(num_sides / 2) + 1) * (num_sides - 2) * np.pi / (num_sides / 2) + angle
 
-	mask = rectangular_aperture(circum_diameter)
+	mask = make_rectangular_aperture(circum_diameter)
 
-	def func(grid):
+	def func(grid, return_with_mask=False):
 		g = grid.as_('cartesian')
 
 		if g.is_separated:
@@ -175,11 +219,17 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 
 			ind_x = np.flatnonzero(x**2 < ((circum_diameter / 2)**2))
 			if not len(ind_x):
-				return grid.zeros()
+				if return_with_mask:
+					return np.array([]), (slice(0, 0), slice(0, 0))
+				else:
+					return grid.zeros()
 
 			ind_y = np.flatnonzero(y**2 < ((circum_diameter / 2)**2))
 			if not len(ind_y):
-				return grid.zeros()
+				if return_with_mask:
+					return np.array([]), (slice(0, 0), slice(0, 0))
+				else:
+					return grid.zeros()
 
 			m_x = slice(ind_x[0], ind_x[-1] + 1)
 			m_y = slice(ind_y[0], ind_y[-1] + 1)
@@ -196,35 +246,43 @@ def regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=None):
 				for theta in thetas:
 					f_sub *= (np.abs(np.sin(theta) * x)[np.newaxis, :] - (np.cos(theta) * y)[:, np.newaxis]) <= apothem
 
+			if return_with_mask:
+				return f_sub, (m_y, m_x)
+
 			f = np.zeros(g.shape)
 			f[m_y, m_x] = f_sub
 
 			return Field(f.ravel(), grid)
 
 		# Slow backup method
-		f = np.ones(grid.size, dtype='float')
 		m = mask(g) != 0
 
 		x, y = g.coords
 		x = x[m] - shift[0]
 		y = y[m] - shift[1]
 
-		f[~m] = 0
+		f_sub = np.ones(x.size, dtype='float')
 
 		# Make use of symmetry
 		if num_sides % 2 == 0:
 			for theta in thetas:
-				f[m] *= (np.cos(theta) * x + np.sin(theta) * y)**2 <= apothem**2
+				f_sub *= (np.cos(theta) * x + np.sin(theta) * y)**2 <= apothem**2
 		else:
 			for theta in thetas:
-				f[m] *= (np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem
+				f_sub *= (np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem
+
+		if return_with_mask:
+			return f_sub, m
+
+		f = grid.zeros()
+		f[m] = f_sub
 
 		return Field(f, grid)
 
 	return func
 
 # Convenience function
-def hexagonal_aperture(circum_diameter, angle=0, center=None):
+def make_hexagonal_aperture(circum_diameter, angle=0, center=None):
 	'''Makes a Field generator for a hexagon aperture.
 
 	Parameters
@@ -241,7 +299,7 @@ def hexagonal_aperture(circum_diameter, angle=0, center=None):
 	Field generator
 		This function can be evaluated on a grid to get a Field.
 	'''
-	return regular_polygon_aperture(6, circum_diameter, angle, center)
+	return make_regular_polygon_aperture(6, circum_diameter, angle, center)
 
 def make_spider(p1, p2, spider_width):
 	'''Make a rectangular obstruction from `p1` to `p2`.
@@ -266,16 +324,30 @@ def make_spider(p1, p2, spider_width):
 	spider_angle = np.arctan2(delta[1], delta[0])
 	spider_length = np.linalg.norm(delta)
 
-	spider = rectangular_aperture((spider_length, spider_width))
-
 	def func(grid):
-		x, y = grid.shifted(-shift).coords
+		g = grid.as_('cartesian')
+
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
+		else:
+			x, y = g.coords
+
+		x = x - shift[0]
+		y = y - shift[1]
 
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
-		spider_grid = CartesianGrid(UnstructuredCoords([x_new, y_new]))
 
-		return 1 - spider(spider_grid)
+		# Doing comparisons for each side separately is actually
+		# faster than doing abs(x_new) < (spider_length / 2).
+		spider = x_new <= (spider_length / 2)
+		spider *= x_new >= (-spider_length / 2)
+		spider *= y_new <= (spider_width / 2)
+		spider *= y_new >= (-spider_width / 2)
+
+		return Field(1 - spider.ravel(), grid)
 	return func
 
 def make_spider_infinite(p, angle, spider_width):
@@ -298,13 +370,28 @@ def make_spider_infinite(p, angle, spider_width):
 	spider_angle = np.radians(angle)
 
 	def func(grid):
-		x, y = grid.shifted(p).coords
+		g = grid.as_('cartesian')
+
+		if g.is_separated:
+			x, y = g.separated_coords
+			x = x[np.newaxis, :]
+			y = y[:, np.newaxis]
+		else:
+			x, y = g.coords
+
+		x = x + p[0]
+		y = y + p[1]
 
 		x_new = x * np.cos(spider_angle) + y * np.sin(spider_angle)
 		y_new = y * np.cos(spider_angle) - x * np.sin(spider_angle)
-		infinite_spider = np.logical_and(np.abs(y_new) <= (spider_width / 2), x_new >= 0)
 
-		return Field(1 - infinite_spider, grid)
+		# Doing comparisons for each side separately is actually
+		# faster than doing abs(y_new) < (spider_length / 2).
+		infinite_spider = y_new <= (spider_width / 2)
+		infinite_spider *= y_new >= (-spider_width / 2)
+		infinite_spider *= x_new >= 0
+
+		return Field(1 - infinite_spider.ravel(), grid)
 	return func
 
 def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio, num_spiders=0, spider_width=0.01):
@@ -329,8 +416,8 @@ def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,
 	central_obscuration_diameter = pupil_diameter * central_obscuration_ratio
 
 	def func(grid):
-		pupil_outer = circular_aperture(pupil_diameter)(grid)
-		pupil_inner = circular_aperture(central_obscuration_diameter)(grid)
+		pupil_outer = make_circular_aperture(pupil_diameter)(grid)
+		pupil_inner = make_circular_aperture(central_obscuration_diameter)(grid)
 		spiders = 1
 
 		spider_angles = np.linspace(0, 2 * np.pi, num_spiders, endpoint=False)
@@ -416,12 +503,23 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
 	'''
 	segment_transmissions = np.ones(segment_positions.size) * segment_transmissions
 
+	mask_available = 'return_with_mask' in inspect.signature(segment_shape).parameters
+
 	def func(grid):
-		res = np.zeros(grid.size, dtype=segment_transmissions.dtype)
+		res = grid.zeros(dtype=segment_transmissions.dtype)
 
 		for p, t in zip(segment_positions.points, segment_transmissions):
-			segment = segment_shape(grid.shifted(-p))
-			res[segment > 0.5] = t
+			if mask_available:
+				# Use the masked version of the segment shape.
+				segment_sub, mask = segment_shape(grid.shifted(-p), return_with_mask=True)
+
+				if isinstance(mask, tuple):
+					res.shaped[mask][segment_sub > 0.5] = t
+				else:
+					res[mask][segment_sub] = t
+			else:
+				segment = segment_shape(grid.shifted(-p))
+				res[segment > 0.5] = t
 
 		return Field(res, grid)
 
@@ -468,7 +566,7 @@ def make_hexagonal_segmented_aperture(num_rings, segment_flat_to_flat, gap_size,
 		The segments. Only returned if return_segments is True.
 	'''
 	segment_circum_diameter = segment_flat_to_flat * 2 / np.sqrt(3)
-	segment = hexagonal_aperture(segment_circum_diameter, np.pi / 2)
+	segment = make_hexagonal_aperture(segment_circum_diameter, np.pi / 2)
 
 	segment_pitch = segment_flat_to_flat + gap_size
 	segment_positions = make_hexagonal_grid(segment_pitch, num_rings, pointy_top=False)
@@ -482,3 +580,27 @@ def make_hexagonal_segmented_aperture(num_rings, segment_flat_to_flat, gap_size,
 		segment_positions = segment_positions.subset(mask)
 
 	return make_segmented_aperture(segment, segment_positions, return_segments=return_segments)
+
+@deprecated_name_changed(make_circular_aperture)
+def circular_aperture():
+	pass
+
+@deprecated_name_changed(make_elliptical_aperture)
+def elliptical_aperture():
+	pass
+
+@deprecated_name_changed(make_rectangular_aperture)
+def rectangular_aperture():
+	pass
+
+@deprecated_name_changed(make_hexagonal_aperture)
+def hexagonal_aperture():
+	pass
+
+@deprecated_name_changed(make_regular_polygon_aperture)
+def regular_polygon_aperture():
+	pass
+
+@deprecated_name_changed(make_irregular_polygon_aperture)
+def irregular_polygon_aperture():
+	pass

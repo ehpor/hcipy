@@ -1,14 +1,15 @@
 Changelog
 =========
 
-0.5.1 (Oct 13, 2022)
+0.5.1 (Oct 17, 2022)
 --------------------
 
 What's Changed
 ~~~~~~~~~~~~~~
 
 * Return mask on all exit paths by `@ehpor <https://github.com/ehpor>`__ in `#156 <https://github.com/ehpor/hcipy/pull/156>`__
-
+* Add segment transmission option to ELT and TMT apertures by `@ivalaginja <https://github.com/ivalaginja>`__ in `#158 <https://github.com/ehpor/hcipy/pull/158>`__
+* Add the possibility to get segments corresponding to the four quadrant of VLT aperture. by `@npourre <https://github.com/npourre>`__ in `#101 <https://github.com/ehpor/hcipy/pull/101>`__
 
 **Full Changelog**: `v0.5.0...v0.5.1 <https://github.com/ehpor/hcipy/compare/v0.5.0...v0.5.1>`__
 

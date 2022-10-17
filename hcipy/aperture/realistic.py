@@ -1,10 +1,15 @@
 import numpy as np
+
 from ..field import make_hexagonal_grid, Field
 from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture
 
+import functools
+
 _vlt_telescope_aliases = {'antu': 'ut1', 'kueyen': 'ut2', 'melipal': 'ut3', 'yepun': 'ut4'}
 
-def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with_M3_cover=False):
+def make_vlt_aperture(
+		normalized=False, telescope='ut3', with_spiders=True, with_M3_cover=False,
+		return_segments=False):
 	'''Make the VLT aperture.
 
 	This aperture is based on the ERIS pupil documentation: VLT-SPE-AES-11310-0006.
@@ -22,11 +27,15 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 		If this is True, a cover will be created for the M3 in stowed position.
 		This M3 cover is only available on UT4, mimicking the ERIS pupil. A warning
 		will be emitted when using an M3 cover with other UTs. Default: False.
+	return_segments : boolean
+		If this is True, the pupil quadrants (segments) will also be returned.
 
 	Returns
 	-------
-	Field generator
+	aperture : Field generator
 		The VLT aperture.
+	segments : list of Field generators
+		The segments. Only returned when `return_segments` is True.
 	'''
 	telescope = telescope.lower()
 	if telescope not in ['ut1', 'ut2', 'ut3', 'ut4']:
@@ -60,7 +69,7 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 
 	obstructed_aperture = make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio)
 
-	if with_spiders:
+	if with_spiders or return_segments:
 		spider_inner_radius = spider_offset / np.cos(np.radians(45 - (angle_between_spiders - 90) / 2))
 
 		spider_start_1 = -spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
@@ -75,6 +84,7 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 		spider_start_4 = spider_inner_radius * np.array([np.cos(np.pi / 4), np.sin(np.pi / 4)])
 		spider_end_4 = spider_outer_radius * np.array([np.cos(np.pi / 2), np.sin(np.pi / 2)])
 
+	if with_spiders:
 		spider1 = make_spider(spider_start_1, spider_end_1, spider_width)
 		spider2 = make_spider(spider_start_2, spider_end_2, spider_width)
 		spider3 = make_spider(spider_start_3, spider_end_3, spider_width)
@@ -98,7 +108,54 @@ def make_vlt_aperture(normalized=False, telescope='ut3', with_spiders=True, with
 			def func(grid):
 				return Field(obstructed_aperture(grid), grid)
 
-	return func
+	if return_segments:
+		n1 = (spider_end_1[1] - spider_start_1[1], spider_start_1[0] - spider_end_1[0])
+		c1 = np.dot(n1, spider_end_1)
+
+		n2 = (spider_end_2[1] - spider_start_2[1], spider_start_2[0] - spider_end_2[0])
+		c2 = np.dot(n2, spider_end_2)
+
+		n3 = (spider_end_3[1] - spider_start_3[1], spider_start_3[0] - spider_end_3[0])
+		c3 = np.dot(n3, spider_end_3)
+
+		n4 = (spider_end_4[1] - spider_start_4[1], spider_start_4[0] - spider_end_4[0])
+		c4 = np.dot(n4, spider_end_4)
+
+		ns = [n1, n4, n3, n2]
+		cs = [c1, c4, c3, c2]
+
+		def segment(n1, c1, n2, c2, grid):
+			if grid.is_separated:
+				x, y = grid.separated_coords
+				f = (np.dot(n1, np.array([x[np.newaxis, :], y[:, np.newaxis]], dtype = object)) > c1) * 1.0
+				f *= (np.dot(n2, np.array([x[np.newaxis, :], y[:, np.newaxis]], dtype = object)) < c2) * 1.0
+				intersection = np.array([c1, c2]).dot(np.linalg.inv(np.array([n1, n2])))
+				ni = np.array([-intersection[1], -intersection[0]])
+				f *= (np.dot(ni, np.array([x[np.newaxis, :], y[:, np.newaxis]], dtype = object)) < 0) * 1.0
+			else:
+				x, y = grid.coords
+				f = (np.dot(n1, np.array([x, y])) > c1) * 1.0
+				f *= (np.dot(n2, np.array([x, y])) < c2) * 1.0
+				intersection = np.array([c1, c2]).dot(np.linalg.inv(np.array([n1, n2])))
+				ni = np.array([-intersection[1], -intersection[0]])
+				f *= (np.dot(ni, np.array([x, y])) < 0) * 1.0
+			f = f.ravel()
+			f *= func(grid)
+
+			if with_M3_cover:
+				f *= m3_cover(grid)
+			return Field(f.astype('float'), grid)
+
+		segments = []
+		for i in range(4):
+			segments.append(functools.partial(
+				segment, np.roll(ns, -i, axis=0)[0], np.roll(cs, -i, axis=0)[0],
+				np.roll(ns, -i, axis=0)[1], np.roll(cs, -i, axis=0)[1]))
+
+	if return_segments:
+		return func, segments
+	else:
+		return func
 
 def make_subaru_aperture():
 	pass

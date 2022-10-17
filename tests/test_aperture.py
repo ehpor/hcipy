@@ -122,6 +122,7 @@ def test_vlt_ut_123_aperture(telescope, with_spiders):
 	check_aperture(
 		make_vlt_aperture, 8.0, name,
 		check_normalization=True,
+		check_segmentation=True,
 		telescope=telescope, with_spiders=with_spiders
 	)
 
@@ -136,6 +137,7 @@ def test_vlt_ut_4_aperture(telescope, with_spiders, with_M3_cover):
 	check_aperture(
 		make_vlt_aperture, 8.1196, name,
 		check_normalization=True,
+		check_segmentation=True,
 		telescope=telescope, with_spiders=with_spiders, with_M3_cover=with_M3_cover
 	)
 

@@ -114,6 +114,7 @@ def _build_glass_catalogue():
 		'SILICA': make_sellmeier_glass(1, [0.6961663, 0.4079426, 0.8974794], [0.0684043**2, 0.1162414**2, 9.896161**2]),
 		'SAPPHIRE': make_sellmeier_glass(1, [1.4313493, 0.65054713, 5.3414021], [0.0726631**2, 0.1193242**2, 18.028251**2]),
 		'CAF2': make_sellmeier_glass(1.33973, [0.69913, 0.11994, 4.35181], [0.09374**2, 21.18**2, 38.46**2]),
+		'N-PSK53' : make_sellmeier_glass(1.0, [1.3434087, 0.241417935, 0.952896897], [0.00675074317, 0.0219910513, 103.551457])
 	}
 
 	catalogues = ['schott_glass_catalogue_2018_09.csv', 'ohara_glass_catalogue_2019_08.csv']

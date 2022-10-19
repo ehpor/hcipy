@@ -1,4 +1,3 @@
-from hcipy.plotting.field import imshow_field
 from .wavefront_sensor import WavefrontSensorOptics, WavefrontSensorEstimator
 from ..propagation import FraunhoferPropagator
 from ..aperture import make_circular_aperture
@@ -7,8 +6,6 @@ from ..field import make_pupil_grid, Field, CartesianGrid, UnstructuredCoords
 from ..field import evaluate_supersampled
 
 import numpy as np
-
-from matplotlib import pyplot as plt
 
 class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 	'''The optical elements for a modulated pyramid wavefront sensor.
@@ -40,7 +37,7 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		separation = self.pyramid_wavefront_sensor._separation
 		refractive_index = self.pyramid_wavefront_sensor._refractive_index
 		wavelength_0 = self.pyramid_wavefront_sensor._wavelength_0
-	
+
 		def surface_function(temp_grid):
 			return Field(-separation / (2 * (refractive_index(wavelength_0) - 1)) * (np.abs(temp_grid.x) + np.abs(temp_grid.y)), temp_grid)
 

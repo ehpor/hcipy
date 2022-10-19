@@ -32,16 +32,27 @@ def test_modulated_pyramid_wavefront_sensor():
 
 	num_steps = 12
 
-	pywfs = PyramidWavefrontSensorOptics(pupil_grid, wfs_grid, 1.0)
+	pywfs = PyramidWavefrontSensorOptics(pupil_grid, wfs_grid, 1.0, q=3)
 	mpywfs = ModulatedPyramidWavefrontSensorOptics(pywfs, 2, num_steps=num_steps)
+	fast_mpywfs = ModulatedPyramidWavefrontSensorOptics(pywfs, 2, num_steps=num_steps, fast_modulation_method=True)
 
 	zernike_modes = make_zernike_basis(20, 1, pupil_grid)
 	aberration = zernike_modes.linear_combination(np.random.randn(20)) * 0.1
 
 	wf = Wavefront(make_circular_aperture(1)(pupil_grid) * np.exp(1j * aberration))
-	imgs = mpywfs(wf)
+	modulated_wfs = mpywfs(wf)
 
-	assert len(imgs) == num_steps
+	assert len(modulated_wfs) == num_steps
+
+	total_image = 0
+	for wi in modulated_wfs:
+		total_image += wi.power / num_steps
+
+	total_image_fast = 0
+	for wi in fast_mpywfs(wf):
+		total_image_fast += wi.power / num_steps
+
+	assert (abs(total_image - total_image_fast).max() / total_image.max()) < 2e-2
 
 def test_zernike_wavefront_sensor():
 	pupil_grid = make_pupil_grid(128)

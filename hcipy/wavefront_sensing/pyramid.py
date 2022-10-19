@@ -33,7 +33,7 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		y_modulation = modulation / 2 * np.sin(theta)
 
 		self.modulation_positions = CartesianGrid(UnstructuredCoords((x_modulation, y_modulation)))
-		
+
 		separation = self.pyramid_wavefront_sensor._separation
 		refractive_index = self.pyramid_wavefront_sensor._refractive_index
 		wavelength_0 = self.pyramid_wavefront_sensor._wavelength_0
@@ -43,10 +43,11 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 
 		self._pyramid_apodizers = []
 		for p in self.modulation_positions:
-			shifted_grid = self.focal_grid.shifted(2 * p) # This factor two is to compensate for the 1/2 for the mirror surface.
+			shifted_grid = self.focal_grid.shifted(2 * p)  # This factor two is to compensate for the 1/2 for the mirror surface.
+
 			pyramid_surface = evaluate_supersampled(surface_function, shifted_grid, 4)
 			pyramid_apodizer = SurfaceApodizer(Field(pyramid_surface, self.focal_grid), refractive_index)
-			
+
 			self._pyramid_apodizers.append(pyramid_apodizer)
 
 		self.pupil_to_focal = self.pyramid_wavefront_sensor.pupil_to_focal
@@ -68,8 +69,8 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 			A list of wavefronts for each modulation position.
 		'''
 		if self._fast_modulation_method:
-			wf_foc = self.pyramid_wavefront_sensor.spatial_filter( self.pupil_to_focal(wavefront) )
-			wf_modulated = [self.focal_to_pupil( apod(wf_foc) ) for apod in self._pyramid_apodizers]
+			wf_foc = self.pyramid_wavefront_sensor.spatial_filter(self.pupil_to_focal(wavefront))
+			wf_modulated = [self.focal_to_pupil(apod(wf_foc)) for apod in self._pyramid_apodizers]
 
 		else:
 			wf_modulated = []
@@ -140,7 +141,7 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		num_pixels = 2 * int(self.num_airy * q)
 		spatial_resolution = wavelength_0 / pupil_diameter
 		self.focal_grid = make_pupil_grid(num_pixels, 2 * spatial_resolution * self.num_airy)
-		
+
 		self._separation = separation
 		self._refractive_index = refractive_index
 		self._wavelength_0 = wavelength_0

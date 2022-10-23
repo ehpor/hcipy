@@ -51,7 +51,7 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		self._pyramid_apodizers = []
 		for p in self.modulation_positions:
 			# The factor of two is to compensate for the factor of 1/2 of the mirror surface.
-			shifted_grid = self.focal_grid.shifted(2 * p) 
+			shifted_grid = self.focal_grid.shifted(2 * p)
 
 			pyramid_surface = evaluate_supersampled(surface_function, shifted_grid, 4)
 			pyramid_apodizer = SurfaceApodizer(Field(pyramid_surface, self.focal_grid), refractive_index)

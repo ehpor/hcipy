@@ -20,6 +20,8 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		The number of steps per modulation cycle.
 	fast_modulation_method : boolean
 		If True the fast propagation method will be used. Default is False.
+		The fast method shifts the pyramid surface instead of shifting the PSF.
+		This reduces the number of propagations by approximately half.
 	'''
 	def __init__(self, pyramid_wavefront_sensor, modulation, num_steps=12, fast_modulation_method=False):
 		self.modulation = modulation
@@ -27,7 +29,11 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		self.tip_tilt_mirror = TipTiltMirror(self.pyramid_wavefront_sensor.input_grid)
 		self.focal_grid = self.pyramid_wavefront_sensor.focal_grid
 
-		# Instead of shifting the input beam, we shift the pyramid prism.
+		self.pupil_to_focal = self.pyramid_wavefront_sensor.pupil_to_focal
+		self.focal_to_pupil = self.pyramid_wavefront_sensor.focal_to_pupil
+		self._fast_modulation_method = fast_modulation_method
+
+		# Calculate the modulation positions
 		theta = np.linspace(0, 2 * np.pi, num_steps, endpoint=False)
 		x_modulation = modulation / 2 * np.cos(theta)
 		y_modulation = modulation / 2 * np.sin(theta)
@@ -38,22 +44,19 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		refractive_index = self.pyramid_wavefront_sensor._refractive_index
 		wavelength_0 = self.pyramid_wavefront_sensor._wavelength_0
 
+		# Create all the shifted pyramid surfaces
 		def surface_function(temp_grid):
 			return Field(-separation / (2 * (refractive_index(wavelength_0) - 1)) * (np.abs(temp_grid.x) + np.abs(temp_grid.y)), temp_grid)
 
 		self._pyramid_apodizers = []
 		for p in self.modulation_positions:
-			shifted_grid = self.focal_grid.shifted(2 * p)  # This factor two is to compensate for the 1/2 for the mirror surface.
+			# The factor of two is to compensate for the factor of 1/2 of the mirror surface.
+			shifted_grid = self.focal_grid.shifted(2 * p) 
 
 			pyramid_surface = evaluate_supersampled(surface_function, shifted_grid, 4)
 			pyramid_apodizer = SurfaceApodizer(Field(pyramid_surface, self.focal_grid), refractive_index)
 
 			self._pyramid_apodizers.append(pyramid_apodizer)
-
-		self.pupil_to_focal = self.pyramid_wavefront_sensor.pupil_to_focal
-		self.focal_to_pupil = self.pyramid_wavefront_sensor.focal_to_pupil
-
-		self._fast_modulation_method = fast_modulation_method
 
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the modulated pyramid wavefront sensor.
@@ -71,7 +74,6 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		if self._fast_modulation_method:
 			wf_foc = self.pyramid_wavefront_sensor.spatial_filter(self.pupil_to_focal(wavefront))
 			wf_modulated = [self.focal_to_pupil(apod(wf_foc)) for apod in self._pyramid_apodizers]
-
 		else:
 			wf_modulated = []
 

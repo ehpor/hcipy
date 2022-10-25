@@ -3,11 +3,17 @@ from ..propagation import FraunhoferPropagator
 from ..aperture import make_circular_aperture
 from ..optics import SurfaceApodizer, Apodizer, TipTiltMirror
 from ..field import make_pupil_grid, Field, CartesianGrid, UnstructuredCoords
+from ..field import evaluate_supersampled
 
 import numpy as np
 
 class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 	'''The optical elements for a modulated pyramid wavefront sensor.
+
+	This class supports both a slow (default) and a fast modulation method, chosen by the
+	fast_modulation_method parameters. The fast method shifts the pyramid surface instead of
+	applying tilts to the incoming wavefront. While the fast modulation method can be up to
+	twice as fast, it needs to precompute all pyramid surfaces and will use up more memory.
 
 	Parameters
 	----------
@@ -17,17 +23,43 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		The modulation radius in radians.
 	num_steps : int
 		The number of steps per modulation cycle.
+	fast_modulation_method : boolean
+		If True the fast propagation method will be used. Default is False.
 	'''
-	def __init__(self, pyramid_wavefront_sensor, modulation, num_steps=12):
+	def __init__(self, pyramid_wavefront_sensor, modulation, num_steps=12, fast_modulation_method=False):
 		self.modulation = modulation
 		self.pyramid_wavefront_sensor = pyramid_wavefront_sensor
 		self.tip_tilt_mirror = TipTiltMirror(self.pyramid_wavefront_sensor.input_grid)
+		self.focal_grid = self.pyramid_wavefront_sensor.focal_grid
 
+		self.pupil_to_focal = self.pyramid_wavefront_sensor.pupil_to_focal
+		self.focal_to_pupil = self.pyramid_wavefront_sensor.focal_to_pupil
+		self._fast_modulation_method = fast_modulation_method
+
+		# Calculate the modulation positions
 		theta = np.linspace(0, 2 * np.pi, num_steps, endpoint=False)
 		x_modulation = modulation / 2 * np.cos(theta)
 		y_modulation = modulation / 2 * np.sin(theta)
 
 		self.modulation_positions = CartesianGrid(UnstructuredCoords((x_modulation, y_modulation)))
+
+		separation = self.pyramid_wavefront_sensor._separation
+		refractive_index = self.pyramid_wavefront_sensor._refractive_index
+		wavelength_0 = self.pyramid_wavefront_sensor._wavelength_0
+
+		# Create all the shifted pyramid surfaces
+		def surface_function(temp_grid):
+			return Field(-separation / (2 * (refractive_index(wavelength_0) - 1)) * (np.abs(temp_grid.x) + np.abs(temp_grid.y)), temp_grid)
+
+		self._pyramid_apodizers = []
+		for p in self.modulation_positions:
+			# The factor of two is to compensate for the factor of 1/2 of the mirror surface.
+			shifted_grid = self.focal_grid.shifted(2 * p)
+
+			pyramid_surface = evaluate_supersampled(surface_function, shifted_grid, 4)
+			pyramid_apodizer = SurfaceApodizer(Field(pyramid_surface, self.focal_grid), refractive_index)
+
+			self._pyramid_apodizers.append(pyramid_apodizer)
 
 	def forward(self, wavefront):
 		'''Propagates a wavefront through the modulated pyramid wavefront sensor.
@@ -42,13 +74,17 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		wf_modulated : list
 			A list of wavefronts for each modulation position.
 		'''
-		wf_modulated = []
+		if self._fast_modulation_method:
+			wf_foc = self.pyramid_wavefront_sensor.spatial_filter(self.pupil_to_focal(wavefront))
+			wf_modulated = [self.focal_to_pupil(apod(wf_foc)) for apod in self._pyramid_apodizers]
+		else:
+			wf_modulated = []
 
-		for point in self.modulation_positions.points:
-			self.tip_tilt_mirror.actuators = point
-			modulated_wavefront = self.tip_tilt_mirror.forward(wavefront)
+			for point in self.modulation_positions.points:
+				self.tip_tilt_mirror.actuators = point
+				modulated_wavefront = self.tip_tilt_mirror.forward(wavefront)
 
-			wf_modulated.append(self.pyramid_wavefront_sensor.forward(modulated_wavefront))
+				wf_modulated.append(self.pyramid_wavefront_sensor.forward(modulated_wavefront))
 
 		return wf_modulated
 
@@ -110,6 +146,10 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		num_pixels = 2 * int(self.num_airy * q)
 		spatial_resolution = wavelength_0 / pupil_diameter
 		self.focal_grid = make_pupil_grid(num_pixels, 2 * spatial_resolution * self.num_airy)
+
+		self._separation = separation
+		self._refractive_index = refractive_index
+		self._wavelength_0 = wavelength_0
 
 		# Make all the optical elements
 		self.spatial_filter = Apodizer(make_circular_aperture(2 * self.num_airy * wavelength_0 / pupil_diameter)(self.focal_grid))

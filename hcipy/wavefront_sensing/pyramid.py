@@ -10,6 +10,11 @@ import numpy as np
 class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 	'''The optical elements for a modulated pyramid wavefront sensor.
 
+	This class supports both a slow (default) and a fast modulation method, chosen by the
+	fast_modulation_method parameters. The fast method shifts the pyramid surface instead of
+	applying tilts to the incoming wavefront. While the fast modulation method can be up to
+	twice as fast, it needs to precompute all pyramid surfaces and will use up more memory.
+
 	Parameters
 	----------
 	pyramid_wavefront_sensor : WavefrontSensorOptics
@@ -20,8 +25,6 @@ class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
 		The number of steps per modulation cycle.
 	fast_modulation_method : boolean
 		If True the fast propagation method will be used. Default is False.
-		The fast method shifts the pyramid surface instead of shifting the PSF.
-		This reduces the number of propagations by approximately half.
 	'''
 	def __init__(self, pyramid_wavefront_sensor, modulation, num_steps=12, fast_modulation_method=False):
 		self.modulation = modulation

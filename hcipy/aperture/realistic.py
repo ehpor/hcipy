@@ -161,7 +161,7 @@ def make_vlti_aperture(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 	'''Make the VLTI aperture for interferometry.
 
 	The position of each VLT is taken from the VLTI user manual: VLT-MAN-ESO-15000-4552.
-	This function does not apply differential piston corrections.
+	This function does not apply any differential piston.
 
 	Parameters
 	----------
@@ -220,11 +220,10 @@ def make_vlti_aperture(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 		return func
 
 def make_vlti_dopd_map(zenith_angle=0, azimuth=0, with_spiders=True, return_segments=False):
-	'''Make the VLTI aperture for interferometry.
+	'''Make the VLTI differential OPD map for interferometry.
 
 	The position of each VLT is taken from the VLTI user manual: VLT-MAN-ESO-15000-4552.
-	This function does not apply differential piston corrections.
-
+	
 	Parameters
 	----------
 	zenith_angle : scalar
@@ -239,9 +238,9 @@ def make_vlti_dopd_map(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 	Returns
 	-------
 	Field generator
-		The VLTI aperture.
+		The full VLTI dOPD map.
 	segments : list of Field generators
-		The individual telescopes. Only returned when `return_segments` is True.
+		The individual dOPD maps for each telescope. Only returned when `return_segments` is True.
 	'''
 	# UT1 is taken as a reference
 	baseline_UT12 = np.array([24.8, 50.8])
@@ -273,16 +272,10 @@ def make_vlti_dopd_map(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 		single_ut = make_shifted_aperture(make_vlt_aperture(telescope=telescope_name, with_spiders=with_spiders), shift=[u_position, v_position])
 		
 		telescope_apertures.append(single_ut)
-		
-		# Use function to return the lambda, to avoid incorrect binding of variables
-		# def segment_with_spider(segment):
-		#	return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid)
-		# segments = [segment_with_spider(s) for s in segments]
 
 	def ut_with_opd(ut, dOPD_i):
 		return lambda grid: ut(grid) * dOPD_i
 	telescope_apertures = [ut_with_opd(ut, dOPD_i) for ut, dOPD_i in zip(telescope_apertures, dOPD)]
-
 
 	def func(grid):
 		res = 0
@@ -294,7 +287,6 @@ def make_vlti_dopd_map(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 		return func, telescope_apertures
 	else:
 		return func
-
 
 def make_subaru_aperture():
 	pass

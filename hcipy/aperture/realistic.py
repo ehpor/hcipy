@@ -195,61 +195,18 @@ def make_vlti_aperture(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 	telescope_apertures = []
 
 	# Make the new local coordinate basis from the pointing vector
-	w = np.array([np.cos(azimuth) * np.sin(altitude), np.sin(azimuth) * np.sin(altitude), np.cos(altitude)])
-	v = np.array([np.cos(azimuth) * np.cos(altitude), np.sin(azimuth) * np.cos(altitude), -np.sin(altitude)])
-	u = np.array([-np.sin(azimuth) * np.cos(altitude), np.cos(azimuth) * np.cos(altitude), -np.sin(altitude)]) 
+	def make_point_vector(theta, phi):
+		return np.array([np.sin(phi) * np.sin(theta), np.cos(phi) * np.sin(theta), np.cos(theta)])
+
+	w = make_point_vector(zenith_angle, azimuth)	
+	v = make_point_vector(zenith_angle + np.pi / 2, azimuth)
+	u = np.cross(v, w)
 
 	for telescope_name, position in zip(['ut1', 'ut2', 'ut3', 'ut4'], telescope_positions):
 		u_position = u[0] * position[0] + u[1] * position[1]
 		v_position = v[0] * position[0] + v[1] * position[1]
+
 		single_ut = make_shifted_aperture(make_vlt_aperture(telescope=telescope_name, with_spiders=with_spiders), shift=[u_position, v_position])
-		telescope_apertures.append(single_ut)
-
-	def func(grid):
-		res = 0
-		for ap in telescope_apertures:
-			res += ap(grid)
-		return res
-
-	if return_segments:
-		return func, telescope_apertures
-	else:
-		return func
-
-
-def make_vlti_aperture(with_spiders=True, return_segments=False):
-	'''Make the VLTI aperture for interferometry.
-
-	The position of each VLT is taken from the VLTI user manual: VLT-MAN-ESO-15000-4552.
-
-	Parameters
-	----------
-	with_spiders : boolean
-		Include the secondary mirror support structure in the aperture.
-	return_segments : boolean
-		If this is True, the segments will also be returned as a ModeBasis.
-
-	Returns
-	-------
-	Field generator
-		The VLTI aperture.
-	segments : list of Field generators
-		The individual telescopes. Only returned when `return_segments` is True.
-	'''
-	# UT1 is taken as a reference
-	baseline_UT12 = np.array([24.8, 50.8])
-	baseline_UT13 = np.array([54.8, 86.5])
-	baseline_UT14 = np.array([113.2, 64.3])
-
-	relative_position = np.array([[0, 0], baseline_UT12, baseline_UT13, baseline_UT14])
-
-	# Calculate the middle between the extremes of the 4 telescopes
-	reference_position = (np.max(relative_position, axis=0) + np.min(relative_position, axis=0)) / 2
-
-	telescope_positions = np.array([-reference_position, baseline_UT12 - reference_position, baseline_UT13 - reference_position, baseline_UT14 - reference_position])
-	telescope_apertures = []
-	for telescope_name, position in zip(['ut1', 'ut2', 'ut3', 'ut4'], telescope_positions):
-		single_ut = make_shifted_aperture(make_vlt_aperture(telescope=telescope_name, with_spiders=with_spiders), shift=position)
 		telescope_apertures.append(single_ut)
 
 	def func(grid):

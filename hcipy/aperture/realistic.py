@@ -198,7 +198,7 @@ def make_vlti_aperture(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 	def make_point_vector(theta, phi):
 		return np.array([np.sin(phi) * np.sin(theta), np.cos(phi) * np.sin(theta), np.cos(theta)])
 
-	w = make_point_vector(zenith_angle, azimuth)	
+	w = make_point_vector(zenith_angle, azimuth)
 	v = make_point_vector(zenith_angle + np.pi / 2, azimuth)
 	u = np.cross(v, w)
 

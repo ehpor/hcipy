@@ -157,13 +157,18 @@ def make_vlt_aperture(
 	else:
 		return func
 
-def make_vlti_aperture(with_spiders=True, return_segments=False):
+def make_vlti_aperture(zenith_angle=0, azimuth=0, with_spiders=True, return_segments=False):
 	'''Make the VLTI aperture for interferometry.
 
 	The position of each VLT is taken from the VLTI user manual: VLT-MAN-ESO-15000-4552.
+	This function does not apply differential piston corrections.
 
 	Parameters
 	----------
+	zenith_angle : scalar
+		The zenith angle component of the pointing direction.
+	azimuth : scalar
+		The azimuth component of the pointing direction. Defined from north to east.
 	with_spiders : boolean
 		Include the secondary mirror support structure in the aperture.
 	return_segments : boolean
@@ -188,8 +193,16 @@ def make_vlti_aperture(with_spiders=True, return_segments=False):
 
 	telescope_positions = np.array([-reference_position, baseline_UT12 - reference_position, baseline_UT13 - reference_position, baseline_UT14 - reference_position])
 	telescope_apertures = []
+
+	# Make the new local coordinate basis from the pointing vector
+	w = np.array([np.cos(azimuth) * np.sin(altitude), np.sin(azimuth) * np.sin(altitude), np.cos(altitude)])
+	v = np.array([np.cos(azimuth) * np.cos(altitude), np.sin(azimuth) * np.cos(altitude), -np.sin(altitude)])
+	u = np.array([-np.sin(azimuth) * np.cos(altitude), np.cos(azimuth) * np.cos(altitude), -np.sin(altitude)]) 
+
 	for telescope_name, position in zip(['ut1', 'ut2', 'ut3', 'ut4'], telescope_positions):
-		single_ut = make_shifted_aperture(make_vlt_aperture(telescope=telescope_name, with_spiders=with_spiders), shift=position)
+		u_position = u[0] * position[0] + u[1] * position[1]
+		v_position = v[0] * position[0] + v[1] * position[1]
+		single_ut = make_shifted_aperture(make_vlt_aperture(telescope=telescope_name, with_spiders=with_spiders), shift=[u_position, v_position])
 		telescope_apertures.append(single_ut)
 
 	def func(grid):

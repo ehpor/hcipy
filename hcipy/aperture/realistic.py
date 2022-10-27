@@ -191,7 +191,7 @@ def make_vlti_aperture(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 	# Calculate the middle between the extremes of the 4 telescopes
 	reference_position = (np.max(relative_position, axis=0) + np.min(relative_position, axis=0)) / 2
 	telescope_positions = np.array([-reference_position, baseline_UT12 - reference_position, baseline_UT13 - reference_position, baseline_UT14 - reference_position])
-	
+
 	# Make the new local coordinate basis from the pointing vector
 	def make_point_vector(theta, phi):
 		return np.array([np.sin(phi) * np.sin(theta), np.cos(phi) * np.sin(theta), np.cos(theta)])
@@ -223,7 +223,7 @@ def make_vlti_dopd_map(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 	'''Make the VLTI differential OPD map for interferometry.
 
 	The position of each VLT is taken from the VLTI user manual: VLT-MAN-ESO-15000-4552.
-	
+
 	Parameters
 	----------
 	zenith_angle : scalar
@@ -259,8 +259,8 @@ def make_vlti_dopd_map(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 
 	w = make_point_vector(zenith_angle, azimuth)
 	v = make_point_vector(zenith_angle + np.pi / 2, azimuth)
-	u = np.cross(v, w)	
-	
+	u = np.cross(v, w)
+
 	dOPD = []
 	telescope_apertures = []
 	for telescope_name, position in zip(['ut1', 'ut2', 'ut3', 'ut4'], telescope_positions):
@@ -270,7 +270,7 @@ def make_vlti_dopd_map(zenith_angle=0, azimuth=0, with_spiders=True, return_segm
 		dOPD.append(dOPD_i)
 
 		single_ut = make_shifted_aperture(make_vlt_aperture(telescope=telescope_name, with_spiders=with_spiders), shift=[u_position, v_position])
-		
+
 		telescope_apertures.append(single_ut)
 
 	def ut_with_opd(ut, dOPD_i):

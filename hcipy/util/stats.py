@@ -79,7 +79,7 @@ def make_emccd_noise(photo_electron_flux, read_noise, emgain):
 	The model is most accurate for high emgains.
 
 	.. [Hirsch2013] Michael Hirsch et al. " A stochastic model for electron multiplication
-		 charge-coupled devices - from theory to practice." PloS one 8.1 (2013): e53671.
+		charge-coupled devices - from theory to practice." PloS one 8.1 (2013): e53671.
 
 	Parameters
 	----------

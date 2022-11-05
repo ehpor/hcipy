@@ -91,7 +91,7 @@ def make_emccd_noise(photo_electron_flux, read_noise, emgain):
 	Returns
 	-------
 	array_like
-		The drawn samples from the Gamma or normal distribution, depending on the expectation value.
+		The noisy realization of the EMCCD detection.
 	"""
 	photo_electrons = large_poisson(photo_electron_flux)
 

@@ -57,6 +57,8 @@ def large_gamma(lam, theta, thresh=1e6):
 	large = lam > thresh
 	small = ~large
 
+	theta = theta * np.ones_like(lam)
+
 	# Use normal approximation if the shape parameter is large
 	n = np.zeros(lam.shape)
 	mean = lam * theta
@@ -73,11 +75,11 @@ def large_gamma(lam, theta, thresh=1e6):
 def make_emccd_noise(photo_electron_flux, read_noise, emgain):
 	"""
 	Draw samples from a Poisson-Gamma-Normal distribution, which is an accurate model of EMCCDs (following [Hirsch2013]_).
-	
+
 	The model is most accurate for high emgains.
 
 	.. [Hirsch2013] Michael Hirsch et al. " A stochastic model for electron multiplication
-	 	charge-coupled devices - from theory to practice." PloS one 8.1 (2013): e53671.
+		 charge-coupled devices - from theory to practice." PloS one 8.1 (2013): e53671.
 
 	Parameters
 	----------
@@ -95,6 +97,6 @@ def make_emccd_noise(photo_electron_flux, read_noise, emgain):
 	"""
 	photo_electrons = large_poisson(photo_electron_flux)
 
-	detector_counts = large_gamma(photo_electrons, emgain) + read_noise * np.random.randn(photo_electron_flux.size)
+	detector_counts = large_gamma(photo_electrons, emgain) + read_noise * np.random.standard_normal(photo_electron_flux.shape)
 
 	return detector_counts

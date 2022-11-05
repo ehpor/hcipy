@@ -89,47 +89,47 @@ def test_poisson():
 
 	num_trials = 100
 	num_runs = 100000
-	lam = 100.0 
+	lam = 100.0
 	sigma = np.sqrt(lam / num_trials)
-	
+
 	lam_realization = large_poisson(lam * np.ones((num_trials, num_runs)), thresh=1e6)
-	
-	assert np.max( abs(np.mean(lam_realization, axis=0) - lam) )  < threshold * sigma
+
+	assert np.max(abs(np.mean(lam_realization, axis=0) - lam))  < threshold * sigma
 
 	num_trials = 100
 	num_runs = 100000
-	lam = 10000000.0 
+	lam = 10000000.0
 	sigma = np.sqrt(lam / num_trials)
-	
+
 	lam_realization = large_poisson(lam * np.ones((num_trials, num_runs)), thresh=1e6)
-	
-	assert np.max( abs(np.mean(lam_realization, axis=0) - lam) )  < threshold * sigma
+
+	assert np.max(abs(np.mean(lam_realization, axis=0) - lam))  < threshold * sigma
 
 def test_gamma():
 	threshold = 8
 
 	num_trials = 100
 	num_runs = 100000
-	lam = 100.0 
-	theta = 1/10.0
+	lam = 100.0
+	theta = 1 / 10.0
 	mean = lam * theta
 	sigma = np.sqrt(lam * theta**2 / num_trials)
-	
+
 	lam_realization = large_gamma(lam * np.ones((num_trials, num_runs)), theta, thresh=1e6)
-	
-	assert np.max( abs(np.mean(lam_realization, axis=0) - mean) )  < threshold * sigma
+
+	assert np.max(abs(np.mean(lam_realization, axis=0) - mean))  < threshold * sigma
 
 	num_trials = 100
 	num_runs = 100000
-	lam = 10000000.0 
-	theta = 1/10.0
-	
+	lam = 10000000.0
+	theta = 1 / 10.0
+
 	mean = lam * theta
 	sigma = np.sqrt(lam * theta**2 / num_trials)
-	
+
 	lam_realization = large_gamma(lam * np.ones((num_trials, num_runs)), theta, thresh=1e6)
-	
-	assert np.max( abs(np.mean(lam_realization, axis=0) - mean) )  < threshold * sigma
+
+	assert np.max(abs(np.mean(lam_realization, axis=0) - mean))  < threshold * sigma
 
 def test_emccd_noise():
 	photo_electron_flux = 1000.0
@@ -143,4 +143,4 @@ def test_emccd_noise():
 	assert abs(np.sqrt(2 * photo_electron_flux) - np.std(noise / emgain)) / np.sqrt(2 * photo_electron_flux) < 1e-2
 
 	threshold = 8.0
-	assert np.max( abs(np.mean(noise, axis=0) / emgain - photo_electron_flux) )  < threshold * np.sqrt(2 * photo_electron_flux)
+	assert np.max(abs(np.mean(noise, axis=0) / emgain - photo_electron_flux))  < threshold * np.sqrt(2 * photo_electron_flux)

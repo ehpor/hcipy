@@ -10,8 +10,8 @@ from ..fourier import FastFourierTransform, MatrixFourierTransform, FourierFilte
 
 class VortexCoronagraph(MultiScaleCoronagraph):
     def __init__(self, input_grid, charge, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
-        phase = lambda grid: Field(np.exp(1j * charge * grid.as_('polar').theta), grid)
-        super().__init__(input_grid, phase, lyot_stop, q, scaling_factor, window_size)
+        phasor = lambda grid: Field(np.exp(1j * charge * grid.as_('polar').theta), grid)
+        super().__init__(input_grid, phasor, lyot_stop, q, scaling_factor, window_size)
 
 class VectorVortexCoronagraph(AgnosticOpticalElement):
 	'''A vector vortex coronagraph.

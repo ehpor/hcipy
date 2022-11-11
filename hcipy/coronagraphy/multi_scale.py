@@ -3,7 +3,7 @@ from scipy.signal import windows
 
 from ..optics import OpticalElement, Apodizer, Wavefront
 from ..propagation import FraunhoferPropagator
-from ..field import make_focal_grid, Field
+from ..field import make_focal_grid, make_pupil_grid, Field
 from ..aperture import make_circular_aperture
 from ..fourier import FastFourierTransform, MatrixFourierTransform, FourierFilter
 
@@ -64,7 +64,8 @@ class MultiScaleCoronagraph(OpticalElement):
 			q = qs[i]
 			num_airy = num_airys[i]
 
-			focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
+			#focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
+			focal_grid = make_pupil_grid(2 * q * num_airy, 1)
 			focal_mask = phase_pattern(focal_grid)
 
 			focal_mask *= 1 - make_circular_aperture(1e-9)(focal_grid)

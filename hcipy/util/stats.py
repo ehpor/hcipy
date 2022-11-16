@@ -64,7 +64,7 @@ def large_gamma(lam, theta, thresh=1e6):
 	mean = lam * theta
 	std = np.sqrt(mean * theta)
 
-	n[large] = np.round(mean[large] + np.random.normal(size=np.sum(large)) * std[large])
+	n[large] = mean[large] + std[large] * np.random.normal(size=np.sum(large))
 	n[small] = np.random.gamma(lam[small], theta[small], size=np.sum(small))
 
 	if hasattr(lam, 'grid'):

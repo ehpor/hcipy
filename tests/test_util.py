@@ -94,7 +94,7 @@ def test_poisson():
 
 	lam_realization = large_poisson(lam * np.ones((num_trials, num_runs)), thresh=1e6)
 
-	assert np.max(abs(np.mean(lam_realization, axis=0) - lam))  < threshold * sigma
+	assert (np.std(np.mean(lam_realization, axis=0) - lam) - sigma) / sigma < 1e-2
 
 	num_trials = 100
 	num_runs = 100000
@@ -103,7 +103,7 @@ def test_poisson():
 
 	lam_realization = large_poisson(lam * np.ones((num_trials, num_runs)), thresh=1e6)
 
-	assert np.max(abs(np.mean(lam_realization, axis=0) - lam))  < threshold * sigma
+	assert (np.std(np.mean(lam_realization, axis=0) - lam) - sigma) / sigma < 1e-2
 
 def test_gamma():
 	threshold = 8
@@ -117,7 +117,7 @@ def test_gamma():
 
 	lam_realization = large_gamma(lam * np.ones((num_trials, num_runs)), theta, thresh=1e6)
 
-	assert np.max(abs(np.mean(lam_realization, axis=0) - mean))  < threshold * sigma
+	assert (np.std(np.mean(lam_realization, axis=0) - lam) - sigma) / sigma < 1e-2
 
 	num_trials = 100
 	num_runs = 100000
@@ -129,7 +129,7 @@ def test_gamma():
 
 	lam_realization = large_gamma(lam * np.ones((num_trials, num_runs)), theta, thresh=1e6)
 
-	assert np.max(abs(np.mean(lam_realization, axis=0) - mean))  < threshold * sigma
+	assert (np.std(np.mean(lam_realization, axis=0) - lam) - sigma) / sigma < 1e-2
 
 def test_emccd_noise():
 	photo_electron_flux = 1000.0
@@ -139,8 +139,6 @@ def test_emccd_noise():
 	num_trials = 100
 	num_runs = 100000
 
+	sigma = np.sqrt(2 * photo_electron_flux / num_trials)
 	noise = make_emccd_noise(photo_electron_flux * np.ones((num_trials, num_runs)), read_noise, emgain)
-	assert abs(np.sqrt(2 * photo_electron_flux) - np.std(noise / emgain)) / np.sqrt(2 * photo_electron_flux) < 1e-2
-
-	threshold = 8.0
-	assert np.max(abs(np.mean(noise, axis=0) / emgain - photo_electron_flux))  < threshold * np.sqrt(2 * photo_electron_flux)
+	assert abs(np.std(np.mean(noise, axis=0) / emgain - photo_electron_flux) - sigma) / sigma < 1e-2

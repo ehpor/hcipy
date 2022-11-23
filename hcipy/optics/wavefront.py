@@ -101,7 +101,7 @@ class Wavefront(object):
 
 	@wavenumber.setter
 	def wavenumber(self, wavenumber):
-		self.wavelength = 2 * npf.pi / wavenumber
+		self.wavelength = 2 * np.pi / wavenumber
 
 	@property
 	def grid(self):

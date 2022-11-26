@@ -187,13 +187,13 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
 
 	return CartesianGrid(RegularCoords(delta, dims, zero))
 
-def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None):
+def make_hexagonal_grid(pitch, n_rings, pointy_top=False, center=None):
 	'''Make a regular hexagonal grid.
 
 	Parameters
 	----------
-	circum_diameter : scalar
-		The circum diameter of the hexagons in the grid.
+	pitch : scalar
+		The distance between the hexagon centers in the grid.
 	n_rings : integer
 		The number of rings in the grid.
 	pointy_top : boolean
@@ -209,9 +209,10 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
 	'''
 	if center is None:
 		center = np.zeros(2)
-
-	apothem = circum_diameter * np.sqrt(3) / 4
-
+	
+	apothem = pitch / 2
+	circum_diameter = np.sqrt(3) / 2 * pitch
+	
 	q = [0]
 	r = [0]
 
@@ -235,8 +236,8 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
 		q += [n] * n
 		r += list(range(-n, 0))
 
-	x = (-np.array(q) + np.array(r)) * circum_diameter / 2 + center[0]
-	y = (np.array(q) + np.array(r)) * apothem * 2 + center[1]
+	x = (-np.array(q) + np.array(r)) * apothem  + center[0]
+	y = (np.array(q) + np.array(r)) * circum_diameter  + center[1]
 
 	weight = 2 * apothem**2 * np.sqrt(3)
 

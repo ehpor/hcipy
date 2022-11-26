@@ -209,10 +209,10 @@ def make_hexagonal_grid(pitch, n_rings, pointy_top=False, center=None):
 	'''
 	if center is None:
 		center = np.zeros(2)
-	
+
 	apothem = pitch / 2
 	circum_diameter = np.sqrt(3) / 2 * pitch
-	
+
 	q = [0]
 	r = [0]
 

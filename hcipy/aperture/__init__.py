@@ -33,7 +33,7 @@ __all__ = [
 	'make_habex_aperture',
 	'make_hst_aperture',
 	'make_jwst_aperture',
-    'make_keck_aperture'
+	'make_keck_aperture',
 ]
 
 from .generic import *

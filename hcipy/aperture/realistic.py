@@ -1340,10 +1340,10 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		Include the secondary mirror support structure in the aperture.
 	with_segment_gaps : boolean
 		Include the gaps between individual segments in the aperture.
-    gap_padding : TYPE, optional
-            DESCRIPTION. The default is 10.
-    segment_transmissions : TYPE, optional
-        DESCRIPTION. The default is 1.
+	gap_padding : TYPE, optional
+		DESCRIPTION. The default is 10.
+	segment_transmissions : TYPE, optional
+		DESCRIPTION. The default is 1.
 	return_segments : boolean
 		If this is True, the segments will also be returned as a list of Field generators.
 

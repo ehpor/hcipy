@@ -1331,7 +1331,6 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 	Make the Keck aperture. This code creates a keck-like aperture matching values used in van Kooten et al (2021) and van Kooten et al (2022) as well as
 	being verified by keck personal to match internal simulation efforts.
 
-
 	Parameters
 	----------
 	normalized : boolean
@@ -1354,32 +1353,31 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		The Keck aperture.
 	segments : list of Field generators
 		The segments. Only returned when `return_segments` is True.
-
 	"""
 
-	pupil_diameter = 10.95 #m actual circumscribed diameter
-	# actual_segment_flat_diameter = np.sqrt(3)/2 * 1.8 #m actual segment flat-to-flat diameter
+	pupil_diameter = 10.95  # m actual circumscribed diameter
+	actual_segment_flat_diameter = np.sqrt(3)/2 * 1.8  # m actual segment flat-to-flat diameter
 	# iris_ao_segment = np.sqrt(3)/2 * .7 mm (~.606 mm)
 	central_obscuration_diameter=2.6
 
-	actual_segment_gap = 0.003 #m actual gap size between segments
+	actual_segment_gap = 0.003  # m actual gap size between segments
 	# (3.5 - (3 D + 4 S)/6 = iris_ao segment gap (~7.4e-17)
-	spider_width = 1*2.6e-2#previous value: 0.02450 #m actual strut size
+	spider_width = 1 * 2.6e-2  # previous value: 0.02450 #m actual strut size
 	if normalized:
-		actual_segment_flat_diameter/=pupil_diameter
-		actual_segment_gap/=pupil_diameter
-		spider_width/=pupil_diameter
-		pupil_diameter/=pupil_diameter
-	segment_gap = actual_segment_gap * gap_padding #padding out the segmentation gaps so they are visible and not sub-pixel
+		actual_segment_flat_diameter /= pupil_diameter
+		actual_segment_gap /= pupil_diameter
+		spider_width /= pupil_diameter
+		pupil_diameter /= pupil_diameter
+	segment_gap = actual_segment_gap * gap_padding  # padding out the segmentation gaps so they are visible and not sub-pixel
 	segment_transmissions = 1.
 
 	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
-	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter #segment circumscribed diameter
+	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter  # segment circumscribed diameter
 
-	num_rings = 3 #number of full rings of hexagons around central segment
+	num_rings = 3  # number of full rings of hexagons around central segment
 
 	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
-	#segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
+	# segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
 
 	segment = make_hexagonal_aperture(segment_circum_diameter, np.pi / 2)
 
@@ -1391,22 +1389,24 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 	spider6 = make_spider_infinite([0, 0], 300, spider_width)
 
 	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=True)
-
 	segmentation, segments = segmented_aperture
+
 	def segment_with_spider(segment):
 		return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
 	segments = [segment_with_spider(s) for s in segments]
 	contour = make_segmented_aperture(segment, segment_positions)
 
 	def func(grid):
-		ap=contour(grid)
-		ap*=make_circular_aperture(central_obscuration_diameter)(grid)
-		res = (ap)* spider1(grid) * spider2(grid) * spider3(grid)* spider4(grid) * spider3(grid)* spider5(grid) * spider6(grid) # * coro(grid)
+		ap = contour(grid)
+		ap *= make_circular_aperture(central_obscuration_diameter)(grid)
+		res = (ap) * spider1(grid) * spider2(grid) * spider3(grid)* spider4(grid) * spider3(grid)* spider5(grid) * spider6(grid) # * coro(grid)
 		return Field(res, grid)
+
 	if return_segments:
 		return func, segments
 	else:
 		return func
+
 def make_keck_lyot_stop(normalized=True, gap_padding=10, segment_transmissions=1, return_header=False):
 	"""
 	This function creates the L-band lyot stop used with the vortex charge 2 coronagraph that is installed on Keck 2
@@ -1426,27 +1426,26 @@ def make_keck_lyot_stop(normalized=True, gap_padding=10, segment_transmissions=1
 	-------
 	lyot_stop : Field generator
 		A field generator for the Lyot stop.
-
 	"""
-	conversion=(10.95/(2*12.05/1000))
-	pupil_diameter = 10.95 #m actual circumscribed diameter
-	actual_segment_flat_diameter = np.sqrt(3)/2 *0.00337*conversion #m actual segment flat-to-flat diameter
-	central_obscuration_diameter=0.00698*conversion
-	actual_segment_gap = 0.003 #m actual gap size between segments
-	spider_width = 0.0005*conversion#Jules previous value: 0.02450 #m actual strut size
+	conversion = (10.95 / (2 * 12.05 / 1000))
+	pupil_diameter = 10.95  # m actual circumscribed diameter
+	actual_segment_flat_diameter = np.sqrt(3)/2 * 0.00337 * conversion  # m actual segment flat-to-flat diameter
+	central_obscuration_diameter = 0.00698 * conversion
+	actual_segment_gap = 0.003  # m actual gap size between segments
+	spider_width = 0.0005 * conversion  # Jules previous value: 0.02450 #m actual strut size
 	if normalized:
-		actual_segment_flat_diameter/=pupil_diameter
-		actual_segment_gap/=pupil_diameter
-		spider_width/=pupil_diameter
-		pupil_diameter/=pupil_diameter
+		actual_segment_flat_diameter /= pupil_diameter
+		actual_segment_gap /= pupil_diameter
+		spider_width /= pupil_diameter
+		pupil_diameter /= pupil_diameter
 
-	segment_gap = actual_segment_gap * gap_padding #padding out the segmentation gaps so they are visible and not sub-pixel
+	segment_gap = actual_segment_gap * gap_padding  # padding out the segmentation gaps so they are visible and not sub-pixel
 	segment_transmissions = 1.
 
 	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
-	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter #segment circumscribed diameter
+	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter  # segment circumscribed diameter
 
-	num_rings = 3 #number of full rings of hexagons around central segment
+	num_rings = 3  # number of full rings of hexagons around central segment
 
 	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
 	segment_positions = segment_positions.subset(lambda grid: ~(make_circular_aperture(segment_circum_diameter)(grid) > 0))
@@ -1461,16 +1460,17 @@ def make_keck_lyot_stop(normalized=True, gap_padding=10, segment_transmissions=1
 	spider6 = make_spider_infinite([0, 0], 300, spider_width)
 
 	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=True)
-
 	segmentation, segments = segmented_aperture
+
 	def segment_with_spider(segment):
 		return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)* spider5(grid) * spider6(grid)
+
 	segments = [segment_with_spider(s) for s in segments]
 	contour = make_segmented_aperture(segment, segment_positions)
 
 	def func(grid):
-		res=contour(grid)
-		res*=make_circular_aperture(central_obscuration_diameter)(grid)
+		res = contour(grid)
+		res *= make_circular_aperture(central_obscuration_diameter)(grid)
 		return Field(res, grid)
 
 	return func

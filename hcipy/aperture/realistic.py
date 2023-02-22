@@ -1356,12 +1356,12 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 	"""
 
 	pupil_diameter = 10.95  # m actual circumscribed diameter
-	actual_segment_flat_diameter = np.sqrt(3)/2 * 1.8  # m actual segment flat-to-flat diameter
-	# iris_ao_segment = np.sqrt(3)/2 * .7 mm (~.606 mm)
-	central_obscuration_diameter=2.6
+	actual_segment_flat_diameter = np.sqrt(3) / 2 * 1.8  # m actual segment flat-to-flat diameter
+	# iris_ao_segment = np.sqrt(3) / 2 * .7 mm (~.606 mm)
+	central_obscuration_diameter = 2.6
 
 	actual_segment_gap = 0.003  # m actual gap size between segments
-	# (3.5 - (3 D + 4 S)/6 = iris_ao segment gap (~7.4e-17)
+	# (3.5 - (3 D + 4 S) / 6 = iris_ao segment gap (~7.4e-17)
 	spider_width = 1 * 2.6e-2  # previous value: 0.02450 #m actual strut size
 	if normalized:
 		actual_segment_flat_diameter /= pupil_diameter
@@ -1399,7 +1399,7 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 	def func(grid):
 		ap = contour(grid)
 		ap *= make_circular_aperture(central_obscuration_diameter)(grid)
-		res = (ap) * spider1(grid) * spider2(grid) * spider3(grid)* spider4(grid) * spider3(grid)* spider5(grid) * spider6(grid) # * coro(grid)
+		res = ap * spider1(grid) * spider2(grid) * spider3(grid)* spider4(grid) * spider3(grid)* spider5(grid) * spider6(grid)  # * coro(grid)
 		return Field(res, grid)
 
 	if return_segments:
@@ -1429,7 +1429,7 @@ def make_keck_lyot_stop(normalized=True, gap_padding=10, segment_transmissions=1
 	"""
 	conversion = (10.95 / (2 * 12.05 / 1000))
 	pupil_diameter = 10.95  # m actual circumscribed diameter
-	actual_segment_flat_diameter = np.sqrt(3)/2 * 0.00337 * conversion  # m actual segment flat-to-flat diameter
+	actual_segment_flat_diameter = np.sqrt(3) / 2 * 0.00337 * conversion  # m actual segment flat-to-flat diameter
 	central_obscuration_diameter = 0.00698 * conversion
 	actual_segment_gap = 0.003  # m actual gap size between segments
 	spider_width = 0.0005 * conversion  # Jules previous value: 0.02450 #m actual strut size

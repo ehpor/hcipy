@@ -1402,7 +1402,7 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		res = segmented_aperture(grid)
 
 		if with_spiders:
-			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider3(grid) * spider5(grid) * spider6(grid) * (1 - make_circular_aperture(central_obscuration_diameter)(grid))
+			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider5(grid) * spider6(grid) * (1 - make_circular_aperture(central_obscuration_diameter)(grid))
 
 		return Field(res, grid)
 

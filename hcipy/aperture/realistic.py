@@ -1327,8 +1327,9 @@ def make_jwst_aperture(normalized=False, with_spiders=True, return_segments=Fals
 	return func, segments
 
 def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=False, gap_padding=10, segment_transmissions=1, return_segments=False):
-	"""
-	Make the Keck aperture. This code creates a keck-like aperture matching values used in van Kooten et al (2021) and van Kooten et al (2022) as well as
+	"""Make the Keck aperture.
+
+	This code creates a keck-like aperture matching values used in van Kooten et al (2021) and van Kooten et al (2022) as well as
 	being verified by keck personal to match internal simulation efforts.
 
 	Parameters
@@ -1340,10 +1341,12 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		Include the secondary mirror support structure in the aperture.
 	with_segment_gaps : boolean
 		Include the gaps between individual segments in the aperture.
-	gap_padding : TYPE, optional
-		DESCRIPTION. The default is 10.
-	segment_transmissions : TYPE, optional
-		DESCRIPTION. The default is 1.
+	gap_padding : scalar
+		Arbitrary padding of gap size to represent gaps on smaller arrays - this effectively
+		makes the gaps larger and the segments smaller to preserve the same segment pitch.
+	segment_transmissions : scalar or array_like
+		The transmission for each of the segments. If this is a scalar, this transmission
+		will be used for all segments.
 	return_segments : boolean
 		If this is True, the segments will also be returned as a list of Field generators.
 
@@ -1357,17 +1360,17 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 
 	pupil_diameter = 10.95  # m actual circumscribed diameter
 	actual_segment_flat_diameter = np.sqrt(3) / 2 * 1.8  # m actual segment flat-to-flat diameter
-	# iris_ao_segment = np.sqrt(3) / 2 * .7 mm (~.606 mm)
 	central_obscuration_diameter = 2.6
 
 	actual_segment_gap = 0.003  # m actual gap size between segments
-	# (3.5 - (3 D + 4 S) / 6 = iris_ao segment gap (~7.4e-17)
 	spider_width = 1 * 2.6e-2  # previous value: 0.02450 #m actual strut size
+
 	if normalized:
 		actual_segment_flat_diameter /= pupil_diameter
 		actual_segment_gap /= pupil_diameter
 		spider_width /= pupil_diameter
 		pupil_diameter /= pupil_diameter
+
 	segment_gap = actual_segment_gap * gap_padding  # padding out the segmentation gaps so they are visible and not sub-pixel
 	segment_transmissions = 1.
 
@@ -1408,19 +1411,23 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		return func
 
 def make_keck_lyot_stop(normalized=True, gap_padding=10, segment_transmissions=1, return_header=False):
-	"""
-	This function creates the L-band lyot stop used with the vortex charge 2 coronagraph that is installed on Keck 2
-	that is avaliable for science with NIRC2. The values were extract from drawings of the mask
-	and represent that mask installed around 2018 that is currently avaliable in 2022.
+	"""Make the Keck L-band Lyot stop.
+
+	Ccreate the L-band Lyot stop used with the vortex charge 2 coronagraph that is installed on Keck 2
+	that is available for science with NIRC2. The values were extract from drawings of the mask
+	and represent that mask installed around 2018 that is currently available in 2022.
 
 	Parameters
 	----------
-	normalized : TYPE, optional
-		DESCRIPTION. The default is True.
-	gap_padding : TYPE, optional
-		DESCRIPTION. The default is 10.
-	segment_transmissions : TYPE, optional
-		DESCRIPTION. The default is 1.
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 10.95 meters.
+	gap_padding : scalar
+		Arbitrary padding of gap size to represent gaps on smaller arrays - this effectively
+		makes the gaps larger and the segments smaller to preserve the same segment pitch.
+	segment_transmissions : scalar or array_like
+		The transmission for each of the segments. If this is a scalar, this transmission
+		will be used for all segments.
 
 	Returns
 	-------

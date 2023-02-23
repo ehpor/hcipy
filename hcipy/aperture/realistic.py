@@ -1391,12 +1391,13 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 
 	segment = make_hexagonal_aperture(segment_circum_diameter, np.pi / 2)
 
-	spider1 = make_spider_infinite([0, 0], 0, spider_width)
-	spider2 = make_spider_infinite([0, 0], 60, spider_width)
-	spider3 = make_spider_infinite([0, 0], 120, spider_width)
-	spider4 = make_spider_infinite([0, 0], 180, spider_width)
-	spider5 = make_spider_infinite([0, 0], 240, spider_width)
-	spider6 = make_spider_infinite([0, 0], 300, spider_width)
+	if with_spiders:
+		spider1 = make_spider_infinite([0, 0], 0, spider_width)
+		spider2 = make_spider_infinite([0, 0], 60, spider_width)
+		spider3 = make_spider_infinite([0, 0], 120, spider_width)
+		spider4 = make_spider_infinite([0, 0], 180, spider_width)
+		spider5 = make_spider_infinite([0, 0], 240, spider_width)
+		spider6 = make_spider_infinite([0, 0], 300, spider_width)
 
 	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=True)
 	segmentation, segments = segmented_aperture

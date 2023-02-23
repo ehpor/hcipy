@@ -1399,18 +1399,23 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		spider5 = make_spider_infinite([0, 0], 240, spider_width)
 		spider6 = make_spider_infinite([0, 0], 300, spider_width)
 
-	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=True)
-	segmentation, segments = segmented_aperture
+	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=return_segments)
+	if return_segments:
+		segmented_aperture, segments = segmented_aperture
 
 	def segment_with_spider(segment):
 		return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
-	segments = [segment_with_spider(s) for s in segments]
-	contour = make_segmented_aperture(segment, segment_positions)
+
+	if with_spiders and return_segments:
+		segments = [segment_with_spider(s) for s in segments]
 
 	def func(grid):
-		ap = contour(grid)
+		ap = segmented_aperture(grid)
 		ap *= make_circular_aperture(central_obscuration_diameter)(grid)
-		res = ap * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider3(grid) * spider5(grid) * spider6(grid)  # * coro(grid)
+
+		if with_spiders:
+			res = ap * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider3(grid) * spider5(grid) * spider6(grid)  # * coro(grid)
+
 		return Field(res, grid)
 
 	if return_segments:

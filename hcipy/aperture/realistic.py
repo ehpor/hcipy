@@ -1374,7 +1374,11 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		spider_width /= pupil_diameter
 		pupil_diameter /= pupil_diameter
 
-	segment_gap = actual_segment_gap * gap_padding  # padding out the segmentation gaps so they are visible and not sub-pixel
+	# padding out the segmentation gaps so they are visible and not sub-pixel
+	segment_gap = actual_segment_gap * gap_padding
+	if not with_segment_gaps:
+		segment_gap = 0
+
 	segment_transmissions = 1.
 
 	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)

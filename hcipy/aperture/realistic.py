@@ -1416,7 +1416,7 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 def make_keck_lyot_stop(normalized=True, gap_padding=10, segment_transmissions=1, return_header=False):
 	"""Make the Keck L-band Lyot stop.
 
-	Ccreate the L-band Lyot stop used with the vortex charge 2 coronagraph that is installed on Keck 2
+	Create the L-band Lyot stop used with the vortex charge 2 coronagraph that is installed on Keck 2
 	that is available for science with NIRC2. The values were extract from drawings of the mask
 	and represent that mask installed around 2018 that is currently available in 2022.
 

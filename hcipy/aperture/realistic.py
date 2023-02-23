@@ -1371,7 +1371,7 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		actual_segment_flat_diameter /= pupil_diameter
 		actual_segment_gap /= pupil_diameter
 		spider_width /= pupil_diameter
-		pupil_diameter /= pupil_diameter
+		pupil_diameter = 1.0
 
 	# padding out the segmentation gaps so they are visible and not sub-pixel
 	segment_gap = actual_segment_gap * gap_padding
@@ -1379,10 +1379,9 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		segment_gap = 0
 
 	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
-	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter  # segment circumscribed diameter
+	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter
 
 	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
-	# segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))
 
 	segment = make_hexagonal_aperture(segment_circum_diameter, np.pi / 2)
 

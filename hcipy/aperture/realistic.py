@@ -1409,10 +1409,11 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 
 		return Field(res, grid)
 
-	def segment_with_spider(segment):
-		return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
-
 	if with_spiders and return_segments:
+		# Use function to return the lambda, to avoid incorrect binding of variables
+		def segment_with_spider(segment):
+			return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
+
 		segments = [segment_with_spider(s) for s in segments]
 
 	if return_segments:

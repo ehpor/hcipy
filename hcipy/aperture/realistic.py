@@ -1362,7 +1362,7 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 	"""
 	pupil_diameter = 10.95  # m actual circumscribed diameter
 	actual_segment_flat_diameter = np.sqrt(3) / 2 * 1.8  # m actual segment flat-to-flat diameter
-	central_obscuration_diameter = 2.6
+	central_obscuration_diameter = 2.6  # m
 	actual_segment_gap = 0.003  # m actual gap size between segments
 	spider_width = 1 * 2.6e-2  # previous value: 0.02450 #m actual strut size
 	num_rings = 3  # number of full rings of hexagons around central segment

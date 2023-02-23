@@ -128,7 +128,7 @@ def make_xinetics_influence_functions(pupil_grid, num_actuators_across_pupil, ac
 	# Read in actuator shape from file.
 	f = files('hcipy.optics').joinpath('influence_dm5v2.fits')
 	with f.open('rb') as fp:
-		actuator = np.squeeze(read_fits(fp))
+		actuator = np.squeeze(read_fits(fp)).astype('float')
 	actuator /= actuator.max()
 
 	# Convert actuator into linear interpolator.

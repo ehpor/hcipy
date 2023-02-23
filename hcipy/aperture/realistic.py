@@ -203,9 +203,6 @@ def make_hale_aperture(normalized=False, with_spiders=True):
 
 	return func
 
-def make_keck_aperture():
-	pass
-
 def make_luvoir_a_aperture(
 		normalized=False, with_spiders=True, with_segment_gaps=True,
 		gap_padding=1, segment_transmissions=1, return_header=False, return_segments=False):

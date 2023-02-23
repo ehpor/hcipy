@@ -1403,20 +1403,20 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 	if return_segments:
 		segmented_aperture, segments = segmented_aperture
 
-	def segment_with_spider(segment):
-		return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
-
-	if with_spiders and return_segments:
-		segments = [segment_with_spider(s) for s in segments]
-
 	def func(grid):
 		ap = segmented_aperture(grid)
 		ap *= make_circular_aperture(central_obscuration_diameter)(grid)
 
 		if with_spiders:
-			res = ap * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider3(grid) * spider5(grid) * spider6(grid)  # * coro(grid)
+			res = ap * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider3(grid) * spider5(grid) * spider6(grid)
 
 		return Field(res, grid)
+
+	def segment_with_spider(segment):
+		return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
+
+	if with_spiders and return_segments:
+		segments = [segment_with_spider(s) for s in segments]
 
 	if return_segments:
 		return func, segments

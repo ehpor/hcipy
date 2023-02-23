@@ -1393,7 +1393,6 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		spider5 = make_spider_infinite([0, 0], 240, spider_width)
 		spider6 = make_spider_infinite([0, 0], 300, spider_width)
 
-	segment_transmissions = 1.
 	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=return_segments)
 	if return_segments:
 		segmented_aperture, segments = segmented_aperture

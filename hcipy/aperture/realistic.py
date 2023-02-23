@@ -1360,13 +1360,12 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 	segments : list of Field generators
 		The segments. Only returned when `return_segments` is True.
 	"""
-
 	pupil_diameter = 10.95  # m actual circumscribed diameter
 	actual_segment_flat_diameter = np.sqrt(3) / 2 * 1.8  # m actual segment flat-to-flat diameter
 	central_obscuration_diameter = 2.6
-
 	actual_segment_gap = 0.003  # m actual gap size between segments
 	spider_width = 1 * 2.6e-2  # previous value: 0.02450 #m actual strut size
+	num_rings = 3  # number of full rings of hexagons around central segment
 
 	if normalized:
 		actual_segment_flat_diameter /= pupil_diameter
@@ -1383,8 +1382,6 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 
 	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
 	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter  # segment circumscribed diameter
-
-	num_rings = 3  # number of full rings of hexagons around central segment
 
 	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
 	# segment_positions = segment_positions.subset(lambda grid: ~(circular_aperture(segment_circum_diameter)(grid) > 0))

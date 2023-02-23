@@ -1402,7 +1402,7 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 	def func(grid):
 		ap = contour(grid)
 		ap *= make_circular_aperture(central_obscuration_diameter)(grid)
-		res = ap * spider1(grid) * spider2(grid) * spider3(grid)* spider4(grid) * spider3(grid)* spider5(grid) * spider6(grid)  # * coro(grid)
+		res = ap * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider3(grid) * spider5(grid) * spider6(grid)  # * coro(grid)
 		return Field(res, grid)
 
 	if return_segments:
@@ -1434,7 +1434,7 @@ def make_keck_lyot_stop(normalized=True, gap_padding=10, segment_transmissions=1
 	lyot_stop : Field generator
 		A field generator for the Lyot stop.
 	"""
-	conversion = (10.95 / (2 * 12.05 / 1000))
+	conversion = 10.95 / (2 * 12.05 / 1000)
 	pupil_diameter = 10.95  # m actual circumscribed diameter
 	actual_segment_flat_diameter = np.sqrt(3) / 2 * 0.00337 * conversion  # m actual segment flat-to-flat diameter
 	central_obscuration_diameter = 0.00698 * conversion
@@ -1470,7 +1470,7 @@ def make_keck_lyot_stop(normalized=True, gap_padding=10, segment_transmissions=1
 	segmentation, segments = segmented_aperture
 
 	def segment_with_spider(segment):
-		return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)* spider5(grid) * spider6(grid)
+		return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider5(grid) * spider6(grid)
 
 	segments = [segment_with_spider(s) for s in segments]
 	contour = make_segmented_aperture(segment, segment_positions)

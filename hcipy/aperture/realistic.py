@@ -1371,6 +1371,7 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 		actual_segment_flat_diameter /= pupil_diameter
 		actual_segment_gap /= pupil_diameter
 		spider_width /= pupil_diameter
+		central_obscuration_diameter /= pupil_diameter
 		pupil_diameter = 1.0
 
 	# padding out the segmentation gaps so they are visible and not sub-pixel
@@ -1399,10 +1400,9 @@ def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=Fa
 
 	def func(grid):
 		res = segmented_aperture(grid)
-		res *= make_circular_aperture(central_obscuration_diameter)(grid)
 
 		if with_spiders:
-			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider3(grid) * spider5(grid) * spider6(grid)
+			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider3(grid) * spider5(grid) * spider6(grid) * (1 - make_circular_aperture(central_obscuration_diameter)(grid))
 
 		return Field(res, grid)
 

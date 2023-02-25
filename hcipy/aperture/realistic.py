@@ -1323,7 +1323,7 @@ def make_jwst_aperture(normalized=False, with_spiders=True, return_segments=Fals
 
 	return func, segments
 
-def make_keck_aperture(normalized=True, with_spiders=False, with_segment_gaps=False, gap_padding=10, segment_transmissions=1, return_segments=False):
+def make_keck_aperture(normalized=True, with_spiders=True, with_segment_gaps=True, gap_padding=10, segment_transmissions=1, return_segments=False):
 	"""Make the Keck aperture.
 
 	This code creates a Keck-like aperture matching values used in [vanKooten2022a] and [vanKooten2022b] as well as

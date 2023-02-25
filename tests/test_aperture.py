@@ -300,3 +300,16 @@ def test_shifted_aperture():
 	aperture2 = make_shifted_aperture(make_circular_aperture(1.0), np.array([0.25, 0.25]))(grid)
 
 	assert np.allclose(aperture1, aperture2)
+
+@pytest.mark.parametrize('with_spiders', [True, False])
+@pytest.mark.parametrize('with_segment_gaps', [True, False])
+def test_keck_aperture(with_spiders, with_segment_gaps):
+	name = 'keck/pupil'
+	name += '_without_spiders' if not with_spiders else ''
+	name += '_without_segment_gaps' if not with_segment_gaps else ''
+
+	check_aperture(
+		make_luvoir_a_aperture, 10.95, name,
+		check_normalization=True, check_segmentation=True,
+		with_spiders=with_spiders, with_segment_gaps=with_segment_gaps
+	)

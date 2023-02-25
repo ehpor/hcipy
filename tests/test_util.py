@@ -83,3 +83,59 @@ def test_finite_difference():
 	laplacian_operator = generate_convolution_matrix(grid, laplacian_kernel)
 	surface_lap = laplacian_operator.dot(surface)
 	assert abs(np.median(surface_lap)) < 1e-10
+
+def test_poisson():
+	num_trials = 100
+	num_runs = 100000
+	lam = 100.0
+	sigma = np.sqrt(lam / num_trials)
+
+	lam_realization = large_poisson(lam * np.ones((num_trials, num_runs)), thresh=1e6)
+
+	assert (np.std(np.mean(lam_realization, axis=0) - lam) - sigma) / sigma < 1e-2
+
+	num_trials = 100
+	num_runs = 100000
+	lam = 10000000.0
+	sigma = np.sqrt(lam / num_trials)
+
+	lam_realization = large_poisson(lam * np.ones((num_trials, num_runs)), thresh=1e6)
+
+	assert (np.std(np.mean(lam_realization, axis=0) - lam) - sigma) / sigma < 1e-2
+
+def test_gamma():
+	num_trials = 100
+	num_runs = 100000
+	lam = 100.0
+	theta = 1 / 10.0
+	mean = lam * theta
+	sigma = np.sqrt(lam * theta**2 / num_trials)
+
+	lam_realization = large_gamma(lam * np.ones((num_trials, num_runs)), theta, thresh=1e6)
+
+	assert (np.std(np.mean(lam_realization, axis=0) - mean) - sigma) / sigma < 1e-2
+
+	num_trials = 100
+	num_runs = 100000
+	lam = 10000000.0
+	theta = 1 / 10.0
+
+	mean = lam * theta
+	sigma = np.sqrt(lam * theta**2 / num_trials)
+
+	lam_realization = large_gamma(lam * np.ones((num_trials, num_runs)), theta, thresh=1e6)
+
+	assert (np.std(np.mean(lam_realization, axis=0) - mean) - sigma) / sigma < 1e-2
+
+def test_emccd_noise():
+	photo_electron_flux = 1000.0
+	read_noise = 0
+	emgain = 500
+
+	num_trials = 100
+	num_runs = 100000
+
+	sigma = np.sqrt(2 * photo_electron_flux / num_trials)
+	noise = make_emccd_noise(photo_electron_flux * np.ones((num_trials, num_runs)), read_noise, emgain)
+
+	assert abs(np.std(np.mean(noise, axis=0) / emgain - photo_electron_flux) - sigma) / sigma < 1e-2

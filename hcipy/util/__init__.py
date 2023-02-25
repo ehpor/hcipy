@@ -6,6 +6,8 @@ __all__ = [
 	'SpectralNoiseFactoryMultiscale',
 	'SpectralNoiseMultiscale',
 	'large_poisson',
+	'large_gamma',
+	'make_emccd_noise',
 	'inverse_truncated',
 	'inverse_truncated_modal',
 	'inverse_tikhonov',

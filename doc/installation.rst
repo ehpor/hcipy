@@ -10,7 +10,7 @@ HCIPy may be installed in one of three different ways:
 
 .. code-block:: shell
 
-    conda install conda-forge:hcipy
+    conda install conda-forge::hcipy
 
 2. Using PyPI.
 

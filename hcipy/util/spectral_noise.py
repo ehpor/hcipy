@@ -97,12 +97,29 @@ class SpectralNoise(object):
 		raise NotImplementedError()
 
 class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
-	def __init__(self, psd, output_grid, oversample=1, psd_args=(), psd_kwargs=None):
-		from ..fourier import FastFourierTransform
+	'''A spectral noise factory based on FFTs.
 
-		if psd_kwargs is None:
-			psd_kwargs = {}
+	The use of FFTs means that these spectral noises will wrap at the
+	edge of the grid, ie. they are continuous from one side of the grid
+	to the other end. This means that the lowest frequencies of the PSD
+	are not well represented and diminished in amplitude. The sampled
+	spatial frequencies can be extended by increasing the oversample
+	parameter at the cost of memory usage and computation time.
 
+	See SpectralNoiseFactoryMultiscale for an alternative if this wrapping
+	should be avoided at only a minor computational cost.
+
+	Parameters
+	----------
+	psd : Field generator
+		The power spectral density of the noise.
+	output_grid : Grid
+		The grid on which to compute the noise.
+	oversample : integer
+		The amount by which to oversample to grid. For values higher than one,
+		the spectral noise can be shifted by that fraction of the grid extent
+		without wrapping.
+	'''
 	def __init__(self, psd, output_grid, oversample=1):
 		SpectralNoiseFactory.__init__(self, psd, output_grid)
 
@@ -118,6 +135,22 @@ class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
 		self.C = np.sqrt(self.psd(self.input_grid) / self.input_grid.weights * (2 * np.pi)**self.input_grid.ndim)
 
 	def make_random(self, seed=None):
+		'''Make a single realization of the spectral noise.
+
+		Parameters
+		----------
+		seed : None, int, array of ints, SeedSequence, BitGenerator, Generator
+			A seed to initialize the spectral noise. If None, then fresh, unpredictable
+			entry will be pulled from the OS. If an int or array of ints, then it will
+			be passed to a numpy.SeedSequency to derive the initial BitGenerator state.
+			If a BitGenerator or Generator are passed, these will be wrapped and used
+			instead. Default: None.
+
+		Returns
+		-------
+		SpectralNoiseFFT
+			A realization of the spectral noise, that can be shifted and evaluated.
+		'''
 		rng = np.random.default_rng(seed)
 
 		N = self.input_grid.size
@@ -127,39 +160,65 @@ class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
 
 		return SpectralNoiseFFT(self, C)
 
-	def make_zero(self):
-		C = Field(np.zeros(self.input_grid.size, dtype='complex'), self.input_grid)
-		return SpectralNoiseFFT(self, C)
-
 class SpectralNoiseFFT(SpectralNoise):
+	'''A single realization of FFT spectral noise.
+
+	Parameters
+	----------
+	factory : SpectralNoiseFactoryMultiscale
+		The factory used to generate this spectral noise instance.
+	C : Field
+		The PSD noise realization in Fourier space.
+	'''
 	def __init__(self, factory, C):
 		self.factory = factory
 		self.C = C
+
 		self.coords = C.grid.separated_coords
 
 	def shift(self, shift):
+		'''In-place shift the noise along the grid axes.
+
+		Parameters
+		----------
+		shift : array_like
+			The shift in the grid axes.
+		'''
 		S = [shift[i] * self.coords[i] for i in range(len(self.coords))]
 		S = np.add.reduce(np.ix_(*S))
+
 		self.C *= np.exp(-1j * S.ravel())
 
-	def __iadd__(self, b):
-		self.C += b.C
-		return self
-
-	def __imul__(self, f):
-		self.C *= f
-		return self
-
 	def __call__(self):
+		'''Evaluate the noise on the pre-specified grid.
+
+		Returns
+		-------
+		Field
+			The computed spectral noise.
+		'''
 		return self.factory.fourier.backward(self.C).real
 
 class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
-	def __init__(self, psd, output_grid, oversampling, psd_args=(), psd_kwargs=None):
-		from ..fourier import FastFourierTransform, MatrixFourierTransform
+	'''A spectral noise factory based on multiscale Fourier transforms.
 
-		if psd_kwargs is None:
-			psd_kwargs = {}
+	This factory should provide similar-looking noise compared to
+	SpectralNoiseFactoryFFT, at a fraction of the computational cost.
+	It does this by performing multiscale FTs rather than full-scale FTs.
+	This means that the noise entropy is slightly reduced, however in the
+	vast majority of cases completely invisibly so.
 
+	Parameters
+	----------
+	psd : Field generator
+		The power spectral density of the noise.
+	output_grid : Grid
+		The grid on which to compute the noise.
+	oversample : integer
+		The amount by which to oversample to grid. For values higher than one,
+		the spectral noise can be shifted by that fraction of the grid extent
+		without wrapping.
+	'''
 	def __init__(self, psd, output_grid, oversampling):
 		SpectralNoiseFactory.__init__(self, psd, output_grid)
 
@@ -182,10 +241,22 @@ class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 		self.C_2[mask_2] = 0
 
 	def make_random(self, seed=None):
+		'''Make a single realization of the spectral noise.
 
-		C_1 = self.C_1 * (np.random.randn(N_1) + 1j * np.random.randn(N_1))
-		C_2 = self.C_2 * (np.random.randn(N_2) + 1j * np.random.randn(N_2))
+		Parameters
+		----------
+		seed : None, int, array of ints, SeedSequence, BitGenerator, Generator
+			A seed to initialize the spectral noise. If None, then fresh, unpredictable
+			entry will be pulled from the OS. If an int or array of ints, then it will
+			be passed to a numpy.SeedSequency to derive the initial BitGenerator state.
+			If a BitGenerator or Generator are passed, these will be wrapped and used
+			instead. Default: None.
 
+		Returns
+		-------
+		SpectralNoiseMultiscale
+			A realization of the spectral noise, that can be shifted and evaluated.
+		'''
 		rng = np.random.default_rng(seed)
 
 		N_1 = self.input_grid_1.size
@@ -197,6 +268,17 @@ class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 		return SpectralNoiseMultiscale(self, C_1, C_2)
 
 class SpectralNoiseMultiscale(SpectralNoise):
+	'''A single realization of multiscale spectral noise.
+
+	Parameters
+	----------
+	factory : SpectralNoiseFactoryMultiscale
+		The factory used to generate this spectral noise instance.
+	C_1 : Field
+		The high-frequency part of the PSD noise realization.
+	C_2 : Field
+		The low-frequency part of the PSD noise realization.
+	'''
 	def __init__(self, factory, C_1, C_2):
 		self.factory = factory
 
@@ -207,6 +289,13 @@ class SpectralNoiseMultiscale(SpectralNoise):
 		self.coords_2 = C_2.grid.separated_coords
 
 	def shift(self, shift):
+		'''In-place shift the noise along the grid axes.
+
+		Parameters
+		----------
+		shift : array_like
+			The shift in the grid axes.
+		'''
 		S_1 = [shift[i] * self.coords_1[i] for i in range(len(self.coords_1))]
 		S_1 = sum(np.ix_(*S_1))
 
@@ -216,17 +305,15 @@ class SpectralNoiseMultiscale(SpectralNoise):
 		self.C_1 *= np.exp(-1j * S_1.ravel())
 		self.C_2 *= np.exp(-1j * S_2.ravel())
 
-	def __iadd__(self, b):
-		self.C_1 += b.C_1
-		self.C_2 += b.C_2
-		return self
-
-	def __imul__(self, f):
-		self.C_1 *= f
-		self.C_2 *= f
-		return self
-
 	def __call__(self):
+		'''Evaluate the noise on the pre-specified grid.
+
+		Returns
+		-------
+		Field
+			The computed spectral noise.
+		'''
 		ps = self.factory.fourier_1.backward(self.C_1).real
 		ps += self.factory.fourier_2.backward(self.C_2).real
+
 		return ps

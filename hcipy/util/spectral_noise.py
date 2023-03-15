@@ -4,54 +4,89 @@ import copy
 from ..field import Field
 
 class SpectralNoiseFactory(object):
-	def __init__(self, psd, output_grid, psd_args=(), psd_kwargs=None):
-		if psd_kwargs is None:
-			psd_kwargs = {}
+	def __init__(self, psd, output_grid):
+		'''A factory class for spectral noise.
 
+		Parameters
+		----------
+		psd : Field generator
+			The power spectral density of the noise.
+		output_grid : Grid
+			The grid on which to compute the noise.
+		'''
 		self.psd = psd
-		self.psd_args = psd_args
-		self.psd_kwargs = psd_kwargs
 		self.output_grid = output_grid
 
-	def make_random(self):
-		raise NotImplementedError()
+	def make_random(self, seed=None):
+		'''Make a single realization of the spectral noise.
 
-	def make_zero(self):
+		This function needs to be implemented in all child classes.
+
+		Parameters
+		----------
+		seed : None, int, array of ints, SeedSequence, BitGenerator, Generator
+			A seed to initialize the spectral noise. If None, then fresh, unpredictable
+			entry will be pulled from the OS. If an int or array of ints, then it will
+			be passed to a numpy.SeedSequency to derive the initial BitGenerator state.
+			If a BitGenerator or Generator are passed, these will be wrapped and used
+			instead. Default: None.
+		'''
 		raise NotImplementedError()
 
 class SpectralNoise(object):
+	'''A spectral noise object.
+
+	This object should not be used directly, but rather be made by a SpectralNoiseFactory object.
+	'''
 	def copy(self):
+		'''Return a copy.
+
+		Returns
+		-------
+		SpectralNoise
+			A copy of ourselves.
+		'''
 		return copy.deepcopy(self)
 
 	def shift(self, shift):
+		'''Shift the noise along the grid axes.
+
+		This function needs to be implemented by the child class.
+
+		Parameters
+		----------
+		shift : array_like
+			The shift in the grid axes.
+		'''
 		raise NotImplementedError()
 
 	def shifted(self, shift):
+		'''Return a copy, shifted by `shift`.
+
+		Parameters
+		----------
+		shift : array_like
+			The shift in the grid axes.
+
+		Returns
+		-------
+		SpectralNoise
+			A copy of ourselves, shifted by `shift`.
+		'''
 		a = self.copy()
 		a.shift(shift)
-		return a
 
-	def __iadd__(self, b):
-		return NotImplemented
-
-	def __add__(self, b):
-		a = self.copy()
-		a += b
-		return a
-
-	def __imul__(self, f):
-		return NotImplemented
-
-	def __mul__(self, f):
-		a = self.copy()
-		a *= f
 		return a
 
 	def __call__(self):
-		raise NotImplementedError()
+		'''Evaluate the noise on the pre-specified grid.
 
-	def evaluate(self):
-		return self()
+		Returns
+		-------
+		Field
+			The computed spectral noise.
+		'''
+		raise NotImplementedError()
 
 class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
 	def __init__(self, psd, output_grid, oversample=1, psd_args=(), psd_kwargs=None):

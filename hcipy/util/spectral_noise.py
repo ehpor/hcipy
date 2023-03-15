@@ -30,6 +30,11 @@ class SpectralNoiseFactory(object):
 			be passed to a numpy.SeedSequency to derive the initial BitGenerator state.
 			If a BitGenerator or Generator are passed, these will be wrapped and used
 			instead. Default: None.
+
+		Returns
+		-------
+		SpectralNoise
+			A realization of the spectral noise, that can be shifted and evaluated.
 		'''
 		raise NotImplementedError()
 
@@ -49,7 +54,7 @@ class SpectralNoise(object):
 		return copy.deepcopy(self)
 
 	def shift(self, shift):
-		'''Shift the noise along the grid axes.
+		'''In-place shift the noise along the grid axes.
 
 		This function needs to be implemented by the child class.
 
@@ -80,6 +85,8 @@ class SpectralNoise(object):
 
 	def __call__(self):
 		'''Evaluate the noise on the pre-specified grid.
+
+		This function should be implemented by all child classes.
 
 		Returns
 		-------

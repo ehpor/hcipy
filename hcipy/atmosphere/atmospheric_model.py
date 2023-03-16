@@ -24,8 +24,8 @@ class AtmosphericLayer(OpticalElement):
 		L0 : scalar
 			The outer scale of the layer.
 		velocity : scalar or array_like
-			The velocity of the layer. If a scalar is given, its direction is
-			chosen randomly.
+			The velocity of the layer. If a scalar is given, its direction will be
+			along x.
 		height : scalar
 			The height of the atmospheric layer above the ground.
 
@@ -120,14 +120,7 @@ class AtmosphericLayer(OpticalElement):
 	@velocity.setter
 	def velocity(self, velocity):
 		if np.isscalar(velocity):
-			if self._velocity is not None:
-				vel = np.sqrt(np.dot(self._velocity, self._velocity))
-				if vel > 0:
-					self._velocity *= velocity / vel
-					return
-
-			theta = np.random.rand() * 2 * np.pi
-			self._velocity = velocity * np.array([np.cos(theta), np.sin(theta)])
+			self._velocity = np.array([velocity, 0])
 		else:
 			self._velocity = np.array(velocity)
 

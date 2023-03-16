@@ -9,9 +9,10 @@ from scipy import linalg
 from scipy.ndimage import affine_transform
 
 import warnings
+import copy
 
 class InfiniteAtmosphericLayer(AtmosphericLayer):
-	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=True):
+	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=True, seed=None):
 		self._initialized = False
 
 		AtmosphericLayer.__init__(self, input_grid, Cn_squared, L0, velocity, height)
@@ -26,14 +27,14 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 		self.stencil_length = stencil_length
 		self.use_interpolation = use_interpolation
+		self.rng = np.random.default_rng(seed)
 
 		self._make_stencils()
 		self._make_covariance_matrices()
 		self._make_ab_matrices()
-		self._make_initial_phase_screen()
 
-		self.center = np.zeros(2)
-		self._t = 0
+		self._original_rng = self.rng
+		self.reset()
 
 		self._initialized = True
 
@@ -50,7 +51,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		self.stencil_bottom = Field(np.zeros(self.input_grid.size, dtype='bool'), self.input_grid).shaped
 		self.stencil_bottom[:self.stencil_length, :] = True
 
-		for i, n in enumerate(np.random.geometric(0.5, self.input_grid.dims[0])):
+		for i, n in enumerate(self.rng.geometric(0.5, self.input_grid.dims[0])):
 			self.stencil_bottom[(n + self.stencil_length - 1) % self.input_grid.dims[1], i] = True
 
 		self.stencil_bottom = self.stencil_bottom.ravel()
@@ -63,7 +64,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		self.stencil_left = Field(np.zeros(self.input_grid.size, dtype='bool'), self.input_grid).shaped
 		self.stencil_left[:, :self.stencil_length] = True
 
-		for i, n in enumerate(np.random.geometric(0.5, self.input_grid.dims[1])):
+		for i, n in enumerate(self.rng.geometric(0.5, self.input_grid.dims[1])):
 			self.stencil_left[i, (n + self.stencil_length - 1) % self.input_grid.dims[0]] = True
 
 		self.stencil_left = self.stencil_left.ravel()
@@ -133,7 +134,9 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 	def _make_initial_phase_screen(self):
 		oversampling = 16
-		layer = FiniteAtmosphericLayer(self.input_grid, self.Cn_squared, self.outer_scale, self.velocity, self.height, oversampling)
+
+		layer = FiniteAtmosphericLayer(self.input_grid, self.Cn_squared, self.outer_scale, self.velocity, self.height, oversampling, self.rng)
+
 		self._achromatic_screen = layer.phase_for(1)
 		self._shifted_achromatic_screen = self._achromatic_screen
 
@@ -156,7 +159,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			B = self.B_vertical
 
 		stencil_data = screen[stencil]
-		random_data = np.random.normal(0, 1, size=B.shape[1])
+		random_data = self.rng.normal(0, 1, size=B.shape[1])
 		new_slice = A.dot(stencil_data) + B.dot(random_data) * np.sqrt(self._Cn_squared)
 
 		screen = screen.shaped
@@ -176,8 +179,18 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 	def phase_for(self, wavelength):
 		return self._shifted_achromatic_screen / wavelength
 
-	def reset(self):
+	def reset(self, make_independent_realization=False):
+		if make_independent_realization:
+			# Reset the original random generator to the current one. This
+			# will essentially reset the randomness.
+			self._original_rng = copy.copy(self.rng)
+		else:
+			# Make a copy of the original random generator. This copy will be
+			# used as the source for all randomness.
+			self.rng = copy.copy(self._original_rng)
+
 		self._make_initial_phase_screen()
+
 		self.center = np.zeros(2)
 		self._t = 0
 
@@ -214,6 +227,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			# Use bilinear interpolation to interpolate the achromatic phase screen to the correct position.
 			# This is to avoid sudden shifts by discrete pixels.
 			ps = self._achromatic_screen.shaped
+
 			with warnings.catch_warnings():
 				# Suppress warnings about the changed behaviour in affine_transform for 1D arrays.
 				# We know about this and are expecting the behaviour as is.

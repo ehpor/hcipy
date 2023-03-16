@@ -53,7 +53,7 @@ def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propag
 	total_variance = []
 
 	for it in range(num_iterations):
-		layer.reset()
+		layer.reset(make_independent_realization=True)
 		if propagate_phase_screen:
 			layer.t = np.sqrt(2) * D_tel / velocity
 
@@ -90,7 +90,7 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
 	mode_coeffs = []
 
 	for it in range(num_iterations):
-		layer.reset()
+		layer.reset(make_independent_realization=True)
 		if propagate_phase_screen:
 			layer.t = np.sqrt(2) * D_tel / velocity
 

@@ -8,42 +8,42 @@ import numpy as np
 from scipy.special import gamma, kv
 
 class AtmosphericLayer(OpticalElement):
+	'''A single infinitely-thin atmospheric layer.
+
+	This class serves as a base class for all atmospheric layers. Multiply
+	atmospheric layers can be combined into an :class:`MultiLayerAtmosphere` which
+	provides modelling of scintillation between layers.
+
+	Parameters
+	----------
+	input_grid : Grid
+		The grid on which the wavefront will be defined.
+	Cn_squared : scalar
+		The integrated value of Cn^2 for the layer.
+	L0 : scalar
+		The outer scale of the layer.
+	velocity : scalar or array_like
+		The velocity of the layer. If a scalar is given, its direction will be
+		along x.
+	height : scalar
+		The height of the atmospheric layer above the ground.
+
+	Attributes
+	----------
+	input_grid : Grid
+		The grid on which the wavefront will be defined.
+	t : scalar
+		The current time.
+	Cn_squared : scalar
+		The integrated value of Cn^2 for the layer.
+	L0 : scalar
+		The outer scale of the phase structure function.
+	velocity : array_like
+		The two-dimensional velocity of the layer.
+	height : scalar
+		The height of the atmospheric layer above the ground.
+	'''
 	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0):
-		'''A single infinitely-thin atmospheric layer.
-
-		This class serves as a base class for all atmospheric layers. Multiply
-		atmospheric layers can be combined into an :class:`MultiLayerAtmosphere` which
-		provides modelling of scintillation between layers.
-
-		Parameters
-		----------
-		input_grid : Grid
-			The grid on which the wavefront will be defined.
-		Cn_squared : scalar
-			The integrated value of Cn^2 for the layer.
-		L0 : scalar
-			The outer scale of the layer.
-		velocity : scalar or array_like
-			The velocity of the layer. If a scalar is given, its direction will be
-			along x.
-		height : scalar
-			The height of the atmospheric layer above the ground.
-
-		Attributes
-		----------
-		input_grid : Grid
-			The grid on which the wavefront will be defined.
-		t : scalar
-			The current time.
-		Cn_squared : scalar
-			The integrated value of Cn^2 for the layer.
-		L0 : scalar
-			The outer scale of the phase structure function.
-		velocity : array_like
-			The two-dimensional velocity of the layer.
-		height : scalar
-			The height of the atmospheric layer above the ground.
-		'''
 		self.input_grid = input_grid
 		self.Cn_squared = Cn_squared
 		self.L0 = L0
@@ -151,23 +151,23 @@ class AtmosphericLayer(OpticalElement):
 		return wf
 
 class MultiLayerAtmosphere(OpticalElement):
+	'''A multi-layer atmospheric model.
+
+	This :class:`OpticalElement` can model turbulence and scintillation effects
+	due to atmospheric turbulence by propagating light through a series of
+	infinitely-thin atmospheric phase screens at different altitudes. The distance
+	between two phase screens can be propagated using Fresnel propagation, or using
+	no :class:`Propagator`.
+
+	Parameters
+	----------
+	layers : list of AtmosphericLayer objects
+		The series of atmospheric layers in this model.
+	scintillation : bool
+		If True, then the distance between two phase screens is propagated using
+		a :class:`FresnelPropagator`. Otherwise, no propagator will be used.
+	'''
 	def __init__(self, layers, scintillation=False, scintilation=None):
-		'''A multi-layer atmospheric model.
-
-		This :class:`OpticalElement` can model turbulence and scintillation effects
-		due to atmospheric turbulence by propagating light through a series of
-		infinitely-thin atmospheric phase screens at different altitudes. The distance
-		between two phase screens can be propagated using Fresnel propagation, or using
-		no :class:`Propagator`.
-
-		Parameters
-		----------
-		layers : list of AtmosphericLayer objects
-			The series of atmospheric layers in this model.
-		scintillation : bool
-			If True, then the distance between two phase screens is propagated using
-			a :class:`FresnelPropagator`. Otherwise, no propagator will be used.
-		'''
 		# Retain backwards compatibility.
 		if scintilation is not None:
 			import warnings

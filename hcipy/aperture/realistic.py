@@ -1411,6 +1411,11 @@ def make_keck_aperture(normalized=False, with_spiders=True, with_segment_gaps=Tr
 		segments = [segment_with_spider(s) for s in segments]
 
 	if return_segments:
+		def segment_with_central_obscuration(segment):
+			return lambda grid: segment(grid) * (1 - make_circular_aperture(central_obscuration_diameter)(grid))
+
+		segments = [segment_with_central_obscuration(segment) for segment in segments]
+
 		return func, segments
 	else:
 		return func

@@ -391,9 +391,6 @@ def make_hale_aperture(normalized=False, with_spiders=True):
 
 	return func
 
-def make_keck_aperture():
-	pass
-
 def make_luvoir_a_aperture(
 		normalized=False, with_spiders=True, with_segment_gaps=True,
 		gap_padding=1, segment_transmissions=1, return_header=False, return_segments=False):
@@ -1519,3 +1516,100 @@ def make_jwst_aperture(normalized=False, with_spiders=True, return_segments=Fals
 		segments = [segment_with_strut(segment) for segment in segments]
 
 	return func, segments
+
+def make_keck_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, gap_padding=10, segment_transmissions=1, return_segments=False):
+	"""Make the Keck aperture.
+
+	This code creates a Keck-like aperture matching values used in [vanKooten2022a] and [vanKooten2022b] as well as
+	being verified by Keck personnel to match internal simulation efforts.
+
+	.. [vanKooten2022a] Maaike van Kooten et al., "Predictive wavefront control on Keck II adaptive optics bench: on-sky coronagraphic results." JATIS 8 (2022): 029006
+	.. [vanKooten2022b] Maaike van Kooten et al., "On-sky Reconstruction of Keck Primary Mirror Piston Offsets Using a Zernike Wavefront Sensor." The Astrophysical Journal 932 (2022): 2, 109.
+
+	Parameters
+	----------
+	normalized : boolean
+		If this is True, the outer diameter will be scaled to 1. Otherwise, the
+		diameter of the pupil will be 10.95 meters.
+	with_spiders : boolean
+		Include the secondary mirror support structure in the aperture.
+	with_segment_gaps : boolean
+		Include the gaps between individual segments in the aperture.
+	gap_padding : scalar
+		Arbitrary padding of gap size to represent gaps on smaller arrays - this effectively
+		makes the gaps larger and the segments smaller to preserve the same segment pitch.
+	segment_transmissions : scalar or array_like
+		The transmission for each of the segments. If this is a scalar, this transmission
+		will be used for all segments.
+	return_segments : boolean
+		If this is True, the segments will also be returned as a list of Field generators.
+
+	Returns
+	-------
+	aperture : Field generator
+		The Keck aperture.
+	segments : list of Field generators
+		The segments. Only returned when `return_segments` is True.
+	"""
+	pupil_diameter = 10.95  # m actual circumscribed diameter
+	actual_segment_flat_diameter = np.sqrt(3) / 2 * 1.8  # m actual segment flat-to-flat diameter
+	central_obscuration_diameter = 2.6  # m
+	actual_segment_gap = 0.003  # m actual gap size between segments
+	spider_width = 2.6e-2  # m actual strut size
+	num_rings = 3  # number of full rings of hexagons around central segment
+
+	if normalized:
+		actual_segment_flat_diameter /= pupil_diameter
+		actual_segment_gap /= pupil_diameter
+		spider_width /= pupil_diameter
+		central_obscuration_diameter /= pupil_diameter
+		pupil_diameter = 1.0
+
+	# padding out the segmentation gaps so they are visible and not sub-pixel
+	segment_gap = actual_segment_gap * gap_padding
+	if not with_segment_gaps:
+		segment_gap = 0
+
+	segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
+	segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter
+
+	segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings)
+
+	segment = make_hexagonal_aperture(segment_circum_diameter, np.pi / 2)
+
+	if with_spiders:
+		spider1 = make_spider_infinite([0, 0], 0, spider_width)
+		spider2 = make_spider_infinite([0, 0], 60, spider_width)
+		spider3 = make_spider_infinite([0, 0], 120, spider_width)
+		spider4 = make_spider_infinite([0, 0], 180, spider_width)
+		spider5 = make_spider_infinite([0, 0], 240, spider_width)
+		spider6 = make_spider_infinite([0, 0], 300, spider_width)
+
+	segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=return_segments)
+	if return_segments:
+		segmented_aperture, segments = segmented_aperture
+
+	def func(grid):
+		res = segmented_aperture(grid) * (1 - make_circular_aperture(central_obscuration_diameter)(grid))
+
+		if with_spiders:
+			res *= spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider5(grid) * spider6(grid)
+
+		return Field(res, grid)
+
+	if with_spiders and return_segments:
+		# Use function to return the lambda, to avoid incorrect binding of variables
+		def segment_with_spider(segment):
+			return lambda grid: segment(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid) * spider5(grid) * spider6(grid)
+
+		segments = [segment_with_spider(s) for s in segments]
+
+	if return_segments:
+		def segment_with_central_obscuration(segment):
+			return lambda grid: segment(grid) * (1 - make_circular_aperture(central_obscuration_diameter)(grid))
+
+		segments = [segment_with_central_obscuration(segment) for segment in segments]
+
+		return func, segments
+	else:
+		return func

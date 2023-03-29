@@ -61,7 +61,7 @@ class TiltElement(SurfaceApodizer):
 	refractive_index : scalar or function
 		The refractive index of the material. The default is 2.0 which makes it achromatic and exact.
 	'''
-	def __init__(self, angle, orientation, refractive_index = 2.0):
+	def __init__(self, angle, orientation = 0, refractive_index = 2.0):
 		self._angle = angle
 		self._orientation = orientation
 		
@@ -136,10 +136,10 @@ class Prism(SurfaceApodizer):
 			The angle of deviation for the traced ray.
 		'''
 		n = self._refractive_index(wavelength)
-		transmitted_angle_surface_1 = snells_law(self._angle_of_incidence, n)
+		transmitted_angle_surface_1 = snells_law(self._angle_of_incidence, 1 / n)
 
 		incident_angle_surface_2 = self._prism_angle - transmitted_angle_surface_1
-		transmitted_angle = snells_law(incident_angle_surface_2, 1 / n)
+		transmitted_angle = snells_law(incident_angle_surface_2, n)
 
 		angle_of_deviation = self._angle_of_incidence + transmitted_angle - self._prism_angle
 		
@@ -149,7 +149,7 @@ class Prism(SurfaceApodizer):
 		''' Calculate the sag profile for the prism.
 		'''
 		theta = self.trace(wavelength)
-		return Field(grid.rotated(self._orientation).y * np.tan(theta), grid)
+		return Field(grid.rotated(self._orientation).y * np.tan(theta) / (self._refractive_index(wavelength) - 1), grid)
 
 class PhaseGrating(PhaseApodizer):
 	'''A grating that applies an achromatic phase pattern.

@@ -13,8 +13,12 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: "3.8"
-      - name: flake8 Lint
-        uses: reviewdog/action-flake8@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          filter_mode: nofilter
+      - name: Install linting dependencies
+        run: |
+          python -m pip install flake8
+        shell: bash
+      - name: Lint with flake8
+        run: |
+          echo "::add-matcher::.github/flake8_problem_matcher.json"
+          flake8 . --max-line-length=127 --count --statistics
+        shell: bash

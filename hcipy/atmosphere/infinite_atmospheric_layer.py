@@ -9,9 +9,75 @@ from scipy import linalg
 from scipy.ndimage import affine_transform
 
 import warnings
+import copy
 
 class InfiniteAtmosphericLayer(AtmosphericLayer):
-	def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=True):
+	'''An atmospheric layer that can be infinitely extended in any direction.
+
+	This is an implementation of [Assemat2006]_. Contrary to the
+	FiniteAtmosphericLayer class, this atmospheric layer uses an
+	autoregressive model for extending the phase screen by one
+	column or row in any direction. Each new row/column is based on
+	a  stencil, which contains the last few rows/columns in addition
+	to a few pixels spread out more into the phase screen to capture
+	the low-order aberrations.
+
+	.. [Assemat2006] François Assémat, Richard W. Wilson, and Eric
+		Gendron, "Method for simulating infinitely long and non
+		stationary phase screens with optimized memory storage,"
+		Opt. Express 14, 988-999 (2006)
+
+	.. note::
+		This algorithm does not work well with large outer scales.
+		This is an inherent flaw in the algorithm and so cannot be avoided
+		easily. It requires extremely large-scale correlations to be included
+		in the correlation matrices. These correlation matrices are inverted
+		by the algorithm, leading to ill-defined inversions.
+
+	Parameters
+	----------
+	input_grid : Grid
+		The grid on which the incoming wavefront is defined.
+	Cn_squared : scalar
+		The integrated strength of the turbulence for this layer.
+	L0 : scalar
+		The outer scale for the atmospheric turbulence of this layer.
+		The default is infinity.
+	velocity : scalar or array_like
+		The wind speed for this atmospheric layer. If this is a scalar,
+		the wind will be along x. If this is a 2D array, then the values
+		are interpreted as the wind speed along x and y. The default is
+		zero.
+	height : scalar
+		The height of the atmospheric layer. By itself, this value has no
+		influence, but it'll be used by the AtmosphericModel to perform
+		inter-layer propagations.
+	stencil_length : integer
+		The number of columns/rows to use for the extrapolation of the phase
+		along a column/row. Additionally, the stencil will contain one more
+		pixel a little away from these initial columns/rows. Note, do not
+		modify this parameter unless you know what you are doing. This parameter
+		can be unintuitive. The default value of 2 is usually sufficient in
+		most instances.
+	use_interpolation : boolean
+		whether to use sub-pixel interpolation of the phase screen. Bilinear
+		interpolation is used. Without interpolation, for short integration times
+		or fast loop speeds, the phase screen may stay on the same pixel for
+		multiple frames. With interpolation, these discrete pixel transitions
+		are smoothed out. The default is True.
+	seed : None, int, array of ints, SeedSequence, BitGenerator, Generator
+		A seed to initialize the spectral noise. If None, then fresh, unpredictable
+		entry will be pulled from the OS. If an int or array of ints, then it will
+		be passed to a numpy.SeedSequency to derive the initial BitGenerator state.
+		If a BitGenerator or Generator are passed, these will be wrapped and used
+		instead. Default: None.
+
+	Raises
+	------
+	ValueError
+		When the input grid is not cartesian, regularly spaced and two-dimensional.
+	'''
+	def __init__(self, input_grid, Cn_squared, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=True, seed=None):
 		self._initialized = False
 
 		AtmosphericLayer.__init__(self, input_grid, Cn_squared, L0, velocity, height)
@@ -26,14 +92,14 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 		self.stencil_length = stencil_length
 		self.use_interpolation = use_interpolation
+		self.rng = np.random.default_rng(seed)
 
 		self._make_stencils()
 		self._make_covariance_matrices()
 		self._make_ab_matrices()
-		self._make_initial_phase_screen()
 
-		self.center = np.zeros(2)
-		self._t = 0
+		self._original_rng = self.rng
+		self.reset()
 
 		self._initialized = True
 
@@ -50,7 +116,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		self.stencil_bottom = Field(np.zeros(self.input_grid.size, dtype='bool'), self.input_grid).shaped
 		self.stencil_bottom[:self.stencil_length, :] = True
 
-		for i, n in enumerate(np.random.geometric(0.5, self.input_grid.dims[0])):
+		for i, n in enumerate(self.rng.geometric(0.5, self.input_grid.dims[0])):
 			self.stencil_bottom[(n + self.stencil_length - 1) % self.input_grid.dims[1], i] = True
 
 		self.stencil_bottom = self.stencil_bottom.ravel()
@@ -63,7 +129,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 		self.stencil_left = Field(np.zeros(self.input_grid.size, dtype='bool'), self.input_grid).shaped
 		self.stencil_left[:, :self.stencil_length] = True
 
-		for i, n in enumerate(np.random.geometric(0.5, self.input_grid.dims[1])):
+		for i, n in enumerate(self.rng.geometric(0.5, self.input_grid.dims[1])):
 			self.stencil_left[i, (n + self.stencil_length - 1) % self.input_grid.dims[0]] = True
 
 		self.stencil_left = self.stencil_left.ravel()
@@ -133,7 +199,9 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 	def _make_initial_phase_screen(self):
 		oversampling = 16
-		layer = FiniteAtmosphericLayer(self.input_grid, self.Cn_squared, self.outer_scale, self.velocity, self.height, oversampling)
+
+		layer = FiniteAtmosphericLayer(self.input_grid, self.Cn_squared, self.outer_scale, self.velocity, self.height, oversampling, self.rng)
+
 		self._achromatic_screen = layer.phase_for(1)
 		self._shifted_achromatic_screen = self._achromatic_screen
 
@@ -156,7 +224,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			B = self.B_vertical
 
 		stencil_data = screen[stencil]
-		random_data = np.random.normal(0, 1, size=B.shape[1])
+		random_data = self.rng.normal(0, 1, size=B.shape[1])
 		new_slice = A.dot(stencil_data) + B.dot(random_data) * np.sqrt(self._Cn_squared)
 
 		screen = screen.shaped
@@ -174,17 +242,75 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			self._achromatic_screen = screen.ravel()
 
 	def phase_for(self, wavelength):
+		'''Compute the phase at a certain wavelength.
+
+		Parameters
+		----------
+		wavelength : scalar
+			The wavelength of the light for which to compute the phase screen.
+
+		Returns
+		-------
+		Field
+			The computed phase screen.
+		'''
 		return self._shifted_achromatic_screen / wavelength
 
-	def reset(self):
+	def reset(self, make_independent_realization=False):
+		'''Reset the atmospheric layer to t=0.
+
+		Parameters
+		----------
+		make_independent_realization : boolean
+			Whether to start an independent realization of the noise for the
+			atmospheric layer or not. When this is False, the exact same phase
+			screens will be generated as in the first run, as long as the Cn^2
+			and outer scale are the same. This allows for testing of multiple
+			runs of a control system with different control parameters. When
+			this is True, an independent realization of the atmospheric layer
+			will be generated. This is useful for Monte-Carlo-style computations.
+			The default is False.
+		'''
+		if make_independent_realization:
+			# Reset the original random generator to the current one. This
+			# will essentially reset the randomness.
+			self._original_rng = copy.copy(self.rng)
+		else:
+			# Make a copy of the original random generator. This copy will be
+			# used as the source for all randomness.
+			self.rng = copy.copy(self._original_rng)
+
 		self._make_initial_phase_screen()
+
 		self.center = np.zeros(2)
 		self._t = 0
 
 	def evolve_until(self, t):
+		'''Evolve the atmospheric layer until a certain time.
+
+		.. note::
+			Backwards evolution is not allowed. The information about previous
+			parts of the phase screen are inherently lost. If you want to replay the
+			same atmospheric noise again, please use `reset()` to reset the layer
+			to its starting position.
+
+		Parameters
+		----------
+		t : scalar
+			The new time to evolve the phase screen to. This should be larger or equal to
+			the current time of the atmospheric layer.
+
+		Raises
+		------
+		ValueError
+			When the time `t` is smaller than the current time of the layer.
+		'''
 		if t is None:
 			self.reset()
 			return
+
+		if t < self._t:
+			raise ValueError('Backwards temporal evolution is not allowed.')
 
 		# Get the old and new center positions
 		old_center = np.round(self.center / self.input_grid.delta).astype('int')
@@ -214,6 +340,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 			# Use bilinear interpolation to interpolate the achromatic phase screen to the correct position.
 			# This is to avoid sudden shifts by discrete pixels.
 			ps = self._achromatic_screen.shaped
+
 			with warnings.catch_warnings():
 				# Suppress warnings about the changed behaviour in affine_transform for 1D arrays.
 				# We know about this and are expecting the behaviour as is.
@@ -227,6 +354,8 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 	@property
 	def Cn_squared(self):  # noqa: N802
+		'''The integrated strength of the turbulence for this layer.
+		'''
 		return self._Cn_squared
 
 	@Cn_squared.setter
@@ -235,6 +364,8 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 	@property
 	def outer_scale(self):
+		'''The outer scale of the turbulence for this layer.
+		'''
 		return self._L0
 
 	@outer_scale.setter

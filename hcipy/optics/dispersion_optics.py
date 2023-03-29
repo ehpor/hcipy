@@ -61,7 +61,7 @@ class TiltElement(SurfaceApodizer):
 	refractive_index : scalar or function
 		The refractive index of the material. The default is 2.0 which makes it achromatic and exact.
 	'''
-	def __init__(self, angle, orientation = 0, refractive_index = 2.0):
+	def __init__(self, angle, orientation=0, refractive_index=2.0):
 		self._angle = angle
 		self._orientation = orientation
 		
@@ -98,21 +98,35 @@ class ThinPrism(TiltElement):
 	refractive_index : scalar or function of wavelength
 		The refractive index of the prism.
 	'''
-	def __init__(self, wedge_angle, orientation, refractive_index):
+	def __init__(self, wedge_angle, refractive_index, orientation=0):
 		super().__init__(wedge_angle, orientation, refractive_index)
+	
+	def trace(self, wavelength):
+		''' Trace a paraxial ray through the prism.
 		
+		Parameters
+		----------
+		wavelength : scalar
+			The wavelength that is traced through the prism.
+
+		Returns
+		-------
+		scalar
+			The angle of deviation for the traced ray.
+		'''
+		return (self._refractive_index(wavelength) - 1) * self.angle
 
 class Prism(SurfaceApodizer):
 	'''A prism that deviates the beam.
 
 	Parameters
 	----------
-	wedge_angle : scalar
-		The wedge angle of the prism.
+	prism_angle : scalar
+		The angle of the prism.
 	refractive_index : scalar or function of wavelength
 		The refractive index of the prism.
 	orientation : scalar
-		The orientation of the prism. The default orientation is aligned along the x-axis.
+		The orientation of the prism. The default orientation is aligned along the y-axis.
 	'''
 	def __init__(self, angle_of_incidence, prism_angle, refractive_index, orientation=0):
 		self._prism_angle = prism_angle
@@ -147,6 +161,18 @@ class Prism(SurfaceApodizer):
 	
 	def prism_sag(self, grid, wavelength):
 		''' Calculate the sag profile for the prism.
+		
+		Parameters
+		----------
+		grid : Grid
+			The grid on which the surface sag is calculated.
+		wavelength : scalar
+			The wavelength for which the surface sag is calculated.
+
+		Returns
+		-------
+		Field
+			The surface sag.
 		'''
 		theta = self.trace(wavelength)
 		return Field(grid.rotated(self._orientation).y * np.tan(theta) / (self._refractive_index(wavelength) - 1), grid)
@@ -157,10 +183,10 @@ class PhaseGrating(PhaseApodizer):
 	Parameters
 	----------
 	grating_period : scalar
-		The wedge angle of the prism.
+		The period of the grating.
 	grating_amplitude : scalar
 		The amplitude of the grating.
-	grating_profile : Field or scalar or function
+	grating_profile : field generator
 		The profile of the grating. The default is None and assumes a sinusoidal profile for the grating.
 	orientation : scalar
 		The orientation of the grating. The default orientation is aligned along the y-axis.
@@ -170,8 +196,8 @@ class PhaseGrating(PhaseApodizer):
 		self._orientation = orientation
 
 		if grating_profile is None:
-			self._grating_profile = lambda temp_grid : grating_amplitude * np.sin(2 * np.pi * temp_grid.rotated(self._orientation) / self._grid_period)
+			self._grating_profile = lambda grid : grating_amplitude * np.sin(2 * np.pi * grid.rotated(self._orientation).y / self._grating_period)
 		else:
-			self._grating_profile = lambda temp_grid : grating_amplitude * grating_profile(temp_grid.scaled(1 / self._grid_period))
+			self._grating_profile = lambda grid : grating_amplitude * grating_profile(grid.rotated(self._orientation).scaled(1 / self._grating_period))
 
 		super().__init__(self._grating_profile)

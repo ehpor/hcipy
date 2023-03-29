@@ -60,7 +60,8 @@ __all__ = [
 	'ThinLens',
     'Prism',
     'ThinPrism',
-    'TiltElement'
+    'TiltElement',
+    'PhaseGrating'
 ]
 
 from .optical_element import *

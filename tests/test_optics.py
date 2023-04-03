@@ -704,7 +704,7 @@ def test_phase_grating():
 	wf_grating = cor(grating(wf))
 	assert abs(wf_grating.total_power - 1) < 1e-15
 
-	grating.orientation = np.pi/2
+	grating.orientation = np.pi / 2
 	wf_grating = cor(grating(wf))
 	assert abs(wf_grating.total_power - 1) < 1e-15
 

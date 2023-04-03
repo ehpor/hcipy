@@ -1,6 +1,6 @@
 from .apodization import SurfaceApodizer, PhaseApodizer
 import numpy as np
-from  ..field import Field
+from ..field import Field
 from scipy.special import jv
 
 def grating_equation(wavelength, order, period, angle_of_incidence):
@@ -90,7 +90,7 @@ class TiltElement(SurfaceApodizer):
 
 		sag = lambda temp_grid: Field(temp_grid.rotated(self._orientation).y * np.tan(self._angle), temp_grid)
 		super().__init__(sag, refractive_index)
-	
+
 	@property
 	def angle(self):
 		return self._angle
@@ -126,7 +126,7 @@ class ThinPrism(TiltElement):
 
 	def minimal_deviation_angle(self, wavelength):
 		''' Find the angle of minimal deviation for a paraxial prism.
-		
+
 		Parameters
 		----------
 		wavelength : scalar
@@ -142,7 +142,7 @@ class ThinPrism(TiltElement):
 
 	def trace(self, wavelength):
 		''' Trace a paraxial ray through the prism.
-		
+
 		Parameters
 		----------
 		wavelength : scalar
@@ -195,7 +195,7 @@ class Prism(SurfaceApodizer):
 
 	def minimal_deviation_angle(self, wavelength):
 		''' Find the angle of minimal deviation for a prism.
-		
+
 		Parameters
 		----------
 		wavelength : scalar
@@ -211,7 +211,7 @@ class Prism(SurfaceApodizer):
 
 	def trace(self, wavelength):
 		''' Trace a ray through the prism.
-		
+
 		Parameters
 		----------
 		wavelength : scalar
@@ -234,7 +234,7 @@ class Prism(SurfaceApodizer):
 
 	def prism_sag(self, grid, wavelength):
 		''' Calculate the sag profile for the prism.
-		
+
 		Parameters
 		----------
 		grid : Grid
@@ -268,7 +268,7 @@ class PhaseGrating(PhaseApodizer):
 		self._grating_period = grating_period
 		self._orientation = orientation
 		self._grating_amplitude = grating_amplitude
-		
+
 		if grating_profile is None:
 			grating_profile = lambda grid: np.sin(2 * np.pi * grid.y)
 		self._grating_profile = grating_profile

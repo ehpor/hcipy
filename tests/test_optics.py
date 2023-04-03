@@ -683,3 +683,73 @@ def test_thin_lens():
 	assert abs(z1[np.argmax(peak1)] / focal_length - 1.0) < 0.01
 	assert abs(z2[np.argmax(peak2)] / (2 * focal_length) - 1.0) < 0.01
 	assert abs(z3[np.argmax(peak3)] / (0.75 * focal_length) - 1.0) < 0.01
+
+def test_phase_grating():
+	from scipy.special import jv
+	grid = make_pupil_grid(128, 1)
+	aperture = make_circular_aperture(1)(grid)
+
+	cor = PerfectCoronagraph(aperture)
+	wf = Wavefront(aperture)
+	wf.total_power = 1.0
+
+	amplitudes = np.linspace(0, np.pi, 31)
+	diffraction_efficiency = np.array([cor(PhaseGrating(1 / 20, amp)(wf)).total_power for amp in amplitudes])
+	eta = 1 - jv(0, amplitudes)**2
+	err = eta - diffraction_efficiency
+
+	assert np.max(abs(err)) < 1e-3
+
+	grating = PhaseGrating(1/20, np.pi/2, lambda grid : np.sign(np.sin(2*np.pi * grid.y)), orientation=0)
+	wf_grating = cor(grating(wf))
+	assert abs(wf_grating.total_power - 1) < 1e-15
+
+	grating.orientation = np.pi/2
+	wf_grating = cor(grating(wf))
+	assert abs(wf_grating.total_power - 1) < 1e-15
+
+def test_thin_prism():
+	nbk7 = get_refractive_index("N-BK7")
+	wedge_angle = np.deg2rad(3. + 53.0/60.0)
+	thin_prism = ThinPrism(wedge_angle, nbk7)
+
+	test_wavelengths = np.linspace(500, 1000, 31) * 1e-9
+	err = np.array([thin_prism.trace(wave) - (nbk7(wave) - 1) * wedge_angle for wave in test_wavelengths])
+
+	assert np.max(abs(err)) < 1e-3
+
+def test_prism():
+	nbk7 = get_refractive_index("N-BK7")
+	wedge_angle = np.deg2rad(3. + 53.0/60.0)
+	prism = Prism(0, wedge_angle, nbk7)
+
+	test_wavelengths = np.array([650.0, 700.0, 750.0]) * 1e-9
+	deviation_angles = np.deg2rad(np.array([2.00390481945681, 1.9982250862238, 1.9934348068561]))
+	err = np.array([prism.trace(wave) - dev for wave, dev in zip(test_wavelengths, deviation_angles)])
+
+	assert np.rad2deg(np.max(abs(err))) < 1e-3
+	assert np.allclose(prism.minimal_deviation_angle(750e-9), 0.03471595671032256)
+
+	prism.prism_angle = 2 * np.deg2rad(3. + 53.0/60.0)
+	assert np.allclose(prism.minimal_deviation_angle(750e-9), 0.06958405951915544)
+	
+	Dtel = 1
+	Dgrid = 1.1 * Dtel
+	sr = np.mean(test_wavelengths) / Dtel
+	
+	grid = make_pupil_grid(128, Dgrid)
+	aperture = make_circular_aperture(Dtel)(grid)
+
+	focal_grid = make_focal_grid(q=3, num_airy=15, spatial_resolution=sr)
+	prop = FraunhoferPropagator(grid, focal_grid)
+
+	for wi, wave in enumerate(test_wavelengths):
+		wf = Wavefront(aperture, wave)
+		wf.total_power = 1
+		
+		prism.orientation = 2*np.pi / 3 * wi
+		prism_compensation = TiltElement(-prism.trace(wave), orientation=2*np.pi / 3 * wi)
+		wf_deviated = prop(prism_compensation(prism(wf)))
+		wf_foc = prop(wf)
+
+		assert np.max(abs(wf_deviated.power - wf_foc.power) / wf_foc.power.max()) < 1e-8

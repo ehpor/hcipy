@@ -1,30 +1,54 @@
 from .optical_element import OpticalElement
 from .apodization import SurfaceApodizer, PhaseApodizer
 import numpy as np
-from  ..field import Field, field_dot
+from  ..field import Field
+from scipy.special import jv
 
-def vector_snells_law(incidence_direction_cosine, surface_normal, relative_refractive_index):
-	'''
+def grating_equation(wavelength, order, period, angle_of_incidence):
+	''' Calculates the angle of the diffracted beam.
+
 	Parameters
 	----------
-	incidence_direction_cosine : Field
+	wavelength : array like
+		The wavelength for which the diffraction efficiency is calculated.
+	order : array like
+		The diffraction order.
+	period : array like
+		The period of the diffraction grating.
+	angle_of_incidence : array like
 		The incidence angles of the incoming field.
-	surface_normal : array-like
-		The normal of the surface
-	relative_refractive_index : scalar
-		The relative refractive index between two media.
 
 	Returns
 	-------
 	Array like
-		The transmitted angles of the outgoing field.
+		The diffraction efficiency
 	'''
+	return np.arcsin(order * wavelength / period + np.sin(angle_of_incidence))
 
-	transmitted_normal_component = np.sqrt(1 - relative_refractive_index * field_dot(surface_normal, incidence_direction_cosine))
-	incident_normal_component = field_dot(surface_normal, incidence_direction_cosine)[np.newaxis,:] * surface_normal[:, np.newaxis]
-	transmitted_transverse_component = relative_refractive_index * (incidence_direction_cosine - incident_normal_component)
+def diffraction_efficiency_sinusoidal_grating(wavelength, groove_depth, order, period, angle_of_incidence):
+	''' Calculates the diffraction efficiency from a sinusoidal phase grating.
 
-	return transmitted_normal_component + transmitted_transverse_component
+	Parameters
+	----------
+	wavelength : array like
+		The wavelength for which the diffraction efficiency is calculated.
+	groove_depth : arraylike
+		The depth of the sinusoidal grating.
+	order : array like
+		The diffraction order.
+	period : array like
+		The period of the diffraction grating.
+	angle_of_incidence : array like
+		The incidence angles of the incoming field.
+
+	Returns
+	-------
+	Array like
+		The diffraction efficiency
+	'''
+	diffracted_angle = grating_equation(wavelength, order, period, angle_of_incidence)
+	phase_difference = np.pi * groove_depth / wavelength * (np.cos(angle_of_incidence) + np.cos(diffracted_angle))
+	return jv(order, phase_difference)**2
 
 def snells_law(incidence_angle, relative_refractive_index):
 	''' Applies Snell's law.
@@ -41,7 +65,7 @@ def snells_law(incidence_angle, relative_refractive_index):
 	Array like
 		The transmitted angles of the outgoing field.
 	'''
-	if relative_refractive_index > 1:
+	if np.all(relative_refractive_index > 1):
 		return np.arcsin(relative_refractive_index * np.sin(incidence_angle))
 	else:
 		if np.all(incidence_angle < np.arcsin(relative_refractive_index)):
@@ -91,15 +115,31 @@ class ThinPrism(TiltElement):
 
 	Parameters
 	----------
-	wedge_angle : scalar
+	angle : scalar
 		The wedge angle of the prism.
 	orientation : scalar
 		The orientation of the prism. The default orientation is aligned along the x-axis.
 	refractive_index : scalar or function of wavelength
 		The refractive index of the prism.
 	'''
-	def __init__(self, wedge_angle, refractive_index, orientation=0):
-		super().__init__(wedge_angle, orientation, refractive_index)
+	def __init__(self, angle, refractive_index, orientation=0):
+		super().__init__(angle, orientation, refractive_index)
+	
+	def minimal_deviation_angle(self, wavelength):
+		''' Find the angle of minimal deviation for a paraxial prism.
+		
+		Parameters
+		----------
+		wavelength : scalar
+			The wavelength that is traced through the prism.
+
+		Returns
+		-------
+		scalar
+			The angle of minimal deviation.
+		'''
+		n = self._refractive_index(wavelength)
+		return (n - 1) * self._prism_angle
 	
 	def trace(self, wavelength):
 		''' Trace a paraxial ray through the prism.
@@ -136,6 +176,40 @@ class Prism(SurfaceApodizer):
 
 		super().__init__(self.prism_sag, self._refractive_index)
 	
+	@property
+	def orientation(self):
+		return self._orientation
+
+	@orientation.setter
+	def orientation(self, new_orientation):
+		self._orientation = new_orientation
+		self.surface_sag = self.prism_sag
+
+	@property
+	def prism_angle(self):
+		return self._prism_angle
+
+	@prism_angle.setter
+	def prism_angle(self, new_prism_angle):
+		self._prism_angle = new_prism_angle
+		self.surface_sag = self.prism_sag
+
+	def minimal_deviation_angle(self, wavelength):
+		''' Find the angle of minimal deviation for a prism.
+		
+		Parameters
+		----------
+		wavelength : scalar
+			The wavelength that is traced through the prism.
+
+		Returns
+		-------
+		scalar
+			The angle of minimal deviation.
+		'''
+		n = self._refractive_index(wavelength)
+		return 2 * np.arcsin(n * np.sin(self._prism_angle / 2)) - self._prism_angle
+
 	def trace(self, wavelength):
 		''' Trace a ray through the prism.
 		
@@ -194,10 +268,40 @@ class PhaseGrating(PhaseApodizer):
 	def __init__(self, grating_period, grating_amplitude, grating_profile=None, orientation=0):
 		self._grating_period = grating_period
 		self._orientation = orientation
-
+		self._grating_amplitude = grating_amplitude
+		
 		if grating_profile is None:
-			self._grating_profile = lambda grid : grating_amplitude * np.sin(2 * np.pi * grid.rotated(self._orientation).y / self._grating_period)
-		else:
-			self._grating_profile = lambda grid : grating_amplitude * grating_profile(grid.rotated(self._orientation).scaled(1 / self._grating_period))
+			grating_profile = lambda grid : np.sin(2 * np.pi * grid.y)
+		self._grating_profile = grating_profile
 
-		super().__init__(self._grating_profile)
+		super().__init__(self.grating_pattern)
+
+	def grating_pattern(self, grid):
+		return self._grating_amplitude * Field(self._grating_profile(grid.rotated(self._orientation).scaled(1 / self._grating_period)), grid)
+	
+	@property
+	def orientation(self):
+		return self._orientation
+
+	@orientation.setter
+	def orientation(self, new_orientation):
+		self._orientation = new_orientation
+		self.phase = self.grating_pattern
+
+	@property
+	def period(self):
+		return self._grating_period
+
+	@period.setter
+	def period(self, new_period):
+		self._grating_period = new_period
+		self.phase = self.grating_pattern
+
+	@property
+	def amplitude(self):
+		return self._amplitude
+
+	@amplitude.setter
+	def amplitude(self, new_amplitude):
+		self._amplitude = new_amplitude
+		self.phase = self.grating_pattern

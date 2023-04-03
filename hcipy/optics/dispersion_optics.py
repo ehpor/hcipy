@@ -1,4 +1,3 @@
-from .optical_element import OpticalElement
 from .apodization import SurfaceApodizer, PhaseApodizer
 import numpy as np
 from  ..field import Field
@@ -88,8 +87,8 @@ class TiltElement(SurfaceApodizer):
 	def __init__(self, angle, orientation=0, refractive_index=2.0):
 		self._angle = angle
 		self._orientation = orientation
-		
-		sag = lambda temp_grid : Field(temp_grid.rotated(self._orientation).y * np.tan(self._angle), temp_grid)
+
+		sag = lambda temp_grid: Field(temp_grid.rotated(self._orientation).y * np.tan(self._angle), temp_grid)
 		super().__init__(sag, refractive_index)
 	
 	@property
@@ -99,7 +98,7 @@ class TiltElement(SurfaceApodizer):
 	@angle.setter
 	def angle(self, new_angle):
 		self._angle = new_angle
-		self.surface_sag = lambda temp_grid : Field(temp_grid.rotated(self._orientation).y * np.tan(self._angle), temp_grid)
+		self.surface_sag = lambda temp_grid: Field(temp_grid.rotated(self._orientation).y * np.tan(self._angle), temp_grid)
 
 	@property
 	def orientation(self):
@@ -108,7 +107,7 @@ class TiltElement(SurfaceApodizer):
 	@orientation.setter
 	def orientation(self, new_orientation):
 		self._orientation = new_orientation
-		self.surface_sag = lambda temp_grid : Field(temp_grid.rotated(self._orientation).y * np.tan(self._angle), temp_grid)
+		self.surface_sag = lambda temp_grid: Field(temp_grid.rotated(self._orientation).y * np.tan(self._angle), temp_grid)
 
 class ThinPrism(TiltElement):
 	'''A thin prism that operates in the paraxial regime.
@@ -124,7 +123,7 @@ class ThinPrism(TiltElement):
 	'''
 	def __init__(self, angle, refractive_index, orientation=0):
 		super().__init__(angle, orientation, refractive_index)
-	
+
 	def minimal_deviation_angle(self, wavelength):
 		''' Find the angle of minimal deviation for a paraxial prism.
 		
@@ -140,7 +139,7 @@ class ThinPrism(TiltElement):
 		'''
 		n = self._refractive_index(wavelength)
 		return (n - 1) * self._prism_angle
-	
+
 	def trace(self, wavelength):
 		''' Trace a paraxial ray through the prism.
 		
@@ -175,7 +174,7 @@ class Prism(SurfaceApodizer):
 		self._orientation = orientation
 
 		super().__init__(self.prism_sag, self._refractive_index)
-	
+
 	@property
 	def orientation(self):
 		return self._orientation
@@ -232,7 +231,7 @@ class Prism(SurfaceApodizer):
 		angle_of_deviation = self._angle_of_incidence + transmitted_angle - self._prism_angle
 		
 		return angle_of_deviation
-	
+
 	def prism_sag(self, grid, wavelength):
 		''' Calculate the sag profile for the prism.
 		
@@ -271,14 +270,14 @@ class PhaseGrating(PhaseApodizer):
 		self._grating_amplitude = grating_amplitude
 		
 		if grating_profile is None:
-			grating_profile = lambda grid : np.sin(2 * np.pi * grid.y)
+			grating_profile = lambda grid: np.sin(2 * np.pi * grid.y)
 		self._grating_profile = grating_profile
 
 		super().__init__(self.grating_pattern)
 
 	def grating_pattern(self, grid):
 		return self._grating_amplitude * Field(self._grating_profile(grid.rotated(self._orientation).scaled(1 / self._grating_period)), grid)
-	
+
 	@property
 	def orientation(self):
 		return self._orientation

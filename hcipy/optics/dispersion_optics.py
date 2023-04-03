@@ -229,7 +229,7 @@ class Prism(SurfaceApodizer):
 		transmitted_angle = snells_law(incident_angle_surface_2, n)
 
 		angle_of_deviation = self._angle_of_incidence + transmitted_angle - self._prism_angle
-		
+
 		return angle_of_deviation
 
 	def prism_sag(self, grid, wavelength):

@@ -1,7 +1,7 @@
 import numpy as np
 
 from .chirp_z_transform import ChirpZTransform
-from .fourier_transform import FourierTransform
+from .fourier_transform import FourierTransform, _get_float_and_complex_dtype
 from ..field import Field
 
 class ZoomFastFourierTransform(FourierTransform):
@@ -40,17 +40,31 @@ class ZoomFastFourierTransform(FourierTransform):
 		self.input_grid = input_grid
 		self.output_grid = output_grid
 
-		w = np.exp(-1j * output_grid.delta * input_grid.delta)
-		a = np.exp(1j * output_grid.zero * input_grid.delta)
+		self._current_dtype = None
 
-		inv_w = np.exp(1j * input_grid.delta * output_grid.delta)
-		inv_a = np.exp(-1j * input_grid.zero * output_grid.delta)
+	def _compute_shifts_and_weights(self, dtype):
+		float_dtype, complex_dtype = _get_float_and_complex_dtype(dtype)
 
-		self.czts = [ChirpZTransform(n, m, ww, aa) for n, m, ww, aa in zip(input_grid.dims, output_grid.dims, w, a)]
-		self.inv_czts = [ChirpZTransform(n, m, ww, aa) for n, m, ww, aa in zip(output_grid.dims, input_grid.dims, inv_w, inv_a)]
+		if complex_dtype != self._current_dtype:
+			w = np.exp(-1j * self.output_grid.delta * self.input_grid.delta)
+			a = np.exp(1j * self.output_grid.zero * self.input_grid.delta)
 
-		self.shifts = np.exp(-1j * np.array(output_grid.separated_coords) * input_grid.zero[:, np.newaxis])
-		self.inv_shifts = np.exp(1j * np.array(input_grid.separated_coords) * output_grid.zero[:, np.newaxis])
+			inv_w = np.exp(1j * self.input_grid.delta * self.output_grid.delta)
+			inv_a = np.exp(-1j * self.input_grid.zero * self.output_grid.delta)
+
+			self.czts = [ChirpZTransform(n, m, ww, aa) for n, m, ww, aa in zip(self.input_grid.dims, self.output_grid.dims, w, a)]
+			self.inv_czts = [ChirpZTransform(n, m, ww, aa) for n, m, ww, aa in zip(self.output_grid.dims, self.input_grid.dims, inv_w, inv_a)]
+
+			self.shifts = np.exp(-1j * np.array(self.output_grid.separated_coords) * self.input_grid.zero[:, np.newaxis])
+			self.inv_shifts = np.exp(1j * np.array(self.input_grid.separated_coords) * self.output_grid.zero[:, np.newaxis])
+
+			self.shifts = self.shifts.astype(complex_dtype, copy=False)
+			self.inv_shifts = self.inv_shifts.astype(complex_dtype, copy=False)
+
+			self.input_weights = self.input_grid.weights.astype(float_dtype)
+			self.output_weights = (self.output_grid.weights * (2 * np.pi)**self.output_grid.ndim).astype(float_dtype)
+
+			self._current_dtype = complex_dtype
 
 	def forward(self, field):
 		'''Returns the forward Fourier transform of the :class:`Field` field.
@@ -65,7 +79,9 @@ class ZoomFastFourierTransform(FourierTransform):
 		Field
 			The Fourier transform of the field.
 		'''
-		f = field.shaped
+		self._compute_shifts_and_weights(field.dtype)
+
+		f = (field * self.input_weights).shaped
 
 		for i, (czt, shift) in enumerate(zip(self.czts, self.shifts)):
 			f = np.moveaxis(f, -i, 0)
@@ -89,7 +105,9 @@ class ZoomFastFourierTransform(FourierTransform):
 		Field
 			The inverse Fourier transform of the field.
 		'''
-		f = field.shaped
+		self._compute_shifts_and_weights(field.dtype)
+
+		f = (field * self.output_weights).shaped
 
 		for i, (czt, shift) in enumerate(zip(self.inv_czts, self.inv_shifts)):
 			f = np.moveaxis(f, -i, 0)

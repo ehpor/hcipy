@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.fft import next_fast_len
 
+from .fourier_transform import _get_float_and_complex_dtype
+
 try:
 	import mkl_fft._numpy_fft as _fft_module
 except ImportError:
@@ -80,12 +82,20 @@ class ChirpZTransform:
 		array_like
 			The chirp Z-transformed array.
 		'''
-		x = x * self._Awk2
+		# Set the correct complex and real data type, based on the input data type.
+		float_dtype, complex_dtype = _get_float_and_complex_dtype(x.dtype)
+
+		Awk2 = self._Awk2.astype(complex_dtype, copy=False)
+		Fwk2 = self._Fwk2.astype(complex_dtype, copy=False)
+		wk2 = self._wk2.astype(complex_dtype, copy=False)
+
+		# Perform the CZT.
+		x = x * Awk2
 
 		intermediate = _fft_module.fft(x, self.nfft)
-		intermediate *= self._Fwk2
+		intermediate *= Fwk2
 		res = _fft_module.ifft(intermediate)
 
-		res = res[..., self._yidx] * self._wk2
+		res = res[..., self._yidx] * wk2
 
 		return res

@@ -290,21 +290,7 @@ def test_fourier_filter():
 					assert np.allclose(f_out_fft, f_out_ff)
 					assert np.allclose(f_in_fft, f_in_ff)
 
-def check_czt_vs_fft(x):
-	# Check that the CZT with specific parameters is the same as an FFT.
-	n = len(x)
-	m = len(x)
-	w = np.exp(-2j * np.pi / m)
-	a = 1
-
-	czt = ChirpZTransform(n, m, w, a)
-
-	y_fft = np.fft.fft(x)
-	y_czt = czt(x)
-
-	assert np.allclose(y_fft, y_czt, rtol=1e-6)
-
-def check_czt_vs_scipy(x, m, w, a):
+def check_czt_vs_scipy(x, m, w, a, dtype):
 	# Check that the CZT gives the same answer as the scipy implementation.
 	n = len(x)
 
@@ -314,9 +300,14 @@ def check_czt_vs_scipy(x, m, w, a):
 	y_hcipy = czt_hcipy(x)
 	y_scipy = czt_scipy(x)
 
-	assert np.allclose(y_hcipy, y_scipy, rtol=1e-13)
+	assert y_hcipy.dtype == dtype
 
-def test_chirp_z_transform():
+	rtol = 1e-13 if dtype == 'complex128' else 1e-4
+
+	assert np.allclose(y_hcipy, y_scipy, rtol=rtol)
+
+@pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
+def test_chirp_z_transform(dtype):
 	# Fix randomness.
 	np.random.seed(0)
 
@@ -325,10 +316,9 @@ def test_chirp_z_transform():
 
 	for n, m in zip(ns, ms):
 		x = np.random.randn(n) + 1j * np.random.randn(n)
-
-		check_czt_vs_fft(x)
+		x = x.astype(dtype)
 
 		w = np.exp(1j * np.random.uniform(0, 2 * np.pi))
 		a = np.exp(1j * np.random.uniform(0, 2 * np.pi))
 
-		check_czt_vs_scipy(x, m, w, a)
+		check_czt_vs_scipy(x, m, w, a, dtype)

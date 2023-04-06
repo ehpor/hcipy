@@ -8,7 +8,8 @@ __all__ = [
     'FastFourierTransform',
     'FourierFilter',
     'MatrixFourierTransform',
-    'NaiveFourierTransform'
+    'NaiveFourierTransform',
+    'ZoomFastFourierTransform',
 ]
 
 from .fourier_transform import *
@@ -17,3 +18,4 @@ from .fast_fourier_transform import *
 from .fourier_operations import *
 from .matrix_fourier_transform import *
 from .naive_fourier_transform import *
+from .zoom_fast_fourier_transform import *

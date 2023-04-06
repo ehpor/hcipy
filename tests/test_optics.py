@@ -698,7 +698,7 @@ def test_phase_grating():
 	eta = 1 - jv(0, amplitudes)**2
 	err = eta - diffraction_efficiency
 
-	assert np.max(abs(err)) < 1e-3
+	assert np.allclose(err, 0, atol=1e-3)
 
 	grating = PhaseGrating(1 / 20, np.pi / 2, lambda grid: np.sign(np.sin(2 * np.pi * grid.y)), orientation=0)
 	wf_grating = cor(grating(wf))
@@ -716,7 +716,7 @@ def test_thin_prism():
 	test_wavelengths = np.linspace(500, 1000, 31) * 1e-9
 	err = np.array([thin_prism.trace(wave) - (nbk7(wave) - 1) * wedge_angle for wave in test_wavelengths])
 
-	assert np.max(abs(err)) < 1e-3
+	assert np.allclose(err, 0, atol=1e-3)
 
 def test_prism():
 	nbk7 = get_refractive_index("N-BK7")
@@ -727,7 +727,7 @@ def test_prism():
 	deviation_angles = np.deg2rad(np.array([2.00390481945681, 1.9982250862238, 1.9934348068561]))
 	err = np.array([prism.trace(wave) - dev for wave, dev in zip(test_wavelengths, deviation_angles)])
 
-	assert np.rad2deg(np.max(abs(err))) < 1e-3
+	assert np.allclose(np.rad2deg(err), 0, atol=1e-3)
 	assert np.allclose(prism.minimal_deviation_angle(750e-9), 0.03471595671032256)
 
 	prism.prism_angle = 2 * np.deg2rad(3. + 53.0 / 60.0)

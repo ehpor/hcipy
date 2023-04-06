@@ -15,7 +15,7 @@ def grating_equation(wavelength, order, period, angle_of_incidence):
 	period : array like
 		The period of the diffraction grating.
 	angle_of_incidence : array like
-		The incidence angles of the incoming field.
+		The incidence angles of the incoming field in radians.
 
 	Returns
 	-------
@@ -38,7 +38,7 @@ def diffraction_efficiency_sinusoidal_grating(wavelength, groove_depth, order, p
 	period : array like
 		The period of the diffraction grating.
 	angle_of_incidence : array like
-		The incidence angles of the incoming field.
+		The incidence angles of the incoming field in radians.
 
 	Returns
 	-------
@@ -55,14 +55,14 @@ def snells_law(incidence_angle, relative_refractive_index):
 	Parameters
 	----------
 	incidence_angle : array like
-		The incidence angles of the incoming field.
+		The incidence angles of the incoming field in radians.
 	relative_refractive_index : scalar
 		The relative refractive index between two media.
 
 	Returns
 	-------
 	Array like
-		The transmitted angles of the outgoing field.
+		The transmitted angles of the outgoing field in radians.
 	'''
 	if np.all(relative_refractive_index > 1):
 		return np.arcsin(relative_refractive_index * np.sin(incidence_angle))
@@ -78,18 +78,16 @@ class TiltElement(SurfaceApodizer):
 	Parameters
 	----------
 	angle: scalar
-		The tilt angle.
+		The tilt angle in radians.
 	orientation : scalar
-		The orientation of the tilt. The default orientation is aligned along the y-axis.
+		The orientation of the tilt in radians. The default orientation is aligned along the y-axis.
 	refractive_index : scalar or function
 		The refractive index of the material. The default is 2.0 which makes it achromatic and exact.
 	'''
 	def __init__(self, angle, orientation=0, refractive_index=2.0):
 		self._angle = angle
 		self._orientation = orientation
-
-		sag = lambda temp_grid: Field(temp_grid.rotated(self._orientation).y * np.tan(self._angle), temp_grid)
-		super().__init__(sag, refractive_index)
+		super().__init__(self.tilt_sag, refractive_index)
 
 	@property
 	def angle(self):
@@ -98,7 +96,7 @@ class TiltElement(SurfaceApodizer):
 	@angle.setter
 	def angle(self, new_angle):
 		self._angle = new_angle
-		self.surface_sag = lambda temp_grid: Field(temp_grid.rotated(self._orientation).y * np.tan(self._angle), temp_grid)
+		self.surface_sag = self.tilt_sag
 
 	@property
 	def orientation(self):
@@ -107,7 +105,22 @@ class TiltElement(SurfaceApodizer):
 	@orientation.setter
 	def orientation(self, new_orientation):
 		self._orientation = new_orientation
-		self.surface_sag = lambda temp_grid: Field(temp_grid.rotated(self._orientation).y * np.tan(self._angle), temp_grid)
+		self.surface_sag = self.tilt_sag
+
+	def tilt_sag(self, grid):
+		''' Calculate the sag profile for the tilt element.
+
+		Parameters
+		----------
+		grid : Grid
+			The grid on which the surface sag is calculated.
+
+		Returns
+		-------
+		Field
+			The surface sag.
+		'''
+		return Field(grid.rotated(self._orientation).y * np.tan(self._angle), grid)
 
 class ThinPrism(TiltElement):
 	'''A thin prism that operates in the paraxial regime.
@@ -117,7 +130,7 @@ class ThinPrism(TiltElement):
 	angle : scalar
 		The wedge angle of the prism.
 	orientation : scalar
-		The orientation of the prism. The default orientation is aligned along the x-axis.
+		The orientation of the prism in radians. The default orientation is aligned along the x-axis.
 	refractive_index : scalar or function of wavelength
 		The refractive index of the prism.
 	'''
@@ -135,7 +148,7 @@ class ThinPrism(TiltElement):
 		Returns
 		-------
 		scalar
-			The angle of minimal deviation.
+			The angle of minimal deviation in radians.
 		'''
 		n = self._refractive_index(wavelength)
 		return (n - 1) * self._prism_angle
@@ -151,7 +164,7 @@ class ThinPrism(TiltElement):
 		Returns
 		-------
 		scalar
-			The angle of deviation for the traced ray.
+			The angle of deviation for the traced ray in radians.
 		'''
 		return (self._refractive_index(wavelength) - 1) * self.angle
 
@@ -160,12 +173,14 @@ class Prism(SurfaceApodizer):
 
 	Parameters
 	----------
+	angle_of_incidence : sacalar
+		The angle of incidence of the wavefront in radians.
 	prism_angle : scalar
-		The angle of the prism.
+		The angle of the prism in radians.
 	refractive_index : scalar or function of wavelength
 		The refractive index of the prism.
 	orientation : scalar
-		The orientation of the prism. The default orientation is aligned along the y-axis.
+		The orientation of the prism in radians. The default orientation is aligned along the y-axis.
 	'''
 	def __init__(self, angle_of_incidence, prism_angle, refractive_index, orientation=0):
 		self._prism_angle = prism_angle
@@ -204,7 +219,7 @@ class Prism(SurfaceApodizer):
 		Returns
 		-------
 		scalar
-			The angle of minimal deviation.
+			The angle of minimal deviation in radians.
 		'''
 		n = self._refractive_index(wavelength)
 		return 2 * np.arcsin(n * np.sin(self._prism_angle / 2)) - self._prism_angle
@@ -220,7 +235,7 @@ class Prism(SurfaceApodizer):
 		Returns
 		-------
 		scalar
-			The angle of deviation for the traced ray.
+			The angle of deviation for the traced ray in radians.
 		'''
 		n = self._refractive_index(wavelength)
 		transmitted_angle_surface_1 = snells_law(self._angle_of_incidence, 1 / n)
@@ -262,7 +277,7 @@ class PhaseGrating(PhaseApodizer):
 	grating_profile : field generator
 		The profile of the grating. The default is None and assumes a sinusoidal profile for the grating.
 	orientation : scalar
-		The orientation of the grating. The default orientation is aligned along the y-axis.
+		The orientation of the grating in radians. The default orientation is aligned along the y-axis.
 	'''
 	def __init__(self, grating_period, grating_amplitude, grating_profile=None, orientation=0):
 		self._grating_period = grating_period
@@ -270,7 +285,11 @@ class PhaseGrating(PhaseApodizer):
 		self._grating_amplitude = grating_amplitude
 
 		if grating_profile is None:
-			grating_profile = lambda grid: np.sin(2 * np.pi * grid.y)
+			def sinusoidal_grating_profile(grid):
+				return np.sin(2 * np.pi * grid.y)
+
+			grating_profile = sinusoidal_grating_profile
+
 		self._grating_profile = grating_profile
 
 		super().__init__(self.grating_pattern)

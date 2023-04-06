@@ -55,14 +55,14 @@ class ZoomFastFourierTransform(FourierTransform):
 			self.czts = [ChirpZTransform(n, m, ww, aa) for n, m, ww, aa in zip(self.input_grid.dims, self.output_grid.dims, w, a)]
 			self.inv_czts = [ChirpZTransform(n, m, ww, aa) for n, m, ww, aa in zip(self.output_grid.dims, self.input_grid.dims, inv_w, inv_a)]
 
-			self.shifts = np.exp(-1j * np.array(self.output_grid.separated_coords) * self.input_grid.zero[:, np.newaxis])
-			self.inv_shifts = np.exp(1j * np.array(self.input_grid.separated_coords) * self.output_grid.zero[:, np.newaxis])
+			self.shifts = [np.exp(-1j * x * x0) for x, x0 in zip(self.output_grid.separated_coords, self.input_grid.zero)]
+			self.inv_shifts = [np.exp(1j * x * x0) for x, x0 in zip(self.input_grid.separated_coords, self.output_grid.zero)]
 
-			self.shifts = self.shifts.astype(complex_dtype, copy=False)
-			self.inv_shifts = self.inv_shifts.astype(complex_dtype, copy=False)
+			self.shifts = [s.astype(complex_dtype, copy=False) for s in self.shifts]
+			self.inv_shifts = [s.astype(complex_dtype, copy=False) for s in self.inv_shifts]
 
 			self.input_weights = self.input_grid.weights.astype(float_dtype)
-			self.output_weights = (self.output_grid.weights * (2 * np.pi)**self.output_grid.ndim).astype(float_dtype)
+			self.output_weights = (self.output_grid.weights / (2 * np.pi)**self.output_grid.ndim).astype(float_dtype)
 
 			self._current_dtype = complex_dtype
 

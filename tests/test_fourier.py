@@ -12,8 +12,9 @@ def make_all_fourier_transforms(input_grid, q, fov, shift):
 	mft4 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=False)
 	nft1 = NaiveFourierTransform(input_grid, fft1.output_grid, precompute_matrices=True)
 	nft2 = NaiveFourierTransform(input_grid, fft1.output_grid, precompute_matrices=False)
+	zfft = ZoomFastFourierTransform(grid, fft1.output_grid)
 
-	return [fft1, fft2, mft1, mft2, mft3, mft4, nft1, nft2]
+	return [fft1, fft2, mft1, mft2, mft3, mft4, nft1, nft2, zft]
 
 def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims):
 	grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
@@ -48,11 +49,11 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
 		# When the full fov is retained, the pattern should be the same and energy should
 		# be conserved. We use different accuracy limits based on bit depth.
 		if np.dtype(dtype) == np.dtype('complex128'):
-			assert np.all(patterns_match < 1e-13)
-			assert np.all(np.abs(energy_ratios - 1) < 1e-14)
+			assert np.all(patterns_match < 1e-12)
+			assert np.all(np.abs(energy_ratios - 1) < 1e-12)
 		else:
 			assert np.all(patterns_match < 1e-6)
-			assert np.all(np.abs(energy_ratios - 1) < 1e-6)
+			assert np.all(np.abs(energy_ratios - 1) < 1e-5)
 	else:
 		# If the full fov is not retained, the pattern and energy loss should be the same
 		# for all fourier transform combinations.

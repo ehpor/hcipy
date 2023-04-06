@@ -32,7 +32,7 @@ class ZoomFastFourierTransform(FourierTransform):
 	def __init__(self, input_grid, output_grid):
 		if not input_grid.is_regular or not input_grid.is_('cartesian'):
 			raise ValueError('The input grid should be regularly spaced in Cartesian coordinates.')
-		if output_grid.is_regular or not output_grid.is_('cartesian'):
+		if not output_grid.is_regular or not output_grid.is_('cartesian'):
 			raise ValueError('The output grid should be regularly spaced in Cartesian coordinates.')
 		if input_grid.ndim != output_grid.ndim:
 			raise ValueError('The input_grid must have the same dimensions as the output_grid.')

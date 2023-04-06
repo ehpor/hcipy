@@ -50,32 +50,29 @@ class ChirpZTransform:
 		self.w = w
 		self.a = a
 
-		k = np.arange(max(self.m, self.n))
-		self.k = k
-
-		wk2 = self.w**(self.k**2 / 2)
-
-		self.nfft = next_fast_len(self.n + self.m - 1)
-
-		self._Awk2 = self.a**-k[:self.n] * wk2[:self.n]
-		self._Fwk2 = _fft_module.fft(1 / np.hstack((wk2[self.n - 1:0:-1], wk2[:self.m])), self.nfft)
-		self._wk2 = wk2[:self.m]
-		self._yidx = slice(self.n - 1, self.n + self.m - 1)
-
 		self._current_dtype = None
 
 	def _compute_kernel_and_weights(self, dtype):
 		_, complex_dtype = _get_float_and_complex_dtype(dtype)
 
 		if complex_dtype != self._current_dtype:
+			k = np.arange(max(self.m, self.n))
+			self.k = k
 
-			self._Awk2_with_dtype = self._Awk2.astype(complex_dtype, copy=False)
-			self._Fwk2_with_dtype = self._Fwk2.astype(complex_dtype, copy=False)
-			self._wk2_with_dtype = self._wk2.astype(complex_dtype, copy=False)
+			wk2 = self.w**(self.k**2 / 2)
+
+			self.nfft = next_fast_len(self.n + self.m - 1)
+
+			self._Awk2 = self.a**-k[:self.n] * wk2[:self.n]
+			self._Fwk2 = _fft_module.fft(1 / np.hstack((wk2[self.n - 1:0:-1], wk2[:self.m])), self.nfft)
+			self._wk2 = wk2[:self.m]
+			self._yidx = slice(self.n - 1, self.n + self.m - 1)
+
+			self._Awk2 = self._Awk2.astype(complex_dtype, copy=False)
+			self._Fwk2 = self._Fwk2.astype(complex_dtype, copy=False)
+			self._wk2 = self._wk2.astype(complex_dtype, copy=False)
 
 			self._current_dtype = complex_dtype
-
-		return self._Awk2_with_dtype, self._Fwk2_with_dtype, self._wk2_with_dtype
 
 	def __call__(self, x):
 		'''Compute the Chirp Z-transform along the last axis.
@@ -97,15 +94,15 @@ class ChirpZTransform:
 		array_like
 			The chirp Z-transformed array.
 		'''
-		Awk2, Fwk2, wk2 = self._compute_kernel_and_weights(x.dtype)
+		self._compute_kernel_and_weights(x.dtype)
 
 		# Perform the CZT.
-		x = x * Awk2
+		x = x * self._Awk2
 
 		intermediate = _fft_module.fft(x, self.nfft)
-		intermediate *= Fwk2
+		intermediate *= self._Fwk2
 		res = _fft_module.ifft(intermediate)
 
-		res = res[..., self._yidx] * wk2
+		res = res[..., self._yidx] * self._wk2
 
 		return res

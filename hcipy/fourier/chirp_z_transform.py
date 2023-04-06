@@ -31,11 +31,18 @@ class ChirpZTransform:
 	m : integer
 		The number of points in the Z-plane.
 	w : scalar
-		The complex ratio between points in the Z-plane.
+		The complex ratio between points in the Z-plane. Note: ensure that its
+		absolute value is close to one, so that w**(max(n, m)**2) does not
+		overflow.
 	a : scalar
-		The starting point in the complex Z-plane.
+		The starting point in the complex Z-plane. Note: ensure that its absolute
+		value is close to one, so that a**max(n, m) does not overflow.
 	'''
 	def __init__(self, n, m, w, a):
+		# Ensure that w and a are complex scalars.
+		w = complex(w)
+		a = complex(a)
+
 		self.n = n
 		self.m = m
 		self.w = w

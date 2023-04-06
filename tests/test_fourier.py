@@ -1,6 +1,7 @@
 from hcipy import *
 import numpy as np
 import pytest
+import scipy.signal
 
 def make_all_fourier_transforms(input_grid, q, fov, shift):
 	fft1 = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift, emulate_fftshifts=True)
@@ -288,3 +289,46 @@ def test_fourier_filter():
 
 					assert np.allclose(f_out_fft, f_out_ff)
 					assert np.allclose(f_in_fft, f_in_ff)
+
+def check_czt_vs_fft(x):
+	# Check that the CZT with specific parameters is the same as an FFT.
+	n = len(x)
+	m = len(x)
+	w = np.exp(-2j * np.pi / m)
+	a = 1
+
+	czt = ChirpZTransform(n, m, w, a)
+
+	y_fft = np.fft.fft(x)
+	y_czt = czt(x)
+
+	assert np.allclose(y_fft, y_czt, rtol=1e-6)
+
+def check_czt_vs_scipy(x, m, w, a):
+	# Check that the CZT gives the same answer as the scipy implementation.
+	n = len(x)
+
+	czt_hcipy = ChirpZTransform(n, m, w, a)
+	czt_scipy = scipy.signal.CZT(n, m, w, a)
+
+	y_hcipy = czt_hcipy(x)
+	y_scipy = czt_scipy(x)
+
+	assert np.allclose(y_hcipy, y_scipy, rtol=1e-13)
+
+def test_chirp_z_transform():
+	# Fix randomness.
+	np.random.seed(0)
+
+	ns = np.random.exponential(1000, size=10).astype('int')
+	ms = np.random.exponential(1000, size=10).astype('int')
+
+	for n, m in zip(ns, ms):
+		x = np.random.randn(n) + 1j * np.random.randn(n)
+
+		check_czt_vs_fft(x)
+
+		w = np.exp(1j * np.random.uniform(0, 2 * np.pi))
+		a = np.exp(1j * np.random.uniform(0, 2 * np.pi))
+
+		check_czt_vs_scipy(x, m, w, a)

@@ -105,4 +105,5 @@ class ChirpZTransform:
 
 		res = res[..., self._yidx] * self._wk2
 
-		return res
+		_, complex_dtype = _get_float_and_complex_dtype(x.dtype)
+		return res.astype(complex_dtype, copy=False)

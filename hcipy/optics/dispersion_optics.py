@@ -128,7 +128,7 @@ class ThinPrism(TiltElement):
 	Parameters
 	----------
 	angle : scalar
-		The wedge angle of the prism.
+		The wedge angle of the prism in radians.
 	orientation : scalar
 		The orientation of the prism in radians. The default orientation is aligned along the x-axis.
 	refractive_index : scalar or function of wavelength

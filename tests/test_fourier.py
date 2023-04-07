@@ -310,7 +310,7 @@ def check_czt_vs_scipy(x, m, w, a, dtype):
 
 @pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
 @pytest.mark.skipif(version.parse(scipy.__version__) < version.parse('1.8.0'),
-                    reason="Requires scipy 1.8.0 or newer")
+	reason="Requires scipy 1.8.0 or newer")
 def test_chirp_z_transform(dtype):
 	# Fix randomness.
 	np.random.seed(0)

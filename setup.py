@@ -22,7 +22,7 @@ setup(
 	],
 	install_requires=[
 		"numpy",
-		"scipy>=1.8.0",
+		"scipy",
 		"matplotlib>=2.0.0",
 		"Pillow",
 		"pyyaml",

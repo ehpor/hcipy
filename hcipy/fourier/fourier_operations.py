@@ -1,7 +1,7 @@
 import numpy as np
 
-from .fast_fourier_transform import FastFourierTransform, make_fft_grid
-from ..field import Field, field_dot, field_conjugate_transpose
+from .fast_fourier_transform import FastFourierTransform, make_fft_grid, _numexpr_grid_shift
+from ..field import Field, field_dot, field_conjugate_transpose, CartesianGrid, RegularCoords
 from .._math import fft as _fft_module
 
 
@@ -153,8 +153,112 @@ class FourierFilter(object):
         return Field(res, self.input_grid)
 
 class FourierShift:
+    '''An image shifting operator implemented in the Fourier domain.
+
+    This operator is smart enough to ignore dimensions where the
+    shift is zero.
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The grid that is expected for the input field.
+    shift : array_like
+        The shift to apply to any input field.
+
+    Attributes
+    ----------
+    shift : array_like
+        The shift to apply to any input field.
+    '''
     def __init__(self, input_grid, shift):
-        pass
+        self.input_grid = input_grid
+        self.output_grid = input_grid
+
+        self.shift = shift
+
+    @property
+    def shift(self):
+        return self._shift
+
+    @shift.setter
+    def shift(self, shift):
+        shift = np.array(shift)
+        self._shift = shift
+
+        # Find out which axes to Fourier transform.
+        mask = shift != 0
+        self._ft_axes = tuple(np.flatnonzero(shift) - 1)
+
+        if not self._ft_axes:
+            # All shifts are zero. We can exit out early.
+            self._shift_filter = None
+            return
+
+        broadcasting_slice = tuple(slice(None) if m else np.newaxis for m in mask[::-1])
+
+        # Compute the Fourier transform grid for these axes.
+        fft_grid = make_fft_grid(self.input_grid, q=1, fov=1)
+        fft_grid = CartesianGrid(RegularCoords(fft_grid.delta[mask], fft_grid.dims[mask], fft_grid.zero[mask]))
+
+        # Compute the shift filter on this grid and broadcast to the original field shape.
+        shift_filter = _numexpr_grid_shift(-shift, fft_grid).reshape(fft_grid.shape)
+        shift_filter = np.fft.ifftshift(shift_filter)
+        shift_filter = shift_filter[broadcasting_slice]
+
+        self._shift_filter = shift_filter
+
+    def forward(self, field):
+        '''Return the forward filtering of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to filter.
+
+        Returns
+        -------
+        Field
+            The filtered field.
+        '''
+        return self._operation(field, adjoint=False)
+
+    def backward(self, field):
+        '''Return the backward (adjoint) filtering of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to filter.
+
+        Returns
+        -------
+        Field
+            The adjoint filtered field.
+        '''
+        return self._operation(field, adjoint=True)
+
+    def _operation(self, field, adjoint):
+        if self._shift_filter is None:
+            return field.astype('complex')
+
+        if _use_mkl:
+            kwargs = {'overwrite_x': True}
+        else:
+            kwargs = {}
+
+        # Never overwrite the input, so don't use kwargs here.
+        f = _fft_module.fftn(field.shaped, axes=self._ft_axes)
+
+        if adjoint:
+            f *= np.conj(self._shift_filter)
+        else:
+            f *= self._shift_filter
+
+        f = _fft_module.ifftn(f, axes=self._ft_axes, **kwargs)
+
+        shape = f.shape[:-field.grid.ndim] + (-1,)
+
+        return Field(f.reshape(shape), field.grid)
 
 class FourierShear:
     '''An image shearing operator implemented in the Fourier domain.

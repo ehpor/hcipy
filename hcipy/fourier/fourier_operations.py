@@ -1,6 +1,6 @@
 import numpy as np
 
-from .fast_fourier_transform import FastFourierTransform
+from .fast_fourier_transform import FastFourierTransform, make_fft_grid
 from ..field import Field, field_dot, field_conjugate_transpose
 from .._math import fft as _fft_module
 
@@ -151,3 +151,121 @@ class FourierFilter(object):
             res = f[c].reshape(s)
 
         return Field(res, self.input_grid)
+
+class FourierShift:
+    def __init__(self, input_grid, shift):
+        pass
+
+class FourierShear:
+    '''An image shearing operator implemented in the Fourier domain.
+
+    When given an image I(x, y), this operator will return a new
+    image I(x + a * y, y) when a shearing along the x axis is
+    requested.
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The grid that is expected for the input field.
+    shear : scalar
+
+
+    Attributes
+    ----------
+    input_grid : Grid
+        The grid assumed for the input of this operator. Read-only.
+    shear : scalar
+        The amount of shear along the axis.
+    axis : integer
+        The axis of the shear. Read-only.
+    '''
+    def __init__(self, input_grid, shear, shear_dim=0):
+        if not input_grid.is_regular or input_grid.ndim != 2:
+            raise ValueError('The input grid should be 2D and regularly spaced.')
+
+        self._input_grid = input_grid
+        self._shear_dim = shear_dim
+        self.shear = shear
+
+    @property
+    def input_grid(self):
+        return self._input_grid
+
+    @property
+    def shear_dim(self):
+        return self._shear_dim
+
+    @property
+    def fourier_dim(self):
+        return 1 if self.shear_dim == 0 else 0
+
+    @property
+    def shear(self):
+        return self._shear
+
+    @shear.setter
+    def shear(self, shear):
+        fft_grid = make_fft_grid(self.input_grid)
+        fx = np.fft.ifftshift(fft_grid.separated_coords[self.shear_dim])
+
+        y = self.input_grid.separated_coords[self.fourier_dim]
+
+        self._filter = np.exp(-1j * shear * np.outer(y, fx))
+
+        if self.shear_dim == 1:
+            self._filter = self._filter.T
+
+        # Make sure the ordering of the filter is the same as the FFT output.
+        self._filter = np.ascontiguousarray(self._filter)
+
+        self._shear = shear
+
+    def forward(self, field):
+        '''Return the forward shear of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to shear.
+
+        Returns
+        -------
+        Field
+            The sheared field.
+        '''
+        return self._operation(field, adjoint=False)
+
+    def backward(self, field):
+        '''Return the backward (adjoint) shear of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to shear.
+
+        Returns
+        -------
+        Field
+            The adjoint sheared field.
+        '''
+        return self._operation(field, adjoint=True)
+
+    def _operation(self, field, adjoint):
+        if _use_mkl:
+            kwargs = {'overwrite_x': True}
+        else:
+            kwargs = {}
+
+        # Never overwrite the input, so don't use kwargs here.
+        f = _fft_module.fft(field.shaped, axis=-self.shear_dim - 1)
+
+        if adjoint:
+            f *= np.conj(self._filter)
+        else:
+            f *= self._filter
+
+        f = _fft_module.ifft(f, axis=-self.shear_dim - 1, **kwargs)
+
+        shape = f.shape[:-field.grid.ndim] + (-1,)
+
+        return Field(f.reshape(shape), field.grid)

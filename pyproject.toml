@@ -72,3 +72,6 @@ build-backend = "setuptools.build_meta"
 packages = ["hcipy"]
 zip-safe = false
 include-package-data = true
+
+[tool.setuptools_scm]
+write_to = "hcipy/_version.py"

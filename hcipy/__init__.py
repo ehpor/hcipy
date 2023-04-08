@@ -1,5 +1,10 @@
 # flake8: noqa
 
+try:
+	from ._version import version as __version__
+except ImportError:
+	__version__ = ''
+
 # Import all submodules.
 from . import aperture
 from . import atmosphere
@@ -51,6 +56,3 @@ __all__.extend(propagation.__all__)
 __all__.extend(util.__all__)
 __all__.extend(wavefront_control.__all__)
 __all__.extend(wavefront_sensing.__all__)
-
-from .version import get_version
-__version__ = get_version()

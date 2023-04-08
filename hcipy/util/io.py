@@ -7,9 +7,13 @@ import asdf.fits_embed
 from astropy import wcs
 from astropy.io import fits
 
-from ..version import get_version
 from ..field import Grid, Field
 from ..mode_basis import ModeBasis
+
+try:
+	from .._version import version as _version
+except ImportError:
+	_version = ''
 
 def read_fits(filename, extension=0):
 	'''Read an array from a fits file.
@@ -99,7 +103,7 @@ def _make_metadata(file_type):
 	'''
 	tree = {
 		'meta': {
-			'author': 'HCIPy %s' % get_version(),
+			'author': 'HCIPy %s' % _version,
 			'date_utc': datetime.datetime.utcnow().isoformat(),
 			'file_type': file_type
 		}

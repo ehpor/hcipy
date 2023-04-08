@@ -25,9 +25,9 @@ This page is intended for the maintainer of HCIPy, and contains step-by-step ins
         make html
         cd ..
 
-2. Write release notes mimicing other release notes. Add those release notes to the :doc:`changelog <../changelog>` in the documentation and commit these changes.
+2. Write release notes mimicking other release notes. Add those release notes to the :doc:`changelog <../changelog>` in the documentation and commit these changes.
 
-3.  Add tag information on Github. You can do this by releasing a new version. Add the written release notes, mimicing previous release notes. After you've released the new version, a new tag will have been added on the Github repository.
+3.  Add tag information on Github. You can do this by releasing a new version. Add the written release notes, mimicking previous release notes. After you've released the new version, a new tag will have been added on the Github repository.
 
 4.  Fetch the tags on your local git repository. Update the version information, and check that the version was changed:
 
@@ -50,15 +50,15 @@ This page is intended for the maintainer of HCIPy, and contains step-by-step ins
 
     .. code-block:: shell
 
-        aws s3 sync --acl public-read --cache-control max-age=2629800,public doc/_build/html s3://docs.hcipy.org/0.3.1
+        aws s3 sync --acl public-read --cache-control max-age=2629800,public doc/_build/html s3://docs.hcipy.org/0.5.1
 
-    where ``0.3.1`` has been changed to the correct version number.
+    where ``0.5.1`` has been changed to the correct version number.
 
 6.  Build the source distribution and wheels:
 
     .. code-block:: shell
 
-        python3 setup.py sdist bdist_wheel
+        python3 -m build
 
     Then submit to PyPI:
 

@@ -12,7 +12,8 @@ This section explains the content of the repository:
 * **doc**. This folder contains the full documentation.
 * **tests**. This folder contains the unit tests, separated by submodule.
 * **examples**. This folder contains old examples. These examples should be rewritten into tutorials for the documentation. Do not add new examples here.
-* **setup.py**. This file is necessary for pip installation.
+* **pyproject.toml**. This file is necessary for pip installation.
+* **setup.py**. This file was used for pip installation, but is now deprecated. It is being kept for backwards compatibility.
 * **README.md**. Main repository readme file.
 * **LICENSE**. A copy of the MIT license, which should be redistributed with any copy of HCIPy.
 * **.azure-pipelines.yml**. Configuration file for the continuous integration service.
@@ -37,7 +38,7 @@ Git is also used to generate a version string, available as ``hcipy.__version__`
 
 .. _coding-style:
 
-The version string will be either released version (ie. ``{tag}`, with ``{tag}`` being for example ``0.2``), a development version with commit hash (ie. ``{tag}.dev{distance}+g{commit_hash}`` where ``{distance}`` is the number of commits since the last release), or a dirty version string (ie. ``{tag}.dev{distance}+g{commit_hash}.d{yyyymmdd}`` where ``{yyyymmdd}`` is the current date).  The version string of HCIPy for this documentation is listed at the top of the navigation bar.
+The version string will be either released version (ie. ``{tag}`, with ``{tag}`` being for example ``0.5.1``), a development version with commit hash (ie. ``{tag}.dev{distance}+g{commit_hash}`` where ``{distance}`` is the number of commits since the last release), or a dirty version string (ie. ``{tag}.dev{distance}+g{commit_hash}.d{yyyymmdd}`` where ``{yyyymmdd}`` is the current date).  The version string of HCIPy for this documentation is listed at the top of the navigation bar.
 
 Coding style
 ------------
@@ -47,14 +48,14 @@ We adhere mostly to `PEP8 <https://www.python.org/dev/peps/pep-0008/>`__, the of
 * **Tabs as indentation**. Deviating from PEP8, we use tabs instead of spaces for indentation.
 * **No double blank lines**. Deviating from PEP8, at most one blank line may be used to separate functions, classes or logical sections inside functions.
 * **Long lines allowed in moderation**. Deviating from PEP8, HCIPy code sets the limit at <100 characters, with lines longer than this allowed sporadically.
-* **No print statements**. Inside the HCIPy package code, no print statements should be used to avoid printing stuff during normal opertion.
+* **No print statements**. Inside the HCIPy package code, no print statements should be used to avoid printing stuff during normal operation.
 * **No commented-out code**. Commented code should be removed, as these lines can always be retrieved using git.
 * **Docstrings in numpydoc**. All functions and classes that are exposed to code outside of HCIPy, should have a docstring written in the numpydoc format.
 
 Continuous integration and test suite
 -------------------------------------
 
-HCIPy currently supports Python 3.5+ on Linux, MacOS and Windows. To make sure that it keeps working as expected on all these configurations, we have set up automatic testing on each of these. `Travis-CI <https://travis-ci.com/ehpor/hcipy/>`__ automatically tests on Linux and MacOS for all versions of Python, while `Appveyor <https://ci.appveyor.com/project/ehpor/hcipy>`__ performs the tests on Windows systems. Configuration files for these services are **.travis.yml** and **appveyor.yml**, which show the CI service how to install HCIPy and its dependencies, and on which operating systems and with which Python versions to test HCIPy. The testing itself is done via the `pytest <https://docs.pytest.org/en/latest/>`__ library.
+HCIPy currently supports Python 3.7+ on Linux, MacOS and Windows. To make sure that it keeps working as expected on all these configurations, we have set up automatic testing on each of these. We currently use `Azure <https://dev.azure.com/ehpor/hcipy/_build?definitionId=1>`__ to run our integrated testing suite. The configuration file for this service is **.azure-pipelines.yml**, which shows Azure how to install HCIPy and its dependencies, and on which operating systems and with which Python versions to test HCIPy. The testing itself is done via the `pytest <https://docs.pytest.org/en/latest/>`__ library.
 
 The test suite tests all major features of HCIPy. In the name of efficiency, HCIPy does not contain much so-called unit tests, but rather tests high-level behaviour, which implicitly tests low-level functions as well. For example, for the atmospheric model, we test whether then variance of the outcoming wavefront conforms to analytic formula, and whether the variance projection on a certain Zernike mode conforms to analytic formula, rather than testing the smallest possible unit of the atmospheric model. Tests are located in **tests/test_[submodule_name].py**, separated by submodule. All tests can be run with:
 
@@ -62,7 +63,7 @@ The test suite tests all major features of HCIPy. In the name of efficiency, HCI
 
     pytest ./tests
 
-As the free services of Travis and Appveyor limit the time for the tests to less than one hour of computation time with limited computer memory, we have separated the tests into fast and slow tests. The slow tests are not run on the CI services, but can be run manually on your own machine by passing the flag ``--runslow`` to the pytest script:
+To reduce the time taken for the suite of tests, we have separated them into comprehensive (ie. fast) and in-depth (ie. slow) tests. The slow tests are not run on the CI service, but can be run manually on your own machine by passing the flag ``--runslow`` to the pytest script:
 
 .. code-block:: shell
 
@@ -73,7 +74,7 @@ Test coverage is reported for all branches and pull requests on `Coveralls <http
 Documentation
 -------------
 
-The documentation is located in the **doc** folder as a bunch of ``.rst`` files and Jupyter notebooks which are built into a static HTML website by `Sphinx <https://www.sphinx-doc.org>`__. The documentation is built on Linux with Python 3.7 for every push to the Github repository. Every build for a push to the master branch is automatically uploaded to `<https://docs.hcipy.org/dev>`__.
+The documentation is located in the **doc** folder as a bunch of ``.rst`` files and Jupyter notebooks which are built into a static HTML website by `Sphinx <https://www.sphinx-doc.org>`__. The documentation is built on Linux with the latest Python version for every push to the Github repository. Every build for a push to the master branch is automatically uploaded to `<https://docs.hcipy.org/dev>`__.
 
 The documentation can be build via a Makefile provided by Sphinx:
 

@@ -57,7 +57,11 @@ __all__ = [
 	'TipTiltMirror',
 	'SimpleVibration',
 	'Wavefront',
-	'ThinLens'
+	'ThinLens',
+	'Prism',
+	'ThinPrism',
+	'TiltElement',
+	'PhaseGrating'
 ]
 
 from .optical_element import *
@@ -65,9 +69,10 @@ from .wavefront import *
 
 from .aberration import *
 from .apodization import *
-from .dynamic_optical_system import *
 from .deformable_mirror import *
 from .detector import *
+from .dispersion_optics import *
+from .dynamic_optical_system import *
 from .fiber import *
 from .gaussian_beam import *
 from .glass import *

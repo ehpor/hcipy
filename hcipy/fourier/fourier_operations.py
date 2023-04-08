@@ -269,3 +269,60 @@ class FourierShear:
         shape = f.shape[:-field.grid.ndim] + (-1,)
 
         return Field(f.reshape(shape), field.grid)
+
+class FourierRotation:
+    def __init__(self, input_grid, angle):
+        self._input_grid = input_grid
+
+        self._shear_x = FourierShear(input_grid, shear=0, shear_dim=0)
+        self._shear_y = FourierShear(input_grid, shear=0, shear_dim=1)
+
+        self.angle = angle
+
+    @property
+    def angle(self):
+        return self._angle
+
+    @angle.setter
+    def angle(self, angle):
+        self._shear_x.shear = np.tan(angle / 2)
+        self._shear_y.shear = -np.sin(angle)
+
+        self._angle = angle
+
+    def forward(self, field):
+        '''Return the forward rotation of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to rotate.
+
+        Returns
+        -------
+        Field
+            The rotated field.
+        '''
+        return self._operation(field, adjoint=False)
+
+    def backward(self, field):
+        '''Return the backward (adjoint) rotation of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to rotate.
+
+        Returns
+        -------
+        Field
+            The adjoint rotated field.
+        '''
+        return self._operation(field, adjoint=True)
+
+    def _operation(self, field, adjoint):
+        f1 = self._shear_x._operation(field, adjoint)
+        f2 = self._shear_y._operation(f1, adjoint)
+        f3 = self._shear_x._operation(f2, adjoint)
+
+        return f1, f2, f3

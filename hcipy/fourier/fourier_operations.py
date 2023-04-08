@@ -272,7 +272,10 @@ class FourierShear:
     input_grid : Grid
         The grid that is expected for the input field.
     shear : scalar
-
+        The amount of shear to apply to th image.
+    shear_dim : integer
+        The dimension to which to apply the shear. A shear along x would
+        be a value of 0, a shear along y would be 1.
 
     Attributes
     ----------
@@ -280,8 +283,13 @@ class FourierShear:
         The grid assumed for the input of this operator. Read-only.
     shear : scalar
         The amount of shear along the axis.
-    axis : integer
-        The axis of the shear. Read-only.
+    shear_dim : integer
+        The dimension along which the shear is applied. Read-only.
+
+    Raises
+    ------
+    ValueError
+        When the input grid is not 2D and regularly spaced.
     '''
     def __init__(self, input_grid, shear, shear_dim=0):
         if not input_grid.is_regular or input_grid.ndim != 2:
@@ -375,8 +383,25 @@ class FourierShear:
         return Field(f.reshape(shape), field.grid)
 
 class FourierRotation:
+    '''An image rotation operator implemented in the Fourier domain.
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The grid that is expected for the input field.
+    angle : scalar
+        The rotation angle.
+
+    Raises
+    ------
+    ValueError
+        When the input grid is not 2D and regularly spaced.
+    '''
     def __init__(self, input_grid, angle):
         self._input_grid = input_grid
+
+        if not input_grid.is_regular or input_grid.ndim != 2:
+            raise ValueError('The input grid should be 2D and regularly spaced.')
 
         self._shear_x = FourierShear(input_grid, shear=0, shear_dim=0)
         self._shear_y = FourierShear(input_grid, shear=0, shear_dim=1)

@@ -2,22 +2,25 @@ from hcipy import *
 import numpy as np
 import pytest
 
+def make_all_fourier_transforms(input_grid, q, fov, shift):
+	fft1 = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift, emulate_fftshifts=True)
+	fft2 = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift, emulate_fftshifts=False)
+	mft1 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=True, allocate_intermediate=True)
+	mft2 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=True, allocate_intermediate=False)
+	mft3 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=True)
+	mft4 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=False)
+	nft1 = NaiveFourierTransform(input_grid, fft1.output_grid, precompute_matrices=True)
+	nft2 = NaiveFourierTransform(input_grid, fft1.output_grid, precompute_matrices=False)
+
+	return [fft1, fft2, mft1, mft2, mft3, mft4, nft1, nft2]
+
 def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims):
 	grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
 	f_in = Field(np.random.randn(grid.size), grid).astype(dtype)
 
 	energy_in = np.sum(np.abs(f_in)**2 * f_in.grid.weights)
 
-	fft1 = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output, emulate_fftshifts=True)
-	fft2 = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output, emulate_fftshifts=False)
-	mft1 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=True, allocate_intermediate=True)
-	mft2 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=True, allocate_intermediate=False)
-	mft3 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=True)
-	mft4 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=False)
-	nft1 = NaiveFourierTransform(grid, fft1.output_grid, precompute_matrices=True)
-	nft2 = NaiveFourierTransform(grid, fft1.output_grid, precompute_matrices=False)
-
-	fourier_transforms = [fft1, fft2, mft1, mft2, mft3, mft4, nft1, nft2]
+	fourier_transforms = make_all_fourier_transforms(grid, q, fov, shift_output)
 
 	energy_ratios = []
 	patterns_match = []

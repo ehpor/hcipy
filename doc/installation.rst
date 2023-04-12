@@ -64,7 +64,7 @@ or
 
 .. code-block:: shell
 
-    pip intall hcipy[dev]
+    pip install hcipy[dev]
 
 depending on the way you originally installed HCIPy. You can then run the full test suite by running the following in the HCIPy directory.
 

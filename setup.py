@@ -38,7 +38,6 @@ setup(
 	extras_require={
 		"dev": [
 			"pytest",
-			"codecov",
 			"coverage",
 			"mpmath",
 			"dill",

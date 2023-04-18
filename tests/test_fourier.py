@@ -2,22 +2,25 @@ from hcipy import *
 import numpy as np
 import pytest
 
+def make_all_fourier_transforms(input_grid, q, fov, shift):
+	fft1 = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift, emulate_fftshifts=True)
+	fft2 = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift, emulate_fftshifts=False)
+	mft1 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=True, allocate_intermediate=True)
+	mft2 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=True, allocate_intermediate=False)
+	mft3 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=True)
+	mft4 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=False)
+	nft1 = NaiveFourierTransform(input_grid, fft1.output_grid, precompute_matrices=True)
+	nft2 = NaiveFourierTransform(input_grid, fft1.output_grid, precompute_matrices=False)
+
+	return [fft1, fft2, mft1, mft2, mft3, mft4, nft1, nft2]
+
 def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims):
 	grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
 	f_in = Field(np.random.randn(grid.size), grid).astype(dtype)
 
 	energy_in = np.sum(np.abs(f_in)**2 * f_in.grid.weights)
 
-	fft1 = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output, emulate_fftshifts=True)
-	fft2 = FastFourierTransform(grid, q=q, fov=fov, shift=shift_output, emulate_fftshifts=False)
-	mft1 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=True, allocate_intermediate=True)
-	mft2 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=True, allocate_intermediate=False)
-	mft3 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=True)
-	mft4 = MatrixFourierTransform(grid, fft1.output_grid, precompute_matrices=False, allocate_intermediate=False)
-	nft1 = NaiveFourierTransform(grid, fft1.output_grid, precompute_matrices=True)
-	nft2 = NaiveFourierTransform(grid, fft1.output_grid, precompute_matrices=False)
-
-	fourier_transforms = [fft1, fft2, mft1, mft2, mft3, mft4, nft1, nft2]
+	fourier_transforms = make_all_fourier_transforms(grid, q, fov, shift_output)
 
 	energy_ratios = []
 	patterns_match = []
@@ -79,15 +82,62 @@ def test_fourier_energy_conservation_2d(dtype):
 						for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
 							check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
 
-def check_symmetry(scale, q, fov, dims):
-	pass
+def check_symmetry(dtype, scale, shift_output, q, fov, dims):
+	tol = 1e-12 if dtype == 'complex128' else 1e-6
 
-def test_fourier_symmetries_2d():
+	input_grid = make_uniform_grid(dims, 1, has_center=False).scaled(scale)
+
+	# Check symmetry of the input grid.
+	for i in range(input_grid.ndim):
+		assert np.allclose(input_grid.coords[i], -input_grid.coords[i][::-1])
+
+	# Make even and odd input fields.
+	f_in = Field(np.random.randn(input_grid.size), input_grid).astype(dtype)
+
+	f_in_even = (f_in + f_in[::-1]) / 2
+	f_in_odd = (f_in - f_in[::-1]) / 2
+
+	assert np.allclose(f_in, f_in_even + f_in_odd, atol=tol)
+
+	# Make different Fourier transforms.
+	fourier_transforms = make_all_fourier_transforms(input_grid, q, fov, shift_output)
+
+	for ft in fourier_transforms:
+		# Check even and odd Fourier symmetries.
+		ft_even = ft.forward(f_in_even)
+		ft_odd = ft.forward(f_in_odd)
+
+		assert np.allclose(ft_even.imag, 0, atol=tol)
+		assert np.allclose(ft_odd.real, 0, atol=tol)
+
+		# Check linearity.
+		ft_both = ft.forward(f_in)
+		assert np.allclose(ft_both, ft_even + ft_odd, atol=tol)
+
+		ft_both_double = ft.forward(f_in * 2)
+		assert np.allclose(ft_both_double, ft_both * 2, atol=tol)
+
+@pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
+def test_fourier_symmetries_1d(dtype):
+	np.random.seed(0)
+
 	for scale in [1, 2]:
-		for q in [1, 3, 4]:
-			for fov in [1, 0.5, 0.8]:
-				for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
-					check_symmetry(scale, q, fov, dims)
+		for shift_output in [0, 0.1]:
+			for q in [1, 1.23, 3, 4]:
+				for fov in [1, 0.5, 0.8]:
+					for dims in [64, 65]:
+						check_symmetry(dtype, scale, shift_output, q, fov, dims)
+
+@pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
+def test_fourier_symmetries_2d(dtype):
+	np.random.seed(0)
+
+	for scale in [1, 2]:
+		for shift_output in [[0, 0], [0.1]]:
+			for q in [1, 1.23, 3, 4]:
+				for fov in [1, 0.5, 0.8]:
+					for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
+						check_symmetry(dtype, scale, shift_output, q, fov, dims)
 
 def test_make_fourier_transform():
 	input_grid = make_pupil_grid(128)

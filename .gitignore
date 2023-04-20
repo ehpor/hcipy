@@ -11,3 +11,4 @@ tags
 /.pytest_cache/
 /.eggs/
 .ipynb_checkpoints/
+_version.py

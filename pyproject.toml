@@ -1,0 +1,76 @@
+[project]
+name = "hcipy"
+dynamic = ["version"]
+authors = [
+    {name = "Emiel Por", email = "epor@stsci.edu"},
+]
+description = "A framework for performing optical propagation simulations, meant for high contrast imaging, in Python."
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Astronomy"
+]
+
+requires-python = ">=3.7"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib>=2.0.0",
+    "Pillow",
+    "pyyaml",
+    "astropy",
+    "imageio",
+    "xxhash",
+    "numexpr",
+    "asdf<=2.10 ; python_version<='3.7'",
+    "asdf ; python_version>'3.7'",
+    "importlib_metadata ; python_version<'3.7'",
+    "importlib_resources>=1.4 ; python_version<'3.9'"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "coverage",
+    "mpmath",
+    "dill",
+    "flake8",
+]
+doc = [
+    "numpydoc",
+    "sphinx_rtd_theme",
+    "nbsphinx",
+    "jupyter_client",
+    "ipykernel",
+    "poppy",
+    "nbclient",
+    "nbformat",
+    "nbconvert",
+    "sphinx-automodapi",
+    "progressbar2",
+]
+
+[project.urls]
+homepage = "https://hcipy.org"
+documentation = "https://docs.hcipy.org"
+repository = "https://github.com/ehpor/hcipy"
+
+[build-system]
+requires = ["setuptools>=61.2", "setuptools_scm[toml]>=7"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["hcipy"]
+zip-safe = false
+include-package-data = true
+
+[tool.setuptools_scm]
+write_to = "hcipy/_version.py"

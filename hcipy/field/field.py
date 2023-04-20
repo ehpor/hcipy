@@ -1,6 +1,7 @@
 import numpy as np
+from ..config import Configuration
 
-class Field(np.ndarray):
+class OldStyleField(np.ndarray):
 	'''The value of some physical quantity for each point in some coordinate system.
 
 	Parameters
@@ -188,3 +189,11 @@ def _field_reconstruct(subtype, baseclass, baseshape, basetype):
 	grid = None
 
 	return subtype.__new__(subtype, data, grid)
+
+class NewStyleField:
+	pass
+
+if Configuration().core.use_new_style_fields:
+	Field = NewStyleField
+else:
+	Field = OldStyleField

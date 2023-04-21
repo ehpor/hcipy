@@ -1,30 +1,12 @@
 import numpy as np
 from ..config import Configuration
 
-class OldStyleField(np.ndarray):
-	'''The value of some physical quantity for each point in some coordinate system.
-
-	Parameters
-	----------
-	arr : array_like
-		An array of values or tensors for each point in the :class:`Grid`.
-	grid : Grid
-		The corresponding :class:`Grid` on which the values are set.
-
-	Attributes
-	----------
-	grid : Grid
-		The grid on which the values are defined.
-	'''
+class Field:
 	def __new__(cls, arr, grid):
-		obj = np.asarray(arr).view(cls)
-		obj.grid = grid
-		return obj
-
-	def __array_finalize__(self, obj):
-		if obj is None:
-			return
-		self.grid = getattr(obj, 'grid', None)
+		if Configuration().core.use_new_style_fields:
+			return NewStyleField.__new__(NewStyleField, arr, grid)
+		else:
+			return OldStyleField.__new__(OldStyleField, arr, grid)
 
 	@classmethod
 	def from_dict(cls, tree):
@@ -166,6 +148,31 @@ class OldStyleField(np.ndarray):
 		i = self.grid.closest_to(p)
 		return self[..., i]
 
+class OldStyleField(Field, np.ndarray):
+	'''The value of some physical quantity for each point in some coordinate system.
+
+	Parameters
+	----------
+	arr : array_like
+		An array of values or tensors for each point in the :class:`Grid`.
+	grid : Grid
+		The corresponding :class:`Grid` on which the values are set.
+
+	Attributes
+	----------
+	grid : Grid
+		The grid on which the values are defined.
+	'''
+	def __new__(cls, arr, grid):
+		obj = np.asarray(arr).view(cls)
+		obj.grid = grid
+		return obj
+
+	def __array_finalize__(self, obj):
+		if obj is None:
+			return
+		self.grid = getattr(obj, 'grid', None)
+
 def _field_reconstruct(subtype, baseclass, baseshape, basetype):
 	'''Internal function for building a new Field object for pickling.
 
@@ -192,8 +199,3 @@ def _field_reconstruct(subtype, baseclass, baseshape, basetype):
 
 class NewStyleField:
 	pass
-
-if Configuration().core.use_new_style_fields:
-	Field = NewStyleField
-else:
-	Field = OldStyleField

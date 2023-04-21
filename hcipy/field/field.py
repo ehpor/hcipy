@@ -2,6 +2,20 @@ import numpy as np
 from ..config import Configuration
 
 class Field:
+	'''The value of some physical quantity for each point in some coordinate system.
+
+	Parameters
+	----------
+	arr : array_like
+		An array of values or tensors for each point in the :class:`Grid`.
+	grid : Grid
+		The corresponding :class:`Grid` on which the values are set.
+
+	Attributes
+	----------
+	grid : Grid
+		The grid on which the values are defined.
+	'''
 	def __new__(cls, arr, grid):
 		if Configuration().core.use_new_style_fields:
 			return NewStyleField.__new__(NewStyleField, arr, grid)

@@ -150,7 +150,7 @@ def test_field_inverse_truncated_modal():
         BB = np.empty_like(B)
 
         for i in range(grid.size):
-            BB[..., i] = inverse_truncated_modal(A[..., i], num_modes)
+            BB[..., i] = inverse_truncated_modal(np.asarray(A[..., i]), num_modes)
 
         assert np.allclose(B, BB)
 

@@ -282,7 +282,7 @@ def field_inverse_truncated_modal(f, num_modes):
 
 		res = np.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
 		for i in range(f.grid.size):
-			res[..., i] = inverse_truncated_modal(f[..., i], num_modes)
+			res[..., i] = inverse_truncated_modal(np.asarray(f[..., i]), num_modes)
 		return Field(res, f.grid)
 	else:
 		return inverse_truncated_modal(f, num_modes)

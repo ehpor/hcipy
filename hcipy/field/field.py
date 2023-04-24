@@ -18,7 +18,7 @@ class Field:
 	'''
 	def __new__(cls, arr, grid):
 		if Configuration().core.use_new_style_fields:
-			return NewStyleField.__new__(NewStyleField, arr, grid)
+			return super().__new__(NewStyleField)
 		else:
 			return OldStyleField.__new__(OldStyleField, arr, grid)
 
@@ -59,30 +59,6 @@ class Field:
 		}
 
 		return tree
-
-	def __getstate__(self):
-		'''Get the internal state for pickling.
-
-		Returns
-		-------
-		tuple
-			The state of the Field.
-		'''
-		data_state = super().__reduce__(self)[2]
-		return data_state + (self.grid,)
-
-	def __setstate__(self, state):
-		'''Set the internal state for pickling.
-
-		Parameters
-		----------
-		state : tuple
-			The state coming from a __getstate__().
-		'''
-		_, shp, typ, isf, raw, grid = state
-
-		super().__setstate__((shp, typ, isf, raw))
-		self.grid = grid
 
 	def __reduce__(self):
 		'''Return a 3-tuple for pickling the Field.
@@ -186,6 +162,30 @@ class OldStyleField(Field, np.ndarray):
 		if obj is None:
 			return
 		self.grid = getattr(obj, 'grid', None)
+
+	def __getstate__(self):
+		'''Get the internal state for pickling.
+
+		Returns
+		-------
+		tuple
+			The state of the Field.
+		'''
+		data_state = super().__reduce__(self)[2]
+		return data_state + (self.grid,)
+
+	def __setstate__(self, state):
+		'''Set the internal state for pickling.
+
+		Parameters
+		----------
+		state : tuple
+			The state coming from a __getstate__().
+		'''
+		_, shp, typ, isf, raw, grid = state
+
+		super().__setstate__((shp, typ, isf, raw))
+		self.grid = grid
 
 def _field_reconstruct(subtype, baseclass, baseshape, basetype):
 	'''Internal function for building a new Field object for pickling.

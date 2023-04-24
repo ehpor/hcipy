@@ -211,5 +211,168 @@ def _field_reconstruct(subtype, baseclass, baseshape, basetype):
 
 	return subtype.__new__(subtype, data, grid)
 
-class NewStyleField:
-	pass
+def _unwrap(arg):
+	if isinstance(arg, Field):
+		return arg.data
+
+	if isinstance(arg, list):
+		return [_unwrap(x) for x in arg]
+
+	if isinstance(arg, dict):
+		return {key: _unwrap(val) for key, val in arg.items()}
+
+	if isinstance(arg, tuple):
+		return tuple(_unwrap(x) for x in arg)
+
+	return arg
+
+class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
+	def __init__(self, data, grid):
+		self.data = np.asarray(data)
+		self.grid = grid
+
+	def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+		out = kwargs.get('out', ())
+
+		inputs = _unwrap(inputs)
+
+		if out:
+			kwargs['out'] = tuple(x.data if is_field(x) else x for x in out)
+
+		result = getattr(ufunc, method)(*inputs, **kwargs)
+
+		if isinstance(result, np.ndarray):
+			return Field(result, self.grid)
+		else:
+			return result
+
+	def __array__(self, dtype=None):
+		if dtype is None:
+			return self.data
+
+		return self.data.astype(dtype, copy=False)
+
+	def __array_function__(self, func, types, args, kwargs):
+		args = _unwrap(args)
+
+		result = func(*args, **kwargs)
+
+		if isinstance(result, np.ndarray):
+			return Field(result, self.grid)
+
+		return result
+
+	def __getitem__(self, indices):
+		res = self.data[indices]
+		if np.isscalar(res):
+			return res
+
+		return Field(res, self.grid)
+
+	def __setitem__(self, indices, values):
+		self.data[indices] = values
+
+		return self
+
+	def __getstate__(self):
+		'''Get the internal state for pickling.
+
+		Returns
+		-------
+		tuple
+			The state of the Field.
+		'''
+		data_state = self.data.__reduce__()[2]
+		return data_state + (self.grid,)
+
+	def __setstate__(self, state):
+		'''Set the internal state for pickling.
+
+		Parameters
+		----------
+		state : tuple
+			The state coming from a __getstate__().
+		'''
+		_, shp, typ, isf, raw, grid = state
+
+		self.data = np.array([])
+		self.data.__setstate__((shp, typ, isf, raw))
+		self.grid = grid
+
+	@property
+	def T(self):
+		return np.transpose(self)
+
+	@property
+	def dtype(self):
+		return self.data.dtype
+
+	@property
+	def imag(self):
+		return np.imag(self)
+
+	@property
+	def real(self):
+		return np.real(self)
+
+	@property
+	def size(self):
+		return np.prod(self.shape)
+
+	@property
+	def ndim(self):
+		return len(self.shape)
+
+	@property
+	def shape(self):
+		return self.data.shape
+
+	def astype(self, dtype, *args, **kwargs):
+		return Field(self.data.astype(dtype, *args, **kwargs), self.grid)
+
+	def __len__(self):
+		return len(self.data)
+
+	def conj(self):
+		return np.conj(self)
+
+	def conjugate(self):
+		return np.conjugate(self)
+
+	@property
+	def flags(self):
+		return self.data.flags
+
+	all = np.all
+	any = np.any
+	argmax = np.argmax
+	argmin = np.argmin
+	argpartition = np.argpartition
+	argsort = np.argsort
+	clip = np.clip
+	compress = np.compress
+	copy = np.copy
+	cumprod = np.cumprod
+	cumsum = np.cumsum
+	dot = np.dot
+	flatten = np.ravel
+	max = np.max
+	mean = np.mean
+	min = np.min
+	nonzero = np.nonzero
+	prod = np.prod
+	ptp = np.ptp
+	ravel = np.ravel
+	repeat = np.repeat
+	reshape = np.reshape
+	round = np.round
+	sort = np.sort
+	squeeze = np.squeeze
+	std = np.std
+	sum = np.sum
+	trace = np.trace
+	transpose = np.transpose
+	var = np.var
+
+def is_field(obj):
+	return isinstance(obj, Field)

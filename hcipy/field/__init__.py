@@ -32,7 +32,8 @@ __all__ = [
     'subsample_field',
     'evaluate_supersampled',
     'make_uniform_vector_field',
-    'make_uniform_vector_field_generator'
+    'make_uniform_vector_field_generator',
+    'is_field',
 ]
 
 from .grid import *

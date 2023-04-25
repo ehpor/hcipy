@@ -163,7 +163,7 @@ class GifWriter(object):
 	def convert(self):
 		'''Convert all frames into a gif file.
 		'''
-		imageio.mimsave(self.filename, self._frames, fps=self.framerate)
+		imageio.mimsave(self.filename, self._frames, duration=1 / self.framerate)
 
 	def close(self):
 		'''Close the animation and create the final gif file.

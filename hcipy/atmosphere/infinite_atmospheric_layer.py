@@ -202,12 +202,12 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
 		layer = FiniteAtmosphericLayer(self.input_grid, self.Cn_squared, self.outer_scale, self.velocity, self.height, oversampling, self.rng)
 
+		self._achromatic_screen = layer.phase_for(1)
+		self._shifted_achromatic_screen = self._achromatic_screen
+
 		# Reuse the rng from the temporary layer, since it "forwarded" the randomness.
 		# This avoids reusing the same randomness every call to reset().
 		self.rng = layer.rng
-
-		self._achromatic_screen = layer.phase_for(1)
-		self._shifted_achromatic_screen = self._achromatic_screen
 
 	def _extrude(self, where=None):
 		flipped = (where == 'top') or (where == 'right')

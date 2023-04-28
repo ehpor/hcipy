@@ -80,7 +80,7 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
 		self.psd = power_spectral_density_von_karman(fried_parameter_from_Cn_squared(self.Cn_squared, 1), self.L0)
 
 		self.noise_factory = SpectralNoiseFactoryMultiscale(self.psd, self.input_grid, self.oversampling)
-		self._noise = self.noise_factory.make_random()
+		self._noise = self.noise_factory.make_random(self.rng)
 
 		self._achromatic_screen = None
 

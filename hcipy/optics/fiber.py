@@ -30,6 +30,8 @@ def fiber_mode_gaussian(mode_field_diameter):
 
 		return Field(res, grid)
 
+	return func
+
 class StepIndexFiber(AgnosticOpticalElement):
 	'''A step-index fiber.
 

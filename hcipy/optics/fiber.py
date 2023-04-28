@@ -42,6 +42,8 @@ class StepIndexFiber(AgnosticOpticalElement):
 		The numerical aperture of the fiber.
 	fiber_length : scalar
 		The length of the optical fiber.
+	position : array_like
+		The 2D position of the fiber in the optical plane.
 	'''
 	def __init__(self, core_radius, NA, fiber_length, position=None):
 		super().__init__(False, True)
@@ -54,11 +56,12 @@ class StepIndexFiber(AgnosticOpticalElement):
 
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		monochromatic_V = self.V(wavelength)
+
 		instance_data.NA = self.evaluate_parameter(self._NA, input_grid, output_grid, wavelength)
 		instance_data.fiber_modes, instance_data.beta = make_lp_modes(input_grid.shifted(-self._position), monochromatic_V, self.core_radius, return_betas=True)
 
 	def num_modes(self, wavelength):
-		'''The approximate amount of modes of the fiber.
+		'''The approximate number of modes of the fiber.
 		'''
 		V = self.V(wavelength)
 		return V**2 / 2
@@ -92,7 +95,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 
 	@property
 	def position(self):
-		'''The position of the fiber.
+		'''The 2D position of the fiber.
 		'''
 		return self._position
 
@@ -153,7 +156,6 @@ class StepIndexFiber(AgnosticOpticalElement):
 		Wavefront
 			The wavefront that exits the fiber.
 		'''
-
 		M = instance_data.fiber_modes.transformation_matrix
 		mode_coefficients = np.einsum('...i, ij->...j', wavefront.electric_field * wavefront.grid.weights, M.conj())
 		output_electric_field = np.einsum('...i, ij->...j', mode_coefficients * np.exp(1j * instance_data.beta * self.fiber_length), M.T.conj())
@@ -202,12 +204,15 @@ class SingleModeFiber(Detector):
 		self.intensity = 0
 		return intensity
 
-# This implementation assumes orthogonality of the different fibers.
-# Forward() should be changed if this is added in the future.
-# Also, the modes are independent of wavelength.
 class SingleModeFiberArray(OpticalElement):
 	def __init__(self, input_grid, fiber_grid, mode, *args, **kwargs):
 		'''An array of single-mode fibers.
+
+		This implementation assumes orthogonality of the different fibers. It
+		does not attempt to perform any orthogonalization of the fibers. This
+		may lead to creation of light power.
+
+		Additionally, all fiber modes are assumed to be independent of wavelength.
 
 		Parameters
 		----------
@@ -229,15 +234,33 @@ class SingleModeFiberArray(OpticalElement):
 		self.projection_matrix = self.fiber_modes.transformation_matrix
 
 	def forward(self, wavefront):
+		'''Forward propagate the light through the fiber array.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The incoming wavefront.
+
+		Returns
+		-------
+		Wavefront
+			The complex amplitudes of each fiber.
+		'''
 		res = self.projection_matrix.T.dot(wavefront.electric_field * self.input_grid.weights)
 		return Wavefront(Field(res, self.fiber_grid), wavefront.wavelength)
 
 	def backward(self, wavefront):
+		'''Backwards propagate the light through the fiber array.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The complex amplitudes for each of the single-mode fibers.
+
+		Returns
+		-------
+		Wavefront
+			The outgoing wavefront.
+		'''
 		res = self.projection_matrix.dot(wavefront.electric_field)
 		return Wavefront(Field(res, self.input_grid), wavefront.wavelength)
-
-	def get_transformation_matrix_forward(self, wavelength=1):
-		return self.projection_matrix.T
-
-	def get_transformation_matrix_backward(self, wavelength=1):
-		return self.projection_matrix

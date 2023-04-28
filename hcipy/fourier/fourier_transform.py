@@ -1,6 +1,17 @@
 import numpy as np
 from ..field import Field
 
+from dataclasses import dataclass
+
+@dataclass
+class ComputationalComplexity:
+	num_multiplications: int = 0
+	num_additions: int = 0
+
+	@property
+	def num_operations(self):
+		return self.num_multiplications + self.num_additions
+
 class FourierTransform(object):
     '''The base class for all Fourier transform implementations.
 
@@ -75,6 +86,44 @@ class FourierTransform(object):
         A /= (2 * np.pi)**self.input_grid.ndim
 
         return A
+
+	@classmethod
+	def is_supported(cls, input_grid, output_grid):
+		'''Check if the specified grids are supported by this Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Fourier transform.
+
+		Returns
+		-------
+		boolean
+			Whether the grids are supported or not.
+		'''
+		return cls.compute_complexity(input_grid, output_grid) is not None
+
+	@staticmethod
+	def compute_complexity(input_grid, output_grid):
+		'''Compute the algorithmic complexity for this Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Fourier transform.
+
+		Returns
+		-------
+		AlgorithmicComplexity or None
+			The algorithmic complexity for this Fourier transform. If this
+			Fourier transform does not support the specified grids, this
+			function will return None.
+		'''
+		return None
 
 def _time_it_iterative(function, num_iterations):
     import time

@@ -3,7 +3,31 @@ from .detector import Detector
 from .optical_element import OpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from .wavefront import Wavefront
 from ..mode_basis import ModeBasis, make_lp_modes
-from ..field import Field
+
+def fiber_mode_gaussian(mode_field_diameter):
+	'''The Gaussian approximation of a fiber mode.
+
+	Parameters
+	----------
+	mode_field_diameter : scalar
+		The mode field diameter of the fiber.
+
+	Returns
+	-------
+	Field generator
+		The Gaussian fiber mode.
+	'''
+	def func(grid):
+		if grid.is_('cartesian'):
+			r2 = grid.x**2 + grid.y**2
+		else:
+			r2 = grid.as_('polar').r**2
+
+		# Compute and normalize the Gaussian function.
+		res = np.exp(-r2 / ((0.5 * mode_field_diameter)**2))
+		res /= np.sum(np.abs(res)**2 * grid.weights)
+
+		return Field(res, grid)
 
 class StepIndexFiber(AgnosticOpticalElement):
 	'''A step-index fiber.

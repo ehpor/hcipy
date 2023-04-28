@@ -171,7 +171,7 @@ class OldStyleField(Field, np.ndarray):
 		tuple
 			The state of the Field.
 		'''
-		data_state = super().__reduce__(self)[2]
+		data_state = np.ndarray.__reduce__(self)[2]
 		return data_state + (self.grid,)
 
 	def __setstate__(self, state):

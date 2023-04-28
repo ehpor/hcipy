@@ -188,8 +188,7 @@ class StepIndexFiber(AgnosticOpticalElement):
 
 		return Wavefront(output_electric_field, wavefront.wavelength)
 
-@deprecated('This class operated counter to HCIPy best practices and will be removed in HCIPy 0.7 or later.' +
-	'Please use a combination of the SingleModeFiberInjection and Detector classes instead.')
+@deprecated('This class operated counter to HCIPy best practices and will be removed in HCIPy 0.7 or later. Please use a combination of the SingleModeFiberInjection and Detector classes instead.')
 class SingleModeFiber(Detector):
 	def __init__(self, input_grid, mode_field_diameter, mode=None):
 		self.input_grid = input_grid

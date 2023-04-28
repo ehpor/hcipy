@@ -44,13 +44,13 @@ class StepIndexFiber(AgnosticOpticalElement):
 		The length of the optical fiber.
 	'''
 	def __init__(self, core_radius, NA, fiber_length, position=None):
+		super().__init__(False, True)
+
 		self._core_radius = core_radius
 		self._NA = NA
 		self.fiber_length = fiber_length
 
 		self._position = np.zeros((2,)) if position is None else np.array(position)
-
-		AgnosticOpticalElement.__init__(self, False, True)
 
 	def make_instance(self, instance_data, input_grid, output_grid, wavelength):
 		monochromatic_V = self.V(wavelength)

@@ -279,7 +279,10 @@ class SingleModeFiberInjection(OpticalElement):
 		Wavefront
 			The outgoing wavefront.
 		'''
-		return Wavefront(wavefront.electric_field * self.mode, wavefront.wavelength, wavefront.input_tokes_vector)
+		output = wavefront.electric_field * self.mode
+		output = Field(output, self.input_grid)
+
+		return Wavefront(output, wavefront.wavelength, wavefront.input_stokes_vector)
 
 class SingleModeFiberArray(OpticalElement):
 	def __init__(self, input_grid, fiber_grid, mode, *args, **kwargs):

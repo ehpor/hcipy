@@ -202,7 +202,7 @@ class SingleModeFiber(Detector):
 		except TypeError:
 			self.mode = mode(self.input_grid)
 
-		self.mode /= np.sum(np.abs(self.mode)**2 * self.input_grid.weights)
+		self.mode /= np.sqrt(np.sum(np.abs(self.mode)**2 * self.input_grid.weights))
 		self.intensity = 0
 
 	def integrate(self, wavefront, dt, weight=1):

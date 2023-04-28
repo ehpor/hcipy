@@ -3,6 +3,7 @@ from .detector import Detector
 from .optical_element import OpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from .wavefront import Wavefront
 from ..mode_basis import ModeBasis, make_lp_modes
+from ..field import Field, CartesianGrid, RegularCoords
 
 def fiber_mode_gaussian(mode_field_diameter):
 	'''The Gaussian approximation of a fiber mode.
@@ -184,25 +185,73 @@ class StepIndexFiber(AgnosticOpticalElement):
 
 		return Wavefront(output_electric_field, wavefront.wavelength)
 
-class SingleModeFiber(Detector):
-	def __init__(self, input_grid, mode_field_diameter, mode=None):
+class SingleModeFiberInjection(OpticalElement):
+	'''Injection into a single mode fiber.
+
+	Parameters
+	----------
+	input_grid : Grid
+		The grid of the incoming wavefront.
+	mode : Field generator
+		The mode of the fiber.
+	position : array_like
+		The 2D position of the fiber. If this is None, the fiber will be located at (0, 0).
+	'''
+	def __init__(self, input_grid, mode, position=None):
 		self.input_grid = input_grid
-		self.mode_field_diameter = mode_field_diameter
 
-		if mode is None:
-			mode = gaussian_mode
+		if position is None:
+			position = np.zeros(2)
+		else:
+			position = np.array(position)
 
-		self.mode = mode(self.input_grid, mode_field_diameter)
+		self.output_grid = CartesianGrid(RegularCoords([1, 1], [1, 1], position))
+		self.output_grid.weights = 1
+
+		# Compute the fiber mode and normalize.
+		self.mode = mode(self.input_grid.shifted(-position), mode_field_diameter)
 		self.mode /= np.sum(np.abs(self.mode)**2 * self.input_grid.weights)
-		self.intensity = 0
 
-	def integrate(self, wavefront, dt, weight=1):
-		self.intensity += weight * dt * (np.dot(wavefront.electric_field * wavefront.electric_field.grid.weights, self.mode))**2
+	def forward(self, wavefront):
+		'''Forward propagate the light through the fiber.
 
-	def read_out(self):
-		intensity = self.intensity
-		self.intensity = 0
-		return intensity
+		Parameters
+		----------
+		wavefront : Wavefront
+			The incoming wavefront.
+
+		Returns
+		-------
+		Wavefront
+			The complex amplitude of the single-mode fiber.
+		'''
+		output = np.dot(wavefront.electric_field * self.input_grid.weights, self.mode)
+
+		if not np.isscalar(output):
+			output = np.array(output)
+		else:
+			# The incoming wavefront was polarized, so we need to add a dimension to
+			# make it a valid Field.
+			output = output[..., np.newaxis]
+
+		output = Field(output, self.output_grid)
+
+		return Wavefront(output, wavefront.wavelength, wavefront.input_stokes_vector)
+
+	def backward(self, wavefront):
+		'''Backwards propagate the light through the fiber.
+
+		Parameters
+		----------
+		wavefront : Wavefront
+			The complex amplitude for the single-mode fiber.
+
+		Returns
+		-------
+		Wavefront
+			The outgoing wavefront.
+		'''
+		return Wavefront(wavefront.electric_field * self.mode, wavefront.wavelength, wavefront.input_tokes_vector)
 
 class SingleModeFiberArray(OpticalElement):
 	def __init__(self, input_grid, fiber_grid, mode, *args, **kwargs):

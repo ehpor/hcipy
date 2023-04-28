@@ -17,7 +17,7 @@ __all__ = [
 	'Detector',
 	'NoiselessDetector',
 	'NoisyDetector',
-	'fiber_mode_gaussian',
+	'make_gaussian_fiber_mode',
 	'StepIndexFiber',
 	'SingleModeFiber',
 	'SingleModeFiberInjection',

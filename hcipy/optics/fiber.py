@@ -6,7 +6,7 @@ from ..mode_basis import ModeBasis, make_lp_modes
 from ..field import Field, CartesianGrid, RegularCoords
 from ..dev import deprecated
 
-def fiber_mode_gaussian(mode_field_diameter):
+def make_gaussian_fiber_mode(mode_field_diameter):
 	'''The Gaussian approximation of a fiber mode.
 
 	Parameters
@@ -195,7 +195,7 @@ class SingleModeFiber(Detector):
 		self.mode_field_diameter = mode_field_diameter
 
 		if mode is None:
-			mode = fiber_mode_gaussian(mode_field_diameter)
+			mode = make_gaussian_fiber_mode(mode_field_diameter)
 
 		try:
 			self.mode = mode(self.input_grid, mode_field_diameter)

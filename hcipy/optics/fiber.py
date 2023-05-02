@@ -28,7 +28,7 @@ def make_gaussian_fiber_mode(mode_field_diameter):
 		# Compute and normalize the Gaussian function.
 		mode_field_radius = 0.5 * mode_field_diameter
 		res = np.exp(-r2 / mode_field_radius**2)
-		res /= np.sqrt(0.5 * np.pi * mode_field_radius**2)
+		res *= np.sqrt(2 / np.pi) / mode_field_radius
 
 		return Field(res, grid)
 

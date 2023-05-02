@@ -207,7 +207,7 @@ class SingleModeFiber(Detector):
 		self.intensity = 0
 
 	def integrate(self, wavefront, dt, weight=1):
-		self.intensity += weight * dt * (np.dot(wavefront.electric_field * wavefront.electric_field.grid.weights, self.mode))**2
+		self.intensity += weight * dt * (np.dot(wavefront.electric_field.conj() * wavefront.electric_field.grid.weights, self.mode))**2
 
 	def read_out(self):
 		intensity = self.intensity

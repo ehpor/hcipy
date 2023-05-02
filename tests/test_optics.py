@@ -636,7 +636,7 @@ def test_step_index_fiber():
 		assert forward_wf.total_power <= img.total_power * (1 + 1e-4)
 		assert backward_wf.total_power <= forward_wf.total_power * (1 + 1e-4)
 
-def test_gaussian_fiber_mode():
+def test_gaussian_fiber_mode_power():
 	for q in [16, 32, 64]:
 		for mfd in [0.25, 0.5, 1]:
 			grid = make_focal_grid(q, 4)
@@ -645,6 +645,13 @@ def test_gaussian_fiber_mode():
 			wf = Wavefront(mode)
 
 			assert np.allclose(wf.total_power, 1)
+
+def test_gaussian_fiber_mode_mfd():
+	for mfd in [0.25, 0.5, 1]:
+		grid = CartesianGrid(UnstructuredCoords(([0, mfd / 2], [0, 0])))
+		mode = make_gaussian_fiber_mode(mfd)(grid)
+
+		assert np.allclose(mode[1] / mode[0], np.exp(-1))
 
 def test_single_mode_fiber_injection():
 	grid = make_focal_grid(16, 4)

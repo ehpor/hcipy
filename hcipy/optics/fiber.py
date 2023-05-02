@@ -255,7 +255,7 @@ class SingleModeFiberInjection(OpticalElement):
 		Wavefront
 			The complex amplitude of the single-mode fiber.
 		'''
-		output = np.dot(wavefront.electric_field * self.input_grid.weights, self.mode)
+		output = np.dot(wavefront.electric_field.conj() * self.input_grid.weights, self.mode)
 
 		if not np.isscalar(output):
 			output = np.array(output)
@@ -328,7 +328,7 @@ class SingleModeFiberArray(OpticalElement):
 		Wavefront
 			The complex amplitudes of each fiber.
 		'''
-		res = self.projection_matrix.T.dot(wavefront.electric_field * self.input_grid.weights)
+		res = self.projection_matrix.T.dot(wavefront.electric_field.conj() * self.input_grid.weights)
 		return Wavefront(Field(res, self.fiber_grid), wavefront.wavelength)
 
 	def backward(self, wavefront):

@@ -239,6 +239,7 @@ class SingleModeFiberInjection(OpticalElement):
 
 		# Compute the fiber mode and normalize.
 		self.mode = mode(self.input_grid.shifted(-position))
+		self.mode.grid = self.input_grid
 		self.mode /= np.sqrt(np.sum(np.abs(self.mode)**2 * self.input_grid.weights))
 
 	def forward(self, wavefront):

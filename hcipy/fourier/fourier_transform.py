@@ -89,7 +89,7 @@ class FourierTransform(object):
 
 	@classmethod
 	def is_supported(cls, input_grid, output_grid):
-		'''Check if the specified grids are supported by this Fourier transform.
+		'''Are the specified grids supported by this Fourier transform?
 
 		Parameters
 		----------
@@ -103,10 +103,34 @@ class FourierTransform(object):
 		boolean
 			Whether the grids are supported or not.
 		'''
-		return cls.compute_complexity(input_grid, output_grid) is not None
+		try:
+			cls.check_if_supported(input_grid, output_grid)
+		except ValueError:
+			return False
 
-	@staticmethod
-	def compute_complexity(input_grid, output_grid):
+		return True
+
+	@classmethod
+	def check_if_supported(cls, input_grid, output_grid):
+		'''Check if the specified grids are supported by this Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Fourier transform.
+
+		Raises
+		------
+		ValueError
+			If the grids are not supported. The message will indicate why
+			the grids are not supported.
+		'''
+		raise NotImplementedError()
+
+	@classmethod
+	def compute_complexity(cls, input_grid, output_grid):
 		'''Compute the algorithmic complexity for this Fourier transform.
 
 		Parameters
@@ -118,12 +142,16 @@ class FourierTransform(object):
 
 		Returns
 		-------
-		AlgorithmicComplexity or None
-			The algorithmic complexity for this Fourier transform. If this
-			Fourier transform does not support the specified grids, this
-			function will return None.
+		AlgorithmicComplexity
+			The algorithmic complexity for this Fourier transform.
+
+		Raises
+		------
+		ValueError
+			If the grids are not supported. The message will indicate why
+			the grids are not supported.
 		'''
-		return None
+		raise NotImplementedError()
 
 def _time_it_iterative(function, num_iterations):
     import time

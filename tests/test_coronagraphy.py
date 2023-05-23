@@ -74,10 +74,10 @@ def test_vector_vortex_coronagraph_polarized():
 	aperture = make_obstructed_circular_aperture(1, 0.2)
 	aperture = evaluate_supersampled(aperture, pupil_grid, 8)
 
-	lyot = make_obstructed_circular_aperture(0.99, 0.2/0.99)
+	lyot = make_obstructed_circular_aperture(0.99, 0.2 / 0.99)
 	lyot = evaluate_supersampled(lyot, pupil_grid, 8) > 1 - 1e-5
 
-	stokes_vector = (1, 0, 0, 1) 
+	stokes_vector = (1, 0, 0, 1)
 	for charge in [2]:
 		vortex = VectorVortexCoronagraph(charge)
 

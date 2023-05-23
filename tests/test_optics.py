@@ -636,6 +636,56 @@ def test_step_index_fiber():
 		assert forward_wf.total_power <= img.total_power * (1 + 1e-4)
 		assert backward_wf.total_power <= forward_wf.total_power * (1 + 1e-4)
 
+def test_gaussian_fiber_mode_power():
+	for q in [16, 32, 64]:
+		for mfd in [0.25, 0.5, 1]:
+			grid = make_focal_grid(q, 4)
+			mode = make_gaussian_fiber_mode(mfd)(grid)
+
+			wf = Wavefront(mode)
+
+			assert np.allclose(wf.total_power, 1)
+
+def test_gaussian_fiber_mode_mfd():
+	for mfd in [0.25, 0.5, 1]:
+		grid = CartesianGrid(UnstructuredCoords(([0, mfd / 2], [0, 0])))
+		mode = make_gaussian_fiber_mode(mfd)(grid)
+
+		assert np.allclose(mode[1] / mode[0], np.exp(-1))
+
+def test_single_mode_fiber_injection():
+	grid = make_focal_grid(16, 4)
+	mode_1 = make_gaussian_fiber_mode(1)
+
+	def mode_2(grid):
+		return mode_1(grid) * 1j
+
+	for mode in [mode_1, mode_2]:
+		smf = SingleModeFiberInjection(grid, mode)
+
+		wf = Wavefront(mode(grid))
+		wf.total_power = 1
+
+		post_fiber_wf = smf.forward(wf)
+
+		# This wavefront should fully couple into the fiber.
+		assert np.allclose(post_fiber_wf.electric_field, 1)
+		assert np.allclose(post_fiber_wf.total_power, 1)
+
+		pre_fiber_wf = smf.backward(post_fiber_wf)
+
+		# Power should be conserved when injecting a perfect mode.
+		assert np.allclose(pre_fiber_wf.electric_field, wf.electric_field)
+		assert np.allclose(pre_fiber_wf.total_power, 1)
+
+		wf = Wavefront(mode(grid) * grid.x)
+		wf.total_power = 1
+
+		post_fiber_wf = smf.forward(wf)
+
+		# This wavefront should not couple at all into the fiber.
+		assert np.allclose(post_fiber_wf.total_power, 0)
+
 def check_thin_lens(wf, lens, num_steps, focal_length):
 	dz = focal_length / (num_steps / 2)
 	prop = FresnelPropagator(wf.electric_field.grid, dz)

@@ -53,15 +53,15 @@ def test_vector_vortex_coronagraph():
 		assert img.total_power < 1e-6
 		assert img.intensity.max() / img_ref.intensity.max() < 1e-8
 
-        # Backward check
-        # with input 2-tensor electric field
+		# Backward check
+		# with input 2-tensor electric field
 		img.electric_field[0,1] *= 0
 		img.electric_field[1,0] *= 0
 		img.electric_field[1,1] *= 0
 		wf_b = prop.backward(img)
 		wf_input_b = vortex.backward(wf_b)
 
-        # with input scalar electric field
+		# with input scalar electric field
 		wf_c = prop.backward(Wavefront(img.electric_field[0, 0]))
 		wf_input_c = vortex.backward(wf_c)
 		assert np.all(wf_input_b.electric_field[0, 0] == wf_input_c.electric_field[0, 0])

@@ -376,10 +376,10 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 				if not wavefront.is_polarized:
 					efield = Wavefront(wavefront.electric_field, input_stokes_vector=(1, 0, 0, 0))
 					pup = Wavefront(prop.backward(efield.electric_field),
-		                        	input_stokes_vector=efield.input_stokes_vector)
+									input_stokes_vector=efield.input_stokes_vector)
 				else:
 					pup = Wavefront(prop.backward(wavefront.electric_field),
-		    						input_stokes_vector=wavefront.input_stokes_vector)
+									input_stokes_vector=wavefront.input_stokes_vector)
 			else:
 				focal = prop(wavefront)
 				if not focal.is_polarized:

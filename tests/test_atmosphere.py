@@ -160,6 +160,41 @@ def test_infinite_atmosphere_zernike_variances_in_depth():
 	check_zernike_variances(0.5e-6, 1, 0.3, 10, True)
 	check_zernike_variances(0.5e-6, 1, 0.1, 40, True)
 
+@pytest.mark.parametrize('layer_cls', [InfiniteAtmosphericLayer, FiniteAtmosphericLayer])
+def test_atmospheric_layer_reset(layer_cls):
+	fried_parameter = 0.3  # meter
+	wavelength = 1e-6  # meter
+	velocity = 10.0  # meter / sec
+	pupil_diameter = 8  # meter
+	outer_scale = 20  # meter
+
+	pupil_grid = make_pupil_grid(32, pupil_diameter)
+
+	Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
+	layer = layer_cls(pupil_grid, Cn_squared, outer_scale, [velocity / np.sqrt(2), velocity / np.sqrt(2)])
+
+	phase_1 = layer.phase_for(wavelength)
+	layer.reset(make_independent_realization=False)
+	phase_2 = layer.phase_for(wavelength)
+	layer.reset(make_independent_realization=False)
+	phase_3 = layer.phase_for(wavelength)
+	layer.reset(make_independent_realization=True)
+	phase_4 = layer.phase_for(wavelength)
+	layer.reset(make_independent_realization=False)
+	phase_5 = layer.phase_for(wavelength)
+	layer.evolve_until(1)
+	phase_6 = layer.phase_for(wavelength)
+	layer.reset(make_independent_realization=False)
+	layer.evolve_until(1)
+	phase_7 = layer.phase_for(wavelength)
+
+	assert np.allclose(phase_1, phase_2)
+	assert np.allclose(phase_2, phase_3)
+	assert not np.allclose(phase_3, phase_4)
+	assert np.allclose(phase_4, phase_5)
+	assert not np.allclose(phase_5, phase_6)
+	assert np.allclose(phase_6, phase_7)
+
 def test_multi_layer_atmosphere():
 	r0 = 0.1
 	wavelength = 500e-9

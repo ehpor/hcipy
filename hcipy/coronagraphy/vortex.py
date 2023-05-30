@@ -374,16 +374,11 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
 		for i, (jones_matrix, prop) in enumerate(zip(instance_data.jones_matrices, instance_data.props)):
 			if i == 0:
 				if not wavefront.is_polarized:
-					efield = Wavefront(wavefront.electric_field, input_stokes_vector=(1, 0, 0, 0))
-					pup = Wavefront(
-						prop.backward(efield.electric_field),
-						input_stokes_vector=efield.input_stokes_vector
-					)
-				else:
-					pup = Wavefront(
-						prop.backward(wavefront.electric_field),
-						input_stokes_vector=wavefront.input_stokes_vector
-					)
+					wavefront = Wavefront(wavefront.electric_field, input_stokes_vector=(1, 0, 0, 0))
+				pup = Wavefront(
+					prop.backward(wavefront.electric_field),
+					input_stokes_vector=wavefront.input_stokes_vector
+				)
 			else:
 				focal = prop(wavefront)
 				if not focal.is_polarized:

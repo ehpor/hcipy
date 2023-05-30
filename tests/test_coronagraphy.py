@@ -53,6 +53,78 @@ def test_vector_vortex_coronagraph():
 		assert img.total_power < 1e-6
 		assert img.intensity.max() / img_ref.intensity.max() < 1e-8
 
+		# Backward check
+		# with input 2-tensor electric field
+		img.electric_field[0, 1] *= 0
+		img.electric_field[1, 0] *= 0
+		img.electric_field[1, 1] *= 0
+		wf_b = prop.backward(img)
+		wf_input_b = vortex.backward(wf_b)
+
+		# with input scalar electric field
+		wf_c = prop.backward(Wavefront(img.electric_field[0, 0]))
+		wf_input_c = vortex.backward(wf_c)
+		assert np.allclose(wf_input_b.electric_field[0, 0], wf_input_c.electric_field[0, 0])
+
+def test_vector_vortex_coronagraph_polarized():
+	pupil_grid = make_pupil_grid(256)
+	focal_grid = make_focal_grid(4, 32)
+	prop = FraunhoferPropagator(pupil_grid, focal_grid)
+
+	aperture = make_obstructed_circular_aperture(1, 0.2)
+	aperture = evaluate_supersampled(aperture, pupil_grid, 8)
+
+	lyot = make_obstructed_circular_aperture(0.99, 0.2 / 0.99)
+	lyot = evaluate_supersampled(lyot, pupil_grid, 8) > 1 - 1e-5
+
+	stokes_vector = (1, 0, 0, 1)
+	for charge in [2]:
+		vortex = VectorVortexCoronagraph(charge)
+
+		wf = Wavefront(aperture, input_stokes_vector=stokes_vector)
+		wf.total_power = 1
+
+		wf = vortex(wf)
+		wf.electric_field *= lyot
+		img = prop(wf)
+
+		# incident circular polarization is transfered to orthogonal state
+		assert np.allclose(img.intensity, (-1) * img.V)
+
+		# Backward check
+		wf_b = prop.backward(img)
+		wf_input_b = vortex.backward(wf_b)
+		assert np.allclose(wf_input_b.intensity, (-1)**2 * wf_input_b.V)
+
+def test_scalar_vortex_coronagraph_polarized():
+	pupil_grid = make_pupil_grid(256)
+	focal_grid = make_focal_grid(4, 32)
+	prop = FraunhoferPropagator(pupil_grid, focal_grid)
+
+	aperture = make_obstructed_circular_aperture(1, 0.2)
+	aperture = evaluate_supersampled(aperture, pupil_grid, 8)
+
+	lyot = make_obstructed_circular_aperture(0.99, 0.2 / 0.99)
+	lyot = evaluate_supersampled(lyot, pupil_grid, 8) > 1 - 1e-5
+
+	stokes_vector = (1, 0, 0, 1)
+	for charge in [2]:
+		vortex = VortexCoronagraph(pupil_grid, charge)
+
+		wf = Wavefront(aperture, input_stokes_vector=stokes_vector)
+		wf.total_power = 1
+
+		wf = vortex(wf)
+		wf.electric_field *= lyot
+		img = prop(wf)
+
+		# polarization state preserved
+		assert np.allclose(img.intensity, img.V)
+
+		wf_b = prop.backward(img)
+		wf_input_b = vortex.backward(wf_b)
+		assert np.allclose(wf_input_b.intensity, wf_input_b.V)
+
 def test_ravc():
 	pupil_grid = make_pupil_grid(256)
 	focal_grid = make_focal_grid(4, 32)

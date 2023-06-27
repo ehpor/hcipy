@@ -68,7 +68,6 @@ class MultiScaleCoronagraph(OpticalElement):
 			focal_grid = make_pupil_grid(2 * q * num_airy, 1)
 			focal_mask = phase_pattern(focal_grid)
 
-			focal_mask *= 1 - make_circular_aperture(1e-9)(focal_grid)
 
 			if i != levels - 1:
 				wx = windows.tukey(window_size, 1, False)

@@ -18,15 +18,15 @@ class MultiScaleCoronagraph(OpticalElement):
 	----------
 	input_grid : Grid
 		The grid on which the incoming wavefront is defined.
-	phase_pattern : field_generator
-		The focal plane phase mask.
+	complex_mask : field_generator
+		The complex focal-plane phase mask.
 	lyot_stop : Field or OpticalElement
 		The Lyot stop for the coronagraph. If it's a Field, it is converted to an
 		OpticalElement for convenience. If this is None (default), then no Lyot stop is used.
 	q : scalar
 		The minimum number of pixels per lambda/D. The number of levels in the multi-scale
 		Fourier transforms will be chosen to reach at least this number of samples. The required
-		q for a high-accuracy vortex coronagraph depends on the charge of the vortex. For charge 2,
+		q for a high-accuracy vortex coronagraph for example depends on the charge of the vortex. For charge 2,
 		this can be as low as 32, but for charge 8 you need ~1024. Lower values give higher performance
 		as a smaller number of levels is needed, but increases the sampling errors near the singularity.
 		Charges not divisible by four require a much lower q. The default (q=1024) is conservative in
@@ -92,7 +92,7 @@ class MultiScaleCoronagraph(OpticalElement):
 			self.props.append(prop)
 
 	def forward(self, wavefront):
-		'''Propagate a wavefront through the vortex coronagraph.
+		'''Propagate a wavefront through the coronagraph.
 
 		Parameters
 		----------
@@ -125,10 +125,10 @@ class MultiScaleCoronagraph(OpticalElement):
 		return lyot
 
 	def backward(self, wavefront):
-		'''Propagate backwards through the vortex coronagraph.
+		'''Propagate backwards through the coronagraph.
 
 		This essentially is a forward propagation through the same vortex
-		coronagraph, but with the sign of its charge flipped.
+		coronagraph, but in the case of a vortex with the sign of its charge flipped.
 
 		Parameters
 		----------

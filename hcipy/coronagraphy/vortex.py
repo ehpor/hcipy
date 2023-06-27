@@ -2,7 +2,7 @@ import numpy as np
 from scipy.signal import windows
 
 from .multi_scale import MultiScaleCoronagraph
-from ..optics import OpticalElement, LinearRetarder, Apodizer, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward, Wavefront
+from ..optics import LinearRetarder, Apodizer, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward, Wavefront
 from ..propagation import FraunhoferPropagator
 from ..field import make_focal_grid, Field, field_dot
 from ..aperture import make_circular_aperture

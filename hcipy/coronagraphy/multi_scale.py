@@ -3,7 +3,7 @@ from scipy.signal import windows
 
 from ..optics import OpticalElement, Apodizer, Wavefront
 from ..propagation import FraunhoferPropagator
-from ..field import make_focal_grid, Field
+from ..field import make_focal_grid
 from ..fourier import FastFourierTransform, MatrixFourierTransform, FourierFilter
 
 class MultiScaleCoronagraph(OpticalElement):

@@ -39,7 +39,7 @@ class MultiScaleCoronagraph(OpticalElement):
 		The size of the next level in the number of pixels on the current layer. Lowering this
 		increases performance in exchange for accuracy. Values smaller than 4-8 are not recommended.
 	'''
-	def __init__(self, input_grid, phase_pattern, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
+	def __init__(self, input_grid, complex_mask, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
 		self.input_grid = input_grid
 		pupil_diameter = input_grid.shape * input_grid.delta
 
@@ -63,10 +63,8 @@ class MultiScaleCoronagraph(OpticalElement):
 			q = qs[i]
 			num_airy = num_airys[i]
 
-			#focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
-			focal_grid = make_pupil_grid(2 * q * num_airy, 1)
-			focal_mask = phase_pattern(focal_grid)
-
+			focal_grid = make_focal_grid(q, num_airy, pupil_diameter=pupil_diameter, reference_wavelength=1, focal_length=1)
+			focal_mask = complex_mask(focal_grid)
 
 			if i != levels - 1:
 				wx = windows.tukey(window_size, 1, False)

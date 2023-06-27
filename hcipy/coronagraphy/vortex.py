@@ -9,9 +9,9 @@ from ..aperture import make_circular_aperture
 from ..fourier import FastFourierTransform, MatrixFourierTransform, FourierFilter
 
 class VortexCoronagraph(MultiScaleCoronagraph):
-    def __init__(self, input_grid, charge, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
-        complex_mask = lambda grid: Field(np.exp(1j * charge * grid.as_('polar').theta), grid) * (1 - make_circular_aperture(1e-9)(grid))
-        super().__init__(input_grid, complex_mask, lyot_stop, q, scaling_factor, window_size)
+	def __init__(self, input_grid, charge, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
+		complex_mask = lambda grid: Field(np.exp(1j * charge * grid.as_('polar').theta), grid) * (1 - make_circular_aperture(1e-9)(grid))
+		super().__init__(input_grid, complex_mask, lyot_stop, q, scaling_factor, window_size)
 
 class VectorVortexCoronagraph(AgnosticOpticalElement):
 	'''A vector vortex coronagraph.

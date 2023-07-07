@@ -1,0 +1,13 @@
+# This file contains all git hashes with far-reaching commits into the codebase.
+# We often want to remove these commits from git blame. The commit hashes in
+# this file are already removed from the git-blame on Github. You can do the
+# same locally with:
+#
+#     > git blame --ignore-revs-file .git-blame-ignore-revs
+#
+# or set it permanently with:
+#
+#     > git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Changed indentation from tabs to spaces.
+f4c6376e9cb198596e7e32cc584ad6ffed31e2ea

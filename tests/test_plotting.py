@@ -9,111 +9,111 @@ import pytest
 import shutil
 
 def is_ffmpeg_installed():
-	ffmpeg_path = Configuration().plotting.ffmpeg_path
+    ffmpeg_path = Configuration().plotting.ffmpeg_path
 
-	if ffmpeg_path is None:
-		ffmpeg_path = 'ffmpeg'
+    if ffmpeg_path is None:
+        ffmpeg_path = 'ffmpeg'
 
-	return shutil.which(ffmpeg_path) is not None
+    return shutil.which(ffmpeg_path) is not None
 
 def check_animation(mw):
-	grid = make_pupil_grid(256)
+    grid = make_pupil_grid(256)
 
-	for i in range(25):
-		field = Field(np.random.randn(grid.size), grid)
+    for i in range(25):
+        field = Field(np.random.randn(grid.size), grid)
 
-		plt.clf()
-		imshow_field(field)
+        plt.clf()
+        imshow_field(field)
 
-		mw.add_frame()
+        mw.add_frame()
 
-	mw.close()
+    mw.close()
 
-	pytest.raises(RuntimeError, mw.add_frame)
+    pytest.raises(RuntimeError, mw.add_frame)
 
 def test_frame_writer():
-	mw = FrameWriter('test_frames/')
+    mw = FrameWriter('test_frames/')
 
-	check_animation(mw)
+    check_animation(mw)
 
-	assert os.path.isdir('test_frames')
-	shutil.rmtree('test_frames')
+    assert os.path.isdir('test_frames')
+    shutil.rmtree('test_frames')
 
 def test_gif_writer():
-	mw = GifWriter('test.gif')
+    mw = GifWriter('test.gif')
 
-	check_animation(mw)
+    check_animation(mw)
 
-	assert os.path.isfile('test.gif')
-	os.remove('test.gif')
+    assert os.path.isfile('test.gif')
+    os.remove('test.gif')
 
 @pytest.mark.skipif(not is_ffmpeg_installed(), reason='FFMpeg is not installed.')
 def test_ffmpeg_writer():
-	mw = FFMpegWriter('test.mp4')
+    mw = FFMpegWriter('test.mp4')
 
-	check_animation(mw)
+    check_animation(mw)
 
-	assert mw._repr_html_()
+    assert mw._repr_html_()
 
-	assert os.path.isfile('test.mp4')
-	os.remove('test.mp4')
+    assert os.path.isfile('test.mp4')
+    os.remove('test.mp4')
 
 def test_imshow_field():
-	grid = make_pupil_grid(256)
+    grid = make_pupil_grid(256)
 
-	field = Field(np.random.randn(grid.size), grid)
+    field = Field(np.random.randn(grid.size), grid)
 
-	imshow_field(field)
-	plt.clf()
+    imshow_field(field)
+    plt.clf()
 
-	mask = make_circular_aperture(1)(grid)
+    mask = make_circular_aperture(1)(grid)
 
-	imshow_field(field, mask=mask)
-	plt.clf()
+    imshow_field(field, mask=mask)
+    plt.clf()
 
-	field = Field(np.random.randn(grid.size) + 1j * np.random.randn(grid.size), grid)
+    field = Field(np.random.randn(grid.size) + 1j * np.random.randn(grid.size), grid)
 
-	imshow_field(field)
-	plt.clf()
+    imshow_field(field)
+    plt.clf()
 
 def test_imsave_field():
-	grid = make_pupil_grid(256)
+    grid = make_pupil_grid(256)
 
-	field = Field(np.random.randn(grid.size), grid)
+    field = Field(np.random.randn(grid.size), grid)
 
-	imsave_field('field.png', field)
-	assert os.path.isfile('field.png')
+    imsave_field('field.png', field)
+    assert os.path.isfile('field.png')
 
-	os.remove('field.png')
+    os.remove('field.png')
 
 def test_contour_field():
-	grid = make_pupil_grid(256)
+    grid = make_pupil_grid(256)
 
-	field = Field(np.random.randn(grid.size), grid)
+    field = Field(np.random.randn(grid.size), grid)
 
-	contour_field(field)
-	plt.clf()
+    contour_field(field)
+    plt.clf()
 
-	contourf_field(field)
-	plt.clf()
+    contourf_field(field)
+    plt.clf()
 
 def test_imshow_util():
-	pupil_grid = make_pupil_grid(128)
-	focal_grid = make_focal_grid(4, 16)
+    pupil_grid = make_pupil_grid(128)
+    focal_grid = make_focal_grid(4, 16)
 
-	aperture = make_magellan_aperture(True)(pupil_grid)
-	prop = FraunhoferPropagator(pupil_grid, focal_grid)
+    aperture = make_magellan_aperture(True)(pupil_grid)
+    prop = FraunhoferPropagator(pupil_grid, focal_grid)
 
-	wf = Wavefront(aperture)
-	wf.electric_field *= np.exp(0.1j * zernike(6, 2, radial_cutoff=False)(pupil_grid))
+    wf = Wavefront(aperture)
+    wf.electric_field *= np.exp(0.1j * zernike(6, 2, radial_cutoff=False)(pupil_grid))
 
-	imshow_pupil_phase(wf, remove_piston=True, crosshairs=True, title='phase')
-	plt.clf()
+    imshow_pupil_phase(wf, remove_piston=True, crosshairs=True, title='phase')
+    plt.clf()
 
-	img = prop(wf)
+    img = prop(wf)
 
-	imshow_psf(img, colorbar_orientation='vertical', normalization='peak', crosshairs=True, title='psf')
-	plt.clf()
+    imshow_psf(img, colorbar_orientation='vertical', normalization='peak', crosshairs=True, title='psf')
+    plt.clf()
 
-	imshow_psf(img, scale='linear', colorbar_orientation='vertical', normalization='peak', crosshairs=True, title='psf')
-	plt.clf()
+    imshow_psf(img, scale='linear', colorbar_orientation='vertical', normalization='peak', crosshairs=True, title='psf')
+    plt.clf()

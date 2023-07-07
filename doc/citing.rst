@@ -9,13 +9,13 @@ The BibTeX citation can be found below:
 
 .. code-block:: bib
 
-	@inproceedings{por2018hcipy,
-		author = {Por, E.~H. and Haffert, S.~Y. and Radhakrishnan, V.~M. and Doelman, D.~S. and Van Kooten, M. and Bos, S.~P.},
-		title = "{High Contrast Imaging for Python (HCIPy): an open-source adaptive optics and coronagraph simulator}",
-		booktitle = {Adaptive Optics Systems VI},
-		year = 2018,
-		series = {Proc. {{SPIE}}},
-		volume = 10703,
-		doi = {10.1117/12.2314407},
-		URL = {https://doi.org/10.1117/12.2314407}
-	}
+    @inproceedings{por2018hcipy,
+        author = {Por, E.~H. and Haffert, S.~Y. and Radhakrishnan, V.~M. and Doelman, D.~S. and Van Kooten, M. and Bos, S.~P.},
+        title = "{High Contrast Imaging for Python (HCIPy): an open-source adaptive optics and coronagraph simulator}",
+        booktitle = {Adaptive Optics Systems VI},
+        year = 2018,
+        series = {Proc. {{SPIE}}},
+        volume = 10703,
+        doi = {10.1117/12.2314407},
+        URL = {https://doi.org/10.1117/12.2314407}
+    }

@@ -1,4 +1,4 @@
 [report]
 omit =
     */python?.?/*
-	*/tests/*
+    */tests/*

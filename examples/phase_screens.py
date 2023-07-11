@@ -43,16 +43,16 @@ aperture = make_circular_aperture(1)(pupil_grid)
 wf = Wavefront(Field(np.ones(pupil_grid.size), pupil_grid), wavelength)
 
 for t in np.linspace(0, 100, 5001):
-	atmosphere.evolve_until(t)
+    atmosphere.evolve_until(t)
 
-	wf2 = atmosphere.forward(wf)
-	wf2.electric_field *= aperture
-	img = Field(prop(wf2).intensity, focal_grid)
+    wf2 = atmosphere.forward(wf)
+    wf2.electric_field *= aperture
+    img = Field(prop(wf2).intensity, focal_grid)
 
-	plt.clf()
-	plt.subplot(1,2,1)
-	imshow_field(wf2.phase, cmap='RdBu')
-	plt.subplot(1,2,2)
-	imshow_field(np.log10(img / img.max()), vmin=-6)
-	plt.draw()
-	plt.pause(0.00001)
+    plt.clf()
+    plt.subplot(1,2,1)
+    imshow_field(wf2.phase, cmap='RdBu')
+    plt.subplot(1,2,2)
+    imshow_field(np.log10(img / img.max()), vmin=-6)
+    plt.draw()
+    plt.pause(0.00001)

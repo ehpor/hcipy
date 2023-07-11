@@ -45,7 +45,6 @@ Coding style
 
 We adhere mostly to `PEP8 <https://www.python.org/dev/peps/pep-0008/>`__, the official style guide for Python code. Deviations from PEP8, plus some additional rules, are listed below:
 
-* **Tabs as indentation**. Deviating from PEP8, we use tabs instead of spaces for indentation.
 * **No double blank lines**. Deviating from PEP8, at most one blank line may be used to separate functions, classes or logical sections inside functions.
 * **Long lines allowed in moderation**. Deviating from PEP8, HCIPy code sets the limit at <100 characters, with lines longer than this allowed sporadically.
 * **No print statements**. Inside the HCIPy package code, no print statements should be used to avoid printing stuff during normal operation.

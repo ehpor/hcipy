@@ -24,15 +24,15 @@ Ntilts = len(tilts)
 
 for j, tilt in enumerate(tilts):
 
-	phase_tilt = 2*np.pi * (pupil_grid.x / D_tel * tilt[0] + pupil_grid.y / D_tel * tilt[1])
-	aper *= np.exp(1j * phase_tilt)
+    phase_tilt = 2*np.pi * (pupil_grid.x / D_tel * tilt[0] + pupil_grid.y / D_tel * tilt[1])
+    aper *= np.exp(1j * phase_tilt)
 
-	wf = Wavefront(aper, wavelength)
-	wf.total_power = 1
+    wf = Wavefront(aper, wavelength)
+    wf.total_power = 1
 
-	for i, prop in enumerate(props):
-		img = prop(wf)
+    for i, prop in enumerate(props):
+        img = prop(wf)
 
-		plt.subplot(Ntilts, 2, 2*j + i + 1)
-		imshow_field(np.log10(img.intensity / img.intensity.max()), vmin=-5)
+        plt.subplot(Ntilts, 2, 2*j + i + 1)
+        imshow_field(np.log10(img.intensity / img.intensity.max()), vmin=-5)
 plt.show()

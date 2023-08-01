@@ -115,7 +115,7 @@ def radial_profile(image, bin_size, statistic='mean'):
 	Parameters
 	----------
 	image : Field
-		The image that we want an azimuthal profile from. This image must be
+		The image that we want a radial profile from. This image must be
 		two-dimensional.
 	bin_size : scalar
 		The extent of each bin. Each bin will be a ring from r to r+`bin_size`.

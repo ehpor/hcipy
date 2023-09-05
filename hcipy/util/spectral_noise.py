@@ -214,7 +214,7 @@ class SpectralNoiseFactoryMultiscale(SpectralNoiseFactory):
 		The power spectral density of the noise.
 	output_grid : Grid
 		The grid on which to compute the noise.
-	oversample : integer
+	oversampling : integer
 		The amount by which to oversample to grid. For values higher than one,
 		the spectral noise can be shifted by that fraction of the grid extent
 		without wrapping.

@@ -100,7 +100,7 @@ class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
 	'''A spectral noise factory based on FFTs.
 
 	The use of FFTs means that these spectral noises will wrap at the
-	edge of the grid, ie. they are continuous from one side of the grid
+	edge of the grid, i.e. they are continuous from one side of the grid
 	to the other end. This means that the lowest frequencies of the PSD
 	are not well represented and diminished in amplitude. The sampled
 	spatial frequencies can be extended by increasing the oversample

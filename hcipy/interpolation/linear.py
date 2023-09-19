@@ -3,7 +3,7 @@ import numpy as np
 from ..field import Field
 
 def make_linear_interpolator_separated(field, grid=None, fill_value=np.nan):
-    '''Make a linear interpolators for a separated grid.
+    '''Make a linear interpolator for a separated grid.
 
     Parameters
     ----------

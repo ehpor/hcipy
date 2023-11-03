@@ -1,9 +1,9 @@
 import datetime
+import io
 import pickle
 
 import numpy as np
 import asdf
-import asdf.fits_embed
 from astropy import wcs
 from astropy.io import fits
 
@@ -14,6 +14,22 @@ try:
 	from .._version import version as _version
 except ImportError:
 	_version = ''
+
+
+def _asdf_to_bintable(af, *args, **kwargs):
+	buffer = io.BytesIO()
+	af.write_to(buffer, *args, **kwargs)
+	buffer.seek(0)
+
+	data = np.array(buffer.getbuffer(), dtype=np.uint8)[None, :]
+	fmt = f"{len(data[0])}B"
+	column = fits.Column(array=data, format=fmt, name="ASDF_METADATA")
+	return fits.BinTableHDU.from_columns([column], name="ASDF")
+
+
+def _bintable_to_asdf(bintable, *args, **kwargs):
+	return asdf.open(io.BytesIO(bintable.data), *args, **kwargs)
+
 
 def read_fits(filename, extension=0):
 	'''Read an array from a fits file.
@@ -139,14 +155,16 @@ def read_grid(filename, fmt=None):
 		if fmt is None:
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
-	if fmt in ['asdf', 'fits']:
-		if fmt == 'fits':
-			f = asdf.fits_embed.AsdfInFits.open(filename)
-		else:
-			f = asdf.open(filename)
+	if fmt == 'fits':
+		f = fits.open(filename)
+		af = _bintable_to_asdf(f['ASDF'])
+		grid = Grid.from_dict(af.tree['grid'])
+		f.close()
+		return grid
+	elif fmt == 'asdf':
+		f = asdf.open(filename)
 		grid = Grid.from_dict(f.tree['grid'])
 		f.close()
-
 		return grid
 	elif fmt == 'pickle':
 		with open(filename, 'rb') as f:
@@ -187,9 +205,8 @@ def write_grid(grid, filename, fmt=None, overwrite=True):
 		target.write_to(filename, all_array_compression='zlib')
 	elif fmt == 'fits':
 		hdulist = fits.HDUList()
-
-		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
-		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
+		hdulist.append(_asdf_to_bintable(asdf.AsdfFile(tree), all_array_compression='zlib'))
+		hdulist.writeto(filename, overwrite=overwrite)
 	elif fmt == 'pickle':
 		with open(filename, 'wb') as f:
 			pickle.dump(grid, f)
@@ -231,8 +248,12 @@ def read_field(filename, fmt=None):
 
 		return field
 	elif fmt == 'fits':
-		f = asdf.fits_embed.AsdfInFits.open(filename)
-		tree = f.tree['field']
+		f = fits.open(filename)
+
+		af = _bintable_to_asdf(f['ASDF'])
+		tree = af.tree['field']
+		if f[0].data is not None:
+			tree['values'] = f[0].data
 
 		if 'grid' in tree:
 			grid = Grid.from_dict(tree['grid'])
@@ -285,7 +306,7 @@ def write_field(field, filename, fmt=None, overwrite=True):
 
 		if field.grid.is_separated:
 			hdulist.append(fits.ImageHDU(np.ascontiguousarray(field.shaped)))
-			tree['field']['values'] = hdulist[0].data
+			del tree['field']['values']
 
 		if field.grid.is_regular:
 			w = wcs.WCS(naxis=field.grid.ndim)
@@ -296,8 +317,8 @@ def write_field(field, filename, fmt=None, overwrite=True):
 
 			hdulist[0].header.update(w.to_header())
 
-		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
-		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
+		hdulist.append(_asdf_to_bintable(asdf.AsdfFile(tree), all_array_compression='zlib'))
+		hdulist.writeto(filename, overwrite=overwrite)
 	elif fmt == 'pickle':
 		with open(filename, 'wb') as f:
 			pickle.dump(field, f)
@@ -339,16 +360,16 @@ def read_mode_basis(filename, fmt=None):
 
 		return mode_basis
 	elif fmt == 'fits':
-		f = asdf.fits_embed.AsdfInFits.open(filename)
-		tree = f.tree['mode_basis']
+		f = fits.open(filename)
 
-		if 'modes' in tree:
+		af = _bintable_to_asdf(f['ASDF'])
+		tree = af.tree['mode_basis']
+		if f[0].data is not None:
 			grid = Grid.from_dict(tree['grid'])
-			modes = tree['modes']
+			modes = f[0].data
 
 			old_shape = np.concatenate((modes.shape[:-grid.ndim], [grid.size]))
 			tree['transformation_matrix'] = modes.reshape(old_shape).T
-			del tree['modes']
 
 		mode_basis = ModeBasis.from_dict(tree)
 		f.close()
@@ -409,10 +430,9 @@ def write_mode_basis(mode_basis, filename, fmt=None, overwrite=True):
 			hdulist[0].header.update(w.to_header())
 
 			del tree['mode_basis']['transformation_matrix']
-			tree['mode_basis']['modes'] = hdulist[0].data
 
-		ff = asdf.fits_embed.AsdfInFits(hdulist, tree)
-		ff.write_to(filename, all_array_compression='zlib', overwrite=overwrite)
+		hdulist.append(_asdf_to_bintable(asdf.AsdfFile(tree), all_array_compression='zlib'))
+		hdulist.writeto(filename, overwrite=overwrite)
 	elif fmt == 'pickle':
 		with open(filename, 'wb') as f:
 			pickle.dump(mode_basis, f)

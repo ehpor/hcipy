@@ -156,11 +156,11 @@ def read_grid(filename, fmt=None):
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
 	if fmt == 'fits':
-		with fits.open(filename) as f:
+		with fits.open(filename, memmap=False) as f:
 			af = _bintable_to_asdf(f['ASDF'])
 			return Grid.from_dict(af.tree['grid'])
 	elif fmt == 'asdf':
-		with asdf.open(filename) as f:
+		with asdf.open(filename, copy_arrays=True) as f:
 			return Grid.from_dict(f.tree['grid'])
 	elif fmt == 'pickle':
 		with open(filename, 'rb') as f:
@@ -238,10 +238,10 @@ def read_field(filename, fmt=None):
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
 	if fmt == 'asdf':
-		with asdf.open(filename) as f:
+		with asdf.open(filename, copy_arrays=True) as f:
 			return Field.from_dict(f.tree['field'])
 	elif fmt == 'fits':
-		with fits.open(filename) as f:
+		with fits.open(filename, memmap=False) as f:
 			af = _bintable_to_asdf(f['ASDF'])
 			tree = af.tree['field']
 			if f[0].data is not None:
@@ -343,10 +343,10 @@ def read_mode_basis(filename, fmt=None):
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
 	if fmt == 'asdf':
-		with asdf.open(filename) as f:
+		with asdf.open(filename, copy_arrays=True) as f:
 			return ModeBasis.from_dict(f.tree['mode_basis'])
 	elif fmt == 'fits':
-		with fits.open(filename) as f:
+		with fits.open(filename, memmap=False) as f:
 			af = _bintable_to_asdf(f['ASDF'])
 			tree = af.tree['mode_basis']
 

@@ -238,11 +238,8 @@ def read_field(filename, fmt=None):
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
 	if fmt == 'asdf':
-		f = asdf.open(filename)
-		field = Field.from_dict(f.tree['field'])
-		f.close()
-
-		return field
+		with asdf.open(filename) as f:
+			return Field.from_dict(f.tree['field'])
 	elif fmt == 'fits':
 		with fits.open(filename) as f:
 			af = _bintable_to_asdf(f['ASDF'])
@@ -346,11 +343,8 @@ def read_mode_basis(filename, fmt=None):
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
 	if fmt == 'asdf':
-		f = asdf.open(filename)
-		mode_basis = ModeBasis.from_dict(f.tree['mode_basis'])
-		f.close()
-
-		return mode_basis
+		with asdf.open(filename) as f:
+			return ModeBasis.from_dict(f.tree['mode_basis'])
 	elif fmt == 'fits':
 		with fits.open(filename) as f:
 			af = _bintable_to_asdf(f['ASDF'])

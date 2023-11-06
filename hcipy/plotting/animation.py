@@ -4,10 +4,26 @@ import base64
 from subprocess import Popen, PIPE
 import io
 
-import matplotlib
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import imageio
 
 from ..config import Configuration
+
+def _data_to_img(data, cmap, copy=False):
+    if cmap is None:
+        if copy:
+            return data.copy()
+
+        return data
+
+    try:
+        cmap = mpl.colormaps.get_cmap(cmap)
+    except AttributeError:
+        # For Matplotlib <3.5.
+        cmap = mpl.cm.get_cmap(cmap)
+
+    return cmap(data, bytes=True)
 
 class FrameWriter(object):
     '''A writer of frames from Matplotlib figures.
@@ -64,17 +80,16 @@ class FrameWriter(object):
 
         if data is None:
             if fig is None:
-                fig = matplotlib.pyplot.gcf()
+                fig = plt.gcf()
 
             facecolor = list(fig.get_facecolor())
             facecolor[3] = 1
 
             fig.savefig(dest, transparent=False, dpi=dpi, facecolor=facecolor)
         else:
-            if cmap is not None:
-                data = matplotlib.cm.get_cmap(cmap)(data, bytes=True)
+            img = _data_to_img(data, cmap)
 
-            imageio.imwrite(dest, data)
+            imageio.imwrite(dest, img)
 
         self.num_frames += 1
 
@@ -142,7 +157,7 @@ class GifWriter(object):
 
         if data is None:
             if fig is None:
-                fig = matplotlib.pyplot.gcf()
+                fig = plt.gcf()
 
             facecolor = list(fig.get_facecolor())
             facecolor[3] = 1
@@ -153,10 +168,7 @@ class GifWriter(object):
 
             frame = imageio.imread(buf.getvalue())
         else:
-            if cmap is not None:
-                frame = matplotlib.cm.get_cmap(cmap)(data, bytes=True)
-            else:
-                frame = data.copy()
+            frame = _data_to_img(data, cmap, copy=True)
 
         self._frames.append(frame)
 
@@ -300,17 +312,16 @@ class FFMpegWriter(object):
 
         if data is None:
             if fig is None:
-                fig = matplotlib.pyplot.gcf()
+                fig = plt.gcf()
 
             facecolor = list(fig.get_facecolor())
             facecolor[3] = 1
 
             fig.savefig(self.p.stdin, format='png', transparent=False, dpi=dpi, facecolor=facecolor)
         else:
-            if cmap is not None:
-                data = matplotlib.cm.get_cmap(cmap)(data, bytes=True)
+            img = _data_to_img(data, cmap)
 
-            imageio.imwrite(self.p.stdin, data, format='png')
+            imageio.imwrite(self.p.stdin, img, format='png')
 
     def close(self):
         '''Close the animation writer and finish the video file.

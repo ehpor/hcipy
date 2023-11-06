@@ -227,7 +227,13 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
     if mask is not None:
         f[~mask.astype('bool')] = np.nan
 
-    cmap = copy(mpl.cm.get_cmap(cmap))
+    try:
+        cmap = mpl.colormaps.get_cmap(cmap)
+    except AttributeError:
+        # For Matplotlib <3.5.
+        cmap = mpl.cm.get_cmap(cmap)
+
+    cmap = copy(cmap)
     cmap.set_bad(mask_color)
 
     plt.imsave(filename, f.shaped, cmap=cmap, vmin=vmin, vmax=vmax)

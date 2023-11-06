@@ -120,7 +120,7 @@ def _make_metadata(file_type):
 	tree = {
 		'meta': {
 			'author': 'HCIPy %s' % _version,
-			'date_utc': datetime.datetime.utcnow().isoformat(),
+			'date_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
 			'file_type': file_type
 		}
 	}

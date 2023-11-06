@@ -10,6 +10,8 @@ except ImportError:
 	_fft_module = np.fft
 	_use_mkl = False
 
+from ..math import fft as _fft_module
+
 class FourierFilter(object):
 	'''A filter in the Fourier domain.
 

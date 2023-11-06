@@ -6,10 +6,7 @@ from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration
 import numexpr as ne
 
-try:
-	import mkl_fft._numpy_fft as _fft_module
-except ImportError:
-	_fft_module = np.fft
+from ..math import fft as _fft_module
 
 def make_fft_grid(input_grid, q=1, fov=1, shift=0):
 	'''Calculate the grid returned by a Fast Fourier Transform.

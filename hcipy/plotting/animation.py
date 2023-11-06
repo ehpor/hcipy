@@ -80,7 +80,7 @@ class FrameWriter(object):
 
         if data is None:
             if fig is None:
-                fig = matplotlib.pyplot.gcf()
+                fig = plt.gcf()
 
             facecolor = list(fig.get_facecolor())
             facecolor[3] = 1
@@ -157,7 +157,7 @@ class GifWriter(object):
 
         if data is None:
             if fig is None:
-                fig = matplotlib.pyplot.gcf()
+                fig = plt.gcf()
 
             facecolor = list(fig.get_facecolor())
             facecolor[3] = 1
@@ -312,7 +312,7 @@ class FFMpegWriter(object):
 
         if data is None:
             if fig is None:
-                fig = matplotlib.pyplot.gcf()
+                fig = plt.gcf()
 
             facecolor = list(fig.get_facecolor())
             facecolor[3] = 1

@@ -156,16 +156,12 @@ def read_grid(filename, fmt=None):
 			raise ValueError('Format not given and could not be guessed based on the file extension.')
 
 	if fmt == 'fits':
-		f = fits.open(filename)
-		af = _bintable_to_asdf(f['ASDF'])
-		grid = Grid.from_dict(af.tree['grid'])
-		f.close()
-		return grid
+		with fits.open(filename) as f:
+			af = _bintable_to_asdf(f['ASDF'])
+			return Grid.from_dict(af.tree['grid'])
 	elif fmt == 'asdf':
-		f = asdf.open(filename)
-		grid = Grid.from_dict(f.tree['grid'])
-		f.close()
-		return grid
+		with asdf.open(filename) as f:
+			return Grid.from_dict(f.tree['grid'])
 	elif fmt == 'pickle':
 		with open(filename, 'rb') as f:
 			return pickle.load(f)
@@ -248,22 +244,18 @@ def read_field(filename, fmt=None):
 
 		return field
 	elif fmt == 'fits':
-		f = fits.open(filename)
+		with fits.open(filename) as f:
+			af = _bintable_to_asdf(f['ASDF'])
+			tree = af.tree['field']
+			if f[0].data is not None:
+				tree['values'] = f[0].data
 
-		af = _bintable_to_asdf(f['ASDF'])
-		tree = af.tree['field']
-		if f[0].data is not None:
-			tree['values'] = f[0].data
+			if 'grid' in tree:
+				grid = Grid.from_dict(tree['grid'])
+				new_shape = np.concatenate((tree['values'].shape[:-grid.ndim], [grid.size])).astype('int')
+				tree['values'] = tree['values'].reshape(new_shape)
 
-		if 'grid' in tree:
-			grid = Grid.from_dict(tree['grid'])
-			new_shape = np.concatenate((tree['values'].shape[:-grid.ndim], [grid.size])).astype('int')
-			tree['values'] = tree['values'].reshape(new_shape)
-
-		field = Field.from_dict(tree).reshape(new_shape)
-		f.close()
-
-		return field
+			return Field.from_dict(tree).reshape(new_shape)
 	elif fmt == 'pickle':
 		with open(filename, 'rb') as f:
 			return pickle.load(f)
@@ -360,21 +352,18 @@ def read_mode_basis(filename, fmt=None):
 
 		return mode_basis
 	elif fmt == 'fits':
-		f = fits.open(filename)
+		with fits.open(filename) as f:
+			af = _bintable_to_asdf(f['ASDF'])
+			tree = af.tree['mode_basis']
 
-		af = _bintable_to_asdf(f['ASDF'])
-		tree = af.tree['mode_basis']
-		if f[0].data is not None:
-			grid = Grid.from_dict(tree['grid'])
-			modes = f[0].data
+			if f[0].data is not None:
+				grid = Grid.from_dict(tree['grid'])
+				modes = f[0].data
 
-			old_shape = np.concatenate((modes.shape[:-grid.ndim], [grid.size]))
-			tree['transformation_matrix'] = modes.reshape(old_shape).T
+				old_shape = np.concatenate((modes.shape[:-grid.ndim], [grid.size]))
+				tree['transformation_matrix'] = modes.reshape(old_shape).T
 
-		mode_basis = ModeBasis.from_dict(tree)
-		f.close()
-
-		return mode_basis
+			return ModeBasis.from_dict(tree)
 	elif fmt == 'pickle':
 		with open(filename, 'rb') as f:
 			return pickle.load(f)

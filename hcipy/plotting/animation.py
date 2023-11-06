@@ -6,7 +6,7 @@ import io
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import imageio
+import imageio.v2 as imageio
 
 from ..config import Configuration
 

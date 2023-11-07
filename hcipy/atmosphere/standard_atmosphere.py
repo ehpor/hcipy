@@ -55,3 +55,31 @@ def make_las_campanas_atmospheric_layers(input_grid, r0=0.16, L0=25, wavelength=
         layers.append(InfiniteAtmosphericLayer(input_grid, cn, L0, v, h, 2))
 
     return layers
+
+def make_keck_atmospheric_layers(input_grid):
+    '''Creates a multi-layer atmosphere for Keck Observatory.
+
+    The atmospheric parameters are based off of [Keck AO note 303]_.
+
+    .. [Keck AO note 303] https://www2.keck.hawaii.edu/optics/kpao/files/KAON/KAON303.pdf
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The input grid of the atmospheric layers.
+
+    Returns
+    -------
+    list
+        A list of turbulence layers.
+    '''
+    heights = np.array([0, 2100, 4100, 6500, 9000, 12000, 14800])
+    velocities = np.array([6.7, 13.9, 20.8, 29.0, 29.0, 29.0, 29.0])
+    outer_scales = np.array([20, 20, 20, 20, 20, 20, 20])
+    Cn_squared = np.array([0.369, 0.219, 0.127, 0.101, 0.046, 0.111, 0.027]) * 1e-12
+
+    layers = []
+    for h, v, cn, L0 in zip(heights, velocities, Cn_squared, outer_scales):
+        layers.append(InfiniteAtmosphericLayer(input_grid, cn, L0, v, h, 2))
+
+    return layers

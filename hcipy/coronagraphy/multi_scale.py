@@ -125,8 +125,8 @@ class MultiScaleCoronagraph(OpticalElement):
     def backward(self, wavefront):
         '''Propagate backwards through the coronagraph.
 
-        This essentially is a forward propagation through the same vortex
-        coronagraph, but in the case of a vortex with the sign of its charge flipped.
+        For a vortex coronagraph, this essentially a forward propagation through the same
+        coronagraph, but with the sign of its charge flipped.
 
         Parameters
         ----------

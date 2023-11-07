@@ -205,8 +205,8 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
     def backward(self, instance_data, wavefront):
         '''Propagate backwards through the vortex coronagraph.
 
-        This essentially is a forward propagation through a the same vortex
-        coronagraph, but with the sign of the its charge flipped.
+        This essentially is a forward propagation through the same vortex
+        coronagraph, but with the sign of its charge flipped.
 
         Parameters
         ----------

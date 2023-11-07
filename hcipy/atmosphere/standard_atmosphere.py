@@ -1,4 +1,4 @@
-from .atmospheric_model import Cn_squared_from_fried_parameter
+from .atmospheric_model import Cn_squared_from_fried_parameter, MultiLayerAtmosphere
 from .infinite_atmospheric_layer import InfiniteAtmosphericLayer
 
 import numpy as np
@@ -36,6 +36,9 @@ def make_standard_atmospheric_layers(input_grid, L0=10):
         layers.append(InfiniteAtmosphericLayer(input_grid, cn, L0, v, h, 2))
 
     return layers
+
+def make_mauna_kea_atmospheric_layers(input_grid, cn_squared=None, outer_scale=None):
+    return make_standard_atmospheric_layers(input_grid, outer_scale)
 
 def make_las_campanas_atmospheric_layers(input_grid, r0=0.16, L0=25, wavelength=550e-9):
     '''Creates a multi-layer atmosphere for the Las Campanas Observatory site.
@@ -106,3 +109,35 @@ def make_keck_atmospheric_layers(input_grid):
         layers.append(InfiniteAtmosphericLayer(input_grid, cn, L0, v, h, 2))
 
     return layers
+
+def make_standard_atmosphere(input_grid, cn_squared=None, outer_scale=None, site='mauna_kea', **kwargs):
+    '''Make a standard atmosphere for one of the built-in sites.
+
+    Parameters
+    ----------
+    cn_squared : scalar or None
+        The integrated Cn^2 value of the atmosphere. If this is None, the default,
+        then the default Cn^2 of your requested site will be used.
+    outer_scale : scalar or None
+        The outer scale of all layers. If this is None, the default, then the default
+        outer scale of your requested site will be used.
+    site : {'mauna_kea', 'las_campanas', 'keck'}
+        The site of the standard atmosphere. This has to be one of the implemented sites.
+    **kwargs : kwargs
+        Any additional kwargs will be fed through to the MultiLayerAtmosphere initializer.
+
+    Returns
+    -------
+    MultiLayerAtmosphere
+        The multi-layer atmospheric model corresponding to the site.
+    '''
+    if site == 'mauna_kea':
+        layers = make_mauna_kea_atmospheric_layers(input_grid, cn_squared, outer_scale)
+    elif site == 'las_campanas':
+        layers = make_las_campanas_atmospheric_layers(input_grid, cn_squared, outer_scale)
+    elif site == 'keck':
+        layers = make_keck_atmospheric_layers(input_grid, cn_squared, outer_scale)
+    else:
+        raise NotImplementedError('Site unknown.')
+
+    return MultiLayerAtmosphere(layers, **kwargs)

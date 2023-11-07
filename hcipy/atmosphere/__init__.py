@@ -12,8 +12,10 @@ __all__ = [
     'InfiniteAtmosphericLayer',
     'ModalAdaptiveOpticsLayer',
     'make_standard_atmospheric_layers',
+    'make_mauna_kea_atmospheric_layers',
     'make_las_campanas_atmospheric_layers',
-    'make_keck_atmospheric_layers'
+    'make_keck_atmospheric_layers',
+    'make_standard_atmosphere',
 ]
 
 from .atmospheric_model import *

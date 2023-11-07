@@ -32,6 +32,7 @@ def check_animation(mw, style):
             imshow_field(field, ax=ax)
 
             mw.add_frame(fig=fig)
+            plt.close(fig)
         elif style == 'img':
             mw.add_frame(data=field.shaped, cmap='RdBu')
         else:

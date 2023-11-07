@@ -4,6 +4,29 @@ from .infinite_atmospheric_layer import InfiniteAtmosphericLayer
 import numpy as np
 
 def make_standard_atmospheric_layers(input_grid, L0=10):
+    '''Create a standardized multi-layer atmosphere.
+
+    The layer parameters are taken from [Guyon2005]_, in turn derived
+    from [Tokovinin2005]_ and are representative for Mauna Kea, Hawaii.
+
+    .. [Guyon 2005] Olivier Guyon, "Limits of Adaptive Optics for
+        High-Contrast Imaging", ApJ 629 592 (2005).
+
+    .. [Tokovinin2005] A. Tokovinin et al., "Optical Turbulence Profiles
+        at Mauna Kea Measured by MASS and SCIDAR", PASP 117 395 (2005).
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The input grid for the atmospheric layers.
+    L0 : scalar
+        The outer scale of the atmosphere
+
+    Returns
+    -------
+    list
+        A list of turbulence layers.
+    '''
     heights = np.array([500, 1000, 2000, 4000, 8000, 16000])
     velocities = np.array([10, 10, 10, 10, 10, 10])
     Cn_squared = np.array([0.2283, 0.0883, 0.0666, 0.1458, 0.3350, 0.1350]) * 1e-12
@@ -31,7 +54,7 @@ def make_las_campanas_atmospheric_layers(input_grid, r0=0.16, L0=25, wavelength=
     Parameters
     ----------
     input_grid : Grid
-        Th
+        The input grid for the atmospheric layers.
     r0 : scalar
         The integrated Cn^2 value for the atmosphere.
     L0 : scalar

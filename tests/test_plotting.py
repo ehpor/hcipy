@@ -16,42 +16,56 @@ def is_ffmpeg_installed():
 
     return shutil.which(ffmpeg_path) is not None
 
-def check_animation(mw):
+def check_animation(mw, style):
     grid = make_pupil_grid(256)
 
     for i in range(25):
         field = Field(np.random.randn(grid.size), grid)
 
-        plt.clf()
-        imshow_field(field)
+        if style == 'mpl':
+            plt.clf()
+            imshow_field(field)
 
-        mw.add_frame()
+            mw.add_frame()
+        elif style == 'fig':
+            fig, ax = plt.subplots()
+            imshow_field(field, ax=ax)
+
+            mw.add_frame(fig=fig)
+            plt.close(fig)
+        elif style == 'img':
+            mw.add_frame(data=field.shaped, cmap='RdBu')
+        else:
+            raise ValueError('Animation style not known.')
 
     mw.close()
 
     pytest.raises(RuntimeError, mw.add_frame)
 
-def test_frame_writer():
+@pytest.mark.parametrize('style', ['mpl', 'fig', 'img'])
+def test_frame_writer(style):
     mw = FrameWriter('test_frames/')
 
-    check_animation(mw)
+    check_animation(mw, style=style)
 
     assert os.path.isdir('test_frames')
     shutil.rmtree('test_frames')
 
-def test_gif_writer():
+@pytest.mark.parametrize('style', ['mpl', 'fig', 'img'])
+def test_gif_writer(style):
     mw = GifWriter('test.gif')
 
-    check_animation(mw)
+    check_animation(mw, style=style)
 
     assert os.path.isfile('test.gif')
     os.remove('test.gif')
 
+@pytest.mark.parametrize('style', ['mpl', 'fig', 'img'])
 @pytest.mark.skipif(not is_ffmpeg_installed(), reason='FFMpeg is not installed.')
-def test_ffmpeg_writer():
+def test_ffmpeg_writer(style):
     mw = FFMpegWriter('test.mp4')
 
-    check_animation(mw)
+    check_animation(mw, style=style)
 
     assert mw._repr_html_()
 

@@ -171,7 +171,7 @@ def test_deformable_mirror():
             assert np.std(deformable_mirror.surface) < 1e-12
 
             for i in np.random.randint(0, num_actuators, size=10):
-                deformable_mirror.actuators[i] = np.random.randn(1)
+                deformable_mirror.actuators[i] = np.random.randn(1)[0]
 
                 # Mirror should not be flat with poked actuator
                 assert np.std(deformable_mirror.surface) > 1e-12
@@ -227,10 +227,10 @@ def test_segmented_deformable_mirror():
         assert np.std(segmented_mirror.surface) < 1e-12
 
         for i in np.random.randint(0, num_segments_expected, size=10):
-            piston = np.random.randn(1)
+            piston = np.random.randn(1)[0]
 
             while np.abs(piston) < 1e-5:
-                piston = np.random.randn(1)
+                piston = np.random.randn(1)[0]
 
             segmented_mirror.set_segment_actuators(i, piston, 0, 0)
 
@@ -241,10 +241,10 @@ def test_segmented_deformable_mirror():
             tip, tilt = np.random.randn(2)
 
             while np.abs(tip) < 1e-5:
-                tip = np.random.randn(1)
+                tip = np.random.randn(1)[0]
 
             while np.abs(tilt) < 1e-5:
-                tilt = np.random.randn(1)
+                tilt = np.random.randn(1)[0]
 
             segmented_mirror.set_segment_actuators(i, 0, tip, tilt)
 

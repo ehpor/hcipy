@@ -130,6 +130,11 @@ def make_standard_atmosphere(input_grid, cn_squared=None, outer_scale=None, site
     -------
     MultiLayerAtmosphere
         The multi-layer atmospheric model corresponding to the site.
+
+    Raises
+    ------
+    ValueError
+        If the requested `site` is not one of the implemented sites.
     '''
     if site == 'mauna_kea':
         layers = make_mauna_kea_atmospheric_layers(input_grid, cn_squared, outer_scale)
@@ -138,6 +143,6 @@ def make_standard_atmosphere(input_grid, cn_squared=None, outer_scale=None, site
     elif site == 'keck':
         layers = make_keck_atmospheric_layers(input_grid, cn_squared, outer_scale)
     else:
-        raise NotImplementedError('Site unknown.')
+        raise ValueError('Site unknown.')
 
     return MultiLayerAtmosphere(layers, **kwargs)

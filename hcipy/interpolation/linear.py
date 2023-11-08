@@ -3,7 +3,7 @@ import numpy as np
 from ..field import Field
 
 def make_linear_interpolator_separated(field, grid=None, fill_value=np.nan):
-    '''Make a linear interpolators for a separated grid.
+    '''Make a linear interpolator for a Field on a separated grid.
 
     Parameters
     ----------
@@ -37,7 +37,7 @@ def make_linear_interpolator_separated(field, grid=None, fill_value=np.nan):
     return interpolator
 
 def make_linear_interpolator_unstructured(field, grid=None, fill_value=np.nan):
-    '''Make a linear interpolator for an unstructured grid.
+    '''Make a linear interpolator for a Field on an unstructured grid.
 
     Parameters
     ----------
@@ -71,7 +71,7 @@ def make_linear_interpolator_unstructured(field, grid=None, fill_value=np.nan):
     return interpolator
 
 def make_linear_interpolator(field, grid=None, fill_value=None):
-    '''Make a linear interpolator for any type of grid.
+    '''Make a linear interpolator for a Field on any type of grid.
 
     Parameters
     ----------

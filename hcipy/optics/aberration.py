@@ -72,7 +72,7 @@ class SurfaceAberration(SurfaceApodizer):
         `diameter` is used if this is not given.
     remove_modes : ModeBasis
         The modes which to remove from the surface aberration. The peak-to-valley
-        is enforced before these modes are removed. This allows for correctting surface
+        is enforced before these modes are removed. This allows for correcting surface
         errors with optic alignment.
     '''
     def __init__(self, pupil_grid, ptv, diameter, exponent=-2.5, refractive_index=-1, aperture=None, remove_modes=None):

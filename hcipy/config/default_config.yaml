@@ -5,7 +5,7 @@ fourier:
     emulate_fftshifts: true
 
     # The backend to use for the FFTs.
-    method: ['mkl', 'fftw', 'numpy']
+    method: ['mkl', 'scipy', 'fftw', 'numpy']
 
   mft:
     # Whether to precompute the matrices used in the MFT.

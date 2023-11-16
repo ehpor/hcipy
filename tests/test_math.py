@@ -4,7 +4,7 @@ import numpy as np
 
 @pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
 @pytest.mark.parametrize('method', ['numpy', 'scipy', 'fftw', 'mkl'])
-def test_fft_method(method, dtype):
+def test_fft_acceleration(method, dtype):
     if method == 'fftw':
         pytest.importorskip('pyfftw')
 
@@ -17,7 +17,7 @@ def test_fft_method(method, dtype):
     x = x.astype(dtype)
 
     y_numpy = np.fft.fftn(x).astype(dtype)
-    y_method = hcipy.fftn(x, method=method)
+    y_method = hcipy._math.fft.fftn(x, method=method).astype(dtype)
 
     if dtype == 'complex64':
         rtol = 1e-4

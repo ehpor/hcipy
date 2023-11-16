@@ -133,7 +133,7 @@ class OccultedLyotCoronagraph(OpticalElement):
 		The grid on which the focal plane mask is defined. If this is none,
 		the grid will be determined from the focal plane mask. The default value is None.
 	'''
-	def __init__(self, input_grid, focal_plane_mask, lyot_stop=None, focal_length=1, coronagraphic_focal_grid=None):
+	def __init__(self, input_grid, focal_plane_mask, focal_length=1, coronagraphic_focal_grid=None):
 
 		if hasattr(focal_plane_mask, 'input_grid'):
 			# Focal plane mask is an optical element.

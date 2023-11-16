@@ -13,6 +13,7 @@ from . import coronagraphy
 from . import field
 from . import fourier
 from . import interpolation
+from . import math
 from . import metrics
 from . import mode_basis
 from . import optics
@@ -30,6 +31,7 @@ from .coronagraphy import *
 from .field import *
 from .fourier import *
 from .interpolation import *
+from .math import *
 from .metrics import *
 from .mode_basis import *
 from .optics import *
@@ -48,6 +50,7 @@ __all__.extend(coronagraphy.__all__)
 __all__.extend(field.__all__)
 __all__.extend(fourier.__all__)
 __all__.extend(interpolation.__all__)
+__all__.extend(math.__all__)
 __all__.extend(metrics.__all__)
 __all__.extend(mode_basis.__all__)
 __all__.extend(optics.__all__)

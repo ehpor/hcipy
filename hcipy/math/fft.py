@@ -28,6 +28,7 @@ def _make_func(func_name):
     scipy_func = getattr(scipy.fft, func_name)
     numpy_func = getattr(np.fft, func_name)
 
+    @functools.wraps(numpy_func)
     def func(*args, overwrite_x=False, method=None, threads=None, **kwargs):
         if method is None:
             methods = Configuration().fourier.fft.method

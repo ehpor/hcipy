@@ -2,8 +2,26 @@ import ctypes
 import ctypes.wintypes
 import os
 import platform
+import multiprocessing
 
 def get_num_available_cores():
+    '''Get the number of cores available on the system.
+
+    The attempt at retrieving the number of cores that our process
+    is assigned may not be available on all operating systems. On
+    unsupported operating systems, the total number of cores is
+    returned instead.
+
+    Returns
+    -------
+    int
+        The number of available cores.
+
+    Raises
+    ------
+    RuntimeError
+        If we are unable to
+    '''
     if hasattr(os, 'sched_getaffinity'):
         return len(os.sched_getaffinity(0))
     elif platform.system() == 'Windows':
@@ -20,9 +38,10 @@ def get_num_available_cores():
 
         mask = DWORD_PTR()
 
-        if not GetProcessAffinityMask(GetCurrentProcess(), ctypes.byref(mask), ctypes.byref(DWORD_PTR())):
-            raise RuntimeError("Call to 'GetProcessAffinityMask' failed")
+        if GetProcessAffinityMask(GetCurrentProcess(), ctypes.byref(mask), ctypes.byref(DWORD_PTR())):
+            # Call successful. Return result.
+            return bin(mask.value).count('1')
 
-        return bin(mask.value).count('1')
-    else:
-        raise RuntimeError('Cannot determine the number of available cores')
+    # Operating system is unsupported or the call to retrieve the
+    # core count has failed. Fall back to all cores.
+    return multiprocessing.cpu_count()

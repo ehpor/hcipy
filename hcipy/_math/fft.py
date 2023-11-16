@@ -4,13 +4,8 @@ from .cpu import get_num_available_cores
 import functools
 import numpy as np
 import scipy
-import multiprocessing
 
-try:
-    _CPU_COUNT = get_num_available_cores()
-except Exception:
-    # Fallback to using all CPUs on the system.
-    _CPU_COUNT = multiprocessing.cpu_count()
+_CPU_COUNT = get_num_available_cores()
 
 try:
     import mkl_fft

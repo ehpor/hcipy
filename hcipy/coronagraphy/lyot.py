@@ -33,7 +33,7 @@ class LyotCoronagraph(OpticalElement):
 		if hasattr(focal_plane_mask, 'input_grid'):
 			# Focal plane mask is an optical element.
 			if coronagraphic_focal_grid is None:
-				grid = focal_plane_mask.apodization.grid 
+				grid = focal_plane_mask.apodization.grid
 			else:
 				grid = coronagraphic_focal_grid
 
@@ -41,7 +41,7 @@ class LyotCoronagraph(OpticalElement):
 		else:
 			# Focal plane mask is a field.
 			if coronagraphic_focal_grid is None:
-				grid = focal_plane_mask.grid 
+				grid = focal_plane_mask.grid
 			else:
 				grid = coronagraphic_focal_grid
 
@@ -138,7 +138,7 @@ class OccultedLyotCoronagraph(OpticalElement):
 		if hasattr(focal_plane_mask, 'input_grid'):
 			# Focal plane mask is an optical element.
 			if coronagraphic_focal_grid is None:
-				grid = focal_plane_mask.apodization.grid 
+				grid = focal_plane_mask.apodization.grid
 			else:
 				grid = coronagraphic_focal_grid
 
@@ -146,7 +146,7 @@ class OccultedLyotCoronagraph(OpticalElement):
 		else:
 			# Focal plane mask is a field.
 			if coronagraphic_focal_grid is None:
-				grid = focal_plane_mask.grid 
+				grid = focal_plane_mask.grid
 			else:
 				grid = coronagraphic_focal_grid
 

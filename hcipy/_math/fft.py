@@ -1,11 +1,16 @@
 from ..config import Configuration
+from .cpu import get_num_available_cores
 
 import functools
 import numpy as np
 import scipy
 import multiprocessing
 
-_CPU_COUNT = multiprocessing.cpu_count()
+try:
+    _CPU_COUNT = get_num_available_cores()
+except Exception:
+    # Fallback to using all CPUs on the system.
+    _CPU_COUNT = multiprocessing.cpu_count()
 
 try:
     import mkl_fft

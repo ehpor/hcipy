@@ -19,9 +19,12 @@ except ImportError:
 
 try:
     import pyfftw
+
+    # Set default cache variables for PyFFTW.
+    pyfftw.interfaces.cache.enable()
+    pyfftw.interfaces.cache.set_keepalive_time(30)
 except ImportError:
     pyfftw = None
-
 
 def _make_func(func_name):
     if mkl_fft is not None:

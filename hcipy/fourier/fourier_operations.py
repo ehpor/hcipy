@@ -2,7 +2,7 @@ import numpy as np
 
 from .fast_fourier_transform import FastFourierTransform
 from ..field import Field, field_dot, field_conjugate_transpose
-from ..math import fft as _fft_module
+from .._math import fft as _fft_module
 
 
 class FourierFilter(object):

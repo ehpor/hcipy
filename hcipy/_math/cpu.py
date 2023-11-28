@@ -1,4 +1,3 @@
-import ctypes
 import os
 import platform
 import multiprocessing
@@ -24,6 +23,7 @@ def get_num_available_cores():
     if hasattr(os, 'sched_getaffinity'):
         return len(os.sched_getaffinity(0))
     elif platform.system() == 'Windows':
+        import ctypes
         import ctypes.wintypes
 
         kernel32 = ctypes.WinDLL('kernel32')

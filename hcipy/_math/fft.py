@@ -4,6 +4,7 @@ from .cpu import get_num_available_cores
 import functools
 import numpy as np
 import scipy
+import warnings
 
 _CPU_COUNT = get_num_available_cores()
 
@@ -47,16 +48,19 @@ def _make_func(func_name):
                 threads = _CPU_COUNT
 
         for method in methods:
-            if method == 'mkl' and mkl_fft is not None:
-                return mkl_func(*args, **kwargs, overwrite_x=overwrite_x)
-            elif method == 'fftw' and pyfftw is not None:
-                return pyfftw_func(*args, **kwargs, workers=threads, overwrite_x=overwrite_x)
-            elif method == 'scipy':
-                return scipy_func(*args, **kwargs, workers=threads, overwrite_x=overwrite_x)
-            elif method == 'numpy':
-                return numpy_func(*args, **kwargs)
+            try:
+                if method == 'mkl' and mkl_fft is not None:
+                    return mkl_func(*args, **kwargs, overwrite_x=overwrite_x)
+                elif method == 'fftw' and pyfftw is not None:
+                    return pyfftw_func(*args, **kwargs, workers=threads, overwrite_x=overwrite_x)
+                elif method == 'scipy':
+                    return scipy_func(*args, **kwargs, workers=threads, overwrite_x=overwrite_x)
+                elif method == 'numpy':
+                    return numpy_func(*args, **kwargs)
+            except Exception as e:
+                warnings.warn(f'Method {method} raised an exception "{e}". Falling back to other methods.')
         else:
-            raise ValueError('No FFT method could be found.')
+            raise ValueError('No suitable/working FFT method could be found.')
 
     return func
 

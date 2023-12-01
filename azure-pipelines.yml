@@ -25,7 +25,7 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy ffmpeg "conda-forge::pyfftw<0.13.1" mkl_fft
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy ffmpeg conda-forge::pyfftw mkl_fft
     displayName: Set up Anaconda environment
 
   - bash: |
@@ -87,7 +87,7 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy ffmpeg "conda-forge::pyfftw<0.13.1" mkl_fft
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy ffmpeg conda-forge::pyfftw mkl_fft
     displayName: Set up Anaconda environment
 
   - bash: |
@@ -146,7 +146,7 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy ffmpeg "conda-forge::pyfftw<0.13.1" mkl_fft
+      conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy ffmpeg conda-forge::pyfftw mkl_fft
     displayName: Set up Anaconda environment
 
   - script: |
@@ -194,7 +194,7 @@ jobs:
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy ffmpeg "conda-forge::pyfftw<0.13.1" mkl_fft
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy ffmpeg conda-forge::pyfftw mkl_fft
     displayName: Set up Anaconda environment
 
   - bash: |

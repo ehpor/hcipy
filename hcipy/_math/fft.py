@@ -43,22 +43,25 @@ def _make_func(func_name):
             # Use a single thread for small FFTs by default. The exact cutoff is very
             # rough changes from computer to computer. We choose 256x256 as a general guide.
             if args[0].size < 256**2:
-                threads = 1
+                preferred_threads = 1
             else:
-                threads = _CPU_COUNT
+                preferred_threads = _CPU_COUNT
 
-        for method in methods:
-            try:
-                if method == 'mkl' and mkl_fft is not None:
-                    return mkl_func(*args, **kwargs, overwrite_x=overwrite_x)
-                elif method == 'fftw' and pyfftw is not None:
-                    return pyfftw_func(*args, **kwargs, workers=threads, overwrite_x=overwrite_x)
-                elif method == 'scipy':
-                    return scipy_func(*args, **kwargs, workers=threads, overwrite_x=overwrite_x)
-                elif method == 'numpy':
-                    return numpy_func(*args, **kwargs)
-            except Exception as e:
-                warnings.warn(f'Method {method} raised an exception "{e}". Falling back to other methods.')
+        for threads in [preferred_threads, 1]:
+            for method in methods:
+                try:
+                    if method == 'mkl' and mkl_fft is not None:
+                        return mkl_func(*args, **kwargs, overwrite_x=overwrite_x)
+                    elif method == 'fftw' and pyfftw is not None:
+                        return pyfftw_func(*args, **kwargs, workers=threads, overwrite_x=overwrite_x)
+                    elif method == 'scipy':
+                        return scipy_func(*args, **kwargs, workers=threads, overwrite_x=overwrite_x)
+                    elif method == 'numpy':
+                        return numpy_func(*args, **kwargs)
+                except Exception as e:
+                    warnings.warn(f'Method {method} raised an exception "{e}". Falling back to other methods.')
+            else:
+                warnings.warn(f'No suitable/working FFT method could be found using {threads} threads.')
         else:
             raise ValueError('No suitable/working FFT method could be found.')
 

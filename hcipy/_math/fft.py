@@ -67,6 +67,7 @@ def _make_func(func_name):
 
     return func
 
+# Make all individual functions using this function generator.
 fft = _make_func('fft')
 fft2 = _make_func('fft2')
 fftn = _make_func('fftn')
@@ -75,6 +76,21 @@ ifft = _make_func('ifft')
 ifft2 = _make_func('ifft2')
 ifftn = _make_func('ifftn')
 
-# For completeness, we include fftshift functions.
+rfft = _make_func('rfft')
+rfft2 = _make_func('rfft2')
+rfftn = _make_func('rfftn')
+
+irfft = _make_func('irfft')
+irfft2 = _make_func('irfft2')
+irfftn = _make_func('irfftn')
+
+hfft = _make_func('hfft')
+
+ihfft = _make_func('ihfft')
+
+# For completeness, we include fftshift and fftfreq functions.
 fftshift = np.fft.fftshift
 ifftshift = np.fft.ifftshift
+
+fftfreq = np.fft.fftfreq
+rfftfreq = np.fft.rfftfreq

@@ -2,9 +2,10 @@ import pytest
 import hcipy
 import numpy as np
 
+@pytest.mark.parametrize('func', ['fftn', 'ifftn', 'rfftn', 'irfftn'])
 @pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
 @pytest.mark.parametrize('method', ['numpy', 'scipy', 'fftw', 'mkl'])
-def test_fft_acceleration(method, dtype):
+def test_fft_acceleration(func, method, dtype):
     if method == 'fftw':
         pytest.importorskip('pyfftw')
 
@@ -13,13 +14,21 @@ def test_fft_acceleration(method, dtype):
 
     N = 128
 
-    x = np.random.randn(N, N) + 1j * np.random.randn(N, N)
-    x = x.astype(dtype)
+    x = np.random.randn(N, N).astype(dtype)
 
-    y_numpy = np.fft.fftn(x).astype(dtype)
-    y_method = hcipy._math.fft.fftn(x, method=method).astype(dtype)
+    if 'r' not in func and 'complex' in dtype:
+        x = x + 1j * np.random.randn(N, N).astype(dtype)
 
-    if dtype == 'complex64':
+    if 'r' in func:
+        x = x.real
+
+    numpy_func = getattr(np.fft, func)
+    hcipy_func = getattr(hcipy._math.fft, func)
+
+    y_numpy = numpy_func(x)
+    y_method = hcipy_func(x, method=method)
+
+    if dtype == 'complex64' or dtype == 'float32':
         rtol = 1e-4
     else:
         rtol = 1e-8

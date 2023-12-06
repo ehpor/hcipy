@@ -33,7 +33,7 @@ def _make_func(func_name):
     numpy_func = getattr(np.fft, func_name)
 
     @functools.wraps(numpy_func)
-    def func(*args, overwrite_x=False, method=None, threads=None, **kwargs):
+    def func(x, *args, overwrite_x=False, method=None, threads=None, **kwargs):
         if method is None:
             methods = Configuration().fourier.fft.method
         else:
@@ -42,7 +42,7 @@ def _make_func(func_name):
         if threads is None:
             # Use a single thread for small FFTs by default. The exact cutoff is very
             # rough changes from computer to computer. We choose 256x256 as a general guide.
-            if args[0].size < 256**2:
+            if x.size < 256**2:
                 preferred_threads = 1
             else:
                 preferred_threads = _CPU_COUNT
@@ -51,13 +51,22 @@ def _make_func(func_name):
             for method in methods:
                 try:
                     if method == 'mkl' and mkl_fft is not None:
-                        return mkl_func(*args, **kwargs, overwrite_x=overwrite_x)
+                        return mkl_func(x, *args, **kwargs, overwrite_x=overwrite_x)
                     elif method == 'fftw' and pyfftw is not None:
-                        return pyfftw_func(*args, **kwargs, workers=threads, overwrite_x=overwrite_x)
+                        return pyfftw_func(x, *args, **kwargs, workers=threads, overwrite_x=overwrite_x)
                     elif method == 'scipy':
-                        return scipy_func(*args, **kwargs, workers=threads, overwrite_x=overwrite_x)
+                        return scipy_func(x, *args, **kwargs, workers=threads, overwrite_x=overwrite_x)
                     elif method == 'numpy':
-                        return numpy_func(*args, **kwargs)
+                        # Numpy doesn't always retain the correct bit depth. Cast the results to the correct bit depth here.
+                        dtype_in = x.dtype
+                        real_out = func_name.startswith('ir') or func_name.startswith('h')
+
+                        if dtype_in == 'float32' or dtype_in == 'complex64':
+                            dtype_out = 'float32' if real_out else 'complex64'
+                        else:
+                            dtype_out = 'float64' if real_out else 'complex128'
+
+                        return numpy_func(x, *args, **kwargs).astype(dtype_out, copy=False)
                 except Exception as e:
                     warnings.warn(f'Method {method} raised an exception "{e}". Falling back to other methods.')
             else:

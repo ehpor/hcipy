@@ -24,7 +24,10 @@ except ImportError:
 
 def _make_func(func_name):
     if mkl_fft is not None:
-        mkl_func = getattr(mkl_fft, func_name)
+        try:
+            mkl_func = getattr(mkl_fft, func_name)
+        except AttributeError:
+            mkl_func is None
 
     if pyfftw is not None:
         pyfftw_func = getattr(pyfftw.interfaces.scipy_fft, func_name)
@@ -50,7 +53,7 @@ def _make_func(func_name):
         for threads in [preferred_threads, 1]:
             for method in methods:
                 try:
-                    if method == 'mkl' and mkl_fft is not None:
+                    if method == 'mkl' and mkl_fft is not None and mkl_func is not None:
                         return mkl_func(x, *args, **kwargs, overwrite_x=overwrite_x)
                     elif method == 'fftw' and pyfftw is not None:
                         return pyfftw_func(x, *args, **kwargs, workers=threads, overwrite_x=overwrite_x)

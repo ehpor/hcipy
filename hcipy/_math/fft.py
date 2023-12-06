@@ -46,11 +46,12 @@ def _make_func(func_name):
             # Use a single thread for small FFTs by default. The exact cutoff is very
             # rough changes from computer to computer. We choose 256x256 as a general guide.
             if x.size < 256**2:
-                preferred_threads = 1
+                threads_attempts = [1]
             else:
-                preferred_threads = _CPU_COUNT
+                threads_attempts = [_CPU_COUNT, 1]
 
-        for threads in [preferred_threads, 1]:
+        # Try multithreaded first, but fall back upon single-threaded if that doesn't work.
+        for threads in threads_attempts:
             for method in methods:
                 try:
                     if method == 'mkl' and mkl_fft is not None and mkl_func is not None:

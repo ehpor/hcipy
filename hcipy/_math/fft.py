@@ -27,7 +27,7 @@ def _make_func(func_name):
         try:
             mkl_func = getattr(mkl_fft, func_name)
         except AttributeError:
-            mkl_func is None
+            mkl_func = None
 
     if pyfftw is not None:
         pyfftw_func = getattr(pyfftw.interfaces.scipy_fft, func_name)

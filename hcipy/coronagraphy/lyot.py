@@ -12,6 +12,10 @@ class LyotCoronagraph(OpticalElement):
 	.. [Soummer2007] Soummer et al. 2007, "Fast computation of Lyot-style
 		coronagraph propagation".
 
+	.. notes:: The LyotCoroonagraph tries to automatically get the grid from the focal_plane_mask.
+		However, a bug in AgnosticOpticalElements creates an invalid access which crashes the initialization.
+		The correct grid can be passed explicitely to circumvent this bug by using the focal_plane_mask_grid parameter.
+
 	Parameters
 	----------
 	input_grid : Grid
@@ -25,25 +29,25 @@ class LyotCoronagraph(OpticalElement):
 		this will be used instead. This allows for more realistic implementations of Lyot stops.
 	focal_length : scalar
 		The internal focal length of the Lyot system.
-	coronagraphic_focal_grid : Grid
+	focal_plane_mask_grid : Grid
 		The grid on which the focal plane mask is defined. If this is none,
 		the grid will be determined from the focal plane mask. The default value is None.
 	'''
-	def __init__(self, input_grid, focal_plane_mask, lyot_stop=None, focal_length=1, coronagraphic_focal_grid=None):
+	def __init__(self, input_grid, focal_plane_mask, lyot_stop=None, focal_length=1, focal_plane_mask_grid=None):
 		if hasattr(focal_plane_mask, 'input_grid'):
 			# Focal plane mask is an optical element.
-			if coronagraphic_focal_grid is None:
+			if focal_plane_mask_grid is None:
 				grid = focal_plane_mask.apodization.grid
 			else:
-				grid = coronagraphic_focal_grid
+				grid = focal_plane_mask_grid
 
 			self.focal_plane_mask = focal_plane_mask
 		else:
 			# Focal plane mask is a field.
-			if coronagraphic_focal_grid is None:
+			if focal_plane_mask_grid is None:
 				grid = focal_plane_mask.grid
 			else:
-				grid = coronagraphic_focal_grid
+				grid = focal_plane_mask_grid
 
 			self.focal_plane_mask = Apodizer(focal_plane_mask)
 
@@ -116,6 +120,10 @@ class OccultedLyotCoronagraph(OpticalElement):
 
 	The area outside of this focal-plane mask is assumed to be fully absorbing.
 
+	.. notes:: The LyotCoroonagraph tries to automatically get the grid from the focal_plane_mask.
+		However, a bug in AgnosticOpticalElements creates an invalid access which crashes the initialization.
+		The correct grid can be passed explicitely to circumvent this bug by using the focal_plane_mask_grid parameter
+
 	Parameters
 	----------
 	input_grid : Grid
@@ -129,26 +137,26 @@ class OccultedLyotCoronagraph(OpticalElement):
 		this will be used instead. This allows for more realistic implementations of Lyot stops.
 	focal_length : scalar
 		The internal focal length of the Lyot system.
-	coronagraphic_focal_grid : Grid
+	focal_plane_mask_grid : Grid
 		The grid on which the focal plane mask is defined. If this is none,
 		the grid will be determined from the focal plane mask. The default value is None.
 	'''
-	def __init__(self, input_grid, focal_plane_mask, focal_length=1, coronagraphic_focal_grid=None):
+	def __init__(self, input_grid, focal_plane_mask, focal_length=1, focal_plane_mask_grid=None):
 
 		if hasattr(focal_plane_mask, 'input_grid'):
 			# Focal plane mask is an optical element.
-			if coronagraphic_focal_grid is None:
+			if focal_plane_mask_grid is None:
 				grid = focal_plane_mask.apodization.grid
 			else:
-				grid = coronagraphic_focal_grid
+				grid = focal_plane_mask_grid
 
 			self.focal_plane_mask = focal_plane_mask
 		else:
 			# Focal plane mask is a field.
-			if coronagraphic_focal_grid is None:
+			if focal_plane_mask_grid is None:
 				grid = focal_plane_mask.grid
 			else:
-				grid = coronagraphic_focal_grid
+				grid = focal_plane_mask_grid
 
 			self.focal_plane_mask = Apodizer(focal_plane_mask)
 

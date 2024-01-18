@@ -19,8 +19,6 @@ class FraunhoferPropagator(AgnosticOpticalElement):
             The grid on which the incoming wavefront is defined.
         output_grid : Grid
             The grid on which the outgoing wavefront is to be evaluated.
-        wavelength : scalar
-            The wavelength of the wavefront.
         focal_length : scalar
             The focal length of the lens system.
     '''

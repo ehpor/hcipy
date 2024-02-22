@@ -366,11 +366,11 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
 	def __len__(self):
 		return len(self.data)
 
-	def conj(self):
-		return np.conj(self)
+	def conj(self, *args, **kwargs):
+		return np.conj(self, *args, **kwargs)
 
-	def conjugate(self):
-		return np.conjugate(self)
+	def conjugate(self, *args, **kwargs):
+		return np.conjugate(self, *args, **kwargs)
 
 	@property
 	def flags(self):

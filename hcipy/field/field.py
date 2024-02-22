@@ -139,7 +139,12 @@ class Field:
 		return self[..., i]
 
 class OldStyleField(Field, np.ndarray):
-	'''The value of some physical quantity for each point in some coordinate system.
+	'''A Field based on subclassing a Numpy array.
+
+	This constitutes an "old-style" Field object. Due to problems and inflexibilities
+	in the way subclassing works, we are gradually transitioning to "new-style" fields
+	(see :class:`NewStyleField`) which use the dispatch mechanism introduced by
+	Numpy 1.13.
 
 	Parameters
 	----------
@@ -227,6 +232,27 @@ def _unwrap(arg):
 	return arg
 
 class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
+	'''A Field based on composition rather than subclassing a Numpy array.
+
+	This constitutes an "new-style" Field object. A previous version uses subclassing
+	from Numpy arrays (see :class:`OldStyleField` that had problems and inflexibilities
+	due to the way subclassing works. We are gradually transitioning to "new-style" fields,
+	which use the dispatch mechanism introduced by Numpy 1.13.
+
+	Parameters
+	----------
+	data : array_like
+		An array of values or tensors for each point in the :class:`Grid`.
+	grid : Grid
+		The corresponding :class:`Grid` on which the values are set.
+
+	Attributes
+	----------
+	data : array_like
+		The underlying data as a Numpy array or compatible object.
+	grid : Grid
+		The grid on which the values are defined.
+	'''
 	def __init__(self, data, grid):
 		self.data = np.asarray(data)
 		self.grid = grid
@@ -241,6 +267,10 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
 
 		result = getattr(ufunc, method)(*inputs, **kwargs)
 
+		# Note: this is an extremely simple way of determining whether the
+		# resulting object should be a Field or not. We can likely do better
+		# by looking directly at the name of the function that we are executing.
+		# The current code is fine for most ufuncs.
 		if isinstance(result, np.ndarray):
 			return Field(result, self.grid)
 		else:
@@ -257,6 +287,9 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
 
 		result = func(*args, **kwargs)
 
+		# Note: this is an extremely simple way of determining whether the
+		# resulting object should be a Field or not. We can likely do better
+		# by looking directly at the name of the function that we are executing.
 		if isinstance(result, np.ndarray):
 			return Field(result, self.grid)
 

@@ -30,30 +30,28 @@ def _parameters():
 def test_fft_acceleration(func, method, dtype_in, dtype_out):
     rng = np.random.default_rng(seed=0)
 
-    print(func, method, dtype_in, dtype_out)
     if method == 'fftw':
         pytest.importorskip('pyfftw')
 
     if method == 'mkl':
         pytest.importorskip('mkl_fft')
 
-    N = 128
+    for N in [32, 128, 1024]:
+        x = rng.standard_normal((N, N)).astype(dtype_in)
 
-    x = rng.standard_normal((N, N)).astype(dtype_in)
+        if dtype_in.startswith('complex'):
+            x = x + 1j * rng.standard_normal((N, N)).astype(dtype_in)
 
-    if dtype_in.startswith('complex'):
-        x = x + 1j * rng.standard_normal((N, N)).astype(dtype_in)
+        numpy_func = getattr(np.fft, func)
+        hcipy_func = getattr(hcipy._math.fft, func)
 
-    numpy_func = getattr(np.fft, func)
-    hcipy_func = getattr(hcipy._math.fft, func)
+        y_numpy = numpy_func(x).astype(dtype_out)
+        y_method = hcipy_func(x, method=method)
 
-    y_numpy = numpy_func(x).astype(dtype_out)
-    y_method = hcipy_func(x, method=method)
+        if dtype_out == 'complex64' or dtype_out == 'float32':
+            rtol = 2e-4
+        else:
+            rtol = 1e-8
 
-    if dtype_out == 'complex64' or dtype_out == 'float32':
-        rtol = 1e-4
-    else:
-        rtol = 1e-8
-
-    assert np.allclose(y_numpy, y_method, rtol=rtol, atol=rtol)
-    assert y_method.dtype == dtype_out
+        assert np.allclose(y_numpy, y_method, rtol=rtol, atol=rtol)
+        assert y_method.dtype == dtype_out

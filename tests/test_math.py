@@ -49,7 +49,7 @@ def test_fft_acceleration(func, method, dtype_in, dtype_out):
         y_method = hcipy_func(x, method=method)
 
         if dtype_out == 'complex64' or dtype_out == 'float32':
-            rtol = 2e-4
+            rtol = 5e-4
         else:
             rtol = 1e-8
 

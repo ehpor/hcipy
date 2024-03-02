@@ -2,13 +2,8 @@ import numpy as np
 
 from .fast_fourier_transform import FastFourierTransform
 from ..field import Field, field_dot, field_conjugate_transpose
+from .._math import fft as _fft_module
 
-try:
-	import mkl_fft as _fft_module
-	_use_mkl = True
-except ImportError:
-	_fft_module = np.fft
-	_use_mkl = False
 
 class FourierFilter(object):
 	'''A filter in the Fourier domain.
@@ -56,7 +51,7 @@ class FourierFilter(object):
 		recompute_internal_array = self.internal_array is None
 		recompute_internal_array = recompute_internal_array or (self.internal_array.ndim != (field.grid.ndim + field.tensor_order))
 		recompute_internal_array = recompute_internal_array or (self.internal_array.dtype != field.dtype)
-		recompute_internal_array = recompute_internal_array or np.all(self.internal_array.shape[:field.tensor_order] == field.tensor_shape)
+		recompute_internal_array = recompute_internal_array or not np.array_equal(self.internal_array.shape[:field.tensor_order], field.tensor_shape)
 
 		if recompute_internal_array:
 			self.internal_array = self.internal_grid.zeros(field.tensor_shape, field.dtype).shaped
@@ -116,12 +111,11 @@ class FourierFilter(object):
 			c = tuple([slice(None)] * field.tensor_order) + self.cutout
 			f[c] = field.shaped
 
-		# Don't overwrite f if it's the input array.
-		if _use_mkl:
-			kwargs = {'overwrite_x': self.cutout is not None and field.grid.ndim > 1}
-		else:
-			kwargs = {}
-		f = _fft_module.fftn(f, axes=tuple(range(-self.input_grid.ndim, 0)), **kwargs)
+		# Don't overwrite f if it shares memory with the input field.
+		overwrite_x = self.cutout is not None
+		axes = tuple(range(-self.input_grid.ndim, 0))
+
+		f = _fft_module.fftn(f, axes=axes, overwrite_x=overwrite_x)
 
 		if (self._transfer_function.ndim - self.internal_grid.ndim) == 2:
 			# The transfer function is a matrix field.
@@ -142,13 +136,13 @@ class FourierFilter(object):
 			else:
 				tf = self._transfer_function
 
-			f *= tf
+			# This is faster than f *= tf for Numpy due to it going back to C ordering.
+			f = f * tf
 
-		if _use_mkl:
-			kwargs = {'overwrite_x': True}
-		else:
-			kwargs = {}
-		f = _fft_module.ifftn(f, axes=tuple(range(-self.input_grid.ndim, 0)), **kwargs)
+		# Since f is now guaranteed to not share memory, always allow overwriting.
+		overwrite_x = True
+
+		f = _fft_module.ifftn(f, axes=axes, overwrite_x=overwrite_x)
 
 		s = f.shape[:-self.internal_grid.ndim] + (-1,)
 		if self.cutout is None:

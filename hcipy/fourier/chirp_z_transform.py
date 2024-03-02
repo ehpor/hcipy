@@ -2,11 +2,7 @@ import numpy as np
 from scipy.fft import next_fast_len
 
 from .fourier_transform import _get_float_and_complex_dtype
-
-try:
-	import mkl_fft._numpy_fft as _fft_module
-except ImportError:
-	_fft_module = np.fft
+from .._math import fft as _fft_module
 
 class ChirpZTransform:
 	'''The Chirp Z-transform (CZT).

@@ -4,6 +4,9 @@ fourier:
     # This provides a 3x speedup, in exchange for a 10x reduction in accuracy.
     emulate_fftshifts: true
 
+    # The backend to use for the FFTs.
+    method: ['mkl', 'scipy', 'fftw', 'numpy']
+
   mft:
     # Whether to precompute the matrices used in the MFT.
     # This provides a 20-30% speedup, in exchange for higher memory usage.

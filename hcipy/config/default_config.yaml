@@ -31,3 +31,7 @@ plotting:
 
   # The default colormap for imshow_pupil_phase().
   pupil_phase_colormap: 'RdBu'
+
+core:
+  # Whether to use new-style or old-style fields.
+  use_new_style_fields: false

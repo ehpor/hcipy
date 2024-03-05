@@ -1,7 +1,7 @@
 import numpy as np
 
 from .chirp_z_transform import ChirpZTransform
-from .fourier_transform import FourierTransform, _get_float_and_complex_dtype
+from .fourier_transform import FourierTransform, ComputationalComplexity, _get_float_and_complex_dtype
 from ..field import Field
 
 class ZoomFastFourierTransform(FourierTransform):
@@ -30,12 +30,7 @@ class ZoomFastFourierTransform(FourierTransform):
 		dimensional, or if the output grid has a different dimension than the input grid.
 	'''
 	def __init__(self, input_grid, output_grid):
-		if not input_grid.is_regular or not input_grid.is_('cartesian'):
-			raise ValueError('The input grid should be regularly spaced in Cartesian coordinates.')
-		if not output_grid.is_regular or not output_grid.is_('cartesian'):
-			raise ValueError('The output grid should be regularly spaced in Cartesian coordinates.')
-		if input_grid.ndim != output_grid.ndim:
-			raise ValueError('The input_grid must have the same dimensions as the output_grid.')
+		self.check_if_supported(input_grid, output_grid)
 
 		self.input_grid = input_grid
 		self.output_grid = output_grid
@@ -117,3 +112,94 @@ class ZoomFastFourierTransform(FourierTransform):
 		shape = tuple(field.tensor_shape) + (-1,)
 
 		return Field(f.reshape(shape), self.input_grid)
+
+	@classmethod
+	def check_if_supported(cls, input_grid, output_grid):
+		'''Check if the specified grids are supported by the Zoom Fast Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Zoom Fast Fourier transform.
+
+		Raises
+		------
+		ValueError
+			If the grids are not supported. The message will indicate why
+			the grids are not supported.
+		'''
+		if not input_grid.is_regular or not input_grid.is_('cartesian'):
+			raise ValueError('The input grid should be regularly spaced in Cartesian coordinates.')
+
+		if not output_grid.is_regular or not output_grid.is_('cartesian'):
+			raise ValueError('The output grid should be regularly spaced in Cartesian coordinates.')
+
+		if input_grid.ndim != output_grid.ndim:
+			raise ValueError('The input_grid must have the same dimensions as the output_grid.')
+
+	@classmethod
+	def compute_complexity(cls, input_grid, output_grid):
+		'''Compute the algorithmic complexity for the Zoom Fast Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Zoom Fast Fourier transform.
+
+		Returns
+		-------
+		AlgorithmicComplexity
+			The algorithmic complexity for this Fourier transform.
+
+		Raises
+		------
+		ValueError
+			If the grids are not supported. The message will indicate why
+			the grids are not supported.
+		'''
+		cls.check_if_supported(input_grid, output_grid)
+
+		num_complex_multiplications = 0
+		num_complex_additions = 0
+
+		for i, (in_len, out_len) in enumerate(zip(input_grid.shape, output_grid.shape)):
+			czt_len = in_len + out_len
+			size_per_czt = np.prod(output_grid.shape[:i]) * np.prod(input_grid.shape[i + 1:])
+
+			size_before_czt = np.prod(output_grid.shape[:i]) * np.prod(input_grid.shape[i:])
+			size_after_czt = np.prod(output_grid.shape[:i + 1]) * np.prod(input_grid.shape[i + 1:])
+
+			print(i, f'{czt_len=}, {size_per_czt=}, {size_before_czt=}, {size_after_czt=}')
+
+
+			# Multiplication 1
+			num_complex_multiplications += size_before_czt
+
+			# FFT
+			num_complex_multiplications += 0.5 * czt_len * size_per_czt * np.log2(czt_len)
+			num_complex_additions += czt_len * size_per_czt * np.log2(czt_len)
+
+			# Multiplication 2
+			num_complex_multiplications += czt_len * size_per_czt
+
+			# Inverse FFT
+			num_complex_multiplications += 0.5 * czt_len * size_per_czt * np.log2(czt_len)
+			num_complex_additions += czt_len * size_per_czt * np.log2(czt_len)
+
+			# Multiplication 3
+			num_complex_multiplications += size_after_czt
+
+			# Shift
+			num_complex_multiplications += size_after_czt
+
+		num_multiplications = 4 * num_complex_multiplications
+		num_additions = 2 * num_complex_multiplications + 2 * num_complex_additions
+
+		return ComputationalComplexity(
+			num_multiplications=num_multiplications,
+			num_additions=num_additions
+		)

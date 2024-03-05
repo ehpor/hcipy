@@ -1,6 +1,17 @@
 import numpy as np
 from ..field import Field
 
+from dataclasses import dataclass
+
+@dataclass
+class ComputationalComplexity:
+	num_multiplications: int = 0
+	num_additions: int = 0
+
+	@property
+	def num_operations(self):
+		return self.num_multiplications + self.num_additions
+
 class FourierTransform(object):
 	'''The base class for all Fourier transform implementations.
 
@@ -75,6 +86,72 @@ class FourierTransform(object):
 		A /= (2 * np.pi)**self.input_grid.ndim
 
 		return A
+
+	@classmethod
+	def is_supported(cls, input_grid, output_grid):
+		'''Are the specified grids supported by this Fourier transform?
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Fourier transform.
+
+		Returns
+		-------
+		boolean
+			Whether the grids are supported or not.
+		'''
+		try:
+			cls.check_if_supported(input_grid, output_grid)
+		except ValueError:
+			return False
+
+		return True
+
+	@classmethod
+	def check_if_supported(cls, input_grid, output_grid):
+		'''Check if the specified grids are supported by this Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Fourier transform.
+
+		Raises
+		------
+		ValueError
+			If the grids are not supported. The message will indicate why
+			the grids are not supported.
+		'''
+		raise NotImplementedError()
+
+	@classmethod
+	def compute_complexity(cls, input_grid, output_grid):
+		'''Compute the algorithmic complexity for this Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Fourier transform.
+
+		Returns
+		-------
+		AlgorithmicComplexity
+			The algorithmic complexity for this Fourier transform.
+
+		Raises
+		------
+		ValueError
+			If the grids are not supported. The message will indicate why
+			the grids are not supported.
+		'''
+		raise NotImplementedError()
 
 def _time_it_iterative(function, num_iterations):
 	import time

@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.linalg import blas
-from .fourier_transform import FourierTransform, multiplex_for_tensor_fields, _get_float_and_complex_dtype
+from .fourier_transform import FourierTransform, ComputationalComplexity, multiplex_for_tensor_fields, _get_float_and_complex_dtype
 from ..field import Field
 from ..config import Configuration
 import numexpr as ne
@@ -40,15 +40,7 @@ class MatrixFourierTransform(FourierTransform):
 		dimensional, or if the output grid has a different dimension than the input grid.
 	'''
 	def __init__(self, input_grid, output_grid, precompute_matrices=None, allocate_intermediate=None):
-		# Check input grid assumptions
-		if not input_grid.is_separated or not input_grid.is_('cartesian'):
-			raise ValueError('The input_grid must be separable in cartesian coordinates.')
-		if not output_grid.is_separated or not output_grid.is_('cartesian'):
-			raise ValueError('The output_grid must be separable in cartesian coordinates.')
-		if input_grid.ndim not in [1, 2]:
-			raise ValueError('The input_grid must be one- or two-dimensional.')
-		if input_grid.ndim != output_grid.ndim:
-			raise ValueError('The input_grid must have the same dimensions as the output_grid.')
+		self.check_if_supported(input_grid, output_grid)
 
 		self.input_grid = input_grid
 		self.output_grid = output_grid
@@ -230,3 +222,75 @@ class MatrixFourierTransform(FourierTransform):
 		self._remove_matrices()
 
 		return Field(res, self.input_grid)
+
+	@classmethod
+	def check_if_supported(cls, input_grid, output_grid):
+		'''Check if the specified grids are supported by the Matrix Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Matrix Fourier transform.
+
+		Raises
+		------
+		ValueError
+			If the grids are not supported. The message will indicate why
+			the grids are not supported.
+		'''
+		if not input_grid.is_separated or not input_grid.is_('cartesian'):
+			raise ValueError('The input_grid must be separable in cartesian coordinates.')
+
+		if not output_grid.is_separated or not output_grid.is_('cartesian'):
+			raise ValueError('The output_grid must be separable in cartesian coordinates.')
+
+		if input_grid.ndim not in [1, 2]:
+			raise ValueError('The input_grid must be one- or two-dimensional.')
+
+		if input_grid.ndim != output_grid.ndim:
+			raise ValueError('The input_grid must have the same dimensions as the output_grid.')
+
+	@classmethod
+	def compute_complexity(cls, input_grid, output_grid):
+		'''Compute the algorithmic complexity for the Matrix Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Matrix Fourier transform.
+
+		Returns
+		-------
+		AlgorithmicComplexity
+			The algorithmic complexity for the Fourier transform.
+
+		Raises
+		------
+		ValueError
+			If the grids are not supported. The message will indicate why
+			the grids are not supported.
+		'''
+		cls.check_if_supported(input_grid, output_grid)
+
+		if input_grid.ndim == 1:
+			num_complex_multiplications = input_grid.size * output_grid.size
+			num_complex_additions = (input_grid.size - 1) * output_grid.size
+		elif input_grid.ndim == 2:
+			a0, c1 = output_grid.shape
+			a1b0, b1c0 = input_grid.shape
+
+			# Note: the current implementation always uses A*(B*C).
+			num_complex_multiplications = b1c0 * a1b0 * c1 + a1b0 * a0 * c1
+			num_complex_additions = (b1c0 - 1) * a1b0 * c1 + (a1b0 - 1) * a0 * c1
+
+		num_multiplications = 4 * num_complex_multiplications
+		num_additions = 2 * num_complex_multiplications + 2 * num_complex_additions
+
+		return ComputationalComplexity(
+			num_multiplications=num_multiplications,
+			num_additions=num_additions
+		)

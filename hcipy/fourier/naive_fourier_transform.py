@@ -1,6 +1,6 @@
 import numpy as np
 
-from .fourier_transform import FourierTransform, multiplex_for_tensor_fields, _get_float_and_complex_dtype
+from .fourier_transform import FourierTransform, ComputationalComplexity, multiplex_for_tensor_fields, _get_float_and_complex_dtype
 from ..field import Field
 from ..config import Configuration
 
@@ -123,3 +123,55 @@ class NaiveFourierTransform(FourierTransform):
 
 		float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
 		return Field(res, self.input_grid).astype(complex_dtype, copy=False)
+
+	@classmethod
+	def check_if_supported(cls, input_grid, output_grid):
+		'''Check if the specified grids are supported by the Naive Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Naive Fourier transform.
+
+		Raises
+		------
+		ValueError
+			If the grids are not supported. The message will indicate why
+			the grids are not supported.
+		'''
+		pass
+
+	@classmethod
+	def compute_complexity(cls, input_grid, output_grid):
+		'''Compute the algorithmic complexity for the Naive Fourier transform.
+
+		Parameters
+		----------
+		input_grid : Grid
+			The grid that is expected for the input field.
+		output_grid : Grid
+			The grid that is produced by the Naive Fourier transform.
+
+		Returns
+		-------
+		AlgorithmicComplexity
+			The algorithmic complexity for this Fourier transform.
+
+		Raises
+		------
+		ValueError
+			If the grids are not supported. The message will indicate why
+			the grids are not supported.
+		'''
+		num_complex_multiplications = input_grid.size * output_grid.size
+		num_complex_additions = (input_grid.size - 1) * output_grid.size
+
+		num_multiplications = 4 * num_complex_multiplications
+		num_additions = 2 * num_complex_multiplications + 2 * num_complex_additions
+
+		return ComputationalComplexity(
+			num_multiplications=num_multiplications,
+			num_additions=num_additions
+		)

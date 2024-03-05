@@ -140,9 +140,7 @@ class FourierFilter(object):
             f = f * tf
 
         # Since f is now guaranteed to not share memory, always allow overwriting.
-        overwrite_x = True
-
-        f = _fft_module.ifftn(f, axes=axes, overwrite_x=overwrite_x)
+        f = _fft_module.ifftn(f, axes=axes, overwrite_x=True)
 
         s = f.shape[:-self.internal_grid.ndim] + (-1,)
         if self.cutout is None:
@@ -241,11 +239,6 @@ class FourierShift:
         if self._shift_filter is None:
             return field.astype('complex')
 
-        if _use_mkl:
-            kwargs = {'overwrite_x': True}
-        else:
-            kwargs = {}
-
         # Never overwrite the input, so don't use kwargs here.
         f = _fft_module.fftn(field.shaped, axes=self._ft_axes)
 
@@ -254,7 +247,8 @@ class FourierShift:
         else:
             f *= self._shift_filter
 
-        f = _fft_module.ifftn(f, axes=self._ft_axes, **kwargs)
+        # Fine to overwrite the input, if supported.
+        f = _fft_module.ifftn(f, axes=self._ft_axes, overwrite_x=True)
 
         shape = f.shape[:-field.grid.ndim] + (-1,)
 
@@ -363,11 +357,6 @@ class FourierShear:
         return self._operation(field, adjoint=True)
 
     def _operation(self, field, adjoint):
-        if _use_mkl:
-            kwargs = {'overwrite_x': True}
-        else:
-            kwargs = {}
-
         # Never overwrite the input, so don't use kwargs here.
         f = _fft_module.fft(field.shaped, axis=-self.shear_dim - 1)
 
@@ -376,7 +365,8 @@ class FourierShear:
         else:
             f *= self._filter
 
-        f = _fft_module.ifft(f, axis=-self.shear_dim - 1, **kwargs)
+        # Fine to overwrite the input, if supported.
+        f = _fft_module.ifft(f, axis=-self.shear_dim - 1, overwrite_x=True)
 
         shape = f.shape[:-field.grid.ndim] + (-1,)
 

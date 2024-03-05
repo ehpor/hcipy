@@ -328,3 +328,46 @@ def test_chirp_z_transform(dtype):
         a = np.exp(1j * np.random.uniform(0, 2 * np.pi))
 
         check_czt_vs_scipy(x, m, w, a, dtype)
+
+def test_fourier_shift():
+    input_grid = make_uniform_grid([32, 32], 1)
+    field = Field(np.random.randn(input_grid.size), input_grid)
+
+    shift = np.array([10, 0])
+
+    shifter = FourierShift(input_grid, shift * input_grid.delta)
+    shifter_reverse = FourierShift(input_grid, -shift * input_grid.delta)
+
+    shifted = shifter.forward(field)
+    ref = np.roll(field.shaped, shift, axis=(1, 0)).ravel()
+    assert np.allclose(shifted, ref)
+
+    back = shifter.backward(shifted)
+    assert np.allclose(field, back)
+
+    back2 = shifter_reverse.forward(shifted)
+    assert np.allclose(field, back2)
+
+    shifter.shift = -shift * input_grid.delta
+    back3 = shifter.forward(shifted)
+    assert np.allclose(field, back3)
+
+def test_fourier_shear():
+    input_grid = make_uniform_grid([32, 32], 1)
+    field = Field(np.random.randn(input_grid.size), input_grid)
+
+    shear = 0.5
+
+    shearer = FourierShear(input_grid, shear)
+    shearer_reverse = FourierShear(input_grid, -shear)
+
+    sheared = shearer.forward(field)
+    back = shearer.backward(sheared)
+    assert np.allclose(field, back)
+
+    back2 = shearer_reverse.forward(sheared)
+    assert np.allclose(field, back2)
+
+    shearer.shear = -shear
+    back3 = shearer.forward(sheared)
+    assert np.allclose(field, back3)

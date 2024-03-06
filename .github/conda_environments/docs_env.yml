@@ -1,0 +1,8 @@
+name: ci-env
+dependencies:
+  - numpy
+  - scipy
+  - ffmpeg
+  - conda-forge::pyfftw
+  - mkl_fft
+  - conda-forge::pandoc

@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_docs:
-    name: Documentation
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
@@ -24,7 +24,7 @@ jobs:
         auto-activate-base: false
     - name: Install our package
       run: |
-        pip install -e .
+        pip install -e ".[doc]"
       shell: bash -l {0}
     - name: Print package versions
       run: |
@@ -48,7 +48,7 @@ jobs:
         retention-days: 14
 
   deploy:
-    name: Deploy documentation
+    name: Deploy
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' }}
     needs: build_docs

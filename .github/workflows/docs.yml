@@ -45,7 +45,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: docs
-        path: ./docs/_build/html
+        path: ./doc/_build/html
         retention-days: 14
 
   deploy:
@@ -59,7 +59,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: docs
-        path: ./docs
+        path: ./doc
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
@@ -70,5 +70,5 @@ jobs:
 
     - name: Upload documentation to website
       run: |
-        aws s3 sync --acl public-read --delete --cache-control max-age=86400,public ./docs s3://docs.hcipy.org/dev
+        aws s3 sync --acl public-read --delete --cache-control max-age=86400,public ./doc s3://docs.hcipy.org/dev
       shell: bash -l {0}

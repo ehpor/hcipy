@@ -1,11 +1,11 @@
-name: flake8 Lint
+name: Linting
 
 on: [pull_request]
 
 jobs:
   flake8-lint:
     runs-on: ubuntu-latest
-    name: Lint
+    name: Flake8
     steps:
       - name: Check out source repository
         uses: actions/checkout@v2

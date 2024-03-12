@@ -10,7 +10,7 @@ on:
 
 jobs:
   pytest:
-    name: Pytest on ${{ matrix.os }} for Python ${{ matrix.python_version }}
+    name: Pytest (${{ matrix.os }} Python${{ matrix.python_version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

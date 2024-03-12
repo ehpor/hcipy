@@ -49,5 +49,5 @@ jobs:
       if: always()
       uses: codecov/codecov-action@v4
       with:
-        directory: ./coverage/reports
+        files: ./coverage.xml
         token: ${{ secrets.CODECOV_TOKEN }}

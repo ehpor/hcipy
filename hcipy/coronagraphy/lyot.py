@@ -14,7 +14,7 @@ class LyotCoronagraph(OpticalElement):
 
     Notes
     -----
-    The LyotCoroonagraph tries to automatically get the grid from the focal_plane_mask.
+    The :class:`LyotCoronagraph` tries to automatically get the grid from the focal_plane_mask.
     However, a bug in AgnosticOpticalElements creates an invalid access which crashes the initialization.
     The correct grid can be passed explicitely to circumvent this bug by using the focal_plane_mask_grid parameter.
 
@@ -124,7 +124,7 @@ class OccultedLyotCoronagraph(OpticalElement):
 
     Notes
     -----
-    The LyotCoroonagraph tries to automatically get the grid from the focal_plane_mask.
+    The :class:`OccultedLyotCoronagraph` tries to automatically get the grid from the focal_plane_mask.
     However, a bug in AgnosticOpticalElements creates an invalid access which crashes the initialization.
     The correct grid can be passed explicitely to circumvent this bug by using the focal_plane_mask_grid parameter.
 

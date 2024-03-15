@@ -1520,7 +1520,7 @@ def make_jwst_aperture(normalized=False, with_spiders=True, return_segments=Fals
 def make_keck_aperture(normalized=False, with_spiders=True, with_segment_gaps=True, gap_padding=10, segment_transmissions=1, return_segments=False):
     """Make the Keck aperture.
 
-    This code creates a Keck-like aperture matching values used in [vanKooten2022a] and [vanKooten2022b] as well as
+    This code creates a Keck-like aperture matching values used in [vanKooten2022a]_ and [vanKooten2022b]_ as well as
     being verified by Keck personnel to match internal simulation efforts.
 
     .. [vanKooten2022a] Maaike van Kooten et al., "Predictive wavefront control on Keck II adaptive optics bench: on-sky coronagraphic results." JATIS 8 (2022): 029006

@@ -12,9 +12,11 @@ class LyotCoronagraph(OpticalElement):
     .. [Soummer2007] Soummer et al. 2007, "Fast computation of Lyot-style
         coronagraph propagation".
 
-    .. notes:: The LyotCoroonagraph tries to automatically get the grid from the focal_plane_mask.
-        However, a bug in AgnosticOpticalElements creates an invalid access which crashes the initialization.
-        The correct grid can be passed explicitely to circumvent this bug by using the focal_plane_mask_grid parameter.
+    Notes
+    -----
+    The LyotCoroonagraph tries to automatically get the grid from the focal_plane_mask.
+    However, a bug in AgnosticOpticalElements creates an invalid access which crashes the initialization.
+    The correct grid can be passed explicitely to circumvent this bug by using the focal_plane_mask_grid parameter.
 
     Parameters
     ----------
@@ -120,9 +122,11 @@ class OccultedLyotCoronagraph(OpticalElement):
 
     The area outside of this focal-plane mask is assumed to be fully absorbing.
 
-    .. notes:: The LyotCoroonagraph tries to automatically get the grid from the focal_plane_mask.
-        However, a bug in AgnosticOpticalElements creates an invalid access which crashes the initialization.
-        The correct grid can be passed explicitely to circumvent this bug by using the focal_plane_mask_grid parameter
+    Notes
+    -----
+    The LyotCoroonagraph tries to automatically get the grid from the focal_plane_mask.
+    However, a bug in AgnosticOpticalElements creates an invalid access which crashes the initialization.
+    The correct grid can be passed explicitely to circumvent this bug by using the focal_plane_mask_grid parameter.
 
     Parameters
     ----------

@@ -12,3 +12,4 @@ tags
 /.eggs/
 .ipynb_checkpoints/
 _version.py
+.DS_Store

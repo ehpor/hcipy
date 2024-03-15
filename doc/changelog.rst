@@ -1,6 +1,61 @@
 Changelog
 =========
 
+0.6.0 (Mar 15, 2024)
+--------------------
+
+This HCIPy release provides further speed improvements for Fast Fourier transforms, New-Style Fields, new telescope pupils, the FQPM coronagraph, among some other minor improvements and bugfixes. See the list of all changes below for a summary. We added support for Python 3.11. This version supports Python 3.7+.
+
+What's Changed
+~~~~~~~~~~~~~~
+
+* added glass NPSK53 by `syhaffert <https://github.com/syhaffert>`__ in `#160 <https://github.com/ehpor/hcipy/pull/160>`__
+* added vacuum as glass material by `syhaffert <https://github.com/syhaffert>`__ in `#161 <https://github.com/ehpor/hcipy/pull/161>`__
+* Faster modulated pyramid wavefront sensor by `syhaffert <https://github.com/syhaffert>`__ in `#162 <https://github.com/ehpor/hcipy/pull/162>`__
+* VLTI aperture by `syhaffert <https://github.com/syhaffert>`__ in `#145 <https://github.com/ehpor/hcipy/pull/145>`__
+* Very small bug fix in Wavefront class by `syhaffert <https://github.com/syhaffert>`__ in `#166 <https://github.com/ehpor/hcipy/pull/166>`__
+* Fix bug in interpolating big-endian ndarray read from fits file. by `ehpor <https://github.com/ehpor>`__ in `#170 <https://github.com/ehpor/hcipy/pull/170>`__
+* Emccd model by `syhaffert <https://github.com/syhaffert>`__ in `#163 <https://github.com/ehpor/hcipy/pull/163>`__
+* Add missing colon for conda installation by `ivalaginja <https://github.com/ivalaginja>`__ in `#172 <https://github.com/ehpor/hcipy/pull/172>`__
+* Add Keck aperture by `vkooten <https://github.com/vkooten>`__ in `#155 <https://github.com/ehpor/hcipy/pull/155>`__
+* Add problem matcher to annotate flake8 errors in PRs. by `ehpor <https://github.com/ehpor>`__ in `#175 <https://github.com/ehpor/hcipy/pull/175>`__
+* Deterministic atmospheric phase screens by `ehpor <https://github.com/ehpor>`__ in `#173 <https://github.com/ehpor/hcipy/pull/173>`__
+* Dispersion optics by `syhaffert <https://github.com/syhaffert>`__ in `#176 <https://github.com/ehpor/hcipy/pull/176>`__
+* Fix a typo in docs by `ivalaginja <https://github.com/ivalaginja>`__ in `#183 <https://github.com/ehpor/hcipy/pull/183>`__
+* Remove codecov from dev requirements. by `ehpor <https://github.com/ehpor>`__ in `#185 <https://github.com/ehpor/hcipy/pull/185>`__
+* Fourier symmetry tests by `ehpor <https://github.com/ehpor>`__ in `#181 <https://github.com/ehpor/hcipy/pull/181>`__
+* Upgrade packaging to `pyproject.toml`. by `ehpor <https://github.com/ehpor>`__ in `#179 <https://github.com/ehpor/hcipy/pull/179>`__
+* Zoom Fast Fourier Transform and Chirp Z-Transform by `ehpor <https://github.com/ehpor>`__ in `#178 <https://github.com/ehpor/hcipy/pull/178>`__
+* FPS changed to duration in imageio dependency by `ehpor <https://github.com/ehpor>`__ in `#188 <https://github.com/ehpor/hcipy/pull/188>`__
+* Fix `reset()` for atmospheric layers by `ehpor <https://github.com/ehpor>`__ in `#190 <https://github.com/ehpor/hcipy/pull/190>`__
+* Refactor the single mode fiber injection unit by `ehpor <https://github.com/ehpor>`__ in `#192 <https://github.com/ehpor/hcipy/pull/192>`__
+* Fixing backward propagation for vector vortex by `GillesOrban <https://github.com/GillesOrban>`__ in `#193 <https://github.com/ehpor/hcipy/pull/193>`__
+* Change indentation from tabs to spaces. by `ehpor <https://github.com/ehpor>`__ in `#196 <https://github.com/ehpor/hcipy/pull/196>`__
+* replace asdf.fits_embed by `braingram <https://github.com/braingram>`__ in `#199 <https://github.com/ehpor/hcipy/pull/199>`__
+* Fix utcnow() deprecation in Python 3.12. by `ehpor <https://github.com/ehpor>`__ in `#206 <https://github.com/ehpor/hcipy/pull/206>`__
+* Fix `get_cmap()` deprecation. by `ehpor <https://github.com/ehpor>`__ in `#207 <https://github.com/ehpor/hcipy/pull/207>`__
+* Explicitly use zeroth element of random array. by `ehpor <https://github.com/ehpor>`__ in `#208 <https://github.com/ehpor/hcipy/pull/208>`__
+* Add Keck atmosphere from KAON303 by `vkooten <https://github.com/vkooten>`__ in `#152 <https://github.com/ehpor/hcipy/pull/152>`__
+* Add support for Python 3.11. by `ehpor <https://github.com/ehpor>`__ in `#212 <https://github.com/ehpor/hcipy/pull/212>`__
+* Explicitly use v2 of the imageio API. by `ehpor <https://github.com/ehpor>`__ in `#210 <https://github.com/ehpor/hcipy/pull/210>`__
+* Fix docstring typos by `ivalaginja <https://github.com/ivalaginja>`__ in `#215 <https://github.com/ehpor/hcipy/pull/215>`__
+* Add FQPM coronagraph by `ivalaginja <https://github.com/ivalaginja>`__ in `#165 <https://github.com/ehpor/hcipy/pull/165>`__
+* Lyot coronagraph fix by `syhaffert <https://github.com/syhaffert>`__ in `#217 <https://github.com/ehpor/hcipy/pull/217>`__
+* Remove wavelength argument from docstring. by `ehpor <https://github.com/ehpor>`__ in `#222 <https://github.com/ehpor/hcipy/pull/222>`__
+* Add FFT backend support for faster FFTs. by `ehpor <https://github.com/ehpor>`__ in `#213 <https://github.com/ehpor/hcipy/pull/213>`__
+* New-style Fields by `ehpor <https://github.com/ehpor>`__ in `#187 <https://github.com/ehpor/hcipy/pull/187>`__
+* Change indentation from tabs to spaces (again). by `ehpor <https://github.com/ehpor>`__ in `#224 <https://github.com/ehpor/hcipy/pull/224>`__
+* Switch to Github Actions CI by `ehpor <https://github.com/ehpor>`__ in `#226 <https://github.com/ehpor/hcipy/pull/226>`__
+
+New Contributors
+~~~~~~~~~~~~~~~~
+
+* `vkooten <https://github.com/vkooten>`__ made their first contribution in `#155 <https://github.com/ehpor/hcipy/pull/155>`__
+* `GillesOrban <https://github.com/GillesOrban>`__ made their first contribution in `#193 <https://github.com/ehpor/hcipy/pull/193>`__
+* `braingram <https://github.com/braingram>`__ made their first contribution in `#199 <https://github.com/ehpor/hcipy/pull/199>`__
+
+**Full Changelog**: `v0.5.1...v0.6.0 <https://github.com/ehpor/hcipy/compare/v0.5.1...v0.6.0>`__
+
 0.5.1 (Oct 17, 2022)
 --------------------
 

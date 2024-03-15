@@ -75,7 +75,7 @@ class ZoomFastFourierTransform(FourierTransform):
             The field to Fourier transform.
 
         Returns
-        --------
+        -------
         Field
             The Fourier transform of the field.
         '''
@@ -101,7 +101,7 @@ class ZoomFastFourierTransform(FourierTransform):
             The field to inverse Fourier transform.
 
         Returns
-        --------
+        -------
         Field
             The inverse Fourier transform of the field.
         '''

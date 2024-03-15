@@ -1,0 +1,56 @@
+name: Testing
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  pytest:
+    name: Pytest (${{ matrix.os }} Python${{ matrix.python_version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python_version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+    - name: Check out repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        filter: tree:0
+    - name: Set up conda environment
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        activate-environment: ci-env
+        python-version: ${{ matrix.python_version }}
+        environment-file: .github/conda_environments/testing_env.yml
+        auto-activate-base: false
+    - name: Install our package
+      run: |
+        pip install -e ".[dev]"
+      shell: bash -l {0}
+    - name: Print package versions
+      run: |
+        python --version
+        python -c "import numpy; print('Numpy', numpy.__version__)"
+        python -c "import scipy; print('Scipy', scipy.__version__)"
+        python -c "import matplotlib; print('Matplotlib', matplotlib.__version__)"
+        python -c "import hcipy; print('HCIPy', hcipy.__version__)"
+        conda list
+      shell: bash -l {0}
+    - name: Run tests
+      run: |
+        pytest ./tests -ra --cov=./ --cov-report=xml
+      shell: bash -l {0}
+    - name: Upload coverage to codecov.io
+      if: always()
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.xml
+        token: ${{ secrets.CODECOV_TOKEN }}

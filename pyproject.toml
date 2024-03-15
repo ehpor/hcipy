@@ -40,7 +40,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "coverage",
+    "pytest-cov",
     "mpmath",
     "dill",
     "flake8",

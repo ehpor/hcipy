@@ -1,0 +1,77 @@
+name: Documentation
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  build_docs:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        filter: tree:0
+    - name: Set up conda environment
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        activate-environment: ci-env
+        python-version: 3.11
+        environment-file: .github/conda_environments/docs_env.yml
+        auto-activate-base: false
+    - name: Install our package
+      run: |
+        pip install -e ".[doc]"
+      shell: bash -l {0}
+    - name: Print package versions
+      run: |
+        python --version
+        python -c "import numpy; print('Numpy', numpy.__version__)"
+        python -c "import scipy; print('Scipy', scipy.__version__)"
+        python -c "import matplotlib; print('Matplotlib', matplotlib.__version__)"
+        python -c "import hcipy; print('HCIPy', hcipy.__version__)"
+        conda list
+      shell: bash -l {0}
+    - name: Build documentation
+      run: |
+        cd doc
+        make html
+      shell: bash -l {0}
+    - name: Upload documentation artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: docs
+        path: ./doc/_build/html
+        retention-days: 14
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    needs: build_docs
+
+    steps:
+    - name: Download documentation artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: docs
+        path: ./doc
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
+
+    - name: Upload documentation to website
+      run: |
+        aws s3 sync --acl public-read --delete --cache-control max-age=86400,public ./doc s3://docs.hcipy.org/dev
+      shell: bash -l {0}

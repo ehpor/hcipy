@@ -23,13 +23,17 @@ class FiberNuller(OpticalElement):
 	phase_screen: Field
 		The pupil plane phase screen, defined on input_grid.
 	'''
-	def __init__(self, input_grid, mode_field_diameter, pupil_diameter,focal_length, wavelength, phase_screen):
+	def __init__(self, input_grid, mode_field_diameter=1.4, pupil_diameter=1,focal_length=1, wavelength=1, phase_screen=None):
 		self.input_grid = input_grid
 		self.mode_field_diameter = mode_field_diameter
 		self.pupil_diameter = pupil_diameter
 		self.focal_length = focal_length
 		self.wavelength = wavelength
-		self.phase_screen = phase_screen
+
+		if phase_screen is not None:
+			self.phase_screen = phase_screen
+		else:
+			phase_screen = np.zeros(input_grid.shape).ravel()
 
 		self.focal_grid = make_focal_grid(q=11,num_airy=3,pupil_diameter=self.pupil_diameter,focal_length=self.focal_length,reference_wavelength=self.wavelength)
 		self.prop = FraunhoferPropagator(self.input_grid, self.focal_grid)
@@ -87,7 +91,7 @@ class VortexFiberNuller(FiberNuller):
 	vortex_charge: integer
 		The vortex charge.
 	'''
-	def __init__(self, input_grid, mode_field_diameter, pupil_diameter,focal_length, wavelength, vortex_charge):
+	def __init__(self, input_grid, mode_field_diameter=1.4, pupil_diameter=1,focal_length=1, wavelength=1, vortex_charge=1):
 		phase_screen_gen = lambda grid: Field(vortex_charge * grid.as_('polar').theta, grid)
 		phase_screen = phase_screen_gen(input_grid)
 		super().__init__(input_grid,mode_field_diameter,pupil_diameter,focal_length,wavelength,phase_screen)
@@ -111,7 +115,7 @@ class PhotonicLanternNuller(FiberNuller):
 		(Optional) The charge of an optional pupil plane vortex mask.
 
 	'''
-	def __init__(self, input_grid, mode_field_diameter, pupil_diameter,focal_length, wavelength, vortex_charge):
+	def __init__(self, input_grid, mode_field_diameter=1.31, pupil_diameter=1,focal_length=1, wavelength=1, vortex_charge=None):
 
 		if vortex_charge is not None:
 			phase_screen_gen = lambda grid: Field(vortex_charge * grid.as_('polar').theta, grid)

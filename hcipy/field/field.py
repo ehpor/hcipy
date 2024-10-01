@@ -408,4 +408,19 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
     var = np.var
 
 def is_field(obj):
+    '''Check if the object is an HCIPy Field.
+
+    This function should be preferred over of `isinstance(obj, hcipy.Field)` for
+    forward compatibility reasons.
+
+    Parameters
+    ----------
+    obj : Any
+        Any object to check.
+
+    Returns
+    -------
+    boolean
+        Whether `obj` is an HCIPy Field or not.
+    '''
     return isinstance(obj, Field)

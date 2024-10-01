@@ -229,7 +229,7 @@ class UnstructuredCoords(Coords):
         boolean
             Whether the two objects are identical.
         '''
-        if type(self) != type(other):
+        if type(self) is not type(other):
             return False
 
         return np.array_equal(self.coords, other.coords)
@@ -361,7 +361,7 @@ class SeparatedCoords(Coords):
         boolean
             Whether the two objects are identical.
         '''
-        if type(self) != type(other):
+        if type(self) is not type(other):
             return False
 
         return np.array_equal(self.separated_coords, other.separated_coords)
@@ -519,7 +519,7 @@ class RegularCoords(Coords):
         boolean
             Whether the two objects are identical.
         '''
-        if type(self) != type(other):
+        if type(self) is not type(other):
             return False
 
         return np.array_equal(self.regular_coords, other.regular_coords)

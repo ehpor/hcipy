@@ -1,6 +1,8 @@
 import numpy as np
-from .grid import Grid
+
 from .coordinates import UnstructuredCoords
+from .field import Field
+from .grid import Grid
 
 from functools import reduce
 import operator
@@ -37,25 +39,25 @@ class CartesianGrid(Grid):
     def x(self):
         '''The x-coordinate (dimension 0).
         '''
-        return self.coords[0]
+        return Field(self.coords[0], self)
 
     @property
     def y(self):
         '''The y-coordinate (dimension 1).
         '''
-        return self.coords[1]
+        return Field(self.coords[1], self)
 
     @property
     def z(self):
         '''The z-coordinate (dimension 2).
         '''
-        return self.coords[2]
+        return Field(self.coords[2], self)
 
     @property
     def w(self):
         '''The w-coordinate (dimension 3).
         '''
-        return self.coords[3]
+        return Field(self.coords[3], self)
 
     def scale(self, scale):
         '''Scale the grid in-place.

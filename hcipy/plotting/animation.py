@@ -239,13 +239,15 @@ class FFMpegWriter(object):
             if quality is None:
                 quality = 10
 
-            if preset is None:
-                preset = 'veryslow'
+            if preset is not None:
+                preset_command = ['-preset', preset]
+            else:
+                preset_command = []
 
             command = [
                 ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
                 '-vcodec', 'png', '-r', str(framerate), '-threads', '0', '-i', '-',
-                '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', '-preset', preset, '-r',
+                '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', *preset_command, '-r',
                 str(framerate), '-crf', str(quality), filename
             ]
         elif codec == 'mpeg4':

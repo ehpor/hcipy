@@ -31,6 +31,10 @@ jobs:
         python-version: ${{ matrix.python_version }}
         environment-file: .github/conda_environments/testing_env.yml
         auto-activate-base: false
+    - name: Install optional dependencies
+      run: |
+        while read requirement; do conda install --yes $requirement; done < ./conda_environments/optional_dependencies.txt
+      shell: bash -l {0}
     - name: Install our package
       run: |
         pip install -e ".[dev]"

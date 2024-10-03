@@ -245,7 +245,7 @@ class FFMpegWriter(object):
                 preset_command = []
 
             command = [
-                ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
+                ffmpeg_path, '-y', '-nostats', '-f', 'image2pipe',
                 '-vcodec', 'png', '-r', str(framerate), '-threads', '0', '-i', '-',
                 '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', *preset_command, '-r',
                 str(framerate), '-crf', str(quality), filename

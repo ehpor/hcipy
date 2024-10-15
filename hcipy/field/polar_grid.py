@@ -1,5 +1,6 @@
 import numpy as np
 
+from .field import Field
 from .grid import Grid
 from .coordinates import UnstructuredCoords
 
@@ -12,13 +13,13 @@ class PolarGrid(Grid):
     def r(self):
         '''The radial coordinate (dimension 0).
         '''
-        return self.coords[0]
+        return Field(self.coords[0], self)
 
     @property
     def theta(self):
         ''' The angular coordinate (dimension 1).
         '''
-        return self.coords[1]
+        return Field(self.coords[1], self)
 
     def scale(self, scale):
         '''Scale the grid in-place.

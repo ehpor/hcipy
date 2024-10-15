@@ -4,4 +4,3 @@ dependencies:
   - scipy
   - ffmpeg
   - conda-forge::pyfftw
-  - mkl_fft

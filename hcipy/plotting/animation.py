@@ -217,7 +217,7 @@ class FFMpegWriter(object):
         if codec is None:
             extension = os.path.splitext(filename)[1]
             if extension == '.mp4' or extension == '.avi':
-                codec = 'libx264'
+                codec = 'h264'
             elif extension == '.webm':
                 codec = 'libvpx-vp9'
             else:
@@ -235,17 +235,19 @@ class FFMpegWriter(object):
         if shutil.which(ffmpeg_path) is None:
             raise RuntimeError('ffmpeg was not found. Did you install it and is it accessible, either from PATH or from the HCIPy configuration file?')
 
-        if codec == 'libx264':
+        if codec == 'h264':
             if quality is None:
                 quality = 10
 
-            if preset is None:
-                preset = 'veryslow'
+            if preset is not None:
+                preset_command = ['-preset', preset]
+            else:
+                preset_command = []
 
             command = [
-                ffmpeg_path, '-y', '-nostats', '-v', 'quiet', '-f', 'image2pipe',
+                ffmpeg_path, '-y', '-nostats', '-f', 'image2pipe',
                 '-vcodec', 'png', '-r', str(framerate), '-threads', '0', '-i', '-',
-                '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', '-preset', preset, '-r',
+                '-vcodec', 'h264', '-pix_fmt', 'yuv420p', *preset_command, '-r',
                 str(framerate), '-crf', str(quality), filename
             ]
         elif codec == 'mpeg4':

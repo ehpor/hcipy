@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python_version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        python_version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - name: Check out repo
@@ -31,6 +31,12 @@ jobs:
         python-version: ${{ matrix.python_version }}
         environment-file: .github/conda_environments/testing_env.yml
         auto-activate-base: false
+    - name: Install optional dependencies if available
+      run: |
+        while read requirement; do
+          conda install --yes $requirement || true
+        done < .github/conda_environments/optional_dependencies.txt
+      shell: bash -l {0}
     - name: Install our package
       run: |
         pip install -e ".[dev]"

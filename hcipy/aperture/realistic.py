@@ -327,10 +327,10 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
     if not with_spiders:
         return obstructed_aperture
 
-    spider1 = make_spider_infinite(spider_offset, 45.0, spider_width1)
-    spider2 = make_spider_infinite(spider_offset, -45.0, spider_width1)
-    spider3 = make_spider_infinite(-spider_offset, 45.0 + 180.0, spider_width2)
-    spider4 = make_spider_infinite(-spider_offset, -45.0 + 180.0, spider_width2)
+    spider1 = make_spider_infinite(-spider_offset, 45.0, spider_width1)
+    spider2 = make_spider_infinite(-spider_offset, -45.0, spider_width1)
+    spider3 = make_spider_infinite(spider_offset, 45.0 + 180.0, spider_width2)
+    spider4 = make_spider_infinite(spider_offset, -45.0 + 180.0, spider_width2)
 
     def func(grid):
         return obstructed_aperture(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)

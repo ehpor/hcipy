@@ -314,7 +314,7 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
     spider_width1 = 0.75 * 0.0254  # meter
     spider_width2 = 1.5 * 0.0254  # meter
     central_obscuration_ratio = 0.29
-    spider_offset = np.array([0.34, 0.0]) # meter
+    spider_offset = np.array([0.34, 0.0])  # meter
 
     if normalized:
         spider_width1 /= pupil_diameter
@@ -326,7 +326,7 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
 
     if not with_spiders:
         return obstructed_aperture
-    
+
     spider1 = make_spider_infinite(spider_offset, 45.0, spider_width1)
     spider2 = make_spider_infinite(spider_offset, -45.0, spider_width1)
     spider3 = make_spider_infinite(-spider_offset, 45.0 + 180.0, spider_width2)

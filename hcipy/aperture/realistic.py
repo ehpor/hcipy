@@ -1680,7 +1680,7 @@ def make_subaru_lyot_stop(
     spider_fraction
         If `with_spiders` is True, the relative scale of the spiders in the mask
     """
-    pupil_diameter = 7.95 # m
+    pupil_diameter = 7.95  # m
     spider_width = 0.1735  # m
     spider_offset = 0.639  # m, spider intersection offset
     spider_angle = 51.75  # deg
@@ -1769,7 +1769,7 @@ def make_scexao_lyot_stop(
     if not with_masks:
         return starter
 
-    pupil_diameter = 7.95 # m
+    pupil_diameter = 7.95  # m
     mask_spider_width = 0.089  # m
     mask_spider_offset = np.array((-0.521, 1.045))
     mask_diameter = 0.632  # m

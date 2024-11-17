@@ -1771,7 +1771,7 @@ def make_scexao_lyot_stop(
 
     pupil_diameter = 7.95 # m
     mask_spider_width = 0.089  # m
-    mask_spider_offset = (-0.521, 1.045)
+    mask_spider_offset = np.array((-0.521, 1.045))
     mask_diameter = 0.632  # m
     mask_offsets = np.array(((1.765, 1.431), (-0.498, -2.331)))  # (x, y), m
     spider_angle = 51.75  # deg

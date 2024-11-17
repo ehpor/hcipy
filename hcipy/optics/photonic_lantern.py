@@ -9,28 +9,20 @@ class PhotonicLantern(OpticalElement):
 
     Parameters
     ----------
-    input_grid: Grid
-        The grid on which the incoming wavefront is defined.
     lantern_modes: ModeBasis
         The modes corresponding to the lantern ports.
-    pupil_diameter: scalar
-        The pupil diameter.
-    focal_length: scalar
-        The focal length for injection into the fiber.
     wavelength: scalar
         The wavelength of the simulation.
     '''
 
-    def __init__(self, input_grid, lantern_modes, normalize_modes = True):
-        self.input_grid = input_grid
+    def __init__(self, lantern_modes, normalize_modes = True):
         self.lantern_modes = lantern_modes
         self.num_modes = len(self.lantern_modes)
-        self.focal_grid = self.lantern_modes.grid
+        self.input_grid = self.lantern_modes.grid
 
-        self.lantern_modes = [m / np.sqrt(np.sum(np.abs(m)**2 * self.focal_grid.weights)) for m in self.lantern_modes]
+        self.lantern_modes = [m / np.sqrt(np.sum(np.abs(m)**2 * self.input_grid.weights)) for m in self.lantern_modes]
         self.lantern_modes = ModeBasis(self.lantern_modes)
 
-        self.prop = FraunhoferPropagator(self.input_grid, self.focal_grid)
         self.output_grid = CartesianGrid(RegularCoords([1, 1], [self.num_modes, 1], np.zeros(2)))
         self.output_grid.weights = 1
 
@@ -50,8 +42,7 @@ class PhotonicLantern(OpticalElement):
             The complex amplitudes of each output port.
         '''
 
-        foc = self.prop.forward(wavefront)
-        output = self.projection_matrix.T.dot(foc.electric_field.conj() * self.focal_grid.weights)
+        output = self.projection_matrix.T.dot(wavefront.electric_field.conj() * self.input_grid.weights)
         output = Field(output, self.output_grid)
 
         return Wavefront(output, wavefront.wavelength)
@@ -70,4 +61,4 @@ class PhotonicLantern(OpticalElement):
             The outgoing wavefront.
         '''
         res = self.projection_matrix.dot(wavefront.electric_field)
-        return Wavefront(Field(res, self.focal_grid), wavefront.wavelength)
+        return Wavefront(Field(res, self.input_grid), wavefront.wavelength)

@@ -63,7 +63,8 @@ __all__ = [
     'Prism',
     'ThinPrism',
     'TiltElement',
-    'PhaseGrating'
+    'PhaseGrating',
+    'PhotonicLantern'
 ]
 
 from .optical_element import *
@@ -87,3 +88,4 @@ from .surface_profiles import *
 from .thin_lens import *
 from .tip_tilt_mirror import *
 from .vibration import *
+from .photonic_lantern import *

@@ -403,7 +403,11 @@ def test_scexao_aperture(with_spiders, with_masks):
 def test_subaru_lyot_stop(with_spiders, outer_diameter_fraction, inner_diameter_fraction, spider_fraction):
     name = 'subaru/lyot_stop'
     name += '_without_spiders' if not with_spiders else ''
-    name += 'outer={:.02f}_inner={:.02f}_spider={:.02f}'.format(outer_diameter_fraction, inner_diameter_fraction, spider_fraction)
+    name += 'outer={:.02f}_inner={:.02f}_spider={:.02f}'.format(
+        outer_diameter_fraction,
+        inner_diameter_fraction,
+        spider_fraction
+    )
     check_aperture(
         make_subaru_lyot_stop, diameter=7.95, name=name,
         check_normalization=True,
@@ -422,8 +426,13 @@ def test_subaru_lyot_stop(with_spiders, outer_diameter_fraction, inner_diameter_
 def test_scexao_lyot_stop(with_spiders, with_masks, outer_diameter_fraction, inner_diameter_fraction, spider_fraction, mask_fraction):
     name = 'scexao/lyot_stop'
     name += '_without_spiders' if not with_spiders else ''
-    name += '_without_masks' if not with_spiders else ''
-    name += 'outer={:.02f}_inner={:.02f}_spider={:.02f}_'.format(outer_diameter_fraction, inner_diameter_fraction, spider_fraction)
+    name += '_without_masks' if not with_masks else ''
+    name += 'outer={:.02f}_inner={:.02f}_spider={:.02f}_mask={:.02f}'.format(
+        outer_diameter_fraction,
+        inner_diameter_fraction,
+        spider_fraction,
+        mask_fraction
+    )
     check_aperture(
         make_scexao_lyot_stop, diameter=7.95, name=name,
         check_normalization=True,

@@ -43,34 +43,34 @@ def check_animation(mw, style):
     pytest.raises(RuntimeError, mw.add_frame)
 
 @pytest.mark.parametrize('style', ['mpl', 'fig', 'img'])
-def test_frame_writer(style):
-    mw = FrameWriter('test_frames/')
+def test_frame_writer(style, tmpdir):
+    dirname = os.path.join(tmpdir, 'test_frames/')
+    mw = FrameWriter(dirname)
 
     check_animation(mw, style=style)
 
-    assert os.path.isdir('test_frames')
-    shutil.rmtree('test_frames')
+    assert os.path.isdir(dirname)
 
 @pytest.mark.parametrize('style', ['mpl', 'fig', 'img'])
-def test_gif_writer(style):
-    mw = GifWriter('test.gif')
+def test_gif_writer(style, tmpdir):
+    fname = os.path.join(tmpdir, 'test.gif')
+    mw = GifWriter(fname)
 
     check_animation(mw, style=style)
 
-    assert os.path.isfile('test.gif')
-    os.remove('test.gif')
+    assert os.path.isfile(fname)
 
 @pytest.mark.parametrize('style', ['mpl', 'fig', 'img'])
 @pytest.mark.skipif(not is_ffmpeg_installed(), reason='FFMpeg is not installed.')
-def test_ffmpeg_writer(style):
-    mw = FFMpegWriter('test.mp4')
+def test_ffmpeg_writer(style, tmpdir):
+    fname = os.path.join(tmpdir, 'test.mp4')
+    mw = FFMpegWriter(fname)
 
     check_animation(mw, style=style)
 
     assert mw._repr_html_()
 
-    assert os.path.isfile('test.mp4')
-    os.remove('test.mp4')
+    assert os.path.isfile(fname)
 
 def test_imshow_field():
     grid = make_pupil_grid(256)

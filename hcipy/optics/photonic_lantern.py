@@ -1,7 +1,6 @@
 import numpy as np
 from ..optics import OpticalElement, Wavefront
-from ..propagation import FraunhoferPropagator
-from ..field import make_focal_grid, Field, CartesianGrid, RegularCoords
+from ..field import Field, CartesianGrid, RegularCoords
 from ..mode_basis import ModeBasis
 
 class PhotonicLantern(OpticalElement):

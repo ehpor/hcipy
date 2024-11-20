@@ -1,7 +1,7 @@
 import numpy as np
-from ..optics import OpticalElement, PhaseApodizer, Wavefront, PhotonicLantern
+from ..optics import OpticalElement, PhaseApodizer, PhotonicLantern
 from ..propagation import FraunhoferPropagator
-from ..field import make_focal_grid, Field, CartesianGrid, RegularCoords
+from ..field import Field, CartesianGrid, RegularCoords
 from ..mode_basis import make_lp_modes
 
 class FiberNuller(OpticalElement):
@@ -40,7 +40,6 @@ class FiberNuller(OpticalElement):
         Wavefront
             The coupling amplitude through the fiber nuller.
         '''
-        wavelength = wavefront.wavelength
 
         if self.apodizer is not None:
             wavefront = self.apodizer.forward(wavefront)
@@ -109,7 +108,7 @@ class PhotonicLanternNuller(FiberNuller):
     '''
     def __init__(self, input_grid, focal_grid, mode_field_diameter=1.31, vortex_charge = None):
 
-        lp_modes = make_lp_modes(focal_grid,1.5*np.pi,mode_field_diameter)
+        lp_modes = make_lp_modes(focal_grid, 1.5 * np.pi, mode_field_diameter)
         mspl = PhotonicLantern(lp_modes)
 
         if vortex_charge is not None:

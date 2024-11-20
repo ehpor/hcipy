@@ -62,28 +62,27 @@ def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, d
         assert np.allclose(patterns_match, patterns_match[0, 0])
 
 @pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
-def test_fourier_energy_conservation_1d(dtype):
+@pytest.mark.parametrize('shift_input', [0, 0.1])
+@pytest.mark.parametrize('scale', [1, 2])
+@pytest.mark.parametrize('shift_output', [0, 0.1])
+@pytest.mark.parametrize('q', [1, 1.23, 3, 4])
+@pytest.mark.parametrize('fov', [1, 0.5, 0.8])
+@pytest.mark.parametrize('dims', [64, 65])
+def test_fourier_energy_conservation_1d(dtype, shift_input, scale, shift_output, q, fov, dims):
     np.random.seed(0)
 
-    for shift_input in [0, 0.1]:
-        for scale in [1, 2]:
-            for shift_output in [0, 0.1]:
-                for q in [1, 1.23, 3, 4]:
-                    for fov in [1, 0.5, 0.8]:
-                        for dims in [64, 65]:
-                            check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
+    check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
 
 @pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
-def test_fourier_energy_conservation_2d(dtype):
+@pytest.mark.parametrize('shift_input', [[0, 0], [0.1]])
+@pytest.mark.parametrize('scale', [1, 2])
+@pytest.mark.parametrize('shift_output', [[0, 0], [0.1]])
+@pytest.mark.parametrize('q', [1, 1.23, 3, 4])
+@pytest.mark.parametrize('fov', [1, 0.5, 0.8])
+@pytest.mark.parametrize('dims', [[8, 8], [8, 16], [9, 9], [9, 18]])
+def test_fourier_energy_conservation_2d(dtype, shift_input, scale, shift_output, q, fov, dims):
     np.random.seed(0)
-
-    for shift_input in [[0, 0], [0.1]]:
-        for scale in [1, 2]:
-            for shift_output in [[0, 0], [0.1]]:
-                for q in [1, 1.23, 3, 4]:
-                    for fov in [1, 0.5, 0.8]:
-                        for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
-                            check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
+    check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
 
 def check_symmetry(dtype, scale, shift_output, q, fov, dims):
     tol = 1e-12 if dtype == 'complex128' else 1e-6

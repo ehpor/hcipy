@@ -12,7 +12,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -31,9 +30,8 @@ dependencies = [
     "imageio",
     "xxhash",
     "numexpr",
-    "asdf<=2.10 ; python_version<='3.7'",
-    "asdf ; python_version>'3.7'",
-    "importlib_metadata ; python_version<'3.7'",
+    "asdf",
+    "importlib_metadata",
     "importlib_resources>=1.4 ; python_version<'3.9'"
 ]
 

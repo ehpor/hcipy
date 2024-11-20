@@ -394,7 +394,6 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
     min = np.min
     nonzero = np.nonzero
     prod = np.prod
-    ptp = np.ptp
     ravel = np.ravel
     repeat = np.repeat
     reshape = np.reshape

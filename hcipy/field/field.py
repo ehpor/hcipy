@@ -276,11 +276,18 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
         else:
             return result
 
-    def __array__(self, dtype=None):
-        if dtype is None:
-            return self.data
+    def __array__(self, dtype=None, copy=None):
+        if dtype is None or dtype == self.data.dtype:
+            # A no-copy is supported if necessary.
+            if copy:
+                return self.data.copy()
+            else:
+                return self.data
 
-        return self.data.astype(dtype, copy=False)
+        if copy is False:
+            raise ValueError(f'copy=False is not supported since the dtypes do not match ({dtype} vs. {self.data.dtype}).')
+
+        return self.data.astype(dtype)
 
     def __array_function__(self, func, types, args, kwargs):
         args = _unwrap(args)
@@ -394,7 +401,6 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
     min = np.min
     nonzero = np.nonzero
     prod = np.prod
-    ptp = np.ptp
     ravel = np.ravel
     repeat = np.repeat
     reshape = np.reshape

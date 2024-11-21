@@ -157,7 +157,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
 
         # Create the intermediate focal grid
         # Oversampling necessary to see all frequencies in the output wavefront sensor plane
-        qmin = np.ceil(max(output_grid.x.ptp() / input_grid.x.ptp(), 2))
+        qmin = np.ceil(max(np.ptp(output_grid.x) / np.ptp(input_grid.x), 2))
         if q is None:
             q = qmin
         elif q < qmin:

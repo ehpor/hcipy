@@ -278,11 +278,11 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
         if make_independent_realization:
             # Reset the original random generator to the current one. This
             # will essentially reset the randomness.
-            self._original_rng = copy.copy(self.rng)
+            self._original_rng = copy.deepcopy(self.rng)
         else:
             # Make a copy of the original random generator. This copy will be
             # used as the source for all randomness.
-            self.rng = copy.copy(self._original_rng)
+            self.rng = copy.deepcopy(self._original_rng)
 
         self._make_initial_phase_screen()
 

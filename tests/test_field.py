@@ -291,7 +291,6 @@ def test_field_arithmetic(use_new_style_fields):
         assert is_field(a * b)
         assert is_field(np.exp(2j * a))
 
-        assert np.ptp(a) == a.ptp()
         assert is_field(a.conj())
         assert is_field(a.conjugate())
         assert is_field(a.clip(-1, 1))

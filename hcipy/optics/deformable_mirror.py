@@ -76,7 +76,7 @@ def make_gaussian_influence_functions(pupil_grid, num_actuators_across_pupil, ac
     ModeBasis
         The influence functions for each of the actuators.
     '''
-    actuator_positions = make_actuator_positions(num_actuators_across_pupil, actuator_spacing)
+    actuator_positions = make_actuator_positions(num_actuators_across_pupil, actuator_spacing, x_tilt, y_tilt, z_tilt)
 
     sigma = actuator_spacing / (np.sqrt((-2 * np.log(crosstalk))))
     cutoff = actuator_spacing / sigma * cutoff

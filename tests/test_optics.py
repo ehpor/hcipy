@@ -803,3 +803,17 @@ def test_prism():
         wf_foc = prop(wf)
 
         assert np.max(abs(wf_deviated.power - wf_foc.power) / wf_foc.power.max()) < 1e-8
+
+def test_photonic_lantern():
+    focal_grid = make_focal_grid(4, 5)
+    lp_modes = make_lp_modes(focal_grid, 1.5 * np.pi, 1.4)
+    mspl = PhotonicLantern(lp_modes)
+
+    for n, mode in enumerate(lp_modes):
+        wf = Wavefront(mode)
+        output = mspl(wf).intensity
+
+        ref_output = np.zeros(len(lp_modes))
+        ref_output[n] = 1
+
+        assert np.allclose(output, ref_output)

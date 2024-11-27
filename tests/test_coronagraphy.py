@@ -276,7 +276,6 @@ def test_lyot_coronagraph():
 def test_vortex_fiber_nuller():
     pupil_grid = make_pupil_grid(256)
     focal_grid = make_focal_grid(4, 5)
-    prop = FraunhoferPropagator(pupil_grid, focal_grid)
 
     aperture = make_circular_aperture(1)
     aperture = evaluate_supersampled(aperture, pupil_grid, 8)
@@ -299,7 +298,7 @@ def test_photonic_lantern_nuller():
     aperture = make_circular_aperture(1)
     aperture = evaluate_supersampled(aperture, pupil_grid, 8)
 
-    pln = PhotonicLanternNuller(pupil_grid,focal_grid)
+    pln = PhotonicLanternNuller(pupil_grid, focal_grid)
 
     wf = Wavefront(aperture)
     wf.total_power = 1

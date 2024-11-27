@@ -11,7 +11,10 @@ __all__ = [
     'VortexCoronagraph',
     'VectorVortexCoronagraph',
     'make_ravc_masks',
-    'get_ravc_planet_transmission'
+    'get_ravc_planet_transmission',
+    'FiberNuller',
+    'VortexFiberNuller',
+    'PhotonicLanternNuller'
 ]
 
 from .apodizing_phase_plate import *
@@ -22,3 +25,4 @@ from .multi_scale import *
 from .perfect_coronagraph import *
 from .shaped_pupil import *
 from .vortex import *
+from .fiber_nuller import *

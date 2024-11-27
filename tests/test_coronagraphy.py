@@ -273,6 +273,39 @@ def test_lyot_coronagraph():
     assert (wf_foc.power.max() / norm) < 5e-3
     np.testing.assert_allclose(wf_foc.power, wf_foc2.power)
 
+def test_vortex_fiber_nuller():
+    pupil_grid = make_pupil_grid(256)
+    focal_grid = make_focal_grid(4, 5)
+
+    aperture = make_circular_aperture(1)
+    aperture = evaluate_supersampled(aperture, pupil_grid, 8)
+
+    fiber = SingleModeFiberInjection(focal_grid, make_gaussian_fiber_mode(1.4))
+
+    for charge in [1, 2]:
+        vfn = VortexFiberNuller(pupil_grid, fiber, charge)
+        wf = Wavefront(aperture)
+        wf.total_power = 1
+
+        img = vfn(wf)
+
+        assert img.total_power < 1e-8
+
+def test_photonic_lantern_nuller():
+    pupil_grid = make_pupil_grid(256)
+    focal_grid = make_focal_grid(4, 5)
+
+    aperture = make_circular_aperture(1)
+    aperture = evaluate_supersampled(aperture, pupil_grid, 8)
+
+    pln = PhotonicLanternNuller(pupil_grid, focal_grid)
+
+    wf = Wavefront(aperture)
+    wf.total_power = 1
+
+    img = pln(wf)
+
+    assert np.allclose(img.intensity[1:5], np.zeros(4))
 
 def test_knife_edge_coronagraph():
     grid = make_pupil_grid(64, 1.1)

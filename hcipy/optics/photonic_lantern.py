@@ -14,7 +14,7 @@ class PhotonicLantern(OpticalElement):
     wavelength : scalar
         The wavelength of the simulation.
     '''
-    def __init__(self, lantern_modes, normalize_modes=True):
+    def __init__(self, lantern_modes):
         self.lantern_modes = lantern_modes
         self.num_modes = len(self.lantern_modes)
         self.input_grid = self.lantern_modes.grid

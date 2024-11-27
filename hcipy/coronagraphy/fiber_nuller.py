@@ -1,4 +1,5 @@
 import numpy as np
+
 from ..optics import OpticalElement, PhaseApodizer, PhotonicLantern
 from ..propagation import FraunhoferPropagator
 from ..field import Field, CartesianGrid, RegularCoords
@@ -9,20 +10,21 @@ class FiberNuller(OpticalElement):
 
     Parameters
     ----------
-    input_grid: Grid
+    input_grid : Grid
         The grid on which the incoming wavefront is defined.
-    fiber: OpticalElement
+    fiber : OpticalElement
         The fiber the light is injected into.
-    apodizer: OpticalElement
+    apodizer : OpticalElement
         The apodizer, assumed to be in the pupil plane.
     '''
-    def __init__(self, input_grid, fiber, apodizer = None):
+    def __init__(self, input_grid, fiber, apodizer=None):
         self.input_grid = input_grid
         self.fiber = fiber
         self.focal_grid = self.fiber.input_grid
+        self.apodizer = apodizer
 
         self.prop = FraunhoferPropagator(self.input_grid, self.focal_grid)
-        self.apodizer = apodizer
+
         self.output_grid = CartesianGrid(RegularCoords([1, 1], [1, 1], np.zeros(2)))
         self.output_grid.weights = 1
 
@@ -40,11 +42,10 @@ class FiberNuller(OpticalElement):
         Wavefront
             The coupling amplitude through the fiber nuller.
         '''
-
         if self.apodizer is not None:
             wavefront = self.apodizer.forward(wavefront)
-        foc = self.prop.forward(wavefront)
 
+        foc = self.prop.forward(wavefront)
         output = self.fiber.forward(foc)
 
         return output
@@ -63,7 +64,6 @@ class FiberNuller(OpticalElement):
         Wavefront
             The pupil plane wavefront.
         '''
-
         foc = self.fiber.backward(wavefront)
         output = self.prop.backward(foc)
 
@@ -77,16 +77,15 @@ class VortexFiberNuller(FiberNuller):
 
     Parameters
     ----------
-    input_grid: Grid
+    input_grid : Grid
         The grid on which the incoming wavefront is defined.
-    fiber: OpticalElement
+    fiber : OpticalElement
         The fiber the light is injected into.
-    vortex_charge: integer
+    vortex_charge : integer
         The vortex charge.
     '''
     def __init__(self, input_grid, fiber, vortex_charge=1):
-        phase_screen_gen = lambda grid: Field(vortex_charge * grid.as_('polar').theta, grid)
-        phase_screen = phase_screen_gen(input_grid)
+        phase_screen = Field(vortex_charge * input_grid.as_('polar').theta, input_grid)
         phase_apodizer = PhaseApodizer(phase_screen)
 
         super().__init__(input_grid, fiber, phase_apodizer)
@@ -96,26 +95,23 @@ class PhotonicLanternNuller(FiberNuller):
 
     Parameters
     ----------
-    input_grid: Grid
+    input_grid : Grid
         The grid on which the incoming wavefront is defined.
-    focal_grid: Grid
+    focal_grid : Grid
         The focal grid where light is injected into the lantern.
-    mode_field_diamter: scalar
+    mode_field_diameter : scalar
         (Optional) The mode field diameter of the lantern modes.
-    vortex_charge: integer
+    vortex_charge : integer
         (Optional) The charge of an optional pupil plane vortex mask.
-
     '''
-    def __init__(self, input_grid, focal_grid, mode_field_diameter=1.31, vortex_charge = None):
-
+    def __init__(self, input_grid, focal_grid, mode_field_diameter=1.31, vortex_charge=None):
         lp_modes = make_lp_modes(focal_grid, 1.5 * np.pi, mode_field_diameter)
-        mspl = PhotonicLantern(lp_modes)
+        photonic_lantern = PhotonicLantern(lp_modes)
 
         if vortex_charge is not None:
-            phase_screen_gen = lambda grid: Field(vortex_charge * grid.as_('polar').theta, grid)
-            phase_screen = phase_screen_gen(input_grid)
+            phase_screen = Field(vortex_charge * input_grid.as_('polar').theta, input_grid)
             phase_apodizer = PhaseApodizer(phase_screen)
         else:
             phase_apodizer = None
 
-        super().__init__(input_grid, mspl, phase_apodizer)
+        super().__init__(input_grid, photonic_lantern, phase_apodizer)

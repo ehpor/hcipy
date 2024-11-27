@@ -1,4 +1,5 @@
 import numpy as np
+
 from ..optics import OpticalElement, Wavefront
 from ..field import Field, CartesianGrid, RegularCoords
 from ..mode_basis import ModeBasis
@@ -8,13 +9,12 @@ class PhotonicLantern(OpticalElement):
 
     Parameters
     ----------
-    lantern_modes: ModeBasis
+    lantern_modes : ModeBasis
         The modes corresponding to the lantern ports.
-    wavelength: scalar
+    wavelength : scalar
         The wavelength of the simulation.
     '''
-
-    def __init__(self, lantern_modes, normalize_modes = True):
+    def __init__(self, lantern_modes, normalize_modes=True):
         self.lantern_modes = lantern_modes
         self.num_modes = len(self.lantern_modes)
         self.input_grid = self.lantern_modes.grid
@@ -40,7 +40,6 @@ class PhotonicLantern(OpticalElement):
         Wavefront
             The complex amplitudes of each output port.
         '''
-
         output = self.projection_matrix.T.dot(wavefront.electric_field.conj() * self.input_grid.weights)
         output = Field(output, self.output_grid)
 
@@ -60,4 +59,5 @@ class PhotonicLantern(OpticalElement):
             The outgoing wavefront.
         '''
         res = self.projection_matrix.dot(wavefront.electric_field)
+
         return Wavefront(Field(res, self.input_grid), wavefront.wavelength)

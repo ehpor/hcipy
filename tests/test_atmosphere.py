@@ -39,12 +39,23 @@ def zernike_variance_von_karman(n, m, R, k0, Cn_squared, wavelength):
 
     return coeffs_all * (term11 * term12 + term21 * term22)
 
-def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propagate_phase_screen):
+@pytest.mark.parametrize('propagate_phase_screen', [
+    pytest.param(True, id='infinite'),
+    pytest.param(False, id='finite')
+])
+@pytest.mark.parametrize('wavelength,pupil_diameter,fried_parameter,outer_scale', [
+    pytest.param(0.5e-6, 1, 0.1, 10, id='baseline'),
+    pytest.param(2e-6, 1, 0.1, 10, id='longer_wavelength', marks=pytest.mark.slow),
+    pytest.param(0.5e-6, 8, 0.1, 10, id='larger_pupil_diameter', marks=pytest.mark.slow),
+    pytest.param(0.5e-6, 1, 0.3, 10, id='larger_fried_parameter', marks=pytest.mark.slow),
+    pytest.param(0.5e-6, 1, 0.1, 40, id='larger_outer_diameter', marks=pytest.mark.slow)
+])
+def test_atmosphere_total_variance(wavelength, pupil_diameter, fried_parameter, outer_scale, propagate_phase_screen):
     velocity = 10.0  # meters/sec
     num_modes = 1000
 
-    pupil_grid = make_pupil_grid(64, D_tel)
-    aperture = make_circular_aperture(D_tel)(pupil_grid)
+    pupil_grid = make_pupil_grid(64, pupil_diameter)
+    aperture = make_circular_aperture(pupil_diameter)(pupil_grid)
 
     Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
     layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, [velocity / np.sqrt(2), velocity / np.sqrt(2)], use_interpolation=False)
@@ -55,7 +66,7 @@ def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propag
     for it in range(num_iterations):
         layer.reset(make_independent_realization=True)
         if propagate_phase_screen:
-            layer.t = np.sqrt(2) * D_tel / velocity
+            layer.t = np.sqrt(2) * pupil_diameter / velocity
 
         phase = layer.phase_for(wavelength)
         total_variance.append(np.var(phase[aperture > 0]))
@@ -65,22 +76,33 @@ def check_total_variance(wavelength, D_tel, fried_parameter, outer_scale, propag
     variance_theory = 0
     for i in range(num_modes):
         n, m = noll_to_zernike(i + 2)
-        variance_theory += zernike_variance_von_karman(n, m, D_tel / 2., 1. / outer_scale, layer.Cn_squared, wavelength)
+        variance_theory += zernike_variance_von_karman(n, m, pupil_diameter / 2., 1. / outer_scale, layer.Cn_squared, wavelength)
 
     assert (variance_measured / variance_theory - 1) < 0.1
 
-def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, propagate_phase_screen):
+@pytest.mark.parametrize('propagate_phase_screen', [
+    pytest.param(True, id='infinite'),
+    pytest.param(False, id='finite')
+])
+@pytest.mark.parametrize('wavelength,pupil_diameter,fried_parameter,outer_scale', [
+    pytest.param(0.5e-6, 1, 0.1, 10, id='baseline'),
+    pytest.param(2e-6, 1, 0.1, 10, id='longer_wavelength', marks=pytest.mark.slow),
+    pytest.param(0.5e-6, 8, 0.1, 10, id='larger_pupil_diameter', marks=pytest.mark.slow),
+    pytest.param(0.5e-6, 1, 0.3, 10, id='larger_fried_parameter', marks=pytest.mark.slow),
+    pytest.param(0.5e-6, 1, 0.1, 40, id='larger_outer_diameter', marks=pytest.mark.slow)
+])
+def test_atmosphere_zernike_variances(wavelength, pupil_diameter, fried_parameter, outer_scale, propagate_phase_screen):
     velocity = 10.0  # meters/sec
     num_modes = 50
 
-    pupil_grid = make_pupil_grid(128, D_tel)
+    pupil_grid = make_pupil_grid(128, pupil_diameter)
 
     Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
     layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, [velocity / np.sqrt(2), velocity / np.sqrt(2)], use_interpolation=False)
 
-    zernike_modes = make_zernike_basis(num_modes + 20, D_tel, pupil_grid, starting_mode=2, radial_cutoff=False)
+    zernike_modes = make_zernike_basis(num_modes + 20, pupil_diameter, pupil_grid, starting_mode=2, radial_cutoff=False)
 
-    weights = evaluate_supersampled(make_circular_aperture(D_tel), pupil_grid, 32)
+    weights = evaluate_supersampled(make_circular_aperture(pupil_diameter), pupil_grid, 32)
     zernike_modes = ModeBasis([z * np.sqrt(weights) for z in zernike_modes])
 
     transformation_matrix = zernike_modes.transformation_matrix
@@ -92,7 +114,7 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
     for it in range(num_iterations):
         layer.reset(make_independent_realization=True)
         if propagate_phase_screen:
-            layer.t = np.sqrt(2) * D_tel / velocity
+            layer.t = np.sqrt(2) * pupil_diameter / velocity
 
         phase = layer.phase_for(wavelength)
         coeffs = projection_matrix.dot(phase * np.sqrt(weights))[:num_modes]
@@ -103,7 +125,7 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
     variances_theory = []
     for j in range(num_modes):
         n, m = noll_to_zernike(j + 2)
-        variances_theory.append(zernike_variance_von_karman(n, m, D_tel / 2., 1. / outer_scale, layer.Cn_squared, wavelength))
+        variances_theory.append(zernike_variance_von_karman(n, m, pupil_diameter / 2., 1. / outer_scale, layer.Cn_squared, wavelength))
     variances_theory = np.array(variances_theory)
     '''
     plt.plot(variances_simulated, label='simulated')
@@ -115,50 +137,6 @@ def check_zernike_variances(wavelength, D_tel, fried_parameter, outer_scale, pro
     plt.show()
     '''
     assert np.all(np.abs(variances_simulated / variances_theory - 1) < 1)
-
-def test_finite_atmosphere_total_variance():
-    check_total_variance(0.5e-6, 1, 0.1, 10, False)
-
-@pytest.mark.slow
-def test_finite_atmosphere_total_variance_in_depth():
-    # Check some selected parameter sets.
-    check_total_variance(2e-6, 1, 0.1, 10, False)
-    check_total_variance(0.5e-6, 8, 0.1, 10, False)
-    check_total_variance(0.5e-6, 1, 0.3, 10, False)
-    check_total_variance(0.5e-6, 1, 0.1, 40, False)
-
-def test_infinite_atmosphere_total_variance():
-    check_total_variance(0.5e-6, 1, 0.1, 10, True)
-
-@pytest.mark.slow
-def test_infinite_atmosphere_total_variance_in_depth():
-    # Check some selected parameter sets.
-    check_total_variance(2e-6, 1, 0.1, 10, True)
-    check_total_variance(0.5e-6, 8, 0.1, 10, True)
-    check_total_variance(0.5e-6, 1, 0.3, 10, True)
-    check_total_variance(0.5e-6, 1, 0.1, 40, True)
-
-def test_finite_atmosphere_zernike_variances():
-    check_zernike_variances(0.5e-6, 1, 0.1, 10, False)
-
-@pytest.mark.slow
-def test_finite_atmosphere_zernike_variances_in_depth():
-    # Check some selected parameter sets.
-    check_zernike_variances(2e-6, 1, 0.1, 10, False)
-    check_zernike_variances(0.5e-6, 8, 0.1, 10, False)
-    check_zernike_variances(0.5e-6, 1, 0.3, 10, False)
-    check_zernike_variances(0.5e-6, 1, 0.1, 40, False)
-
-def test_infinite_atmosphere_zernike_variances():
-    check_zernike_variances(0.5e-6, 1, 0.1, 10, True)
-
-@pytest.mark.slow
-def test_infinite_atmosphere_zernike_variances_in_depth():
-    # Check some selected parameter sets.
-    check_zernike_variances(2e-6, 1, 0.1, 10, True)
-    check_zernike_variances(0.5e-6, 8, 0.1, 10, True)
-    check_zernike_variances(0.5e-6, 1, 0.3, 10, True)
-    check_zernike_variances(0.5e-6, 1, 0.1, 40, True)
 
 @pytest.mark.parametrize('layer_cls', [InfiniteAtmosphericLayer, FiniteAtmosphericLayer])
 def test_atmospheric_layer_reset(layer_cls):
@@ -255,8 +233,9 @@ def test_las_campanas_atmosphere():
     wf_out = atmospheric_model.forward(wf)
     assert np.allclose(wf_out.amplitude, aperture)
 
-
 def test_fried_parameter_seeing():
+    np.random.seed(0)
+
     for i in range(10):
         seeing = np.random.uniform(0.5, 2)  # arcsec
         wavelength = np.random.uniform(500e-9, 800e-9)
@@ -266,14 +245,14 @@ def test_fried_parameter_seeing():
 
         assert np.allclose(seeing_recovered, seeing)
 
-def test_phase_covariance_phase_structure_function_von_karman():
+@pytest.mark.parametrize('L0', [10, 20])
+@pytest.mark.parametrize('r0', [0.1, 0.2])
+def test_phase_covariance_phase_structure_function_von_karman(r0, L0):
     grid = make_uniform_grid([256, 256], [1, 1], has_center=True)
 
-    for r0 in [0.1, 0.2]:
-        for L0 in [10, 20]:
-            phase_structure_function = phase_structure_function_von_karman(r0, L0)(grid)
-            phase_covariance = phase_covariance_von_karman(r0, L0)(grid)
+    phase_structure_function = phase_structure_function_von_karman(r0, L0)(grid)
+    phase_covariance = phase_covariance_von_karman(r0, L0)(grid)
 
-            phase_structure_function_from_covariance = 2 * (phase_covariance.max() - phase_covariance)
+    phase_structure_function_from_covariance = 2 * (phase_covariance.max() - phase_covariance)
 
-            assert np.allclose(phase_structure_function_from_covariance, phase_structure_function)
+    assert np.allclose(phase_structure_function_from_covariance, phase_structure_function)

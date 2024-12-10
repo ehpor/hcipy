@@ -5,7 +5,7 @@ import inspect
 import numpy as np
 from matplotlib.path import Path
 
-from ..field import Field, make_hexagonal_grid
+from ..field import Field, make_hexagonal_grid, CartesianGrid, UnstructuredCoords
 from ..dev import deprecated_name_changed
 
 def make_circular_aperture(diameter, center=None):
@@ -723,6 +723,115 @@ def make_keystone_aperture(segment_shape, segment_positions, segment_transmissio
 		return func, segments
 	else:
 		return func
+
+def make_keystone_grid(core_diameter, outer_diameter, num_rings, num_keys, pointy_top=True):
+    """Make a keystone aperture with a central core diameter.
+
+    Parameters
+    ----------
+    core_diameter : scalar
+        The diameter of the central circular mirror. If 0, no central core is included.
+    outer_diameter : scalar
+        The total diameter of the aperture, including the outermost ring of wedges.
+    num_rings : int
+        The number of concentric rings of wedge-shaped segments.
+    num_keys : int
+        The number of wedge-shaped segments (keys) in each ring.
+    pointy_top : bool, optional
+        If True, the wedge sector will be at the "top". Defaults to True.
+
+    Returns
+    -------
+    CartesianGrid
+        A Cartesian grid of the keystone aperture's segment positions.
+    """
+
+    apothem = outer_diameter * np.sqrt(3) / 4
+    segment_pitch = (outer_diameter - core_diameter) / num_rings / 2
+
+    # Generate radial distances and angles
+    radii = np.linspace(core_diameter / 2 + segment_pitch / 2, outer_diameter / 2 - segment_pitch / 2, num_rings)
+    angles = np.linspace(0, 2 * np.pi, num_keys, endpoint=False) + np.pi / 2
+
+    # Create a meshgrid of polar coordinates
+    radii_grid, angles_grid = np.meshgrid(radii, angles, indexing='ij')
+
+    # Flatten the grid arrays to get a list of radial and angular coordinates
+    radii_flat = radii_grid.ravel()
+    angles_flat = angles_grid.ravel()
+
+    # Convert polar coordinates (r, theta) to Cartesian coordinates (x, y)
+    x_coords = radii_flat * np.cos(angles_flat)
+    y_coords = radii_flat * np.sin(angles_flat)
+
+    # Add central core position if core_diameter != 0
+    if core_diameter != 0:
+        x_coords = np.r_[0, x_coords]
+        y_coords = np.r_[0, y_coords]
+
+    weight = 2 * apothem**2 * np.sqrt(3)
+
+    if pointy_top:
+        return CartesianGrid(UnstructuredCoords((x_coords, y_coords)), weight)
+    else:
+        return CartesianGrid(UnstructuredCoords((y_coords, x_coords)), weight)
+
+def make_wedge_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, return_segments=False, pointy_top=True):
+    """Create a wedge-shaped keystone aperture.
+
+    The aperture consists of a central circular core and a series of wedge-shaped segments 
+    arranged in concentric rings. The radial and angular spacing of the segments can be customized 
+    with the parameters. The aperture can optionally include the individual segments as separate elements.
+
+    Parameters
+    ----------
+    core_diameter : scalar
+        The diameter of the central circular mirror. If 0, no central core is included.
+    outer_diameter : scalar
+        The total diameter of the aperture, including the outermost ring of wedges.
+    num_rings : int
+        The number of concentric rings of wedge-shaped segments.
+    radial_gap : scalar
+        The radial spacing between consecutive rings of wedges.
+    num_keys : int
+        The number of wedge-shaped segments (keys) in each ring.
+    spider_width : scalar
+        The width of any central obstructions (e.g., spiders) that intersect the wedges.
+    return_segments : bool, optional
+        Whether to return a list of individual segments in addition to the full aperture. 
+        Defaults to False.
+    pointy_top : bool, optional
+        If True, the wedge sector will be at the "top". Defaults to True.
+
+    Returns
+    -------
+    Field generator
+        The complete wedge-shaped keystone aperture.
+    list of Field generators
+        The individual wedge segments. Only returned if `return_segments` is True.
+    """
+
+    def func(grid):
+        angle_width = 360 / num_keys
+
+        segment_positions = make_keystone_grid(0, outer_diameter, 1, num_keys, pointy_top=True)
+        
+        pupil_inner = make_circular_aperture(core_diameter)(grid)
+
+        ring_diameter = np.linspace(core_diameter, outer_diameter, num_rings + 1)
+
+        for i in range(num_rings):
+            inner_keystone_diameter = ring_diameter[i] + radial_gap
+            outer_keystone_diameter = ring_diameter[i + 1]
+            keystone = make_wedge_aperture(inner_keystone_diameter, outer_keystone_diameter, angle_width, spider_width, pointy_top=pointy_top)
+            if i == 0:
+                keys = make_keystone_aperture(keystone, segment_positions, return_segments=return_segments)(grid)
+            else:
+                keys += make_keystone_aperture(keystone, segment_positions, return_segments=return_segments)(grid)
+
+        return pupil_inner + keys
+
+    return func
 
 @deprecated_name_changed(make_circular_aperture)
 def circular_aperture():

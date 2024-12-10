@@ -1,7 +1,7 @@
 import numpy as np
 
 from ..field import make_hexagonal_grid, Field
-from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_shifted_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture
+from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_shifted_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture, make_wedge_keystone_aperture
 
 import functools
 
@@ -1606,3 +1606,33 @@ def make_keck_aperture(normalized=False, with_spiders=True, with_segment_gaps=Tr
         return func, segments
     else:
         return func
+
+def make_eac2_aperture(core_diameter = 3.,
+        outer_diameter = 6.51,
+        num_rings = 1, 
+        radial_gap = 50e-3,
+        num_keys = 6, 
+        spider_width = 80e-3,
+        pointy_top = True):
+    '''Make the off-axis EAC2 pupil.
+
+    This pupil is based on the Exploratory Aperture Concept number 2 from private communications
+    with Dimitri Mawet.
+
+    .. note::
+        This pupil is parametrized, so you can modify parameters to see
+        the influence of your coronagraph as function of gap size and
+        other parameters.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    hcipy.Field generator
+        A function that takes an hcipy.Grid and evaluates the pupil on this grid.
+    '''
+
+    aperture = make_wedge_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, return_segments=False, pointy_top=pointy_top)
+
+    return aperture

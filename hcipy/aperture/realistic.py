@@ -1607,13 +1607,7 @@ def make_keck_aperture(normalized=False, with_spiders=True, with_segment_gaps=Tr
     else:
         return func
 
-def make_eac2_aperture(core_diameter = 3.,
-        outer_diameter = 6.51,
-        num_rings = 1, 
-        radial_gap = 50e-3,
-        num_keys = 6, 
-        spider_width = 80e-3,
-        pointy_top = True):
+def make_eac2_aperture(core_diameter=3., outer_diameter=6.51, num_rings=1, radial_gap=50e-3, num_keys=6, spider_width=80e-3, pointy_top=True):
     '''Make the off-axis EAC2 pupil.
 
     This pupil is based on the Exploratory Aperture Concept number 2 from private communications
@@ -1632,7 +1626,6 @@ def make_eac2_aperture(core_diameter = 3.,
     hcipy.Field generator
         A function that takes an hcipy.Grid and evaluates the pupil on this grid.
     '''
-
     aperture = make_wedge_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, return_segments=False, pointy_top=pointy_top)
 
     return aperture

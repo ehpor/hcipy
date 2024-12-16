@@ -1607,25 +1607,73 @@ def make_keck_aperture(normalized=False, with_spiders=True, with_segment_gaps=Tr
     else:
         return func
 
-def make_eac2_aperture(core_diameter=3., outer_diameter=6.51, num_rings=1, radial_gap=50e-3, num_keys=6, spider_width=80e-3, pointy_top=True):
-    '''Make the off-axis EAC2 pupil.
+def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, segment_transmissions=1,
+        return_header=False, return_segments=False):
+    '''Makes an off-axis EAC 2-type pupil.
 
-    This pupil is based on the Exploratory Aperture Concept number 2 from private communications
-    with Dimitri Mawet.
-
-    .. note::
-        This pupil is parametrized, so you can modify parameters to see
-        the influence of your coronagraph as function of gap size and
-        other parameters.
+    This pupil is based on the Exploratory Analytic Case (EAC) 2 design. The parameters will be updated as the EAC 2 design evolves.
+    Telescope properties, such as core diameter, outer diameter, number of ring and keys are derived from the public source document linked below, while the gaps size is currently set to an arbitrary value.
+    source: https://science.nasa.gov/wp-content/uploads/2024/10/6-habitable-worlds-observatory-hwo-hpd-cross-divisional-opportunities.pdf
 
     Parameters
     ----------
+    normalized : boolean
+        If this is True, the pupil diameter will be scaled to 1. Otherwise, the
+        diameter of the pupil will be 6.0 meters.
+    with_segment_gaps : boolean
+        Include the gaps between individual segments in the aperture.
+    gap_padding : scalar
+        Arbitrary padding of gap size to represent gaps on smaller arrays - this effectively
+        makes the gaps larger and the segments smaller to preserve the same segment pitch.
+    segment_transmissions : scalar or array_like
+        The transmission for each of the segments. If this is a scalar, this transmission
+        will be used for all segments.
+    return_header : boolean
+        If this is True, a header will be returned giving all important values for the
+        created aperture for reference.
+    return_segments : boolean
+        If this is True, the segments will also be returned as a ModeBasis.
 
     Returns
     -------
-    hcipy.Field generator
-        A function that takes an hcipy.Grid and evaluates the pupil on this grid.
+    aperture : Field generator
+        The EAC 2 aperture.
+    aperture_header : dict
+        A dictionary containing all quantities used when making this aperture. Only returned if
+        `return_header` is True.
+    segments : list of Field generators
+        The segments. Only returned when `return_segments` is True.
     '''
+    core_diameter=3.
+    outer_diameter=6.
+    num_rings=1
+    radial_gap=50e-3
+    num_keys=6
+    spider_width=50e-3,
+
+    if normalized:
+        core_diameter /= outer_diameter
+        outer_diameter /= outer_diameter
+        radial_gap /= outer_diameter
+        spider_width /= outer_diameter
+
+    # padding out the segmentation gaps so they are visible and not sub-pixel
+    radial_gap = radial_gap * gap_padding
+    spider_width = spider_width * gap_padding
+    if not with_segment_gaps:
+        spider_width = 0
+        radial_gap = 0
+
+    aperture_header = {
+        'TELESCOP': 'EAC 2',
+        'D_CIRC': outer_diameter,
+        'D_INSC': outer_diameter,
+        'NORM': normalized,
+        'SEG_TRAN': segment_transmissions,
+        'GAP_PAD': gap_padding,
+        'PROV': 'Exploratory Aperture Concept number 2'
+    }
+
     aperture = make_wedge_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, return_segments=False, pointy_top=pointy_top)
 
     return aperture

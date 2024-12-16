@@ -113,11 +113,20 @@ class GifWriter(object):
         The path and filename of the gif.
     framerate : integer
         The number of frames per second of the generated gif file.
+    loop : integer or None
+        The number of loops the gif will have. A value of None indicates
+        that the resulting gif will not loop. The default (0) will make
+        the GIF loop indefinitely.
+    **kwargs : keyword arguments
+        Any additional arguments will be fed to imageio.misave(). Please
+        refer to the imageio documentation for more options.
     '''
-    def __init__(self, filename, framerate=15):
+    def __init__(self, filename, framerate=15, loop=0, **kwargs):
         self.is_closed = False
         self.filename = filename
         self.framerate = framerate
+        self.loop = loop
+        self.kwargs = kwargs
 
         self._frames = []
 
@@ -175,7 +184,7 @@ class GifWriter(object):
     def convert(self):
         '''Convert all frames into a gif file.
         '''
-        imageio.mimsave(self.filename, self._frames, duration=1 / self.framerate)
+        imageio.mimsave(self.filename, self._frames, duration=1 / self.framerate, loop=self.loop, **self.kwargs)
 
     def close(self):
         '''Close the animation and create the final gif file.

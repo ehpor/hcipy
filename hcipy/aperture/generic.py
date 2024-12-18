@@ -663,8 +663,8 @@ def make_wedge_aperture(inner_diameter, outer_diameter, angle_width, spider_widt
 
     return func
 
-def make_keystone_aperture(segment_shape, segment_positions, segment_transmissions=1, return_segments=False):
-    """Create a keystone aperture composed of multiple wedge-shaped segments.
+def make_wedge_annular_aperture(segment_shape, segment_positions, segment_transmissions=1, return_segments=False):
+    """Create an annular aperture composed of multiple wedge-shaped segments.
 
     Parameters
     ----------
@@ -683,7 +683,7 @@ def make_keystone_aperture(segment_shape, segment_positions, segment_transmissio
     Returns
     -------
     Field generator
-        The full keystone aperture.
+        The annular aperture.
     list of Field generators
         The individual wedge-shaped segments. Only returned if `return_segments` is True.
     """
@@ -775,7 +775,7 @@ def make_keystone_grid(core_diameter, outer_diameter, num_rings, num_keys, point
     else:
         return CartesianGrid(UnstructuredCoords((y_coords, x_coords)), weight)
 
-def make_wedge_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, return_segments=False, pointy_top=True):
+def make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, return_segments=False, pointy_top=True):
     """Create a wedge-shaped keystone aperture.
 
     The aperture consists of a central circular core and a series of wedge-shaped segments
@@ -824,9 +824,9 @@ def make_wedge_keystone_aperture(core_diameter, outer_diameter, num_rings, radia
             outer_keystone_diameter = ring_diameter[i + 1]
             keystone = make_wedge_aperture(inner_keystone_diameter, outer_keystone_diameter, angle_width, spider_width, pointy_top=pointy_top)
             if i == 0:
-                keys = make_keystone_aperture(keystone, segment_positions, return_segments=return_segments)(grid)
+                keys = make_wedge_annular_aperture(keystone, segment_positions, return_segments=return_segments)(grid)
             else:
-                keys += make_keystone_aperture(keystone, segment_positions, return_segments=return_segments)(grid)
+                keys += make_wedge_annular_aperture(keystone, segment_positions, return_segments=return_segments)(grid)
 
         return pupil_inner + keys
 

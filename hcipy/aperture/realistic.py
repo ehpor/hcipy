@@ -1,7 +1,7 @@
 import numpy as np
 
 from ..field import make_hexagonal_grid, Field
-from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_shifted_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture, make_wedge_keystone_aperture
+from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_shifted_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture, make_keystone_aperture
 
 import functools
 
@@ -1607,8 +1607,7 @@ def make_keck_aperture(normalized=False, with_spiders=True, with_segment_gaps=Tr
     else:
         return func
 
-def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, segment_transmissions=1,
-        return_header=False, return_segments=False):
+def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, segment_transmissions=1, return_segments=False):
     '''Makes an off-axis EAC 2-type pupil.
 
     This pupil is based on the Exploratory Analytic Case (EAC) 2 design. The parameters will be updated as the EAC 2 design evolves.
@@ -1664,16 +1663,6 @@ def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, 
         spider_width = 0
         radial_gap = 0
 
-    aperture_header = {
-        'TELESCOP': 'EAC 2',
-        'D_CIRC': outer_diameter,
-        'D_INSC': outer_diameter,
-        'NORM': normalized,
-        'SEG_TRAN': segment_transmissions,
-        'GAP_PAD': gap_padding,
-        'PROV': 'Exploratory Aperture Concept number 2'
-    }
-
-    aperture = make_wedge_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, return_segments=False, pointy_top=pointy_top)
+    aperture = make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, return_segments=False)
 
     return aperture

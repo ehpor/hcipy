@@ -1,7 +1,7 @@
 from ..optics import Apodizer, OpticalElement, Wavefront
 from ..field import Field
 from ..fourier import FastFourierTransform, make_fft_grid
-from .._math import fft as _fft_module
+from ..math._implementation import fft as _fft_module
 
 import numpy as np
 

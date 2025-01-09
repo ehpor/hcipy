@@ -43,7 +43,7 @@ def test_fft_acceleration(func, method, dtype_in, dtype_out):
             x = x + 1j * rng.standard_normal((N, N)).astype(dtype_in)
 
         numpy_func = getattr(np.fft, func)
-        hcipy_func = getattr(hcipy._math.fft, func)
+        hcipy_func = getattr(hcipy.math._implementation.fft, func)
 
         y_numpy = numpy_func(x).astype(dtype_out)
         y_method = hcipy_func(x, method=method)

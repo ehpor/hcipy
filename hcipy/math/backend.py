@@ -18,12 +18,9 @@ _function_aliases = {}
 _function_wrappers = {}
 
 _constants = [
-    'Inf', 'Infinity',
-    'NAN', 'NINF', 'NZERO',
-    'NaN', 'PINF', 'PZERO',
     'e',
     'euler_gamma',
-    'inf', 'infty',
+    'inf',
     'nan',
     'newaxis',
     'pi'
@@ -182,5 +179,5 @@ def einsum_dispatcher(*args, **kwargs):
         return args[0]
 
 _module_aliases['decimal'] = 'math'
-_module_aliases['builtins'] = Configuration().field.default_backend
+_module_aliases['builtins'] = Configuration().core.default_backend
 _module_aliases['hcipy'] = 'numpy'

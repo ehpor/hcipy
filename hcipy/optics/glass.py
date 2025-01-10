@@ -161,7 +161,6 @@ def fresnel_reflection_coefficients(n1, n2, angle_of_incidence):
 
     return r_s, r_p
 
-
 def fresnel_transmission_coefficients(n1, n2, angle_of_incidence):
     '''Calculates the fresnel transmission amplitude coefficient for an interface.
 

@@ -133,3 +133,58 @@ def _parse_sellmeier_glass_catalogue(catalogue_file):
         database[di[0].replace(" ", "")] = make_sellmeier_glass(1, di[1:4].astype('float'), di[4::].astype('float'))
 
     return database
+
+def fresnel_reflection_coefficients(n1, n2, angle_of_incidence):
+    '''Calculates the fresnel reflection amplitude coefficient for an interface.
+
+    Parameters
+    ----------
+    n1 : array_like
+        Refractive index of the first medium
+    n2 : array_like
+        Refractive index of the second medium
+    angle_of_incidence : array_like
+        The angle of incidence with respect to the normal of the interface.
+
+    Returns
+    -------
+    r_s, r_p
+        The reflection coefficients for s and p polarization.
+    
+    '''
+    n_rel = n2 / n1
+    n_cos_theta_out = np.sqrt(n_rel**2 - np.sin(angle_of_incidence)**2)
+    cos_theta_in = np.cos(angle_of_incidence)
+
+    r_s = (cos_theta_in - n_cos_theta_out) / (cos_theta_in + n_cos_theta_out)
+    r_p = (-n_rel**2 * cos_theta_in + n_cos_theta_out) / (n_rel**2 * cos_theta_in + n_cos_theta_out)
+
+    return r_s, r_p
+
+
+def fresnel_transmission_coefficients(n1, n2, angle_of_incidence):
+    '''Calculates the fresnel transmission amplitude coefficient for an interface.
+
+    Parameters
+    ----------
+    n1 : array_like
+        Refractive index of the first medium
+    n2 : array_like
+        Refractive index of the second medium
+    angle_of_incidence : array_like
+        The angle of incidence with respect to the normal of the interface.
+
+    Returns
+    -------
+    t_s, t_p
+        The transmission coefficients for s and p polarization.
+    
+    '''
+    n_rel = n2 / n1
+    n_cos_theta_out = np.sqrt(n_rel**2 - np.sin(angle_of_incidence)**2)
+    cos_theta_in = np.cos(angle_of_incidence)
+    
+    t_s = 2 * cos_theta_in / (cos_theta_in + n_cos_theta_out)
+    t_p = 2 * n_rel * cos_theta_in / (n_rel**2 * cos_theta_in + n_cos_theta_out)
+
+    return t_s, t_p

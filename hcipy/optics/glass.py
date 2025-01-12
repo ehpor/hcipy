@@ -150,7 +150,7 @@ def fresnel_reflection_coefficients(n1, n2, angle_of_incidence):
     -------
     r_s, r_p
         The reflection coefficients for s and p polarization.
-    
+
     '''
     n_rel = n2 / n1
     n_cos_theta_out = np.sqrt(n_rel**2 - np.sin(angle_of_incidence)**2)
@@ -177,12 +177,12 @@ def fresnel_transmission_coefficients(n1, n2, angle_of_incidence):
     -------
     t_s, t_p
         The transmission coefficients for s and p polarization.
-    
+
     '''
     n_rel = n2 / n1
     n_cos_theta_out = np.sqrt(n_rel**2 - np.sin(angle_of_incidence)**2)
     cos_theta_in = np.cos(angle_of_incidence)
-    
+
     t_s = 2 * cos_theta_in / (cos_theta_in + n_cos_theta_out)
     t_p = 2 * n_rel * cos_theta_in / (n_rel**2 * cos_theta_in + n_cos_theta_out)
 

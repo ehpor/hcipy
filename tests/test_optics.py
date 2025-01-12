@@ -816,7 +816,7 @@ def test_fresnel_coefficients():
 
     t_s, t_p = fresnel_transmission_coefficients(n1, n2, 0)
     assert np.allclose(abs(t_s)**2, abs(t_p)**2)
-    
+
     theoretical_transmission = (1 - theoretical_reflection)
     assert np.allclose(np.real(n2 / n1) * abs(t_s)**2, theoretical_transmission)
 

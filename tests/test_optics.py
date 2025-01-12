@@ -809,16 +809,16 @@ def test_fresnel_coefficients():
     n1 = 1.0
 
     r_s, r_p = fresnel_reflection_coefficients(n1, n2, 0)
+    assert np.allclose(abs(r_s)**2, abs(r_p)**2)
+
+    theoretical_reflection = (abs(n2 - n1))**2 / (abs(n2 + n1))**2
+    assert np.allclose(abs(r_s)**2, theoretical_reflection)
+
     t_s, t_p = fresnel_transmission_coefficients(n1, n2, 0)
-    assert np.allclose(abs(r_s)**2 - abs(r_p)**2)
-
-    assert np.allclose(abs(t_s)**2 - abs(t_p)**2)
-
-    theoretical_reflection = (n2 - n1)**2 / (n2 + n1)**2
-    assert np.allclose(abs(r_s)**2 - theoretical_reflection)
+    assert np.allclose(abs(t_s)**2, abs(t_p)**2)
     
     theoretical_transmission = (1 - theoretical_reflection)
-    assert np.allclose(abs(t_s)**2 - theoretical_transmission)
+    assert np.allclose(np.real(n2 / n1) * abs(t_s)**2, theoretical_transmission)
 
 def test_photonic_lantern():
     focal_grid = make_focal_grid(4, 5)

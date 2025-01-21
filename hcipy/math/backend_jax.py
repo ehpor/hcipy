@@ -1,4 +1,5 @@
 from .backend import _functions, _module_aliases, _backend_aliases, call
+from .primitives import primitive_function
 
 _jax_random_key = None
 
@@ -61,3 +62,7 @@ _functions['jax']['to_numpy'] = jax_to_numpy
 _functions['jax']['random.seed'] = jax_random_seed
 _functions['jax']['random.uniform'] = jax_random_uniform
 _functions['jax']['random.normal'] = jax_random_normal
+
+@primitive_function('jax')
+def jones_matrix_to_q(jones_matrix):
+    return 'jax'

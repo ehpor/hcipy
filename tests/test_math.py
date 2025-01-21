@@ -58,6 +58,8 @@ def test_fft_acceleration(func, method, dtype_in, dtype_out):
 
 def test_backend_math():
     import time
+    import hcipy.math.numpy as np
+
     a = np.eye(1024, dtype='complex64')
 
     print('Dot product:')

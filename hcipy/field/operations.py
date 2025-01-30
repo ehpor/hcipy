@@ -2,7 +2,6 @@ from .field import Field
 # import numpy as np
 import string
 from hcipy.math import numpy as np
-np.ndarray = type(np.empty(1)) # TODO fix this hack, this fixes the problem where np.ndarray is a partial function and can therefore not be used with `isinstance`
 
 
 def field_einsum(subscripts, *operands, **kwargs):

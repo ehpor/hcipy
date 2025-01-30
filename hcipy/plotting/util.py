@@ -2,7 +2,8 @@ from .field import imshow_field
 from ..field import Field
 from ..config import Configuration
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 def imshow_psf(
         psf, grid=None, vmin=1e-8, vmax=1e-1, scale='log',

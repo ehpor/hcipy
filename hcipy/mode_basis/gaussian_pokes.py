@@ -1,5 +1,6 @@
 from ..field import evaluate_supersampled
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from scipy.sparse import csr_matrix
 
 def make_gaussian_pokes(grid, mu, sigma, cutoff=5):

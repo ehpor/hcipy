@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from ..util import large_poisson
 from ..field import subsample_field, make_supersampled_grid
 

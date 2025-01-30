@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from ..field import Field
 
 def large_poisson(lam, thresh=1e6):

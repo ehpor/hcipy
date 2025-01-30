@@ -4,7 +4,8 @@ from ..optics import PhaseApodizer, LinearRetarder, Wavefront
 from ..aperture import make_circular_aperture
 from ..field import make_uniform_grid, Field
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 class ZernikeWavefrontSensorOptics(WavefrontSensorOptics):
     '''The optical elements for a Zernike wavefront sensor.

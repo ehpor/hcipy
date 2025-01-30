@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 from ..field import Field
 from ..util import SpectralNoiseFactoryFFT, inverse_tikhonov

@@ -1,5 +1,6 @@
 from scipy.interpolate import RegularGridInterpolator, LinearNDInterpolator
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from ..field import Field
 
 def make_linear_interpolator_separated(field, grid=None, fill_value=np.nan):

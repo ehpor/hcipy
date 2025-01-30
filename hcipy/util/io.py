@@ -3,7 +3,8 @@ import io
 import pickle
 import packaging
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 import asdf
 from astropy import wcs
 from astropy.io import fits

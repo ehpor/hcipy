@@ -3,7 +3,8 @@ from ..field import Field
 from ..fourier import FastFourierTransform, make_fft_grid
 from ..math._implementation import fft as _fft_module
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 class KnifeEdgeLyotCoronagraph(OpticalElement):
     '''A Lyot-style coronagraph with a centered, knife-edge focal-plane mask.

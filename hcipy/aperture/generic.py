@@ -2,7 +2,8 @@ from __future__ import division
 import functools
 import inspect
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from matplotlib.path import Path
 
 from ..field import Field, make_hexagonal_grid

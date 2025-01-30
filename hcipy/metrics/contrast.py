@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 def get_strehl_from_focal(img, ref_img):
     '''Get the Strehl ratio from a focal-plane image.

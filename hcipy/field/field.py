@@ -1,5 +1,6 @@
-import numpy as np
+import numpy as onp
 from ..config import Configuration
+from ..math import numpy as np
 
 class Field:
     '''The value of some physical quantity for each point in some coordinate system.
@@ -231,7 +232,7 @@ def _unwrap(arg):
 
     return arg
 
-class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
+class NewStyleField(Field, onp.lib.mixins.NDArrayOperatorsMixin): #TODO This should probably not refer back to original numpy
     '''A Field based on composition rather than subclassing a Numpy array.
 
     This constitutes an "new-style" Field object. A previous version uses subclassing
@@ -379,6 +380,44 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
     def conjugate(self, *args, **kwargs):
         return np.conjugate(self, *args, **kwargs)
 
+    #TODO The following additions are because of the arguments not being ordered correctly when using the regular dispatcher or missing an argument (e.g. array.sum() where it misses self). Either fix this or remove the commented out lines in the definitions below. It probably also happens for the remaining functions but they aren't covered in the tests
+    def clip(self, *args, **kwargs):
+        return np.clip(self, *args, **kwargs)
+
+    def repeat(self, *args, **kwargs):
+        return np.repeat(self, *args, **kwargs)
+
+    def dot(self, *args, **kwargs):
+        return np.dot(self, *args, **kwargs)
+
+    def reshape(self, *args, **kwargs):
+        return np.reshape(self, *args, **kwargs)
+    
+    def sum(self, *args, **kwargs):
+        return np.sum(self, *args, **kwargs)
+    
+    def mean(self, *args, **kwargs):
+        return np.mean(self, *args, **kwargs)
+
+    def std(self, *args, **kwargs):
+        return np.std(self, *args, **kwargs)
+    
+    def max(self, *args, **kwargs):
+        return np.max(self, *args, **kwargs)
+    
+    def min(self, *args, **kwargs):
+        return np.min(self, *args, **kwargs)
+    
+    def ravel(self, *args, **kwargs):
+        return np.ravel(self, *args, **kwargs)
+
+    def copy(self, *args, **kwargs):
+        return np.copy(self, *args, **kwargs)
+    
+    def round(self, *args, **kwargs):
+        return np.round(self, *args, **kwargs)
+    
+
     @property
     def flags(self):
         return self.data.flags
@@ -389,26 +428,26 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
     argmin = np.argmin
     argpartition = np.argpartition
     argsort = np.argsort
-    clip = np.clip
+    # clip = np.clip
     compress = np.compress
-    copy = np.copy
+    # copy = np.copy
     cumprod = np.cumprod
     cumsum = np.cumsum
-    dot = np.dot
+    # dot = np.dot
     flatten = np.ravel
-    max = np.max
-    mean = np.mean
-    min = np.min
+    # max = np.max
+    # mean = np.mean
+    # min = np.min
     nonzero = np.nonzero
     prod = np.prod
-    ravel = np.ravel
-    repeat = np.repeat
-    reshape = np.reshape
-    round = np.round
+    # ravel = np.ravel
+    # repeat = np.repeat
+    # reshape = np.reshape
+    # round = np.round
     sort = np.sort
     squeeze = np.squeeze
-    std = np.std
-    sum = np.sum
+    # std = np.std
+    # sum = np.sum
     trace = np.trace
     transpose = np.transpose
     var = np.var

@@ -1,5 +1,6 @@
 import copy
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 import numexpr as ne
 
 from ..field import Field, field_dot, field_kron

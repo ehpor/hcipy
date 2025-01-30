@@ -1,6 +1,7 @@
 import pytest
 import hcipy
-import numpy as np
+# import numpy as np
+from hcipy.math import numpy as np
 
 
 def _parameters():
@@ -58,7 +59,7 @@ def test_fft_acceleration(func, method, dtype_in, dtype_out):
 
 def test_backend_math():
     import time
-    import hcipy.math.numpy as np
+    from hcipy.math import numpy as np
 
     a = np.eye(1024, dtype='complex64')
 
@@ -66,7 +67,7 @@ def test_backend_math():
     b = np.dot(a, a)
     print(np.to_numpy(b).dtype)
 
-    N = 10000
+    N = 100
     start = time.perf_counter()
     for i in range(N):
         b = np.dot(a, a)
@@ -78,7 +79,7 @@ def test_backend_math():
     b = np.fft.fft2(a)
     print(np.to_numpy(b).dtype)
 
-    N = 10000
+    N = 100
     start = time.perf_counter()
     for i in range(N):
         b = np.fft.fft2(a)

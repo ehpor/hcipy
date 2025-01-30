@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from hcipy.math import numpy as np
 import matplotlib.pyplot as plt
 from hcipy import *
 import pytest

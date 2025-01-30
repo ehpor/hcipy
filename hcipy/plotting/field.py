@@ -1,5 +1,6 @@
 from copy import copy
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 from ..field import Field
 

@@ -1,5 +1,6 @@
 from ..field import Field, make_uniform_grid
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from scipy import sparse
 
 def generate_convolution_matrix(grid, kernel):

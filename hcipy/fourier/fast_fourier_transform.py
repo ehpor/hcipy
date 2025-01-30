@@ -1,6 +1,7 @@
 from __future__ import division
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields, _get_float_and_complex_dtype
 from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration

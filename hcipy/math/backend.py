@@ -7,7 +7,9 @@ from ..config import Configuration
 import numpy as onp
 
 def first_arg_dispatcher(*args, **kwargs):
-    return args[0]
+    if args:
+        return args[0]
+    return None
 
 _functions = defaultdict(lambda: {})
 _dispatchers = defaultdict(lambda: first_arg_dispatcher)
@@ -24,6 +26,12 @@ _constants = [
     'nan',
     'newaxis',
     'pi'
+]
+
+#TODO this is the only dtype that is explictly (`np.uint8()`) used currently in hcipy but we should catch all dtypes
+_dtypes = [
+    'ndarray',
+    'uint8', 
 ]
 
 def call(func_name, *args, like=None, **kwargs):
@@ -52,6 +60,9 @@ class BackendShim:
 
             for name in _constants:
                 setattr(self, name, getattr(onp, name))
+
+            for name in _dtypes:
+                setattr(self, name, getattr(onp, name)) #TODO maybe not import dtypes from onp
 
     def __getattr__(self, func_name):
         if self.submodule is not None:

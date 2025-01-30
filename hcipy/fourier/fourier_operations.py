@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 from .fast_fourier_transform import FastFourierTransform
 from ..field import Field, field_dot, field_conjugate_transpose

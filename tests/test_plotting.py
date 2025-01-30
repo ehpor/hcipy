@@ -2,7 +2,8 @@ import matplotlib
 matplotlib.use('Agg')
 
 from hcipy import *
-import numpy as np
+# import numpy as np
+from hcipy.math import numpy as np
 import matplotlib.pyplot as plt
 import os
 import pytest

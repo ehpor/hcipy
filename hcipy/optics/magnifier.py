@@ -1,6 +1,7 @@
 from .optical_element import AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 class Magnifier(AgnosticOpticalElement):
     def __init__(self, magnification):

@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 def inverse_truncated_modal(M, num_modes, svd=None):
     '''Invert `M` with `num_modes` modes.

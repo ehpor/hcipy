@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from scipy.fft import next_fast_len
 
 from .fourier_transform import _get_float_and_complex_dtype

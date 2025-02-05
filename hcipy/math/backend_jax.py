@@ -124,18 +124,18 @@ _module_aliases['jax'] = 'jax.numpy'
 
 _functions['jax']['to_numpy'] = jax_to_numpy
 
-# random libary needs to be defined for both builtins and jax
-_functions['builtins']['random.default_rng'] = jax_default_rng
-_functions['builtins']['random.seed'] = jax_random_seed
-_functions['builtins']['random.uniform'] = jax_random_uniform
-_functions['builtins']['random.normal'] = jax_random_normal
-_functions['builtins']['random.rand'] = jax_random_rand
-_functions['builtins']['random.randn'] = jax_random_randn
-_functions['builtins']['random.randint'] = jax_random_randint
-_functions['builtins']['random.choice'] = jax_random_choice
-_functions['builtins']['random.gamma'] = jax_random_gamma
-_functions['builtins']['random.exponential'] = jax_random_exponential
-_functions['builtins']['random.poisson'] = jax_random_poisson
+if 'jax' in _module_aliases['builtins']: # catch both 'jax' and 'jax.numpy'
+    _functions['builtins']['random.default_rng'] = jax_default_rng
+    _functions['builtins']['random.seed'] = jax_random_seed
+    _functions['builtins']['random.uniform'] = jax_random_uniform
+    _functions['builtins']['random.normal'] = jax_random_normal
+    _functions['builtins']['random.rand'] = jax_random_rand
+    _functions['builtins']['random.randn'] = jax_random_randn
+    _functions['builtins']['random.randint'] = jax_random_randint
+    _functions['builtins']['random.choice'] = jax_random_choice
+    _functions['builtins']['random.gamma'] = jax_random_gamma
+    _functions['builtins']['random.exponential'] = jax_random_exponential
+    _functions['builtins']['random.poisson'] = jax_random_poisson
 
 _functions['jax']['random.uniform'] = jax_random_uniform
 _functions['jax']['random.normal'] = jax_random_normal

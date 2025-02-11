@@ -191,4 +191,5 @@ def einsum_dispatcher(*args, **kwargs):
 
 _module_aliases['decimal'] = 'math'
 _module_aliases['builtins'] = Configuration().core.default_backend
-_module_aliases['hcipy'] = 'numpy'
+_module_aliases['hcipy'] = Configuration().core.default_backend
+_module_aliases['asdf'] = Configuration().core.default_backend

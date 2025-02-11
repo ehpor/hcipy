@@ -157,8 +157,7 @@ class ModeBasis(object):
         else:
             if self._transformation_matrix.ndim != 2:
                 raise TypeError('Cannot sparsify a mode basis of tensor fields')
-
-            T = scipy.sparse.csc_matrix(self._transformation_matrix)
+            T = scipy.sparse.csc_matrix(self._transformation_matrix.astype(float)) # convert to float to avoid scipy type conversion issues
             T.eliminate_zeros()
             return ModeBasis(T, self.grid)
 

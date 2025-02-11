@@ -1627,9 +1627,6 @@ def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, 
     segment_transmissions : scalar or array_like
         The transmission for each of the segments. If this is a scalar, this transmission
         will be used for all segments.
-    return_header : boolean
-        If this is True, a header will be returned giving all important values for the
-        created aperture for reference.
     return_segments : boolean
         If this is True, the segments will also be returned as a ModeBasis.
 
@@ -1648,7 +1645,7 @@ def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, 
     num_rings=1
     radial_gap=50e-3
     num_keys=6
-    spider_width=50e-3,
+    spider_width=50e-3
 
     if normalized:
         core_diameter /= outer_diameter
@@ -1663,6 +1660,6 @@ def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, 
         spider_width = 0
         radial_gap = 0
 
-    aperture = make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, return_segments=False)
+    aperture = make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, segment_transmissions=segment_transmissions, return_segments=return_segments)
 
     return aperture

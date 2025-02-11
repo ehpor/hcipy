@@ -819,7 +819,7 @@ def make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap,
 
         res = grid.zeros(dtype=segment_transmissions.dtype)
         segment_index = 0
-        segments=[]
+        segments = []
 
         # Central core
         if core_diameter != 0:

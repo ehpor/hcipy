@@ -713,7 +713,8 @@ def make_wedge_annular_aperture(segment_shape, segment_positions, segment_transm
 
     if return_segments:
         def seg(grid, p, t):
-            return segment_shape(grid.shifted(-p)) * t
+            alpha = np.arctan2(p[1], p[0])
+            return segment_shape(grid.rotated(-alpha)) * t
 
         segments = []
         for p, t in zip(segment_positions.points, segment_transmissions):
@@ -814,27 +815,43 @@ def make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap,
     total_segments = num_rings * num_keys + (1 if core_diameter != 0 else 0)
     segment_transmissions = np.ones(total_segments) * segment_transmissions
 
-    def func(grid):
+    def func(grid, return_segments=return_segments):
+
+        res = grid.zeros(dtype=segment_transmissions.dtype)
         segment_index = 0
+        segments=[]
 
-        pupil_inner = 0
+        # Central core
         if core_diameter != 0:
-            pupil_inner += make_circular_aperture(core_diameter)(grid)
-            pupil_inner *= segment_transmissions[0]
+            core_aperture = make_circular_aperture(core_diameter)
+            res += core_aperture(grid) * segment_transmissions[0]
             segment_index += 1
+            if return_segments:
+                segments.append(core_aperture)
 
+        # Rings of keystones
         ring_diameter = np.linspace(core_diameter, outer_diameter, num_rings + 1)
 
-        keys = 0
         for i in range(num_rings):
             inner_keystone_diameter = ring_diameter[i] + radial_gap
             outer_keystone_diameter = ring_diameter[i + 1]
             keystone = make_wedge_aperture(inner_keystone_diameter, outer_keystone_diameter, angle_width, spider_width, pointy_top=pointy_top)
             ring_transmissions = segment_transmissions[segment_index:segment_index + num_keys]
             segment_index += num_keys
-            keys += make_wedge_annular_aperture(keystone, segment_positions, segment_transmissions=ring_transmissions, return_segments=return_segments)(grid)
+            keystone_aperture = make_wedge_annular_aperture(keystone, segment_positions, segment_transmissions=ring_transmissions, return_segments=return_segments)
 
-        return pupil_inner + keys
+            if return_segments:
+                _keys, _segments = keystone_aperture
+                res += _keys(grid)
+                segments.extend(_segments)
+            else:
+                _keys = keystone_aperture
+                res += _keys(grid)
+
+        if return_segments:
+            return res, segments
+        else:
+            return res
 
     return func
 

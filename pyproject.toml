@@ -42,6 +42,7 @@ dev = [
     "mpmath",
     "dill",
     "flake8",
+    "jax"
 ]
 doc = [
     "numpydoc",

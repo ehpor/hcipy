@@ -3,7 +3,8 @@ from ..optics import OpticalSystem, MicroLensArray
 from ..field import CartesianGrid, Field, SeparatedCoords
 from ..propagation import FresnelPropagator
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from scipy import ndimage
 
 class ShackHartmannWavefrontSensorOptics(WavefrontSensorOptics):

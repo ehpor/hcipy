@@ -1,5 +1,6 @@
 from scipy.interpolate import RegularGridInterpolator, NearestNDInterpolator
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from ..field import Field
 
 def make_nearest_interpolator_separated(field, grid=None):

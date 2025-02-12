@@ -5,7 +5,8 @@ from ..optics import SurfaceApodizer, Apodizer, TipTiltMirror
 from ..field import make_pupil_grid, Field, CartesianGrid, UnstructuredCoords
 from ..field import evaluate_supersampled
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
     '''The optical elements for a modulated pyramid wavefront sensor.

@@ -34,4 +34,7 @@ plotting:
 
 core:
   # Whether to use new-style or old-style fields.
-  use_new_style_fields: false
+  use_new_style_fields: true
+
+  # The default backend to use for internal calculations.
+  default_backend: 'numpy'

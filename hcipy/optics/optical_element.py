@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 import inspect
 import collections
 import itertools

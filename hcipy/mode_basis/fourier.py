@@ -1,6 +1,7 @@
 from .mode_basis import ModeBasis
 from ..field import Field
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 _epsilon = 1e-12
 

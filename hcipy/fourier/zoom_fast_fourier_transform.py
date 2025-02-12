@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 from .chirp_z_transform import ChirpZTransform
 from .fourier_transform import FourierTransform, _get_float_and_complex_dtype

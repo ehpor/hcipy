@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 from ..field import make_hexagonal_grid, Field
 from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_shifted_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture

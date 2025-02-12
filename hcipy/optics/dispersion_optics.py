@@ -1,5 +1,6 @@
 from .apodization import SurfaceApodizer, PhaseApodizer
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from ..field import Field
 from scipy.special import jv
 

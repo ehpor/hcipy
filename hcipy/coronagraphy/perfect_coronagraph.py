@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from ..optics import OpticalElement
 from ..mode_basis import ModeBasis
 from ..util import inverse_truncated

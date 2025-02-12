@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 from .wavefront import Wavefront, jones_to_mueller
 from .optical_element import OpticalElement, make_agnostic_forward, make_agnostic_backward, AgnosticOpticalElement

@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 from ..optics import OpticalElement, Wavefront
 from ..field import Field, CartesianGrid, RegularCoords

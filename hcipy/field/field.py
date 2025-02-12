@@ -1,5 +1,7 @@
-import numpy as np
+import numpy as onp
+import jax.numpy as jnp
 from ..config import Configuration
+from ..math import numpy as np
 
 class Field:
     '''The value of some physical quantity for each point in some coordinate system.
@@ -231,7 +233,7 @@ def _unwrap(arg):
 
     return arg
 
-class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
+class NewStyleField(Field, onp.lib.mixins.NDArrayOperatorsMixin): #TODO This should probably not refer back to original numpy
     '''A Field based on composition rather than subclassing a Numpy array.
 
     This constitutes an "new-style" Field object. A previous version uses subclassing
@@ -265,13 +267,17 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
         if out:
             kwargs['out'] = tuple(x.data if is_field(x) else x for x in out)
 
-        result = getattr(ufunc, method)(*inputs, **kwargs)
+        if hasattr(jnp, ufunc.__name__):
+            # make sure jax (or numpy) ufuncs are dispatched to internal np
+            result = getattr(np, ufunc.__name__)(*inputs, **kwargs) 
+        else:
+            result = getattr(ufunc, method)(*inputs, **kwargs)
 
         # Note: this is an extremely simple way of determining whether the
         # resulting object should be a Field or not. We can likely do better
         # by looking directly at the name of the function that we are executing.
         # The current code is fine for most ufuncs.
-        if isinstance(result, np.ndarray):
+        if isinstance(result, np.ndarray) and not np.isscalar(result):
             return Field(result, self.grid)
         else:
             return result
@@ -288,6 +294,9 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
             raise ValueError(f'copy=False is not supported since the dtypes do not match ({dtype} vs. {self.data.dtype}).')
 
         return self.data.astype(dtype)
+    
+    def __jax_array__(self, dtype=None, copy=None):
+        return self.__array__(dtype, copy)
 
     def __array_function__(self, func, types, args, kwargs):
         args = _unwrap(args)
@@ -297,10 +306,17 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
         # Note: this is an extremely simple way of determining whether the
         # resulting object should be a Field or not. We can likely do better
         # by looking directly at the name of the function that we are executing.
-        if isinstance(result, np.ndarray):
+        if isinstance(result, np.ndarray) and not np.isscalar(result):
             return Field(result, self.grid)
 
         return result
+
+    def tree_flatten(self):
+        return (self.data,), self.grid
+    
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        return cls(children[0], aux_data)
 
     def __getitem__(self, indices):
         res = self.data[indices]
@@ -322,7 +338,11 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
         tuple
             The state of the Field.
         '''
-        data_state = self.data.__reduce__()[2]
+        #TODO make this also compatible with JAX arrays
+        if isinstance(self.data, jnp.ndarray):
+            data_state = self.data.__reduce__()[1][2]
+        else:
+            data_state = self.data.__reduce__()[2]
         return data_state + (self.grid,)
 
     def __setstate__(self, state):
@@ -338,7 +358,13 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
         self.data = np.array([])
         self.data.__setstate__((shp, typ, isf, raw))
         self.grid = grid
-
+    
+    def matvec(self, x):
+        return np.asarray(self.data) @ x
+    
+    def rmatvec(self, x):
+        return x @ np.asarray(self.data)
+    
     @property
     def T(self):
         return np.transpose(self)
@@ -357,7 +383,7 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
 
     @property
     def size(self):
-        return np.prod(self.shape)
+        return np.prod(np.asarray(self.shape))
 
     @property
     def ndim(self):
@@ -379,6 +405,44 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
     def conjugate(self, *args, **kwargs):
         return np.conjugate(self, *args, **kwargs)
 
+    #TODO The following additions are because of the arguments not being ordered correctly when using the regular dispatcher or missing an argument (e.g. array.sum() where it misses self). Either fix this or remove the commented out lines in the definitions below. It probably also happens for the remaining functions but they aren't covered in the tests
+    def clip(self, *args, **kwargs):
+        return np.clip(self, *args, **kwargs)
+
+    def repeat(self, *args, **kwargs):
+        return np.repeat(self, *args, **kwargs)
+
+    def dot(self, *args, **kwargs):
+        return np.dot(self, *args, **kwargs)
+
+    def reshape(self, *args, **kwargs):
+        return np.reshape(self, *args, **kwargs)
+    
+    def sum(self, *args, **kwargs):
+        return np.sum(self, *args, **kwargs)
+    
+    def mean(self, *args, **kwargs):
+        return np.mean(self, *args, **kwargs)
+
+    def std(self, *args, **kwargs):
+        return np.std(self, *args, **kwargs)
+    
+    def max(self, *args, **kwargs):
+        return np.max(self, *args, **kwargs)
+    
+    def min(self, *args, **kwargs):
+        return np.min(self, *args, **kwargs)
+    
+    def ravel(self, *args, **kwargs):
+        return np.ravel(self, *args, **kwargs)
+
+    def copy(self, *args, **kwargs):
+        return np.copy(self, *args, **kwargs)
+    
+    def round(self, *args, **kwargs):
+        return np.round(self, *args, **kwargs)
+    
+
     @property
     def flags(self):
         return self.data.flags
@@ -389,26 +453,26 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
     argmin = np.argmin
     argpartition = np.argpartition
     argsort = np.argsort
-    clip = np.clip
+    # clip = np.clip
     compress = np.compress
-    copy = np.copy
+    # copy = np.copy
     cumprod = np.cumprod
     cumsum = np.cumsum
-    dot = np.dot
+    # dot = np.dot
     flatten = np.ravel
-    max = np.max
-    mean = np.mean
-    min = np.min
+    # max = np.max
+    # mean = np.mean
+    # min = np.min
     nonzero = np.nonzero
     prod = np.prod
-    ravel = np.ravel
-    repeat = np.repeat
-    reshape = np.reshape
-    round = np.round
+    # ravel = np.ravel
+    # repeat = np.repeat
+    # reshape = np.reshape
+    # round = np.round
     sort = np.sort
     squeeze = np.squeeze
-    std = np.std
-    sum = np.sum
+    # std = np.std
+    # sum = np.sum
     trace = np.trace
     transpose = np.transpose
     var = np.var

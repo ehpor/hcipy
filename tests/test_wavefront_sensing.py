@@ -1,5 +1,6 @@
 from hcipy import *
-import numpy as np
+# import numpy as np
+from hcipy.math import numpy as np
 
 def test_optical_differentiation_wavefront_sensor():
     pupil_grid = make_pupil_grid(128, 1)

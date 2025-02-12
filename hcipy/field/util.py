@@ -1,6 +1,7 @@
 from __future__ import division
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
 from .field import Field
 from .cartesian_grid import CartesianGrid
@@ -29,9 +30,9 @@ def make_uniform_grid(dims, extent, center=0, has_center=False):
     '''
     num_dims = max(np.array([dims]).shape[-1], np.array([extent]).shape[-1], np.array([center]).shape[-1])
 
-    dims = (np.ones(num_dims) * dims).astype('int')
-    extent = (np.ones(num_dims) * extent).astype('float')
-    center = (np.ones(num_dims) * center).astype('float')
+    dims = (np.ones(num_dims) * np.array(dims)).astype('int')
+    extent = (np.ones(num_dims) * np.array(extent)).astype('float')
+    center = (np.ones(num_dims) * np.array(center)).astype('float')
 
     delta = extent / dims
     zero = -extent / 2 + center + delta / 2

@@ -1,5 +1,6 @@
 from hcipy import *
-import numpy as np
+import numpy as onp
+from hcipy.math import numpy as np
 
 def test_vortex_coronagraph():
     pupil_grid = make_pupil_grid(256)
@@ -271,7 +272,7 @@ def test_lyot_coronagraph():
 
     # Checks performance of the coronagraph and if the focal length does not introduce artifacts
     assert (wf_foc.power.max() / norm) < 5e-3
-    np.testing.assert_allclose(wf_foc.power, wf_foc2.power)
+    onp.testing.assert_allclose(wf_foc.power, wf_foc2.power)
 
 def test_vortex_fiber_nuller():
     pupil_grid = make_pupil_grid(256)

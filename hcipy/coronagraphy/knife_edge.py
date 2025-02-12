@@ -1,9 +1,10 @@
 from ..optics import Apodizer, OpticalElement, Wavefront
 from ..field import Field
 from ..fourier import FastFourierTransform, make_fft_grid
-from .._math import fft as _fft_module
+from ..math._implementation import fft as _fft_module
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 class KnifeEdgeLyotCoronagraph(OpticalElement):
     '''A Lyot-style coronagraph with a centered, knife-edge focal-plane mask.

@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from ..field import Field
 
 def spherical_surface_sag(radius_of_curvature):

@@ -1,4 +1,4 @@
-from ..config import Configuration
+from ...config import Configuration
 from .cpu import get_num_available_cores
 
 import functools

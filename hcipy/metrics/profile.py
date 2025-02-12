@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from math import pi
 
 def binned_profile(y, x, bins=20, statistic='mean'):

@@ -3,7 +3,8 @@ from ..propagation import FraunhoferPropagator
 from ..optics import MultiplexedComplexSurfaceApodizer
 from ..field import make_pupil_grid, Field
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 
 def make_polarization_odwfs_amplitude_filter(beta):
     '''

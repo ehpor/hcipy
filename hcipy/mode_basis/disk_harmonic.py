@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from scipy.special import jv, jn_zeros, jnp_zeros
 
 from .mode_basis import ModeBasis

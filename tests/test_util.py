@@ -1,4 +1,5 @@
-import numpy as np
+# import numpy as np
+from hcipy.math import numpy as np
 import os
 from hcipy import *
 

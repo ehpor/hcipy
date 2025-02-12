@@ -1,12 +1,13 @@
 from __future__ import division
 
-import numpy as np
+# import numpy as np
+from ..math import numpy as np
 from .fourier_transform import FourierTransform, multiplex_for_tensor_fields, _get_float_and_complex_dtype
 from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration
 import numexpr as ne
 
-from .._math import fft as _fft_module
+from ..math._implementation import fft as _fft_module
 
 def make_fft_grid(input_grid, q=1, fov=1, shift=0):
     '''Calculate the grid returned by a Fast Fourier Transform.

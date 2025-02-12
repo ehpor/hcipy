@@ -1,5 +1,6 @@
 from hcipy import *
-import numpy as np
+import numpy as onp
+from hcipy.math import numpy as np
 import os
 import warnings
 import pytest

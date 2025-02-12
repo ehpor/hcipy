@@ -1,5 +1,6 @@
 from hcipy import *
-import numpy as np
+# import numpy as np
+from hcipy.math import numpy as np
 import scipy
 
 def test_zernike_modes():

@@ -4,7 +4,10 @@ from collections import defaultdict, OrderedDict
 
 from ..config import Configuration
 
-import numpy as onp
+if Configuration().core.default_backend == 'numpy':
+    import numpy as np
+elif Configuration().core.default_backend == 'jax.numpy':
+    import jax.numpy as np
 
 def first_arg_dispatcher(*args, **kwargs):
     if args:
@@ -32,7 +35,28 @@ _constants = [
 _dtypes = [
     'ndarray',
     'uint8', 
+    'uint16',
+    'uint32',
+    'float16',
+    'float32',
+    'float64',
+    'complex64',
+    'complex128',
+    'bool',
 ]
+
+_custum_jax_ufuncs = [
+    'conj',
+    'conjugate',
+    'clip',
+    'repeat',
+    'exp'
+]
+
+def __jax_array_ufunc__(func, *args, **kwargs):
+    children, aux_data = args[0].tree_flatten()
+    new_args = children + args[1:]
+    return args[0].tree_unflatten(aux_data, [func(*new_args, **kwargs)])
 
 def call(func_name, *args, like=None, **kwargs):
     if like is None:
@@ -47,6 +71,9 @@ def call(func_name, *args, like=None, **kwargs):
     except KeyError:
         func = import_library_function(backend, func_name)
 
+    if backend == 'hcipy' and 'jax' in _module_aliases['hcipy'] and func_name in _custum_jax_ufuncs:
+        return __jax_array_ufunc__(func, *args, **kwargs) # Call the custom ufunc for jax operations on HCIPy objects.
+
     return func(*args, **kwargs)
 
 class BackendShim:
@@ -59,10 +86,10 @@ class BackendShim:
             self.fft = BackendShim('fft')
 
             for name in _constants:
-                setattr(self, name, getattr(onp, name))
+                setattr(self, name, getattr(np, name))
 
             for name in _dtypes:
-                setattr(self, name, getattr(onp, name)) #TODO maybe not import dtypes from onp
+                setattr(self, name, getattr(np, name))
 
     def __getattr__(self, func_name):
         if self.submodule is not None:

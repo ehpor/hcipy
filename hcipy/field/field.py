@@ -1,4 +1,5 @@
 import numpy as onp
+import jax.numpy as jnp
 from ..config import Configuration
 from ..math import numpy as np
 
@@ -266,13 +267,17 @@ class NewStyleField(Field, onp.lib.mixins.NDArrayOperatorsMixin): #TODO This sho
         if out:
             kwargs['out'] = tuple(x.data if is_field(x) else x for x in out)
 
-        result = getattr(ufunc, method)(*inputs, **kwargs)
+        if hasattr(jnp, ufunc.__name__):
+            # make sure jax (or numpy) ufuncs are dispatched to internal np
+            result = getattr(np, ufunc.__name__)(*inputs, **kwargs) 
+        else:
+            result = getattr(ufunc, method)(*inputs, **kwargs)
 
         # Note: this is an extremely simple way of determining whether the
         # resulting object should be a Field or not. We can likely do better
         # by looking directly at the name of the function that we are executing.
         # The current code is fine for most ufuncs.
-        if isinstance(result, np.ndarray):
+        if isinstance(result, np.ndarray) and not np.isscalar(result):
             return Field(result, self.grid)
         else:
             return result
@@ -289,6 +294,9 @@ class NewStyleField(Field, onp.lib.mixins.NDArrayOperatorsMixin): #TODO This sho
             raise ValueError(f'copy=False is not supported since the dtypes do not match ({dtype} vs. {self.data.dtype}).')
 
         return self.data.astype(dtype)
+    
+    def __jax_array__(self, dtype=None, copy=None):
+        return self.__array__(dtype, copy)
 
     def __array_function__(self, func, types, args, kwargs):
         args = _unwrap(args)
@@ -298,10 +306,17 @@ class NewStyleField(Field, onp.lib.mixins.NDArrayOperatorsMixin): #TODO This sho
         # Note: this is an extremely simple way of determining whether the
         # resulting object should be a Field or not. We can likely do better
         # by looking directly at the name of the function that we are executing.
-        if isinstance(result, np.ndarray):
+        if isinstance(result, np.ndarray) and not np.isscalar(result):
             return Field(result, self.grid)
 
         return result
+
+    def tree_flatten(self):
+        return (self.data,), self.grid
+    
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        return cls(children[0], aux_data)
 
     def __getitem__(self, indices):
         res = self.data[indices]
@@ -323,7 +338,11 @@ class NewStyleField(Field, onp.lib.mixins.NDArrayOperatorsMixin): #TODO This sho
         tuple
             The state of the Field.
         '''
-        data_state = self.data.__reduce__()[2]
+        #TODO make this also compatible with JAX arrays
+        if isinstance(self.data, jnp.ndarray):
+            data_state = self.data.__reduce__()[1][2]
+        else:
+            data_state = self.data.__reduce__()[2]
         return data_state + (self.grid,)
 
     def __setstate__(self, state):
@@ -339,7 +358,13 @@ class NewStyleField(Field, onp.lib.mixins.NDArrayOperatorsMixin): #TODO This sho
         self.data = np.array([])
         self.data.__setstate__((shp, typ, isf, raw))
         self.grid = grid
-
+    
+    def matvec(self, x):
+        return np.asarray(self.data) @ x
+    
+    def rmatvec(self, x):
+        return x @ np.asarray(self.data)
+    
     @property
     def T(self):
         return np.transpose(self)
@@ -358,7 +383,7 @@ class NewStyleField(Field, onp.lib.mixins.NDArrayOperatorsMixin): #TODO This sho
 
     @property
     def size(self):
-        return np.prod(self.shape)
+        return np.prod(np.asarray(self.shape))
 
     @property
     def ndim(self):

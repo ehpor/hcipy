@@ -66,12 +66,12 @@ def field_einsum(subscripts, *operands, **kwargs):
         If all of the fields don't have    the same grid size. If the number of
         operands is not equal to the number of subscripts specified.
     '''
-    is_field = [isinstance(o, Field) for o in operands]
+    is_field = np.array([isinstance(o, Field) for o in operands])
     if not np.count_nonzero(is_field):
         return np.einsum(subscripts, *operands, **kwargs)
 
-    field_sizes = [o.grid.size for i, o in enumerate(operands) if is_field[i]]
-    element_sizes = [o.shape[-1] for i, o in enumerate(operands) if is_field[i]]
+    field_sizes = np.array([o.grid.size for i, o in enumerate(operands) if is_field[i]])
+    element_sizes = np.array([o.shape[-1] for i, o in enumerate(operands) if is_field[i]])
 
     if not np.allclose(field_sizes, field_sizes[0]) or not np.allclose(element_sizes, element_sizes[0]):
         raise ValueError('All fields must be the same size for a field_einsum().')
@@ -210,9 +210,7 @@ def field_inverse_tikhonov(f, rcond=1e-15):
         if f.tensor_order != 2:
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
-        res = np.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
-        for i in range(f.grid.size):
-            res[..., i] = inverse_tikhonov(f[..., i], rcond)
+        res = np.dstack([inverse_tikhonov(f[...,i], rcond) for i in range(f.grid.size)])
         return Field(res, f.grid)
     else:
         return inverse_tikhonov(f, rcond)
@@ -246,9 +244,7 @@ def field_inverse_truncated(f, rcond=1e-15):
         if f.tensor_order != 2:
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
-        res = np.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
-        for i in range(f.grid.size):
-            res[..., i] = inverse_truncated(f[..., i], rcond)
+        res = np.dstack([inverse_truncated(f[...,i], rcond) for i in range(f.grid.size)])
         return Field(res, f.grid)
     else:
         return inverse_truncated(f, rcond)
@@ -282,9 +278,7 @@ def field_inverse_truncated_modal(f, num_modes):
         if f.tensor_order != 2:
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
-        res = np.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
-        for i in range(f.grid.size):
-            res[..., i] = inverse_truncated_modal(np.asarray(f[..., i]), num_modes)
+        res = np.dstack([inverse_truncated_modal(np.asarray(f[...,i]), num_modes) for i in range(f.grid.size)])
         return Field(res, f.grid)
     else:
         return inverse_truncated_modal(f, num_modes)

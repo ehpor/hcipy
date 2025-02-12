@@ -1640,12 +1640,12 @@ def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, 
     segments : list of Field generators
         The segments. Only returned when `return_segments` is True.
     '''
-    core_diameter = 3.
-    outer_diameter = 6.
+    core_diameter = 3.  # meter
+    outer_diameter = 6.  # meter
     num_rings = 1
-    radial_gap = 50e-3
+    radial_gap = 50e-3  # meter
     num_keys = 6
-    spider_width = 50e-3
+    spider_width = 50e-3  # meter
 
     if normalized:
         core_diameter /= outer_diameter

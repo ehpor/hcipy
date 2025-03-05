@@ -1660,9 +1660,9 @@ def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, 
 def make_subaru_lyot_stop(
         normalized: bool=False,
         inner_diameter_fraction: float=0.3,
-        outer_diameter_fraction: float=0.9,
+        outer_diameter_fraction: float=1,
         with_spiders: bool=True,
-        spider_fraction: float=1.5
+        spider_fraction: float=1
     ):
     """
     Generates a Subaru-like pupil, based on the Nasmyth-IR pupil (Julien Lozi priv. communications)
@@ -1725,7 +1725,7 @@ def make_subaru_aperture(normalized=False, with_spiders=True):
     """
     return make_subaru_lyot_stop(
         normalized=normalized,
-        inner_diameter_fraction=0.289,
+        inner_diameter_fraction=0.307,
         outer_diameter_fraction=1,
         with_spiders=with_spiders
     )
@@ -1771,7 +1771,7 @@ def make_scexao_lyot_stop(
 
     pupil_diameter = 7.95  # m
     mask_spider_width = 0.081  # m
-    mask_spider_offset = np.array((0.491, 1.117))
+    mask_spider_offset = np.array((-0.491, -1.117))
     mask_diameter = 0.583  # m
     mask_offsets = np.array(( # (x, y), m
         (-0.448, 2.308), 
@@ -1792,7 +1792,7 @@ def make_scexao_lyot_stop(
 
     mask1 = make_obstruction(make_circular_aperture(diameter=mask_diameter, center=mask_offsets[0]))
     mask2 = make_obstruction(make_circular_aperture(diameter=mask_diameter, center=mask_offsets[1]))
-    mask_spider = make_spider_infinite(mask_spider_offset, spider_angle + 180, mask_spider_width)
+    mask_spider = make_spider_infinite(mask_spider_offset, 180 - spider_angle, mask_spider_width)
 
     def func(grid):
         return starter(grid) * mask1(grid) * mask2(grid) * mask_spider(grid)

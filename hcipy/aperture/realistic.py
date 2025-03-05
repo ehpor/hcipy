@@ -1681,8 +1681,8 @@ def make_subaru_lyot_stop(
         If `with_spiders` is True, the relative scale of the spiders in the mask
     """
     pupil_diameter = 7.95  # m
-    spider_width = 0.1735  # m
-    spider_offset = 0.639  # m, spider intersection offset
+    spider_width = 0.184  # m
+    spider_offset = 0.659  # m, spider intersection offset
     spider_angle = 51.75  # deg
 
     if normalized:
@@ -1732,8 +1732,8 @@ def make_subaru_aperture(normalized=False, with_spiders=True):
 
 def make_scexao_lyot_stop(
         normalized=False,
-        inner_diameter_fraction=0.3,
-        outer_diameter_fraction=0.9,
+        inner_diameter_fraction=0.307,
+        outer_diameter_fraction=1,
         with_spiders=True,
         spider_fraction=1,
         with_masks=True,
@@ -1770,10 +1770,13 @@ def make_scexao_lyot_stop(
         return starter
 
     pupil_diameter = 7.95  # m
-    mask_spider_width = 0.089  # m
-    mask_spider_offset = np.array((-0.521, 1.045))
-    mask_diameter = 0.632  # m
-    mask_offsets = np.array(((1.765, 1.431), (-0.498, -2.331)))  # (x, y), m
+    mask_spider_width = 0.081  # m
+    mask_spider_offset = np.array((0.491, 1.117))
+    mask_diameter = 0.583  # m
+    mask_offsets = np.array(( # (x, y), m
+        (-0.448, 2.308), 
+        (1.77, -1.412))
+    )  
     spider_angle = 51.75  # deg
 
     if normalized:
@@ -1811,7 +1814,7 @@ def make_scexao_aperture(normalized=False, with_spiders=True, with_masks=True):
     """
     return make_scexao_lyot_stop(
         normalized=normalized,
-        inner_diameter_fraction=0.294,
+        inner_diameter_fraction=0.307,
         outer_diameter_fraction=1,
         with_spiders=with_spiders,
         spider_fraction=1,

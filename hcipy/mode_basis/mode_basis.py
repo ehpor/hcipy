@@ -157,7 +157,15 @@ class ModeBasis(object):
             if self._transformation_matrix.ndim != 2:
                 raise TypeError('Cannot sparsify a mode basis of tensor fields')
 
-            T = scipy.sparse.csc_matrix(self._transformation_matrix)
+            # Ensure the transformation matrix is little endian.
+            # Scipy.sparse cannot deal with big endian sparse matrices.
+            if self._transformation_matrix.dtype.byteorder == '>':
+                T = self._transformation_matrix.byteswap()
+                T = T.view(T.dtype.newbyteorder('<'))
+            else:
+                T = self._transformation_matrix
+
+            T = scipy.sparse.csc_matrix(T)
             T.eliminate_zeros()
             return ModeBasis(T, self.grid)
 

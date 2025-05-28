@@ -20,6 +20,7 @@ Direct contributors to code
 * David Kleingeld (`@dskleingeld <https://github.com/dskleingeld>`__), Leiden Observatory
 * Gilles Orban de Xivry (`@GillesOrban <https://github.com/GillesOrban>`__), Université de Liège
 * Brett Graham (`@braingram <https://github.com/braingram>`__), Space Telescope Science Institute
+* Rachel Morgan (`@rmnasa <https://github.com/rmnasa>`__), NASA Ames Research Center
 
 Testing and QA
 --------------

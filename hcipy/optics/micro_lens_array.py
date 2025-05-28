@@ -25,9 +25,12 @@ class MicroLensArray(OpticalElement):
         The focal length of the micro-lenses
     lenslet_shape : field generator
         The shape of a lenslet.
-    nanfill : what to do with lenslet sag values that are NaNs. Options are "zeros", "nanmin", and "nanmax"
+    nanfill : scalar or string or None
+        What to fill in for surface sag values that are NaNs. Options are a scalar, or
+        one of {'min', 'max'}. If this is None, no NaN correction is performed. The
+        default is 0.
     '''
-    def __init__(self, input_grid, lenslet_grid, focal_length, lenslet_shape=None, nanfill="zeros"):
+    def __init__(self, input_grid, lenslet_grid, focal_length, lenslet_shape=None, nanfill=0):
         self.input_grid = input_grid
         self.focal_length = focal_length
 
@@ -77,10 +80,12 @@ class SphericalMicroLensArray(OpticalElement):
         The conic constant of the micro-lenses.
     aspheric_coefficients : array_like
         The aspheric coefficients of the micro-lenses.
-    nanfill : what to do with lenslet sag values that are NaNs. Options are "zeros", "nanmin", and "nanmax"
-
+    nanfill : scalar or string or None
+        What to fill in for surface sag values that are NaNs. Options are a scalar, or
+        one of {'min', 'max'}. If this is None, no NaN correction is performed. The
+        default is 0.
     '''
-    def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, nanfill="zeros"):
+    def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, nanfill=0):
 
         self.input_grid = input_grid
         self.mla_grid = lenslet_grid
@@ -128,10 +133,12 @@ class EvenAsphereMicroLensArray(OpticalElement):
         The conic constant of the micro-lenses.
     aspheric_coefficients : array_like
         The aspheric coefficients of the micro-lenses.
-    nanfill: what to do with lenslet sag values that are NaNs. Options are "zeros", "nanmin", and "nanmax"
-
+    nanfill : scalar or string or None
+        What to fill in for surface sag values that are NaNs. Options are a scalar, or
+        one of {'min', 'max'}. If this is None, no NaN correction is performed. The
+        default is 0.
     '''
-    def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, conic_constant=0, aspheric_coefficients=None, nanfill="zeros"):
+    def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, conic_constant=0, aspheric_coefficients=None, nanfill=0):
         self.input_grid = input_grid
         self.mla_grid = lenslet_grid
         self.n = refractive_index

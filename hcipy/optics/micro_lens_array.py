@@ -25,9 +25,9 @@ class MicroLensArray(OpticalElement):
         The focal length of the micro-lenses
     lenslet_shape : field generator
         The shape of a lenslet.
-    nanfill: what to do with lenslet sag values that are NaNs. Options are "zeros", "nanmin", and "nanmax"
+    nanfill : what to do with lenslet sag values that are NaNs. Options are "zeros", "nanmin", and "nanmax"
     '''
-    def __init__(self, input_grid, lenslet_grid, focal_length, lenslet_shape=None, nanfill = "zeros"):
+    def __init__(self, input_grid, lenslet_grid, focal_length, lenslet_shape=None, nanfill="zeros"):
         self.input_grid = input_grid
         self.focal_length = focal_length
 
@@ -49,7 +49,7 @@ class MicroLensArray(OpticalElement):
                 self.mla_opd[mask] = (-1 / (2 * focal_length)) * (shifted_grid.x[mask]**2 + shifted_grid.y[mask]**2)
                 self.mla_index[mask] = i
 
-        self.mla_surface = SurfaceApodizer(self.mla_opd, 2, nanfill = nanfill)
+        self.mla_surface = SurfaceApodizer(self.mla_opd, 2, nanfill=nanfill)
 
     def forward(self, wavefront):
         return self.mla_surface.forward(wavefront)
@@ -77,10 +77,10 @@ class SphericalMicroLensArray(OpticalElement):
         The conic constant of the micro-lenses.
     aspheric_coefficients : array_like
         The aspheric coefficients of the micro-lenses.
-    nanfill: what to do with lenslet sag values that are NaNs. Options are "zeros", "nanmin", and "nanmax"
+    nanfill : what to do with lenslet sag values that are NaNs. Options are "zeros", "nanmin", and "nanmax"
 
     '''
-    def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, nanfill = "zeros"):
+    def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, nanfill="zeros"):
 
         self.input_grid = input_grid
         self.mla_grid = lenslet_grid
@@ -101,7 +101,7 @@ class SphericalMicroLensArray(OpticalElement):
                 self.mla_index[mask] = i
                 self.mla_opd[mask] += self.surface_sag(subset_grid)
 
-        self.mla_surface = SurfaceApodizer(self.mla_opd, refractive_index, nanfill = nanfill)
+        self.mla_surface = SurfaceApodizer(self.mla_opd, refractive_index, nanfill=nanfill)
 
     def forward(self, wavefront):
         return self.mla_surface.forward(wavefront)
@@ -131,7 +131,7 @@ class EvenAsphereMicroLensArray(OpticalElement):
     nanfill: what to do with lenslet sag values that are NaNs. Options are "zeros", "nanmin", and "nanmax"
 
     '''
-    def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, conic_constant=0, aspheric_coefficients=None, nanfill = "zeros"):
+    def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5, conic_constant=0, aspheric_coefficients=None, nanfill="zeros"):
         self.input_grid = input_grid
         self.mla_grid = lenslet_grid
         self.n = refractive_index

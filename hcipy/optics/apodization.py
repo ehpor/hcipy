@@ -89,10 +89,10 @@ class SurfaceApodizer(Apodizer):
         The sag in the surface.
     refractive_index : scalar or function
         The refractive index of the material of the plate.
-    nanfill: what to do with lenslet sag values that are NaNs. Options are "zeros", "nanmin", and "nanmax"
+    nanfill : what to do with lenslet sag values that are NaNs. Options are "zeros", "nanmin", and "nanmax"
     '''
-    def __init__(self, surface_sag, refractive_index, nanfill = "zeros"):
-        ## correct surface sag nans so propagator doesn't throw error:
+    def __init__(self, surface_sag, refractive_index, nanfill="zeros"):
+        # Correct surface sag NaNs so propagator doesn't throw error.
         if nanfill == "zeros":
             surface_sag[np.isnan(surface_sag)] = 0
         if nanfill == "nanmin":

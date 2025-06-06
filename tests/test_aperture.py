@@ -336,3 +336,10 @@ def test_keck_aperture(with_spiders, with_segment_gaps):
         check_normalization=True, check_segmentation=True,
         with_spiders=with_spiders, with_segment_gaps=with_segment_gaps
     )
+
+@pytest.mark.parametrize('aperture', [make_rectangular_aperture([0.5, 0.2]), make_keck_aperture(True)])
+def test_rotated_aperture(aperture):
+    pupil_grid = make_pupil_grid(128)
+    ap = aperture(pupil_grid)
+
+    ap_rot = make_rotated_aperture(aperture, np.pi)(pupil_grid)

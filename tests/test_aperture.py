@@ -340,6 +340,8 @@ def test_keck_aperture(with_spiders, with_segment_gaps):
 @pytest.mark.parametrize('aperture', [make_rectangular_aperture([0.5, 0.2]), make_keck_aperture(True)])
 def test_rotated_aperture(aperture):
     pupil_grid = make_pupil_grid(128)
-    ap = aperture(pupil_grid)
+    rotated_aperture = make_rotated_aperture(aperture, np.pi)
 
-    ap_rot = make_rotated_aperture(aperture, np.pi)(pupil_grid)
+    # Check whether rotation evaluates without errors. TODO: we should test for whether the rotation is done correctly too.
+    _ = aperture(pupil_grid)
+    _ = rotated_aperture(pupil_grid)

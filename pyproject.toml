@@ -54,7 +54,7 @@ doc = [
     "nbformat",
     "nbconvert",
     "sphinx-automodapi",
-    "progressbar2",
+    "tqdm",
 ]
 
 [project.urls]

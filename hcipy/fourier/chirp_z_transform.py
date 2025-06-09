@@ -5,7 +5,7 @@ from .fourier_transform import _get_float_and_complex_dtype
 from .._math import fft as _fft_module
 
 class ChirpZTransform:
-    '''The Chirp Z-transform (CZT).
+    r'''The Chirp Z-transform (CZT).
 
     This class evaluates:
 

@@ -55,6 +55,7 @@ doc = [
     "nbconvert",
     "sphinx-automodapi",
     "tqdm",
+    "ipywidgets",
 ]
 
 [project.urls]

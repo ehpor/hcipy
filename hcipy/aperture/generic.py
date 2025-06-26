@@ -204,7 +204,7 @@ def make_regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=No
     if num_sides % 2 == 0:
         thetas = np.arange(int(num_sides / 2), dtype='float') * np.pi / int(num_sides / 2) + angle
     else:
-        thetas = np.arange(int(num_sides / 2) + 1) * (num_sides - 2) * np.pi / (num_sides / 2) + angle
+        thetas = np.arange(num_sides) * 2 * np.pi / num_sides + angle
 
     mask = make_rectangular_aperture(circum_diameter)
 
@@ -244,7 +244,7 @@ def make_regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=No
                     f_sub *= ((np.cos(theta) * x)[np.newaxis, :] + (np.sin(theta) * y)[:, np.newaxis])**2 <= apothem**2
             else:
                 for theta in thetas:
-                    f_sub *= (np.abs(np.sin(theta) * x)[np.newaxis, :] - (np.cos(theta) * y)[:, np.newaxis]) <= apothem
+                    f_sub *= ((np.sin(theta) * x)[np.newaxis, :] - (np.cos(theta) * y)[:, np.newaxis]) <= apothem
 
             if return_with_mask:
                 return f_sub, (m_y, m_x)

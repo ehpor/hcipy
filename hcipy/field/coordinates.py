@@ -364,7 +364,14 @@ class SeparatedCoords(Coords):
         if type(self) is not type(other):
             return False
 
-        return np.array_equal(self.separated_coords, other.separated_coords)
+        if len(self.separated_coords) != len(other.separated_coords):
+            return False
+
+        for s, o in zip(self.separated_coords, other.separated_coords):
+            if not np.array_equal(s, o):
+                return False
+
+        return True
 
     def reverse(self):
         '''Reverse the ordering of points in-place.

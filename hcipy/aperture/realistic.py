@@ -1649,9 +1649,9 @@ def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, 
 
     if normalized:
         core_diameter /= outer_diameter
-        outer_diameter /= outer_diameter
         radial_gap /= outer_diameter
         spider_width /= outer_diameter
+        outer_diameter /= outer_diameter
 
     # padding out the segmentation gaps so they are visible and not sub-pixel
     radial_gap = radial_gap * gap_padding

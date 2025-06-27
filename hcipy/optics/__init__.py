@@ -64,7 +64,9 @@ __all__ = [
     'ThinPrism',
     'TiltElement',
     'PhaseGrating',
-    'PhotonicLantern'
+    'PhotonicLantern',
+    'fresnel_reflection_coefficients',
+    'fresnel_transmission_coefficients'
 ]
 
 from .optical_element import *

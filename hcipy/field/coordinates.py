@@ -65,13 +65,13 @@ class Coords(object):
         '''
         raise NotImplementedError()
 
-    def __div__(self, f):
-        '''Divide each coordinate with `f` separately and return the result.
+    def __truediv__(self, f):
+        '''Divide each coordinate by `f` separately and return the result.
         '''
         return self * (1 / f)
 
-    def __idiv__(self, f):
-        '''Divide each coordinate with `f` separately in-place.
+    def __itruediv__(self, f):
+        '''Divide each coordinate by `f` separately in-place.
         '''
         self *= 1 / f
         return self

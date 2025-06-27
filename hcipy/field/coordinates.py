@@ -396,21 +396,21 @@ class RegularCoords(Coords):
     '''
     def __init__(self, delta, dims, zero=None):
         if np.isscalar(dims):
-            self.dims = np.array([dims]).astype('int')
+            self.dims = np.array([dims], dtype='int')
         else:
-            self.dims = np.array(dims).astype('int')
+            self.dims = np.array(dims, dtype='int')
 
         if np.isscalar(delta):
-            self.delta = np.array([delta] * len(self.dims))
+            self.delta = np.array([delta] * len(self.dims), dtype='float')
         else:
-            self.delta = np.array(delta)
+            self.delta = np.array(delta, dtype='float')
 
         if zero is None:
-            self.zero = np.zeros(len(self.dims))
+            self.zero = np.zeros(len(self.dims), dtype='float')
         elif np.isscalar(zero):
-            self.zero = np.array([zero] * len(self.dims))
+            self.zero = np.array([zero] * len(self.dims), dtype='float')
         else:
-            self.zero = np.array(zero)
+            self.zero = np.array(zero, dtype='float')
 
     @classmethod
     def from_dict(cls, tree):

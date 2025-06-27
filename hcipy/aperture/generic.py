@@ -5,7 +5,7 @@ import inspect
 import numpy as np
 from matplotlib.path import Path
 
-from ..field import Field, make_hexagonal_grid, CartesianGrid, UnstructuredCoords
+from ..field import Field, make_hexagonal_grid, CartesianGrid, PolarGrid, UnstructuredCoords, SeparatedCoords
 from ..dev import deprecated_name_changed
 
 def make_circular_aperture(diameter, center=None):
@@ -635,7 +635,7 @@ def make_wedge_aperture(inner_diameter, outer_diameter, angle_width, spider_widt
     outer_diameter : scalar
         The outer radius of the sector, defining the end boundary of the wedge.
     angle_width : scalar
-        The angular width of the wedge in degrees or radians, specifying the span of the aperture.
+        The angular width of the wedge in degrees, specifying the span of the aperture.
     spider_width : scalar
         The full width of the spider.
     pointy_top : bool, optional
@@ -687,7 +687,6 @@ def make_wedge_annular_aperture(segment_shape, segment_positions, segment_transm
     list of Field generators
         The individual wedge-shaped segments. Only returned if `return_segments` is True.
     """
-
     segment_transmissions = np.ones(segment_positions.size) * segment_transmissions
 
     mask_available = 'return_with_mask' in inspect.signature(segment_shape).parameters
@@ -745,7 +744,6 @@ def make_keystone_grid(core_diameter, outer_diameter, num_rings, num_keys, point
     CartesianGrid
         A Cartesian grid of the keystone aperture's segment positions.
     """
-
     apothem = outer_diameter * np.sqrt(3) / 4
     segment_pitch = (outer_diameter - core_diameter) / num_rings / 2
 
@@ -753,16 +751,10 @@ def make_keystone_grid(core_diameter, outer_diameter, num_rings, num_keys, point
     radii = np.linspace(core_diameter / 2 + segment_pitch / 2, outer_diameter / 2 - segment_pitch / 2, num_rings)
     angles = np.linspace(0, 2 * np.pi, num_keys, endpoint=False) + np.pi / 2
 
-    # Create a meshgrid of polar coordinates
-    radii_grid, angles_grid = np.meshgrid(radii, angles, indexing='ij')
-
-    # Flatten the grid arrays to get a list of radial and angular coordinates
-    radii_flat = radii_grid.ravel()
-    angles_flat = angles_grid.ravel()
-
-    # Convert polar coordinates (r, theta) to Cartesian coordinates (x, y)
-    x_coords = radii_flat * np.cos(angles_flat)
-    y_coords = radii_flat * np.sin(angles_flat)
+    # Create a grid of polar coordinates
+    radial_grid = PolarGrid(SeparatedCoords((radii, angles)))
+    cartesian_grid = radial_grid.as_('cartesian')
+    x_coords, y_coords = cartesian_grid.coords
 
     # Add central core position if core_diameter != 0
     if core_diameter != 0:
@@ -811,18 +803,20 @@ def make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap,
         The individual wedge segments. Only returned if `return_segments` is True.
     """
     angle_width = 360 / num_keys
+
     segment_positions = make_keystone_grid(0, outer_diameter, 1, num_keys, pointy_top=True)
+
     total_segments = num_rings * num_keys + (1 if core_diameter != 0 else 0)
     segment_transmissions = np.ones(total_segments) * segment_transmissions
 
     def func(grid):
-
         res = grid.zeros(dtype=segment_transmissions.dtype)
         segment_index = 0
 
         # Central core
         if core_diameter != 0:
             core_aperture = make_circular_aperture(core_diameter)
+
             res += core_aperture(grid) * segment_transmissions[0]
             segment_index += 1
 
@@ -832,10 +826,14 @@ def make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap,
         for i in range(num_rings):
             inner_keystone_diameter = ring_diameter[i] + radial_gap
             outer_keystone_diameter = ring_diameter[i + 1]
+
             keystone = make_wedge_aperture(inner_keystone_diameter, outer_keystone_diameter, angle_width, spider_width, pointy_top=pointy_top)
+
             ring_transmissions = segment_transmissions[segment_index:segment_index + num_keys]
             segment_index += num_keys
+
             keystone_aperture = make_wedge_annular_aperture(keystone, segment_positions, segment_transmissions=ring_transmissions, return_segments=False)
+
             res += keystone_aperture(grid)
 
         return Field(res, grid)
@@ -847,6 +845,7 @@ def make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap,
         # Central core
         if core_diameter != 0:
             core_aperture = make_circular_aperture(core_diameter)
+
             segments.append(lambda g: core_aperture(g) * segment_transmissions[0])
             segment_index += 1
 
@@ -856,12 +855,15 @@ def make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap,
         for i in range(num_rings):
             inner_keystone_diameter = ring_diameter[i] + radial_gap
             outer_keystone_diameter = ring_diameter[i + 1]
+
             keystone = make_wedge_aperture(inner_keystone_diameter, outer_keystone_diameter, angle_width, spider_width, pointy_top=pointy_top)
+
             ring_transmissions = segment_transmissions[segment_index:segment_index + num_keys]
             segment_index += num_keys
 
             keystone_aperture = make_wedge_annular_aperture(keystone, segment_positions, segment_transmissions=ring_transmissions, return_segments=return_segments)
             _, _segments = keystone_aperture
+
             segments.extend(_segments)
 
         return func, segments

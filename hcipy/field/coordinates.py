@@ -65,13 +65,13 @@ class Coords(object):
         '''
         raise NotImplementedError()
 
-    def __div__(self, f):
-        '''Divide each coordinate with `f` separately and return the result.
+    def __truediv__(self, f):
+        '''Divide each coordinate by `f` separately and return the result.
         '''
         return self * (1 / f)
 
-    def __idiv__(self, f):
-        '''Divide each coordinate with `f` separately in-place.
+    def __itruediv__(self, f):
+        '''Divide each coordinate by `f` separately in-place.
         '''
         self *= 1 / f
         return self
@@ -258,7 +258,7 @@ class SeparatedCoords(Coords):
     '''
     def __init__(self, separated_coords):
         # Make a copy to avoid modification from outside the class
-        self.separated_coords = [copy.deepcopy(s) for s in separated_coords]
+        self.separated_coords = [np.array(s, dtype='float') for s in separated_coords]
 
     @classmethod
     def from_dict(cls, tree):
@@ -364,7 +364,14 @@ class SeparatedCoords(Coords):
         if type(self) is not type(other):
             return False
 
-        return np.array_equal(self.separated_coords, other.separated_coords)
+        if len(self.separated_coords) != len(other.separated_coords):
+            return False
+
+        for s, o in zip(self.separated_coords, other.separated_coords):
+            if not np.array_equal(s, o):
+                return False
+
+        return True
 
     def reverse(self):
         '''Reverse the ordering of points in-place.
@@ -396,21 +403,21 @@ class RegularCoords(Coords):
     '''
     def __init__(self, delta, dims, zero=None):
         if np.isscalar(dims):
-            self.dims = np.array([dims]).astype('int')
+            self.dims = np.array([dims], dtype='int')
         else:
-            self.dims = np.array(dims).astype('int')
+            self.dims = np.array(dims, dtype='int')
 
         if np.isscalar(delta):
-            self.delta = np.array([delta] * len(self.dims))
+            self.delta = np.array([delta] * len(self.dims), dtype='float')
         else:
-            self.delta = np.array(delta)
+            self.delta = np.array(delta, dtype='float')
 
         if zero is None:
-            self.zero = np.zeros(len(self.dims))
+            self.zero = np.zeros(len(self.dims), dtype='float')
         elif np.isscalar(zero):
-            self.zero = np.array([zero] * len(self.dims))
+            self.zero = np.array([zero] * len(self.dims), dtype='float')
         else:
-            self.zero = np.array(zero)
+            self.zero = np.array(zero, dtype='float')
 
     @classmethod
     def from_dict(cls, tree):

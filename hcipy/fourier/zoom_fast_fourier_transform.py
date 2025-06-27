@@ -166,36 +166,40 @@ class ZoomFastFourierTransform(FourierTransform):
         num_complex_multiplications = 0
         num_complex_additions = 0
 
+        # Add initial multiplication by input_weights
+        num_complex_multiplications += input_grid.size
+
         for i, (in_len, out_len) in enumerate(zip(input_grid.shape, output_grid.shape)):
-            czt_len = in_len + out_len
+            # Correct czt_len to use next_fast_len
+            import scipy.fft
+            czt_len = np.array(scipy.fft.next_fast_len(in_len + out_len - 1))
+
             size_per_czt = np.prod(output_grid.shape[:i]) * np.prod(input_grid.shape[i + 1:])
 
             size_before_czt = np.prod(output_grid.shape[:i]) * np.prod(input_grid.shape[i:])
             size_after_czt = np.prod(output_grid.shape[:i + 1]) * np.prod(input_grid.shape[i + 1:])
 
-            print(i, f'{czt_len=}, {size_per_czt=}, {size_before_czt=}, {size_after_czt=}')
-
-
-            # Multiplication 1
+            # Multiplication 1 (x = x * self._Awk2 in CZT)
             num_complex_multiplications += size_before_czt
 
-            # FFT
+            # FFT (in CZT)
             num_complex_multiplications += 0.5 * czt_len * size_per_czt * np.log2(czt_len)
             num_complex_additions += czt_len * size_per_czt * np.log2(czt_len)
 
-            # Multiplication 2
+            # Multiplication 2 (intermediate *= self._Fwk2 in CZT)
             num_complex_multiplications += czt_len * size_per_czt
 
-            # Inverse FFT
+            # Inverse FFT (in CZT)
             num_complex_multiplications += 0.5 * czt_len * size_per_czt * np.log2(czt_len)
             num_complex_additions += czt_len * size_per_czt * np.log2(czt_len)
 
-            # Multiplication 3
+            # Multiplication 3 (res = res[..., self._yidx] * self._wk2 in CZT)
             num_complex_multiplications += size_after_czt
 
-            # Shift
+            # Shift (f = czt(f) * shift in ZoomFFT)
             num_complex_multiplications += size_after_czt
 
+        # Convert to real operations.
         num_multiplications = 4 * num_complex_multiplications
         num_additions = 2 * num_complex_multiplications + 2 * num_complex_additions
 

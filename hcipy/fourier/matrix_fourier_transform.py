@@ -280,13 +280,21 @@ class MatrixFourierTransform(FourierTransform):
             num_complex_multiplications = input_grid.size * output_grid.size
             num_complex_additions = (input_grid.size - 1) * output_grid.size
         elif input_grid.ndim == 2:
-            a0, c1 = output_grid.shape
-            a1b0, b1c0 = input_grid.shape
+            N_out_x, N_out_y = output_grid.shape
+            N_in_x, N_in_y = input_grid.shape
 
-            # Note: the current implementation always uses A*(B*C).
-            num_complex_multiplications = b1c0 * a1b0 * c1 + a1b0 * a0 * c1
-            num_complex_additions = (b1c0 - 1) * a1b0 * c1 + (a1b0 - 1) * a0 * c1
+            # Complexity for gemm(1, self.M2.T, f.T)
+            num_complex_multiplications = N_in_y * N_in_x * N_out_y
+            num_complex_additions = N_in_y * N_in_x * (N_out_y - 1)
 
+            # Complexity for gemm(alpha, self.intermediate_array.T, self.M1.T)
+            num_complex_multiplications += N_in_y * N_out_x * N_in_x
+            num_complex_additions += N_in_y * N_out_x * (N_in_x - 1)
+
+            # Add complexity for initial multiplication by weights_input if not scalar
+            num_complex_multiplications += input_grid.size
+
+        # Convert to real operations.
         num_multiplications = 4 * num_complex_multiplications
         num_additions = 2 * num_complex_multiplications + 2 * num_complex_additions
 

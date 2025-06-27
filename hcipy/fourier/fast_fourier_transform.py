@@ -425,13 +425,27 @@ class FastFourierTransform(FourierTransform):
             If the grids are not supported. The message will indicate why
             the grids are not supported.
         '''
-        q, _, _ = get_fft_parameters(output_grid, input_grid)
+        q, _, shift = get_fft_parameters(output_grid, input_grid)
 
         shape = input_grid.shape.astype('float') * q
 
-        num_complex_multiplications = 0.5 * np.prod(shape) * np.log2(np.prod(shape))
-        num_complex_additions = np.prod(shape) * np.log2(np.prod(shape))
+        N_internal = np.prod(shape)
+        N_input = np.prod(input_grid.shape)
+        N_output = np.prod(output_grid.shape)
 
+        num_complex_multiplications = 0.5 * N_internal * np.log2(N_internal)
+        num_complex_additions = N_internal * np.log2(N_internal)
+
+        # Add complexity for initial multiplication by shift_output.
+        # The multiplication happens on `field.reshape(self.shape_in)` which has N_input elements.
+        if not np.allclose(shift, 0):
+            num_complex_multiplications += N_input
+
+        # Add complexity for final multiplication by shift_input
+        # This multiplication happens on `res` which has N_output elements.
+        num_complex_multiplications += N_output
+
+        # Convert to real operations
         num_multiplications = 4 * num_complex_multiplications
         num_additions = 2 * num_complex_multiplications + 2 * num_complex_additions
 

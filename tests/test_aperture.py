@@ -336,3 +336,14 @@ def test_keck_aperture(with_spiders, with_segment_gaps):
         check_normalization=True, check_segmentation=True,
         with_spiders=with_spiders, with_segment_gaps=with_segment_gaps
     )
+
+@pytest.mark.parametrize('with_segment_gaps', [True, False])
+def test_eac2_aperture(with_segment_gaps):
+    name = 'eac2/pupil'
+    name += '_without_segment_gaps' if not with_segment_gaps else ''
+
+    check_aperture(
+        make_eac2_aperture, 6, name,
+        check_normalization=True, check_segmentation=True,
+        with_segment_gaps=with_segment_gaps
+    )

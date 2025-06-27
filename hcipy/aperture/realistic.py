@@ -1,7 +1,7 @@
 import numpy as np
 
 from ..field import make_hexagonal_grid, Field
-from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_shifted_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture
+from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_shifted_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture, make_keystone_aperture
 
 import functools
 
@@ -1606,3 +1606,56 @@ def make_keck_aperture(normalized=False, with_spiders=True, with_segment_gaps=Tr
         return func, segments
     else:
         return func
+
+def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, segment_transmissions=1, return_segments=False):
+    '''Makes an off-axis EAC 2-type pupil.
+
+    This pupil is based on the Exploratory Analytic Case (EAC) 2 design. The parameters will be updated as the EAC 2 design evolves.
+    Telescope properties, such as core diameter, outer diameter, number of ring and keys are derived from the public source document linked below, while the gaps size is currently set to an arbitrary value.
+    source: https://science.nasa.gov/wp-content/uploads/2024/10/6-habitable-worlds-observatory-hwo-hpd-cross-divisional-opportunities.pdf
+
+    Parameters
+    ----------
+    normalized : boolean
+        If this is True, the pupil diameter will be scaled to 1. Otherwise, the
+        diameter of the pupil will be 6.0 meters.
+    with_segment_gaps : boolean
+        Include the gaps between individual segments in the aperture.
+    gap_padding : scalar
+        Arbitrary padding of gap size to represent gaps on smaller arrays - this effectively
+        makes the gaps larger and the segments smaller to preserve the same segment pitch.
+    segment_transmissions : scalar or array_like
+        The transmission for each of the segments. If this is a scalar, this transmission
+        will be used for all segments.
+    return_segments : boolean
+        If this is True, the segments will also be returned as a ModeBasis.
+
+    Returns
+    -------
+    aperture : Field generator
+        The EAC 2 aperture.
+    segments : list of Field generators
+        The segments. Only returned when `return_segments` is True.
+    '''
+    core_diameter = 3.0  # meter
+    outer_diameter = 6.0  # meter
+    num_rings = 1
+    radial_gap = 50e-3  # meter
+    num_keys = 6
+    spider_width = 50e-3  # meter
+
+    if normalized:
+        core_diameter /= outer_diameter
+        radial_gap /= outer_diameter
+        spider_width /= outer_diameter
+        outer_diameter /= outer_diameter
+
+    # Padding out the segmentation gaps so they are visible and not sub-pixel.
+    radial_gap = radial_gap * gap_padding
+    spider_width = spider_width * gap_padding
+
+    if not with_segment_gaps:
+        spider_width = 0
+        radial_gap = 0
+
+    return make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, segment_transmissions=segment_transmissions, return_segments=return_segments)

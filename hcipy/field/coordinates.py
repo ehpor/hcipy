@@ -258,7 +258,7 @@ class SeparatedCoords(Coords):
     '''
     def __init__(self, separated_coords):
         # Make a copy to avoid modification from outside the class
-        self.separated_coords = [copy.deepcopy(s) for s in separated_coords]
+        self.separated_coords = [np.array(s, dtype='float') for s in separated_coords]
 
     @classmethod
     def from_dict(cls, tree):

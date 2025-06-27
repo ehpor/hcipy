@@ -1634,14 +1634,11 @@ def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, 
     -------
     aperture : Field generator
         The EAC 2 aperture.
-    aperture_header : dict
-        A dictionary containing all quantities used when making this aperture. Only returned if
-        `return_header` is True.
     segments : list of Field generators
         The segments. Only returned when `return_segments` is True.
     '''
-    core_diameter = 3.  # meter
-    outer_diameter = 6.  # meter
+    core_diameter = 3.0  # meter
+    outer_diameter = 6.0  # meter
     num_rings = 1
     radial_gap = 50e-3  # meter
     num_keys = 6
@@ -1653,13 +1650,12 @@ def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, 
         spider_width /= outer_diameter
         outer_diameter /= outer_diameter
 
-    # padding out the segmentation gaps so they are visible and not sub-pixel
+    # Padding out the segmentation gaps so they are visible and not sub-pixel.
     radial_gap = radial_gap * gap_padding
     spider_width = spider_width * gap_padding
+
     if not with_segment_gaps:
         spider_width = 0
         radial_gap = 0
 
-    aperture = make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, segment_transmissions=segment_transmissions, return_segments=return_segments)
-
-    return aperture
+    return make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, segment_transmissions=segment_transmissions, return_segments=return_segments)

@@ -1778,7 +1778,7 @@ def make_scexao_lyot_stop(normalized=False, inner_diameter_fraction=0.307, outer
     mask_spider_width = 0.081  # m
     mask_spider_offset = np.array((-0.491, -1.117))
     mask_diameter = 0.583  # m
-    mask_offsets = np.array(( # (x, y), m
+    mask_offsets = np.array((  # (x, y), m
         (-0.448, 2.308),
         (1.77, -1.412))
     )

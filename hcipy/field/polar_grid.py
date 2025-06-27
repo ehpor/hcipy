@@ -94,7 +94,7 @@ class PolarGrid(Grid):
         Grid
             Itself to allow for chaining these transformations.
         '''
-        self.theta += angle
+        self.coords += (0, angle)
         return self
 
     @staticmethod

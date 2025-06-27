@@ -1657,28 +1657,28 @@ def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, 
 
     return make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap, num_keys, spider_width, segment_transmissions=segment_transmissions, return_segments=return_segments)
 
-def make_subaru_lyot_stop(
-        normalized: bool=False,
-        inner_diameter_fraction: float=0.3,
-        outer_diameter_fraction: float=1,
-        with_spiders: bool=True,
-        spider_fraction: float=1
-    ):
-    """
-    Generates a Subaru-like pupil, based on the Nasmyth-IR pupil (Julien Lozi priv. communications)
+def make_subaru_lyot_stop(normalized=False, inner_diameter_fraction=0.3, outer_diameter_fraction=1, with_spiders=True, spider_fraction=1):
+    """Generate a Subaru-like pupil.
+
+    The pupil is based on the Nasmyth-IR pupil (Julien Lozi priv. communications).
 
     Parameters
     ----------
-    normalized
-        If True, the outer diameter will be scaled to 1, otherwise it is 7.95 m
-    inner_diameter_fraction
-        The ratio of size of the secondary obstruction to the original diameter of 7.95 m
-    outer_diameter_fraction
-        The ratio of the outer diameter to the original diameter of 7.95 m
-    with_spiders
-        If True, will include spiders in the aperture mask
-    spider_fraction
-        If `with_spiders` is True, the relative scale of the spiders in the mask
+    normalized : boolean
+        If True, the outer diameter will be scaled to 1, otherwise it is 7.95 m.
+    inner_diameter_fraction : scalar
+        The ratio of size of the secondary obstruction to the original diameter of 7.95 m.
+    outer_diameter_fraction : scalar
+        The ratio of the outer diameter to the original diameter of 7.95 m.
+    with_spiders : boolean
+        If True, will include spiders in the aperture mask.
+    spider_fraction : boolean
+        If `with_spiders` is True, the relative scale of the spiders in the mask.
+
+    Returns
+    -------
+    Field generator
+        The Subaru Lyot stop.
     """
     pupil_diameter = 7.95  # m
     spider_width = 0.184  # m
@@ -1711,17 +1711,23 @@ def make_subaru_lyot_stop(
     return func
 
 def make_subaru_aperture(normalized=False, with_spiders=True):
-    """
-    Generates a Subaru-like pupil, based on the Nasmyth-IR pupil (Julien Lozi priv. communications).
+    """Generate a Subaru-like pupil.
+
+    This pupil is based on the Nasmyth-IR pupil (Julien Lozi priv. communications).
 
     Parameters
     ----------
-    normalized
-        If True, the outer diameter will be scaled to 1, otherwise it is 7.95 m
-    with_spiders
-        If True, will include spiders in the aperture
-    with_masks
-        If True, will include bad actuator masks in the aperture
+    normalized : boolean
+        If True, the outer diameter will be scaled to 1, otherwise it is 7.95 m.
+    with_spiders : boolean
+        If True, will include spiders in the aperture.
+    with_masks : boolean
+        If True, will include bad actuator masks in the aperture.
+
+    Returns
+    -------
+    Field generator
+        The Subaru-like aperture.
     """
     return make_subaru_lyot_stop(
         normalized=normalized,
@@ -1730,34 +1736,33 @@ def make_subaru_aperture(normalized=False, with_spiders=True):
         with_spiders=with_spiders
     )
 
-def make_scexao_lyot_stop(
-        normalized=False,
-        inner_diameter_fraction=0.307,
-        outer_diameter_fraction=1,
-        with_spiders=True,
-        spider_fraction=1,
-        with_masks=True,
-        mask_fraction=1
-    ):
-    """
-    Generates a Subaru-like pupil with SCExAO geometry (Julien Lozi priv. communications), arbitrarily scaled for generating Lyot stops.
+def make_scexao_lyot_stop(normalized=False, inner_diameter_fraction=0.307, outer_diameter_fraction=1, with_spiders=True, spider_fraction=1, with_masks=True, mask_fraction=1):
+    """Generate a Subaru-like pupil with SCExAO geometry.
+
+    This pupil is based on a pupil by Julien Lozi (priv. communications),
+    and is arbitrarily scaled for generating Lyot stops.
 
     Parameters
     ----------
-    normalized
-        If True, the outer diameter will be scaled to 1, otherwise it is 7.95 m
-    inner_diameter_fraction
-        The ratio of size of the secondary obstruction to the original diameter of 7.95 m
-    outer_diameter_fraction
-        The ratio of the outer diameter to the original diameter of 7.95 m
-    with_spiders
-        If True, will include spiders in the aperture
-    spider_fraction
-        If `with_spiders` is True, the relative scale of the spiders in the mask
-    with_masks
-        If True, will include bad actuator masks in the aperture
-    mask_fraction
-        If `with_masks` is True, the relative scale of the masks
+    normalized : boolean
+        If True, the outer diameter will be scaled to 1, otherwise it is 7.95 m.
+    inner_diameter_fraction : scalar
+        The ratio of size of the secondary obstruction to the original diameter of 7.95 m.
+    outer_diameter_fraction : scalar
+        The ratio of the outer diameter to the original diameter of 7.95 m.
+    with_spiders : boolean
+        If True, will include spiders in the aperture.
+    spider_fraction : scalar
+        If `with_spiders` is True, the relative scale of the spiders in the mask.
+    with_masks : boolean
+        If True, will include bad actuator masks in the aperture.
+    mask_fraction : scalar
+        If `with_masks` is True, the relative scale of the masks.
+
+    Returns
+    -------
+    Field generator
+        The generated SCExAO Lyot stop.
     """
     starter = make_subaru_lyot_stop(
         normalized=normalized,
@@ -1774,9 +1779,9 @@ def make_scexao_lyot_stop(
     mask_spider_offset = np.array((-0.491, -1.117))
     mask_diameter = 0.583  # m
     mask_offsets = np.array(( # (x, y), m
-        (-0.448, 2.308), 
+        (-0.448, 2.308),
         (1.77, -1.412))
-    )  
+    )
     spider_angle = 51.75  # deg
 
     if normalized:
@@ -1800,17 +1805,23 @@ def make_scexao_lyot_stop(
     return func
 
 def make_scexao_aperture(normalized=False, with_spiders=True, with_masks=True):
-    """
-    Generates a Subaru-like pupil with SCExAO geometry (Julien Lozi priv. communications).
+    """Generate a Subaru-like pupil with SCExAO geometry.
+
+    Based on a pupil by Julien Lozi (priv. communications).
 
     Parameters
     ----------
-    normalized
-        If True, the outer diameter will be scaled to 1, otherwise it is 7.95 m
-    with_spiders
-        If True, will include spiders in the aperture
-    with_masks
-        If True, will include bad actuator masks in the aperture
+    normalized : boolean
+        If True, the outer diameter will be scaled to 1, otherwise it is 7.95 m.
+    with_spiders : boolean
+        If True, will include spiders in the aperture.
+    with_masks : boolean
+        If True, will include bad actuator masks in the aperture.
+
+    Returns
+    -------
+    Field generator
+        The Subaru pupil with SCExAO geometry.
     """
     return make_scexao_lyot_stop(
         normalized=normalized,

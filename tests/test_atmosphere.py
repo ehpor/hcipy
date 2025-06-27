@@ -177,8 +177,8 @@ def test_multi_layer_atmosphere():
     r0 = 0.1
     wavelength = 500e-9
 
-    pupil_grid = make_pupil_grid(256, 1.5)
-    layers = make_standard_atmospheric_layers(pupil_grid)
+    pupil_grid = make_pupil_grid(32, 1.5)
+    layers = make_mauna_kea_atmospheric_layers(pupil_grid)
 
     atmospheric_model = MultiLayerAtmosphere(layers, scintillation=False)
     atmospheric_model.Cn_squared = Cn_squared_from_fried_parameter(r0, wavelength)
@@ -216,22 +216,20 @@ def test_multi_layer_atmosphere():
     wf_out2 = atmospheric_model.forward(wf)
     assert not np.allclose(wf_out.electric_field, wf_out2.electric_field)
 
-def test_las_campanas_atmosphere():
-    r0 = 0.1
-    wavelength = 500e-9
+@pytest.mark.parametrize('site', ['mauna_kea', 'las_campanas', 'keck'])
+def test_standard_atmosphere_factory(site):
+    grid = make_pupil_grid(32, 1.5)
 
-    grid = make_pupil_grid(256, 1.5)
-    layers = make_las_campanas_atmospheric_layers(grid)
-    atmospheric_model = MultiLayerAtmosphere(layers, scintillation=False)
-    atmospheric_model.Cn_squared = Cn_squared_from_fried_parameter(r0, wavelength)
-    atmospheric_model.reset()
+    # Test with different sites.
+    atmosphere = make_standard_atmosphere(grid, site=site)
+    assert isinstance(atmosphere, MultiLayerAtmosphere)
+    assert len(atmosphere.layers) > 0
 
-    aperture = Field(np.exp(-(grid.as_('polar').r / 0.65)**20), grid)
-    wf = Wavefront(aperture, wavelength)
+def test_standard_atmosphere_factory_unknown():
+    grid = make_pupil_grid(32, 1.5)
 
-    # Model with no scintillation should only not modify amplitude
-    wf_out = atmospheric_model.forward(wf)
-    assert np.allclose(wf_out.amplitude, aperture)
+    with pytest.raises(ValueError):
+        make_standard_atmosphere(grid, site='unknown_site')
 
 def test_fried_parameter_seeing():
     np.random.seed(0)

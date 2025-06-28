@@ -215,73 +215,60 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, shift=0, pl
     from .fast_fourier_transform import FastFourierTransform, make_fft_grid, get_fft_parameters
     from .matrix_fourier_transform import MatrixFourierTransform
     from .naive_fourier_transform import NaiveFourierTransform
+    from .zoom_fast_fourier_transform import ZoomFastFourierTransform
+
+    options = {
+        'fft': FastFourierTransform,
+        'mft': MatrixFourierTransform,
+        'naive': NaiveFourierTransform,
+        'zft': ZoomFastFourierTransform,
+    }
 
     if output_grid is not None:
         # Try to detect if the grid is compatible with an FFT grid.
         try:
             q, fov, shift = get_fft_parameters(output_grid, input_grid)
-
-            # If we got this far, the output grid is a native FFT grid.
-            # Remove output grid as its now completely defined by q, fov and shift parameters.
-            output_grid = None
         except ValueError:
-            # The grid is not a native FFT grid.
-            pass
-
-    if output_grid is None:
-        # Choose between FFT and MFT
-        if not (input_grid.is_regular and input_grid.is_('cartesian')):
-            raise ValueError('For non-regular non-cartesian Grids, a Fourier transform is required to have an output_grid.')
-
-        if input_grid.ndim not in [1, 2]:
-            method = 'fft'
-        else:
-            output_grid = make_fft_grid(input_grid, q, fov, shift)
-
-            if planner == 'estimate':
-                # Estimate analytically from complexities.
-                # Convert shapes to float to avoid potential overflows.
-                N_in = input_grid.shape.astype('float') * q
-                N_out = output_grid.shape.astype('float')
-
-                if input_grid.ndim == 1:
-                    fft = 4 * N_in[0] * np.log2(N_in)
-                    mft = 4 * input_grid.size * N_out[0]
-                else:
-                    fft = 4 * np.prod(N_in) * np.log2(np.prod(N_in))
-                    mft = 4 * (np.prod(input_grid.shape) * N_out[1] + np.prod(N_out) * input_grid.shape[0])
-
-                if fft > mft:
-                    method = 'mft'
-                else:
-                    method = 'fft'
-            elif planner == 'measure':
-                # Measure directly.
-                fft = FastFourierTransform(input_grid, q, fov)
-                mft = MatrixFourierTransform(input_grid, output_grid)
-
-                a = input_grid.zeros(dtype='complex')
-                fft_time = _time_it(lambda: fft.forward(a))
-                mft_time = _time_it(lambda: mft.forward(a))
-
-                if fft_time > mft_time:
-                    method = 'mft'
-                else:
-                    method = 'fft'
+            # The grid is not a native FFT grid, so remove the FFT option.
+            del options['fft']
     else:
-        # Choose between MFT and Naive
-        if input_grid.is_separated and input_grid.is_('cartesian') and output_grid.is_separated and output_grid.is_('cartesian') and input_grid.ndim in [1, 2]:
-            method = 'mft'
-        else:
-            method = 'naive'
+        output_grid = make_fft_grid(input_grid, q, fov, shift)
+
+    # Find the time taken for each of the options.
+    expected_time = {}
+    for method, ft in options.items():
+        if not ft.is_supported(input_grid, output_grid):
+            continue
+
+        if planner == 'estimate':
+            # Estimate the time taken based on the computational complexity.
+            complexity = ft.compute_complexity(input_grid, output_grid)
+            expected_time[method] = complexity.num_operations
+        elif planner == 'measure':
+            if method == 'naive':
+                # This is very expensive to measure and should only be used if
+                # it's the only option.
+                expected_time[method] = np.inf
+                continue
+
+            # Construct the Fourier transform object.
+            if method == 'fft':
+                ft_obj = ft(input_grid, q, fov, shift)
+            else:
+                ft_obj = ft(input_grid, output_grid)
+
+            # Time the Fourier transform.
+            a = input_grid.zeros(dtype='complex')
+            expected_time[method] = _time_it(lambda: ft_obj.forward(a))
+
+    # Choose the best option.
+    best_method = min(expected_time, key=expected_time.get)
 
     # Make the Fourier transform
-    if method == 'fft':
+    if best_method == 'fft':
         return FastFourierTransform(input_grid, q, fov, shift)
-    elif method == 'mft':
-        return MatrixFourierTransform(input_grid, output_grid)
-    elif method == 'naive':
-        return NaiveFourierTransform(input_grid, output_grid)
+    else:
+        return options[best_method](input_grid, output_grid)
 
 def multiplex_for_tensor_fields(func):
     '''A decorator for automatically multiplexing a function over the tensor directions.

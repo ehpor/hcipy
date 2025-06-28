@@ -75,3 +75,6 @@ include-package-data = true
 
 [tool.setuptools_scm]
 write_to = "hcipy/_version.py"
+
+[project.scripts]
+hcipy_tune_fourier = "hcipy.fourier.tuning:_cli"

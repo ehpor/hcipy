@@ -8,6 +8,7 @@ from tqdm import tqdm
 import numpy as np
 import scipy.optimize
 import matplotlib.pyplot as plt
+import argparse
 
 def compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs, t_max=0.01):
     """Compute a dataset of performance measurements for a Fourier transform class.
@@ -126,6 +127,12 @@ def plot_fourier_performance_data(datasets, ax=None):
 def _cli():
     """A command-line interface for tuning Fourier transforms.
     """
+    parser = argparse.ArgumentParser(description='Tune Fourier transforms.')
+    parser.add_argument('--show-plot', action='store_true', help='Show the plot.')
+    parser.add_argument('--save-plot', type=str, default=None, help='Save the plot to a file.')
+
+    args = parser.parse_args()
+
     Ns = np.array([32, 64, 128, 256, 512, 1024])
     qs = np.array([1, 2, 4, 8, 16])
     fovs = np.array([1, 0.5, 0.3, 0.1])
@@ -136,18 +143,23 @@ def _cli():
         'zfft': ZoomFastFourierTransform,
     }
 
-    datasets = {
-        label: compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs)
-        for label, fourier_class in fourier_transforms.items()
-    }
+    datasets = {}
+    for label, fourier_class in tqdm(fourier_transforms.items()):
+        datasets[label] = compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs)
 
-    plot_fourier_performance_data(datasets)
-    plt.show()
+    if args.show_plot or args.save_plot:
+        plot_fourier_performance_data(datasets)
+        if args.save_plot:
+            plt.savefig(args.save_plot)
+        if args.show_plot:
+            plt.show()
 
-    print('fit_results:')
+    print('Fit results:')
     for label, dataset in datasets.items():
         popt, _ = fit_fourier_performance_data(*dataset)
         print(f'  {label}:')
         print(f'    a: {popt[0]:.3f}')
         print(f'    b: {popt[1]:.3f}')
         print(f'    c: {popt[2]:.3f}')
+
+    print('Put these values in your HCIPy configuration file.')

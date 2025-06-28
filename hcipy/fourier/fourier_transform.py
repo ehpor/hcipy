@@ -3,10 +3,11 @@ from ..field import Field
 
 from dataclasses import dataclass
 
-@dataclass
+@dataclass(frozen=True)
 class ComputationalComplexity:
     num_multiplications: int = 0
     num_additions: int = 0
+    expected_execution_time: float | None = None
 
     @property
     def num_operations(self):
@@ -153,6 +154,27 @@ class FourierTransform(object):
         '''
         raise NotImplementedError()
 
+    @classmethod
+    def predict_execution_time(cls, num_operations, prediction_coefficients=None):
+        '''Predict the execution time for this Fourier transform.
+
+        Parameters
+        ----------
+        num_operations : int
+            The number of floating-point operations that will be performed.
+        prediction_coefficients : dict of string to float, or None
+            The prediction coefficients for the execution time. The
+            key values and their interpretation are specific to the
+            implementation. If None is given, the default coefficients
+            for the implementation will be used.
+
+        Returns
+        -------
+        float
+            The predicted execution time in seconds.
+        '''
+        raise NotImplementedError()
+
 def _time_it_iterative(function, num_iterations):
     import time
 
@@ -243,7 +265,7 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, shift=0, pl
         if planner == 'estimate':
             # Estimate the time taken based on the computational complexity.
             complexity = ft.compute_complexity(input_grid, output_grid)
-            expected_time[method] = complexity.num_operations
+            expected_time[method] = complexity.expected_execution_time
         elif planner == 'measure':
             if method == 'naive':
                 # This is very expensive to measure and should only be used if

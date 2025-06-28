@@ -7,6 +7,13 @@ fourier:
     # The backend to use for the FFTs.
     method: ['mkl', 'scipy', 'fftw', 'numpy']
 
+    # The performance prediction parameters for an FFT.
+    # The default parameters are based on an Apple M2 Max chip.
+    execution_time_prediction_coefficients:
+      a: 3.746
+      b: 0.881
+      c: -4.749
+
   mft:
     # Whether to precompute the matrices used in the MFT.
     # This provides a 20-30% speedup, in exchange for higher memory usage.
@@ -16,10 +23,25 @@ fourier:
     # This provides a 5-10% speedup, in exchange for higher memory usage.
     allocate_intermediate: true
 
+    # The performance prediction parameters for an MFT.
+    # The default parameters are based on an Apple M2 Max chip.
+    execution_time_prediction_coefficients:
+      a: 1.667
+      b: 0.716
+      c: -4.624
+
   nft:
     # Whether to precompute the matrices used in the NFT.
     # Enabling this is not recommended, as it requires vast amounts of memory.
     precompute_matrices: false
+
+  zfft:
+    # The performance prediction parameters for an ZFFT.
+    # The default parameters are based on an Apple M2 Max chip.
+    execution_time_prediction_coefficients:
+      a: 4.093
+      b: 0.847
+      c: -2.973
 
 plotting:
   # The path to the ffmpeg binary. If this is empty, ffmpeg should be available from PATH

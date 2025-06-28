@@ -285,11 +285,11 @@ class MatrixFourierTransform(FourierTransform):
 
             # Complexity for gemm(1, self.M2.T, f.T)
             num_complex_multiplications = N_in_y * N_in_x * N_out_y
-            num_complex_additions = N_in_y * N_in_x * (N_out_y - 1)
+            num_complex_additions = N_out_y * N_in_x * (N_in_y - 1)
 
             # Complexity for gemm(alpha, self.intermediate_array.T, self.M1.T)
-            num_complex_multiplications += N_in_y * N_out_x * N_in_x
-            num_complex_additions += N_in_y * N_out_x * (N_in_x - 1)
+            num_complex_multiplications += N_in_x * N_out_x * N_out_y
+            num_complex_additions += N_out_x * N_out_y * (N_in_x - 1)
 
             # Add complexity for initial multiplication by weights_input if not scalar
             num_complex_multiplications += input_grid.size

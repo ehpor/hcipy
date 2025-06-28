@@ -144,6 +144,10 @@ def _cli():
     plot_fourier_performance_data(datasets)
     plt.show()
 
+    print('fit_results:')
     for label, dataset in datasets.items():
         popt, _ = fit_fourier_performance_data(*dataset)
-        print(label, popt)
+        print(f'  {label}:')
+        print(f'    a: {popt[0]:.3f}')
+        print(f'    b: {popt[1]:.3f}')
+        print(f'    c: {popt[2]:.3f}')

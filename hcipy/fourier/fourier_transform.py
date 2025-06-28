@@ -7,7 +7,7 @@ from dataclasses import dataclass
 class ComputationalComplexity:
     num_multiplications: int = 0
     num_additions: int = 0
-    expected_execution_time: float | None = None
+    expected_execution_time: float = 0
 
     @property
     def num_operations(self):

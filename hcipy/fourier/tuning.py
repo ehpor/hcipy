@@ -10,6 +10,28 @@ import scipy.optimize
 import matplotlib.pyplot as plt
 
 def compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs, t_max=0.01):
+    """Compute a dataset of performance measurements for a Fourier transform class.
+
+    Parameters
+    ----------
+    fourier_class : FourierTransform
+        The Fourier transform class to measure the performance of.
+    Ns : array_like
+        The pupil grid sizes to measure.
+    qs : array_like
+        The oversampling factors to measure.
+    fovs : array_like
+        The fields of view to measure.
+    t_max : float
+        The maximum time to spend on a single performance measurement.
+
+    Returns
+    -------
+    complexities : array_like
+        The computational complexities for each of the measurements in GFLOPS.
+    execution_times : array_like
+        The execution times for each of the measurements in ms.
+    """
     parameter_grid = CartesianGrid(SeparatedCoords((Ns, qs, fovs)))
 
     complexities = []
@@ -44,6 +66,22 @@ def compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs, t_max=0.01)
     return complexities, execution_times
 
 def fit_fourier_performance_data(complexities, execution_times):
+    """Fit a power-law to the performance data.
+
+    Parameters
+    ----------
+    complexities : array_like
+        The computational complexities for each of the measurements in GFLOPS.
+    execution_times : array_like
+        The execution times for each of the measurements in ms.
+
+    Returns
+    -------
+    popt : array_like
+        The optimal parameters for the power-law fit.
+    func : function
+        The fitted power-law function.
+    """
     # Fit a power law to our data.
     def powerlaw_in_log_space(x, a, b, c):
         return np.logaddexp(a + x * b, c)
@@ -53,6 +91,16 @@ def fit_fourier_performance_data(complexities, execution_times):
     return popt, lambda x: np.exp(powerlaw_in_log_space(np.log(x), *popt))
 
 def plot_fourier_performance_data(datasets, ax=None):
+    """Plot the fourier performance data.
+
+    Parameters
+    ----------
+    datasets : dict
+        A dictionary of datasets. The keys are the names of the datasets,
+        and the values are tuples of (complexities, execution_times).
+    ax : matplotlib axes
+        The axes to plot on. If not given, a new figure and axes will be created.
+    """
     if ax is None:
         ax = plt.gca()
 
@@ -62,12 +110,10 @@ def plot_fourier_performance_data(datasets, ax=None):
     ax.set_ylabel('Time taken for Fourier transform [ms]')
     ax.grid(c='0.7', ls=':')
 
-    symbols = ['o', '*', 'x']
-
-    for (label, data), symbol in zip(datasets.items(), symbols):
+    for label, data in datasets.items():
         x, y = data
 
-        plotted_data = plt.plot(x, y, symbol, label=label)
+        plotted_data = plt.plot(x, y, '.', label=label)
         c = plotted_data[0].get_color()
 
         _, f = fit_fourier_performance_data(x, y)
@@ -78,7 +124,9 @@ def plot_fourier_performance_data(datasets, ax=None):
     plt.legend()
 
 def _cli():
-    Ns = np.array([32, 64, 128, 256, 512])
+    """A command-line interface for tuning Fourier transforms.
+    """
+    Ns = np.array([32, 64, 128, 256, 512, 1024])
     qs = np.array([1, 2, 4, 8, 16])
     fovs = np.array([1, 0.5, 0.3, 0.1])
 

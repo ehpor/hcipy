@@ -4,6 +4,7 @@ from .fourier_transform import FourierTransform, ComputationalComplexity, multip
 from ..field import Field
 from ..config import Configuration
 import numexpr as ne
+import math
 
 class MatrixFourierTransform(FourierTransform):
     '''A Matrix Fourier Transform (MFT) object.
@@ -297,8 +298,41 @@ class MatrixFourierTransform(FourierTransform):
         # Convert to real operations.
         num_multiplications = 4 * num_complex_multiplications
         num_additions = 2 * num_complex_multiplications + 2 * num_complex_additions
+        num_operations = num_multiplications + num_additions
 
         return ComputationalComplexity(
             num_multiplications=num_multiplications,
-            num_additions=num_additions
+            num_additions=num_additions,
+            expected_execution_time=cls.predict_execution_time(num_operations)
         )
+
+    @classmethod
+    def predict_execution_time(cls, num_operations, prediction_coefficients=None):
+        '''Predict the execution time for this Fourier transform.
+
+        Parameters
+        ----------
+        num_operations : int
+            The number of floating-point operations that will be performed.
+        prediction_coefficients : dict of string to float, or None
+            The prediction coefficients for the execution time. The
+            key values and their interpretation are specific to the
+            implementation. If None is given, the default coefficients
+            for the implementation will be used.
+
+        Returns
+        -------
+        float
+            The predicted execution time in seconds.
+        '''
+        if prediction_coefficients is None:
+            prediction_coefficients = Configuration().fourier.mft.execution_time_prediction_coefficients
+
+        a = prediction_coefficients['a']
+        b = prediction_coefficients['b']
+        c = prediction_coefficients['c']
+
+        billion_operations = num_operations / 1e9
+        time_in_ms = math.exp(a) * billion_operations**b + math.exp(c)
+
+        return time_in_ms * 1e-3

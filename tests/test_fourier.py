@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 from packaging import version
 import scipy.signal
+import os
 
 def make_all_fourier_transforms(input_grid, q, fov, shift):
     fft1 = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift, emulate_fftshifts=True)
@@ -342,3 +343,18 @@ def test_chirp_z_transform(dtype):
         a = np.exp(1j * np.random.uniform(0, 2 * np.pi))
 
         check_czt_vs_scipy(x, m, w, a, dtype)
+
+def test_performance_tuning(tmpdir):
+    fname = os.path.join(tmpdir, 'tuning_result.pdf')
+    tuned_parameters = tune_fourier_transforms(
+        plot_fname=fname,
+        show_plot=False,
+        Ns=np.array([32, 64]),
+        qs=np.array([1, 2]),
+        fovs=np.array([1, 0.5])
+    )
+
+    assert len(tuned_parameters) > 0
+
+    for value in tuned_parameters.values():
+        assert len(value) > 0

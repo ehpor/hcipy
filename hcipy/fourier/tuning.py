@@ -10,6 +10,7 @@ import scipy.optimize
 import matplotlib.pyplot as plt
 import argparse
 import functools
+import yaml
 
 def compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs, t_max=0.01):
     """Compute a dataset of performance measurements for a Fourier transform class.
@@ -208,14 +209,19 @@ def _cli():
     '''
     parser = argparse.ArgumentParser(description='Tune all Fourier transforms.')
     parser.add_argument('--show-plot', action='store_true', help='Show a diagnostic plot.')
-    parser.add_argument('--save-plot', type=str, default=None, help='Save the plot to a file.')
-
+    parser.add_argument('--plot-out', type=str, default=None, help='Save the plot to a file.')
+    parser.add_argument('--coeffs-out', type=str, default=None, help='Save the tuned coefficients to a file.')
     args = parser.parse_args()
-    tuned_parameters = tune_fourier_transforms(args.save_plot, args.show_plot)
+
+    tuned_parameters = tune_fourier_transforms(None, args.plot_out, args.show_plot)
+
+    if args.coeffs_out:
+        with open('output.yaml', 'w') as f:
+            yaml.dump(tuned_parameters, f)
 
     print('Fit results:')
-    for label, params in tuned_parameters:
+    for label, params in tuned_parameters.items():
         print(f'  {label}:')
-        for param_name, param_value in params.items:
+        for param_name, param_value in params.items():
             print(f'    {param_name}: {param_value:.3f}')
     print('Put these values in your HCIPy configuration file.')

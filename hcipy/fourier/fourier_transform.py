@@ -2,6 +2,7 @@ import numpy as np
 from ..field import Field
 
 from dataclasses import dataclass
+import math
 
 @dataclass(frozen=True)
 class ComputationalComplexity:
@@ -155,7 +156,7 @@ class FourierTransform(object):
         raise NotImplementedError()
 
     @classmethod
-    def predict_execution_time(cls, num_operations, prediction_coefficients=None):
+    def _predict_execution_time(cls, num_operations, prediction_coefficients):
         '''Predict the execution time for this Fourier transform.
 
         Parameters
@@ -165,15 +166,21 @@ class FourierTransform(object):
         prediction_coefficients : dict of string to float, or None
             The prediction coefficients for the execution time. The
             key values and their interpretation are specific to the
-            implementation. If None is given, the default coefficients
-            for the implementation will be used.
+            implementation.
 
         Returns
         -------
         float
             The predicted execution time in seconds.
         '''
-        raise NotImplementedError()
+        a = prediction_coefficients['a']
+        b = prediction_coefficients['b']
+        c = prediction_coefficients['c']
+
+        billion_operations = num_operations / 1e9
+        time_in_ms = math.exp(a) * billion_operations**b + math.exp(c)
+
+        return time_in_ms * 1e-3
 
 def _time_it_iterative(function, num_iterations):
     import time

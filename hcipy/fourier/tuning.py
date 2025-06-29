@@ -9,6 +9,7 @@ import numpy as np
 import scipy.optimize
 import matplotlib.pyplot as plt
 import argparse
+import functools
 
 def compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs, t_max=0.01):
     """Compute a dataset of performance measurements for a Fourier transform class.
@@ -58,7 +59,7 @@ def compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs, t_max=0.01)
                 ft = fourier_class(input_grid, output_grid)
             execution_time = _time_it(lambda: ft.forward(field), t_max=t_max)
 
-        # Convert complexity to GFLOPS.
+        # Convert complexity to GFLOP.
         complexities.append(complexity / 1e9)
 
         # Convert execution time to ms.
@@ -87,7 +88,15 @@ def fit_fourier_performance_data(complexities, execution_times):
     def powerlaw_in_log_space(x, a, b, c):
         return np.logaddexp(a + x * b, c)
 
-    popt, _ = scipy.optimize.curve_fit(powerlaw_in_log_space, np.log(complexities), np.log(execution_times))
+    x = np.log(complexities)
+    y = np.log(execution_times)
+
+    # First fit without the bias.
+    popt, _ = scipy.optimize.curve_fit(functools.partial(powerlaw_in_log_space, c=-np.inf), x, y)
+
+    # Use this as a starting point for the real fit.
+    p0 = np.concatenate((popt, [np.min(x)]))
+    popt, _ = scipy.optimize.curve_fit(powerlaw_in_log_space, x, y, p0=p0)
 
     coeffs = {
         'a': popt[0],
@@ -95,7 +104,7 @@ def fit_fourier_performance_data(complexities, execution_times):
         'c': popt[2]
     }
 
-    return coeffs, lambda x: np.exp(powerlaw_in_log_space(np.log(x), *popt))
+    return coeffs, lambda xs: np.exp(powerlaw_in_log_space(np.log(xs), *popt))
 
 def plot_fourier_performance_data(datasets, ax=None):
     """Plot the fourier performance data.
@@ -113,7 +122,7 @@ def plot_fourier_performance_data(datasets, ax=None):
 
     ax.set_xscale('log')
     ax.set_yscale('log')
-    ax.set_xlabel('Number of floating-point operations [GFLOPS]')
+    ax.set_xlabel('Number of floating-point operations [GFLOP]')
     ax.set_ylabel('Time taken for Fourier transform [ms]')
     ax.grid(c='0.7', ls=':')
 

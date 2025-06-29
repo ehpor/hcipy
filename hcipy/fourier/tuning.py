@@ -114,15 +114,15 @@ def plot_fourier_performance_data(datasets, ax=None):
     for label, data in datasets.items():
         x, y = data
 
-        plotted_data = plt.plot(x, y, '.', label=label)
+        plotted_data = ax.plot(x, y, '.', label=label)
         c = plotted_data[0].get_color()
 
         _, f = fit_fourier_performance_data(x, y)
 
         x_fit = np.exp(np.linspace(np.log(x).min() - 1, np.log(x).max() + 1))
-        plt.plot(x_fit, f(x_fit), ls='--', c=c)
+        ax.plot(x_fit, f(x_fit), ls='--', c=c)
 
-    plt.legend()
+    ax.legend()
 
 def _cli():
     """A command-line interface for tuning Fourier transforms.

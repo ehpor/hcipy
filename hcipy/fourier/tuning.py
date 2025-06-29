@@ -78,7 +78,7 @@ def fit_fourier_performance_data(complexities, execution_times):
 
     Returns
     -------
-    popt : array_like
+    coeffs : dict of string to float
         The optimal parameters for the power-law fit.
     func : function
         The fitted power-law function.
@@ -89,7 +89,13 @@ def fit_fourier_performance_data(complexities, execution_times):
 
     popt, _ = scipy.optimize.curve_fit(powerlaw_in_log_space, np.log(complexities), np.log(execution_times))
 
-    return popt, lambda x: np.exp(powerlaw_in_log_space(np.log(x), *popt))
+    coeffs = {
+        'a': popt[0],
+        'b': popt[1],
+        'c': popt[2]
+    }
+
+    return coeffs, lambda x: np.exp(powerlaw_in_log_space(np.log(x), *popt))
 
 def plot_fourier_performance_data(datasets, ax=None):
     """Plot the fourier performance data.

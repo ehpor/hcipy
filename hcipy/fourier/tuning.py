@@ -130,11 +130,14 @@ def plot_fourier_performance_data(datasets, ax=None):
 
     ax.legend()
 
-def tune_fourier_transforms(plot_fname=None, show_plot=True, Ns=None, qs=None, fovs=None):
+def tune_fourier_transforms(fourier_transforms=None, plot_fname=None, show_plot=True, Ns=None, qs=None, fovs=None):
     '''Tune the Fourier transforms by measuring their performance and fitting a power-law to the data.
 
     Parameters
     ----------
+    fourier_transforms : (dict of string to Fourier class) or None
+        The Fourier transform classes to tune. If None, all Fourier transforms
+        will be tuned.
     plot_fname : str or None
         The filename to save the plot to. If None, the plot will not be saved.
     show_plot : bool
@@ -162,18 +165,21 @@ def tune_fourier_transforms(plot_fname=None, show_plot=True, Ns=None, qs=None, f
     if fovs is None:
         fovs = np.array([1, 0.5, 0.3, 0.1])
 
-    fourier_transforms = {
-        'fft': FastFourierTransform,
-        'mft': MatrixFourierTransform,
-        'zfft': ZoomFastFourierTransform,
-    }
+    if fourier_transforms is None:
+        fourier_transforms = {
+            'fft': FastFourierTransform,
+            'mft': MatrixFourierTransform,
+            'zfft': ZoomFastFourierTransform,
+        }
 
     datasets = {}
     for label, fourier_class in tqdm(fourier_transforms.items()):
         datasets[label] = compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs)
 
+    res = {}
     for label, dataset in datasets.items():
-        popt, _ = fit_fourier_performance_data(*dataset)
+        coeffs, _ = fit_fourier_performance_data(*dataset)
+        res[label] = coeffs
 
     if plot_fname is not None or show_plot:
         plot_fourier_performance_data(datasets)
@@ -185,6 +191,8 @@ def tune_fourier_transforms(plot_fname=None, show_plot=True, Ns=None, qs=None, f
             plt.show()
         else:
             plt.close()
+
+    return res
 
 def _cli():
     '''A command-line interface for tuning Fourier transforms.

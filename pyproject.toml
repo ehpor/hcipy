@@ -33,7 +33,8 @@ dependencies = [
     "numexpr",
     "asdf",
     "importlib_metadata",
-    "importlib_resources>=1.4 ; python_version<'3.9'"
+    "importlib_resources>=1.4 ; python_version<'3.9'",
+    "tqdm"
 ]
 
 [project.optional-dependencies]

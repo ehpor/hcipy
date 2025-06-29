@@ -4,7 +4,6 @@ from .fourier_transform import FourierTransform, ComputationalComplexity, multip
 from ..field import Field
 from ..config import Configuration
 import numexpr as ne
-import math
 
 class MatrixFourierTransform(FourierTransform):
     '''A Matrix Fourier Transform (MFT) object.

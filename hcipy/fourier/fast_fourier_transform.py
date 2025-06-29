@@ -5,7 +5,6 @@ from .fourier_transform import FourierTransform, ComputationalComplexity, multip
 from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration
 import numexpr as ne
-import math
 
 from .._math import fft as _fft_module
 

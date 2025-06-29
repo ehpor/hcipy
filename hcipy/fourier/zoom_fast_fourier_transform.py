@@ -5,8 +5,6 @@ from .fourier_transform import FourierTransform, ComputationalComplexity, _get_f
 from ..field import Field
 from ..config import Configuration
 
-import math
-
 class ZoomFastFourierTransform(FourierTransform):
     '''A Zoom Fast Fourier transform (ZoomFFT) object.
 

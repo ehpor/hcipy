@@ -130,18 +130,37 @@ def plot_fourier_performance_data(datasets, ax=None):
 
     ax.legend()
 
-def _cli():
-    """A command-line interface for tuning Fourier transforms.
-    """
-    parser = argparse.ArgumentParser(description='Tune Fourier transforms.')
-    parser.add_argument('--show-plot', action='store_true', help='Show the plot.')
-    parser.add_argument('--save-plot', type=str, default=None, help='Save the plot to a file.')
+def tune_fourier_transforms(plot_fname=None, show_plot=True, Ns=None, qs=None, fovs=None):
+    '''Tune the Fourier transforms by measuring their performance and fitting a power-law to the data.
 
-    args = parser.parse_args()
+    Parameters
+    ----------
+    plot_fname : str or None
+        The filename to save the plot to. If None, the plot will not be saved.
+    show_plot : bool
+        Whether to show the plot.
+    Ns : array_like
+        The pupil grid sizes to measure. If None, a default set of values will be used.
+    qs : array_like
+        The oversampling factors to measure. If None, a default set of values will be used.
+    fovs : array_like
+        The fields of view to measure. If None, a default set of values will be used.
 
-    Ns = np.array([32, 64, 128, 256, 512, 1024])
-    qs = np.array([1, 2, 4, 8, 16])
-    fovs = np.array([1, 0.5, 0.3, 0.1])
+    Returns
+    -------
+    dict
+        A dictionary containing the fit results for each Fourier transform.
+        The keys are the names of the Fourier transforms, and the values are
+        dictionaries containing the optimal parameters for the power-law fit.
+    '''
+    if Ns is None:
+        Ns = np.array([32, 64, 128, 256, 512, 1024])
+
+    if qs is None:
+        qs = np.array([1, 2, 4, 8, 16])
+
+    if fovs is None:
+        fovs = np.array([1, 0.5, 0.3, 0.1])
 
     fourier_transforms = {
         'fft': FastFourierTransform,
@@ -153,19 +172,33 @@ def _cli():
     for label, fourier_class in tqdm(fourier_transforms.items()):
         datasets[label] = compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs)
 
-    if args.show_plot or args.save_plot:
-        plot_fourier_performance_data(datasets)
-        if args.save_plot:
-            plt.savefig(args.save_plot)
-        if args.show_plot:
-            plt.show()
-
-    print('Fit results:')
     for label, dataset in datasets.items():
         popt, _ = fit_fourier_performance_data(*dataset)
-        print(f'  {label}:')
-        print(f'    a: {popt[0]:.3f}')
-        print(f'    b: {popt[1]:.3f}')
-        print(f'    c: {popt[2]:.3f}')
 
+    if plot_fname is not None or show_plot:
+        plot_fourier_performance_data(datasets)
+
+        if plot_fname is not None:
+            plt.savefig(plot_fname)
+
+        if show_plot:
+            plt.show()
+        else:
+            plt.close()
+
+def _cli():
+    '''A command-line interface for tuning Fourier transforms.
+    '''
+    parser = argparse.ArgumentParser(description='Tune all Fourier transforms.')
+    parser.add_argument('--show-plot', action='store_true', help='Show a diagnostic plot.')
+    parser.add_argument('--save-plot', type=str, default=None, help='Save the plot to a file.')
+
+    args = parser.parse_args()
+    tuned_parameters = tune_fourier_transforms(args.save_plot, args.show_plot)
+
+    print('Fit results:')
+    for label, params in tuned_parameters:
+        print(f'  {label}:')
+        for param_name, param_value in params.items:
+            print(f'    {param_name}: {param_value:.3f}')
     print('Put these values in your HCIPy configuration file.')

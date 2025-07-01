@@ -82,16 +82,19 @@ def test_imshow_field(grid):
     field = Field(np.random.randn(grid.size), grid)
 
     imshow_field(field)
+    plt.draw()
     plt.clf()
 
     mask = make_circular_aperture(1)(grid)
 
     imshow_field(field, mask=mask)
+    plt.draw()
     plt.clf()
 
     field = Field(np.random.randn(grid.size) + 1j * np.random.randn(grid.size), grid)
 
     imshow_field(field)
+    plt.draw()
     plt.clf()
 
 def test_imsave_field(tmpdir):
@@ -109,9 +112,11 @@ def test_contour_field():
     field = Field(np.random.randn(grid.size), grid)
 
     contour_field(field)
+    plt.draw()
     plt.clf()
 
     contourf_field(field)
+    plt.draw()
     plt.clf()
 
 def test_imshow_util():
@@ -125,12 +130,15 @@ def test_imshow_util():
     wf.electric_field *= np.exp(0.1j * zernike(6, 2, radial_cutoff=False)(pupil_grid))
 
     imshow_pupil_phase(wf, remove_piston=True, crosshairs=True, title='phase')
+    plt.draw()
     plt.clf()
 
     img = prop(wf)
 
     imshow_psf(img, colorbar_orientation='vertical', normalization='peak', crosshairs=True, title='psf')
+    plt.draw()
     plt.clf()
 
     imshow_psf(img, scale='linear', colorbar_orientation='vertical', normalization='peak', crosshairs=True, title='psf')
+    plt.draw()
     plt.clf()

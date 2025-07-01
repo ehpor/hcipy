@@ -205,7 +205,7 @@ def imshow_field(
     ax.format_coord = format_coord
 
     # Set current image for future colorbar creation.
-    plt.sci(im)
+    ax._sci(im)
 
     return im
 

@@ -1,7 +1,70 @@
 from copy import copy
 import numpy as np
+from matplotlib.transforms import Transform
 
 from ..field import Field
+
+class SeparatedGridTransform(Transform):
+    '''A transform for mapping between array indices and Cartesian coordinates.
+
+    Parameters
+    ----------
+    grid : Grid
+       The grid providing the mapping.
+    '''
+    def __init__(self, grid):
+        super().__init__()
+
+        if not grid.is_separated or not grid.is_('cartesian'):
+            raise ValueError('The grid must be separated and Cartesian.')
+
+        self._grid = grid
+
+    input_dims = 2
+    output_dims = 2
+    is_separable = True
+    is_affine = False
+
+    def transform_non_affine(self, coords):
+        # Docstring inherited from parent.
+        x = np.interp(coords[:, 0], np.arange(len(self._grid.separated_coords[0])), self._grid.separated_coords[0])
+        y = np.interp(coords[:, 1], np.arange(len(self._grid.separated_coords[1])), self._grid.separated_coords[1])
+
+        return np.column_stack((x, y))
+
+    def inverted(self):
+        # Docstring inherited from parent.
+        return InverseSeparatedGridTransform(self._grid)
+
+class InverseSeparatedGridTransform(Transform):
+    '''A transform for mapping between Cartesian coordinates and array indices.
+
+    Parameters
+    ----------
+    grid : Grid
+       The grid providing the mapping.
+    '''
+    def __init__(self, grid):
+        super().__init__()
+
+        if not grid.is_separated or not grid.is_('cartesian'):
+            raise ValueError('The grid must be separated and Cartesian.')
+
+        self._grid = grid
+
+    input_dims = 2
+    output_dims = 2
+    is_separable = True
+    is_affine = False
+
+    def transform_non_affine(self, coords):
+        x = np.interp(coords[:, 0], self._grid.separated_coords[0], np.arange(len(self._grid.separated_coords[0])))
+        y = np.interp(coords[:, 1], self._grid.separated_coords[1], np.arange(len(self._grid.separated_coords[1])))
+
+        return np.column_stack((x, y))
+
+    def inverted(self):
+        return SeparatedGridTransform(self._grid)
 
 def imshow_field(
         field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation='nearest',

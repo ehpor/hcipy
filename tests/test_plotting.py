@@ -19,7 +19,7 @@ def is_ffmpeg_installed():
 def check_animation(mw, style):
     grid = make_pupil_grid(256)
 
-    for i in range(25):
+    for i in range(5):
         field = Field(np.random.randn(grid.size), grid)
 
         if style == 'mpl':

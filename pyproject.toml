@@ -54,7 +54,8 @@ doc = [
     "nbformat",
     "nbconvert",
     "sphinx-automodapi",
-    "progressbar2",
+    "tqdm",
+    "ipywidgets",
 ]
 
 [project.urls]

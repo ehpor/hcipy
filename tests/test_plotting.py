@@ -85,6 +85,10 @@ def test_imshow_field(grid):
     plt.draw()
     plt.clf()
 
+    imshow_field(field, grid_units=2)
+    plt.draw()
+    plt.clf()
+
     mask = make_circular_aperture(1)(grid)
 
     imshow_field(field, mask=mask)

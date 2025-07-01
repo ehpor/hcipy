@@ -204,6 +204,9 @@ def imshow_field(
 
     ax.format_coord = format_coord
 
+    # Set current image for future colorbar creation.
+    plt.sci(im)
+
     return im
 
 def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, mask=None, mask_color='k', cmap=None):

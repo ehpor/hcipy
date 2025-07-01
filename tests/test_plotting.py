@@ -72,9 +72,13 @@ def test_ffmpeg_writer(style, tmpdir):
 
     assert os.path.isfile(fname)
 
-def test_imshow_field():
-    grid = make_pupil_grid(256)
+grids = [
+    pytest.param(make_pupil_grid(256), id='regularly_spaced_grid'),
+    pytest.param(CartesianGrid(SeparatedCoords((np.linspace(-0.5, 0.5, 257), np.linspace(-0.5, 0.5, 257)))), id='separated_grid')
+]
 
+@pytest.mark.parametrize('grid', grids)
+def test_imshow_field(grid):
     field = Field(np.random.randn(grid.size), grid)
 
     imshow_field(field)

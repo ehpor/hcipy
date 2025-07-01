@@ -90,15 +90,14 @@ def test_imshow_field():
     imshow_field(field)
     plt.clf()
 
-def test_imsave_field():
+def test_imsave_field(tmpdir):
     grid = make_pupil_grid(256)
 
     field = Field(np.random.randn(grid.size), grid)
 
-    imsave_field('field.png', field)
-    assert os.path.isfile('field.png')
-
-    os.remove('field.png')
+    fname = os.path.join(tmpdir, 'field.png')
+    imsave_field(fname, field)
+    assert os.path.isfile(fname)
 
 def test_contour_field():
     grid = make_pupil_grid(256)

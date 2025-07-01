@@ -67,8 +67,8 @@ class InverseSeparatedGridTransform(Transform):
         return SeparatedGridTransform(self._grid)
 
 def imshow_field(
-        field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None, interpolation='nearest',
-        non_linear_axes=False, cmap=None, mask=None, mask_color='k', grid_units=1, *args, **kwargs):
+        field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None,
+        mask=None, mask_color='k', grid_units=1, *args, **kwargs):
     '''Display a two-dimensional image on a matplotlib figure.
 
     This function serves as an easy replacement for the matplotlib.pyplot.imshow() function.
@@ -97,17 +97,7 @@ def imshow_field(
         If 'equal', changes the axes aspect ratio to match that of the image.
     norm : Normalize
         A Normalize instance is used to scale the input to the (0, 1) range for
-        input to the `cmap`. If it is not given, a linear scale will be used.
-    interpolation : string
-        The interpolation method used. The default is 'nearest'. Supported values
-        are {'nearest', 'bilinear'}.
-    non_linear_axes : boolean
-        If axes are scaled in a non-linear way, for example on a log plot, then imshow_field
-        needs to use a more expensive implementation. This parameter is to indicate that this
-        algorithm needs to be used.
-    cmap : Colormap or None
-        The colormap with which to plot the image. It is ignored if a complex
-        field or a vector field is supplied.
+        input to the colormap. If it is not given, a linear scale will be used.
     mask : field or ndarray
         If part of the image needs to be masked, this mask is overlayed on top of the image.
         This is for example useful when plotting a phase pattern on a certain aperture, which
@@ -126,8 +116,8 @@ def imshow_field(
     '''
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-    from matplotlib.image import NonUniformImage
 
+    # Get the default axes if they weren't given.
     if ax is None:
         ax = plt.gca()
 
@@ -146,6 +136,10 @@ def imshow_field(
             grid = grid.scaled(1.0 / grid_units)
             field = Field(field, grid)
 
+    # We can't draw non-Cartesian directly.
+    if not grid.is_('cartesian'):
+        raise NotImplementedError('Non-Cartesian grids are not implemented.')
+
     # If field is complex, draw complex
     if np.iscomplexobj(field):
         f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
@@ -163,44 +157,29 @@ def imshow_field(
             vmax = np.nanmax(f)
         norm = mpl.colors.Normalize(vmin, vmax)
 
-    # Get extent
-    c_grid = grid.as_('cartesian')
-    min_x, min_y, max_x, max_y = c_grid.x.min(), c_grid.y.min(), c_grid.x.max(), c_grid.y.max()
+    # Get extent and transform.
+    if grid.is_regular:
+        min_x = grid.zero[0] - grid.delta[0] * 0.5
+        min_y = grid.zero[1] - grid.delta[1] * 0.5
+        max_x = grid.zero[0] + grid.delta[0] * (grid.shape[0] - 0.5)
+        max_y = grid.zero[1] + grid.delta[1] * (grid.shape[1] - 0.5)
 
-    if grid.is_separated and grid.is_('cartesian'):
-        # We can draw this directly
-        x, y = grid.coords.separated_coords
-        z = f.shaped
-        if np.iscomplexobj(field) or field.tensor_order > 0:
-            z = np.rollaxis(z, 0, z.ndim)
+        transform = None
+        extent = (min_x, max_x, min_y, max_y)
+    elif grid.is_separated:
+        transform = SeparatedGridTransform(grid)
+        extent = None
     else:
-        # We can't draw this directly.
-        raise NotImplementedError()
+        raise NotImplementedError('Irregular grids are not implemented.')
 
-    if non_linear_axes:
-        # Use pcolormesh to display
-        x_mid = (x[1:] + x[:-1]) / 2
-        y_mid = (y[1:] + y[:-1]) / 2
+    z = f.shaped
+    if np.iscomplexobj(field) or field.tensor_order > 0:
+        z = np.rollaxis(z, 0, z.ndim)
 
-        x2 = np.concatenate(([1.5 * x[0] - 0.5 * x[1]], x_mid, [1.5 * x[-1] - 0.5 * x[-2]]))
-        y2 = np.concatenate(([1.5 * y[0] - 0.5 * y[1]], y_mid, [1.5 * y[-1] - 0.5 * y[-2]]))
-        X, Y = np.meshgrid(x2, y2)
+    im = ax.imshow(z, extent=extent, origin='lower', aspect=aspect, norm=norm, *args, **kwargs)
 
-        im = ax.pcolormesh(X, Y, z, *args, norm=norm, rasterized=True, cmap=cmap, **kwargs)
-    else:
-        # Use NonUniformImage to display
-        im = NonUniformImage(ax, extent=(min_x, max_x, min_y, max_y), interpolation=interpolation, norm=norm, cmap=cmap, *args, **kwargs)
-        im.set_data(x, y, z)
-
-        from matplotlib.patches import Rectangle
-        patch = Rectangle((min_x, min_y), max_x - min_x, max_y - min_y, facecolor='none')
-        ax.add_patch(patch)
-        im.set_clip_path(patch)
-
-        ax.add_image(im)
-
-    ax.set_xlim(min_x, max_x)
-    ax.set_ylim(min_y, max_y)
+    if transform is not None:
+        im.set_transform(transform + ax.transData)
 
     if mask is not None:
         one = np.ones(grid.size)
@@ -224,8 +203,6 @@ def imshow_field(
         return 'x=%0.3g, y=%0.3g' % (x, y)
 
     ax.format_coord = format_coord
-
-    ax._sci(im)
 
     return im
 

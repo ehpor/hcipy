@@ -398,8 +398,15 @@ class FourierRotation:
         if not input_grid.is_regular or input_grid.ndim != 2:
             raise ValueError('The input grid should be 2D and regularly spaced.')
 
-        self._shear_x = FourierShear(input_grid, shear=0, shear_dim=0)
-        self._shear_y = FourierShear(input_grid, shear=0, shear_dim=1)
+        self._padding = input_grid.shape // 2
+
+        zero = input_grid.zero - input_grid.delta * self._padding[::-1]
+        self._padded_grid = CartesianGrid(RegularCoords(input_grid.delta, input_grid.dims + 2 * np.array(self._padding[::-1]), zero))
+
+        self._cropping = tuple(slice(pad, pad + dim) for pad, dim in zip(self._padding, input_grid.shape))
+
+        self._shear_x = FourierShear(self._padded_grid, shear=0, shear_dim=0)
+        self._shear_y = FourierShear(self._padded_grid, shear=0, shear_dim=1)
 
         self.angle = angle
 
@@ -421,13 +428,6 @@ class FourierRotation:
 
         self._shear_x.shear = np.tan(small_angle / 2)
         self._shear_y.shear = -np.sin(small_angle)
-
-    def _propagate(self, field, adjoint):
-        f1 = self._shear_x._operation(field, adjoint)
-        f2 = self._shear_y._operation(f1, adjoint)
-        f3 = self._shear_x._operation(f2, adjoint)
-
-        return f3
 
     def forward(self, field):
         '''Return the forward rotation of the input field.
@@ -463,8 +463,15 @@ class FourierRotation:
         if self.num_rotations == 0:
             return field
 
-        f = field
-        for _ in range(self.num_rotations):
-            f = self._propagate(f, adjoint)
+        # Pad the field.
+        f = np.pad(field.shaped, self._padding[::-1])
+        f = Field(f.ravel(), self._padded_grid)
 
-        return f
+        # Perform the shears.
+        for _ in range(self.num_rotations):
+            f = self._shear_x._operation(f, adjoint)
+            f = self._shear_y._operation(f, adjoint)
+            f = self._shear_x._operation(f, adjoint)
+
+        # Crop the field back to its original size and return.
+        return Field(f.shaped[self._cropping].ravel(), field.grid)

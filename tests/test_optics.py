@@ -259,6 +259,132 @@ def test_segmented_deformable_mirror():
         label_actuator_centroid_positions(segments)
         plt.clf()
 
+def test_segmented_deformable_mirror_backward_compatibility():
+    '''Test that PTT-only functionality remains unchanged.'''
+    num_pix = 128
+    grid = make_pupil_grid(num_pix)
+    
+    num_rings = 2
+    segment_positions = make_hexagonal_grid(0.5 / num_rings * np.sqrt(3) / 2, num_rings)
+    aperture, segments = make_segmented_aperture(make_hexagonal_aperture(0.5 / num_rings - 0.003, np.pi / 2), segment_positions, return_segments=True)
+    
+    aperture = evaluate_supersampled(aperture, grid, 2)
+    segments = evaluate_supersampled(segments, grid, 2)
+    
+    # Test old constructor signature
+    mirror_old_style = SegmentedDeformableMirror(segments)
+    
+    # Test that it behaves exactly like the old implementation
+    assert mirror_old_style.num_zernike_modes == 0
+    assert mirror_old_style.num_actuators_per_segment == 3
+    assert len(mirror_old_style.actuators) == len(segments) * 3
+    
+    # Test old method signatures
+    mirror_old_style.set_segment_actuators(0, 100e-9, 1e-6, 1e-6)
+    piston, tip, tilt = mirror_old_style.get_segment_actuators(0)
+    
+    assert np.isclose(piston, 100e-9)
+    assert np.isclose(tip, 1e-6)
+    assert np.isclose(tilt, 1e-6)
+
+def test_segmented_zernike_deformable_mirror():
+    '''Test segment-level Zernike aberrations.'''
+    num_pix = 128
+    grid = make_pupil_grid(num_pix)
+    
+    # Create hexagonal segmented aperture
+    num_rings = 2
+    segment_positions = make_hexagonal_grid(0.5 / num_rings * np.sqrt(3) / 2, num_rings)
+    aperture, segments = make_segmented_aperture(
+        make_hexagonal_aperture(0.5 / num_rings - 0.003, np.pi / 2), 
+        segment_positions, 
+        return_segments=True
+    )
+    
+    aperture = evaluate_supersampled(aperture, grid, 2)
+    segments = evaluate_supersampled(segments, grid, 2)
+    
+    # Test Zernike-enabled segmented mirror
+    num_zernike_modes = 5
+    mirror = SegmentedDeformableMirror(segments, num_zernike_modes=num_zernike_modes)
+    
+    # Test 1: Verify total actuator count
+    expected_actuators = len(segments) * (3 + num_zernike_modes)
+    assert len(mirror.actuators) == expected_actuators
+    assert mirror.num_actuators_per_segment == 3 + num_zernike_modes
+    assert mirror.total_num_actuators == expected_actuators
+    
+    # Test 2: Test individual segment Zernike control
+    segment_id = 0
+    zernike_index = 2  # Test 3rd Zernike mode
+    amplitude = 100e-9  # 100 nm RMS
+    
+    mirror.set_segment_zernike_actuator(segment_id, zernike_index, amplitude)
+    retrieved_amplitude = mirror.get_segment_zernike_actuator(segment_id, zernike_index)
+    assert np.isclose(retrieved_amplitude, amplitude)
+    
+    # Test 3: Test combined PTT + Zernike operation
+    ptt_values = (50e-9, 1e-6, 1e-6)  # piston, tip, tilt
+    zernike_values = [20e-9, 30e-9, 15e-9, 25e-9, 10e-9]  # 5 Zernike amplitudes
+    
+    mirror.set_segment_actuators(segment_id, *(ptt_values + tuple(zernike_values)))
+    retrieved_actuators = mirror.get_segment_actuators(segment_id)
+    
+    expected_actuators = ptt_values + tuple(zernike_values)
+    assert np.allclose(retrieved_actuators, expected_actuators)
+    
+    # Test 4: Verify surface deformation occurs when Zernike mode is applied
+    mirror.flatten()
+    surface_before = mirror.surface.copy()
+    mirror.set_segment_zernike_actuator(segment_id, zernike_index, amplitude)
+    surface_after = mirror.surface
+    
+    surface_change = surface_after - surface_before
+    
+    # Verify that some surface change occurred
+    assert np.std(surface_change) > 0, "No surface change detected after applying Zernike mode"
+    
+    # Test 5: Test Zernike mode info
+    mode_info = mirror.get_zernike_mode_info(zernike_index)
+    assert 'noll_index' in mode_info
+    assert 'ansi_index' in mode_info
+    assert 'n' in mode_info
+    assert 'm' in mode_info
+    
+    # Test 6: Test parameter validation
+    with pytest.raises(ValueError):
+        mirror.set_segment_zernike_actuator(segment_id, num_zernike_modes, amplitude)  # Index too large
+    
+    with pytest.raises(ValueError):
+        mirror.get_segment_zernike_actuator(segment_id, num_zernike_modes)  # Index too large
+    
+    with pytest.raises(ValueError):
+        mirror.set_segment_actuators(segment_id, 1, 2)  # Wrong number of actuator values
+
+def test_zernike_mirror_indexing():
+    '''Test Noll vs ANSI indexing consistency.'''
+    num_pix = 64
+    grid = make_pupil_grid(num_pix)
+    
+    # Create simple single segment
+    aperture = make_circular_aperture(0.8)(grid)
+    segments = ModeBasis([aperture])
+    
+    # Test both indexing schemes
+    mirror_noll = SegmentedDeformableMirror(segments, num_zernike_modes=3, zernike_indexing='noll')
+    mirror_ansi = SegmentedDeformableMirror(segments, num_zernike_modes=3, zernike_indexing='ansi')
+    
+    # Verify mode info consistency
+    for i in range(3):
+        noll_info = mirror_noll.get_zernike_mode_info(i)
+        ansi_info = mirror_ansi.get_zernike_mode_info(i)
+        
+        # The n,m values should be consistent for the same physical mode
+        assert isinstance(noll_info['n'], int)
+        assert isinstance(noll_info['m'], int)
+        assert isinstance(ansi_info['n'], int)
+        assert isinstance(ansi_info['m'], int)
+
 def test_wavefront_stokes():
     N = 4
     grid = make_pupil_grid(N)

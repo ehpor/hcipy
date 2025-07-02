@@ -375,12 +375,17 @@ class FourierShear:
 class FourierRotation:
     '''An image rotation operator implemented in the Fourier domain.
 
+    This operator is implemented using three consecutive shearing operations.
+    For rotations larger than 45 degrees, the individual shears do not
+    work anymore. For those larger rotations, we instead use multiple smaller
+    rotations.
+
     Parameters
     ----------
     input_grid : Grid
         The grid that is expected for the input field.
     angle : scalar
-        The rotation angle.
+        The rotation angle in radians.
 
     Raises
     ------
@@ -404,10 +409,25 @@ class FourierRotation:
 
     @angle.setter
     def angle(self, angle):
-        self._shear_x.shear = np.tan(angle / 2)
-        self._shear_y.shear = -np.sin(angle)
+        self._angle = (angle + np.pi) % (2 * np.pi) - np.pi
 
-        self._angle = angle
+        if self.angle == 0:
+            self.num_rotations = 0
+            return
+
+        max_angle = np.deg2rad(45)
+        self.num_rotations = int(np.ceil(abs(self.angle) / max_angle))
+        small_angle = self.angle / self.num_rotations
+
+        self._shear_x.shear = np.tan(small_angle / 2)
+        self._shear_y.shear = -np.sin(small_angle)
+
+    def _propagate(self, field, adjoint):
+        f1 = self._shear_x._operation(field, adjoint)
+        f2 = self._shear_y._operation(f1, adjoint)
+        f3 = self._shear_x._operation(f2, adjoint)
+
+        return f3
 
     def forward(self, field):
         '''Return the forward rotation of the input field.
@@ -440,8 +460,11 @@ class FourierRotation:
         return self._operation(field, adjoint=True)
 
     def _operation(self, field, adjoint):
-        f1 = self._shear_x._operation(field, adjoint)
-        f2 = self._shear_y._operation(f1, adjoint)
-        f3 = self._shear_x._operation(f2, adjoint)
+        if self.num_rotations == 0:
+            return field
 
-        return f3
+        f = field
+        for _ in range(self.num_rotations):
+            f = self._propagate(f, adjoint)
+
+        return f

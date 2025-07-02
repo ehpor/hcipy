@@ -3,6 +3,7 @@ import scipy.sparse
 
 from ..mode_basis import ModeBasis, make_hexike_basis
 from .deformable_mirror import DeformableMirror
+from ..interpolation import make_linear_interpolator
 
 class SegmentedDeformableMirror(DeformableMirror):
     '''A segmented deformable mirror with piston, tip, tilt, and optional Hexike control.
@@ -204,6 +205,10 @@ class SegmentedDeformableMirror(DeformableMirror):
 
         # Process each segment that has aberrations
         for seg_id, mode_dict in segment_zernike_dict.items():
+            
+            # Skip empty mode dictionaries
+            if not mode_dict:
+                continue
 
             if seg_id >= len(self.segments):
                 # Warn for non-existent segments

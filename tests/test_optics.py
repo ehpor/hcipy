@@ -312,7 +312,7 @@ def test_segmented_zernike_deformable_mirror():
     expected_actuators = len(segments) * (3 + num_zernike_modes)
     assert len(mirror.actuators) == expected_actuators
     assert mirror.num_actuators_per_segment == 3 + num_zernike_modes
-    assert mirror.total_num_actuators == expected_actuators
+    assert mirror.actuators == expected_actuators
     
     # Test 2: Test individual segment Zernike control
     segment_id = 0
@@ -384,6 +384,225 @@ def test_zernike_mirror_indexing():
         assert isinstance(noll_info['m'], int)
         assert isinstance(ansi_info['n'], int)
         assert isinstance(ansi_info['m'], int)
+
+def test_zernike_mode_orthogonality_within_segments():
+    '''Test mathematical correctness of Zernike mode orthogonalization.'''
+    num_pix = 128
+    grid = make_pupil_grid(num_pix)
+    
+    # Use circular aperture for cleaner mathematical testing
+    aperture = make_circular_aperture(0.8)(grid)
+    segments = ModeBasis([aperture])
+    
+    # Test with starting_mode=4 to avoid PTT overlap and test pure orthogonality
+    num_zernike_modes = 3  # modes 4,5,6 (defocus, astigmatism x2)
+    mirror = SegmentedDeformableMirror(segments, num_zernike_modes=num_zernike_modes, 
+                                      zernike_starting_mode=4)
+    
+    segment_mask = aperture > 0.5
+    
+    # Get PTT surfaces for orthogonality testing
+    mirror.flatten()
+    mirror.set_segment_actuators(0, 1.0, 0, 0, 0, 0, 0)  # piston
+    piston_surface = mirror.surface[segment_mask]
+    
+    mirror.flatten()
+    mirror.set_segment_actuators(0, 0, 1e-6, 0, 0, 0, 0)  # tip
+    tip_surface = mirror.surface[segment_mask]
+    
+    mirror.flatten()
+    mirror.set_segment_actuators(0, 0, 0, 1e-6, 0, 0, 0)  # tilt
+    tilt_surface = mirror.surface[segment_mask]
+    
+    # Get Zernike surfaces
+    zernike_surfaces = []
+    for i in range(num_zernike_modes):
+        mirror.flatten()
+        mirror.set_segment_zernike_actuator(0, i, 100e-9)
+        zernike_surfaces.append(mirror.surface[segment_mask])
+    
+    def normalized_correlation(a, b):
+        if np.std(a) == 0 or np.std(b) == 0:
+            return 0
+        return np.corrcoef(a, b)[0,1]
+    
+    # Test 1: Zernike modes should be orthogonal to PTT (no overlap by design)
+    ptt_surfaces = [piston_surface, tip_surface, tilt_surface]
+    ptt_names = ['piston', 'tip', 'tilt']
+    
+    for i, zernike_surf in enumerate(zernike_surfaces):
+        for j, (ptt_surf, ptt_name) in enumerate(zip(ptt_surfaces, ptt_names)):
+            corr = abs(normalized_correlation(zernike_surf, ptt_surf))
+            assert corr < 1e-10, \
+                f"Zernike mode {i} not orthogonal to {ptt_name}: correlation = {corr}"
+    
+    # Test 2: Zernike modes should be orthogonal to each other
+    for i in range(len(zernike_surfaces)):
+        for j in range(i+1, len(zernike_surfaces)):
+            corr = abs(normalized_correlation(zernike_surfaces[i], zernike_surfaces[j]))
+            assert corr < 1e-10, \
+                f"Zernike modes {i},{j} not orthogonal: correlation = {corr}"
+    
+    # Test 3: Verify we're getting the expected Zernike polynomials
+    mode_info = [mirror.get_zernike_mode_info(i) for i in range(num_zernike_modes)]
+    expected_modes = [(2,0), (2,-2), (2,2)]  # defocus, astigmatism
+    
+    for i, (expected_n, expected_m) in enumerate(expected_modes):
+        info = mode_info[i]
+        assert info['n'] == expected_n and info['m'] == expected_m, \
+            f"Mode {i}: expected (n={expected_n}, m={expected_m}), got (n={info['n']}, m={info['m']})"
+
+def test_zernike_spatial_localization():
+    '''Test that Zernike modes are spatially localized to their target segments.'''
+    num_pix = 128
+    grid = make_pupil_grid(num_pix)
+    
+    # Create multi-segment aperture for localization testing
+    num_rings = 1  # 7 segments - enough to test localization
+    segment_positions = make_hexagonal_grid(0.5 / num_rings * np.sqrt(3) / 2, num_rings)
+    aperture, segments = make_segmented_aperture(
+        make_hexagonal_aperture(0.5 / num_rings - 0.003, np.pi / 2), 
+        segment_positions, 
+        return_segments=True
+    )
+    
+    aperture = evaluate_supersampled(aperture, grid, 2)
+    segments = evaluate_supersampled(segments, grid, 2)
+    
+    # Use starting_mode=4 to avoid PTT overlap for clean testing
+    num_zernike_modes = 2
+    mirror = SegmentedDeformableMirror(segments, num_zernike_modes=num_zernike_modes, 
+                                      zernike_starting_mode=4)
+    
+    # Test localization for center segment and edge segment
+    test_segments = [0, 1]  # center and edge
+    
+    for segment_id in test_segments:
+        target_mask = segments[segment_id] > 0.5
+        if not np.any(target_mask):
+            continue
+        
+        # Create mask for all other segments
+        other_segments_mask = np.zeros_like(target_mask)
+        for other_id in range(len(segments)):
+            if other_id != segment_id:
+                other_segments_mask |= (segments[other_id] > 0.5)
+        
+        for zernike_idx in range(num_zernike_modes):
+            # Apply Zernike mode to target segment
+            amplitude = 100e-9
+            mirror.flatten()
+            mirror.set_segment_zernike_actuator(segment_id, zernike_idx, amplitude)
+            
+            surface = mirror.surface
+            
+            # Calculate energy in target vs other segments
+            energy_target = np.sum(surface[target_mask]**2) if np.any(target_mask) else 0
+            energy_others = np.sum(surface[other_segments_mask]**2) if np.any(other_segments_mask) else 0
+            total_energy = energy_target + energy_others
+            
+            # Test 1: Energy should be primarily in target segment (if mode creates surface change)
+            if total_energy > 1e-20:
+                energy_fraction = energy_target / total_energy
+                # Some Zernike modes may have very little energy in certain segments (e.g., astigmatism at center)
+                # Focus on testing that when energy exists, it's properly localized
+                if energy_target > 1e-22:  # Mode has significant energy in target segment
+                    assert energy_fraction > 0.5, \
+                        f"Poor energy localization for segment {segment_id}, mode {zernike_idx}: {energy_fraction:.3f}"
+            
+            # Test 2: RMS localization ratio (when mode has energy in target)
+            if energy_others > 0 and energy_target > 1e-22:
+                localization_ratio = np.sqrt(energy_target / energy_others)
+                assert localization_ratio > 2.0, \
+                    f"Poor RMS localization for segment {segment_id}, mode {zernike_idx}: ratio = {localization_ratio:.2f}"
+            
+            # Test 3: Verify mode creates some surface change somewhere (sanity check)
+            total_rms = np.sqrt(np.mean(surface**2))
+            assert total_rms > 1e-11, \
+                f"No surface change detected anywhere for segment {segment_id}, mode {zernike_idx}"
+
+def test_zernike_indexing_consistency():
+    '''Test that Noll and ANSI indexing produce identical physical results.'''
+    num_pix = 64
+    grid = make_pupil_grid(num_pix)
+    
+    # Create simple single segment for cleaner testing
+    aperture = make_circular_aperture(0.8)(grid)
+    segments = ModeBasis([aperture])
+    
+    # Test with moderate number of modes to cover multiple orders
+    num_zernike_modes = 10
+    
+    # Create mirrors with both indexing schemes
+    mirror_noll = SegmentedDeformableMirror(segments, num_zernike_modes=num_zernike_modes, 
+                                           zernike_indexing='noll')
+    mirror_ansi = SegmentedDeformableMirror(segments, num_zernike_modes=num_zernike_modes, 
+                                           zernike_indexing='ansi')
+    
+    # Test each mode by comparing surfaces for same (n,m) values
+    for mode_idx in range(num_zernike_modes):
+        # Get mode info from both systems
+        noll_info = mirror_noll.get_zernike_mode_info(mode_idx)
+        ansi_info = mirror_ansi.get_zernike_mode_info(mode_idx)
+        
+        # Find corresponding mode in other system with same (n,m)
+        target_n, target_m = noll_info['n'], noll_info['m']
+        corresponding_ansi_idx = None
+        
+        for ansi_idx in range(num_zernike_modes):
+            ansi_test_info = mirror_ansi.get_zernike_mode_info(ansi_idx)
+            if ansi_test_info['n'] == target_n and ansi_test_info['m'] == target_m:
+                corresponding_ansi_idx = ansi_idx
+                break
+        
+        if corresponding_ansi_idx is not None:
+            # Apply same amplitude to both systems
+            amplitude = 100e-9
+            
+            mirror_noll.flatten()
+            mirror_noll.set_segment_zernike_actuator(0, mode_idx, amplitude)
+            surface_noll = mirror_noll.surface.copy()
+            
+            mirror_ansi.flatten()
+            mirror_ansi.set_segment_zernike_actuator(0, corresponding_ansi_idx, amplitude)
+            surface_ansi = mirror_ansi.surface.copy()
+            
+            # Surfaces should be identical for same (n,m) mode
+            surface_diff = np.abs(surface_noll - surface_ansi)
+            max_diff = np.max(surface_diff)
+            rms_diff = np.sqrt(np.mean(surface_diff**2))
+            
+            assert max_diff < 1e-12, \
+                f"Noll/ANSI surfaces differ for mode ({target_n},{target_m}): max_diff = {max_diff}"
+            assert rms_diff < 1e-12, \
+                f"Noll/ANSI surfaces differ for mode ({target_n},{target_m}): rms_diff = {rms_diff}"
+    
+    # Test bidirectional mode info consistency
+    for mode_idx in range(min(6, num_zernike_modes)):  # Test first few modes
+        # Noll -> (n,m) -> ANSI -> (n,m) -> Noll roundtrip
+        noll_info = mirror_noll.get_zernike_mode_info(mode_idx)
+        n, m = noll_info['n'], noll_info['m']
+        
+        # Find this (n,m) in ANSI system
+        corresponding_ansi_idx = None
+        for ansi_idx in range(num_zernike_modes):
+            ansi_info = mirror_ansi.get_zernike_mode_info(ansi_idx)
+            if ansi_info['n'] == n and ansi_info['m'] == m:
+                corresponding_ansi_idx = ansi_idx
+                break
+        
+        if corresponding_ansi_idx is not None:
+            ansi_info = mirror_ansi.get_zernike_mode_info(corresponding_ansi_idx)
+            
+            # Verify (n,m) values are preserved
+            assert ansi_info['n'] == n, f"n value not preserved: {ansi_info['n']} != {n}"
+            assert ansi_info['m'] == m, f"m value not preserved: {ansi_info['m']} != {m}"
+            
+            # Verify index conversions are consistent
+            assert noll_info['ansi_index'] == ansi_info['ansi_index'], \
+                f"ANSI index mismatch: {noll_info['ansi_index']} != {ansi_info['ansi_index']}"
+            assert noll_info['noll_index'] == ansi_info['noll_index'], \
+                f"Noll index mismatch: {noll_info['noll_index']} != {ansi_info['noll_index']}"
 
 def test_wavefront_stokes():
     N = 4

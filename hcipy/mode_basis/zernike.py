@@ -380,12 +380,18 @@ def make_hexike_basis(num_modes, circum_diameter, grid, hexagon_angle=0):
     Q, R = np.linalg.qr(zernike_basis.transformation_matrix)
 
     # Correct for negative sign of components of the Q matrix.
-    hexike_basis = ModeBasis(Q / np.sign(np.diag(R)), grid)
+    # Replace zero entries in diag(R) with 1 to avoid division by zero.
+    diag_sign = np.sign(np.diag(R))
+    diag_sign[diag_sign == 0] = 1
+    hexike_basis = ModeBasis(Q / diag_sign, grid)
 
-    # Renormalize the resulting functions using the area of a hexagon and the grid weights.
+    # Renormalize using the hexagon area; skip zero-weight pixels.
+    # Pixels with zero weight will have zero normalization, effectively
+    # excluding them from the mode basis (which is the desired behavior).
     area_hexagon = 3 * np.sqrt(3) / 8 * circum_diameter**2
-    # Reshape sqrt_weights for proper broadcasting
-    normalization_factor = (np.sqrt(area_hexagon) / sqrt_weights)[:, np.newaxis]
+    normalization_factor = np.zeros_like(sqrt_weights)
+    non_zero = sqrt_weights != 0
+    normalization_factor[non_zero] = np.sqrt(area_hexagon) / sqrt_weights[non_zero]
+    normalization_factor = normalization_factor[:, np.newaxis]
     hexike_basis.transformation_matrix *= normalization_factor
-
     return hexike_basis

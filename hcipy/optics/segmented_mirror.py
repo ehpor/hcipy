@@ -521,30 +521,47 @@ class SegmentedDeformableMirror(DeformableMirror):
 
         # Process each segment that has aberrations
         for seg_id, mode_dict in segment_zernike_dict.items():
-            if seg_id < len(self.segments):
-                # Get the center of this segment
-                center = self.segment_centers.points[seg_id]
+            for seg_id, mode_dict in segment_zernike_dict.items():
+                if seg_id >= len(self.segments):
+                    # Warn for non-existent segments
+                    import warnings
+                    warnings.warn(f"Segment {seg_id} does not exist. "
+                                f"Mirror has {len(self.segments)} segments. Skipping.",
+                                UserWarning)
+                    continue
+                
+                if seg_id >= len(self.segment_centers.points):
+                    # Your existing warning
+                    import warnings
+                    warnings.warn(f"Segment {seg_id} has no center information in segment_centers. "
+                                f"Available centers: {len(self.segment_centers.points)}, "
+                                f"requested segment: {seg_id}. Skipping this segment.",
+                                UserWarning)
+                    continue
+            
+            # Get the center of this segment
+            center = self.segment_centers.points[seg_id]
 
-                # Find the maximum mode needed for this segment
-                max_mode_for_segment = max(mode_dict.keys())
+            # Find the maximum mode needed for this segment
+            max_mode_for_segment = max(mode_dict.keys())
 
-                # Create hexike basis for this segment only (on-demand generation)
-                angle = self.hexagon_angle  # Use configured angle
-                from ..mode_basis import make_hexike_basis
-                basis = make_hexike_basis(int(max_mode_for_segment + 1), 
-                                        self.segment_point_to_point,
-                                        self.pupil_grid.shifted(-center), angle)
+            # Create hexike basis for this segment only (on-demand generation)
+            angle = self.hexagon_angle  # Use configured angle
+            from ..mode_basis import make_hexike_basis
+            basis = make_hexike_basis(int(max_mode_for_segment + 1), 
+                                    self.segment_point_to_point,
+                                    self.pupil_grid.shifted(-center), angle)
 
-                # Apply each requested mode
-                for mode, coeff_nm in mode_dict.items():
-                    if mode < len(basis):
-                        # Convert nm to phase in radians
-                        phase_rad = 2 * np.pi * (coeff_nm * 1e-9) / wavelength
-                        # Get the mode as a Field
-                        mode_field = basis[mode]
-                        # Apply segment mask to ensure mode only affects this segment
-                        segment_mask = self.segments[seg_id]
-                        phase_screen += phase_rad * mode_field * segment_mask
+            # Apply each requested mode
+            for mode, coeff_nm in mode_dict.items():
+                if mode < len(basis):
+                    # Convert nm to phase in radians
+                    phase_rad = 2 * np.pi * (coeff_nm * 1e-9) / wavelength
+                    # Get the mode as a Field
+                    mode_field = basis[mode]
+                    # Apply segment mask to ensure mode only affects this segment
+                    segment_mask = self.segments[seg_id]
+                    phase_screen += phase_rad * mode_field * segment_mask
 
         # Store the phase screen for automatic application
         self._hexike_phase_screen = phase_screen

@@ -4,6 +4,35 @@ from matplotlib.transforms import Transform
 
 from ..field import Field
 
+def _interp(x, xp, fp):
+    '''Linear interpolation with linear extrapolation beyond the edges.
+
+    Parameters
+    ----------
+    x : ndarray
+        The points to interpolate at.
+    xp : ndarray
+        The points at which `fp` is defined.
+    fp : ndarray
+        The values of the function at `xp`.
+
+    Returns
+    -------
+    ndarray
+        The interpolated values.'''
+    # Linear interpolation
+    interp_vals = np.interp(x, xp, fp)
+
+    # Extrapolate on the left
+    left_mask = x < xp[0]
+    interp_vals[left_mask] = fp[0] + (x[left_mask] - xp[0]) * (fp[1] - fp[0]) / (xp[1] - xp[0])
+
+    # Extrapolate on the right
+    right_mask = x > xp[-1]
+    interp_vals[right_mask] = fp[-1] + (x[right_mask] - xp[-1]) * (fp[-1] - fp[-2]) / (xp[-1] - xp[-2])
+
+    return interp_vals
+
 class SeparatedGridTransform(Transform):
     '''A transform for mapping between array indices and Cartesian coordinates.
 
@@ -35,8 +64,8 @@ class SeparatedGridTransform(Transform):
 
     def transform_non_affine(self, coords):
         # Docstring inherited from parent.
-        x = np.interp(coords[:, 0], self._ix, self._x)
-        y = np.interp(coords[:, 1], self._iy, self._y)
+        x = _interp(coords[:, 0], self._ix, self._x)
+        y = _interp(coords[:, 1], self._iy, self._y)
 
         return np.column_stack((x, y))
 
@@ -75,8 +104,8 @@ class InverseSeparatedGridTransform(Transform):
 
     def transform_non_affine(self, coords):
         # Docstring inherited from parent.
-        x = np.interp(coords[:, 0], self._x, self._ix)
-        y = np.interp(coords[:, 1], self._y, self._iy)
+        x = _interp(coords[:, 0], self._x, self._ix)
+        y = _interp(coords[:, 1], self._y, self._iy)
 
         return np.column_stack((x, y))
 

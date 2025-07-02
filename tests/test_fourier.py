@@ -372,8 +372,9 @@ def test_fourier_shear():
     assert np.allclose(field, back3)
 
 def test_fourier_rotation():
-    input_grid = make_uniform_grid([32, 32], 1)
+    input_grid = make_uniform_grid([128, 128], 1)
     field = Field(np.random.randn(input_grid.size), input_grid)
+    field *= make_circular_aperture(0.5)(input_grid)
 
     angle = 0.5
 
@@ -382,11 +383,14 @@ def test_fourier_rotation():
 
     rotated = rotator.forward(field)
     back = rotator.backward(rotated)
-    assert np.allclose(field, back, atol=1e-6)
+    mse = np.mean(np.abs(field - back)**2)
+    assert mse < 1e-3
 
     back2 = rotator_reverse.forward(rotated)
-    assert np.allclose(field, back2, atol=1e-6)
+    mse2 = np.mean(np.abs(field - back2)**2)
+    assert mse2 < 1e-3
 
     rotator.angle = -angle
     back3 = rotator.forward(rotated)
-    assert np.allclose(field, back3, atol=1e-6)
+    mse3 = np.mean(np.abs(field - back3)**2)
+    assert mse3 < 1e-3

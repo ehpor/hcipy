@@ -1,38 +1,26 @@
 import numpy as np
 import scipy.sparse
 
-from ..mode_basis import ModeBasis, make_zernike_basis, make_hexike_basis, noll_to_zernike, ansi_to_zernike, zernike_to_noll, zernike_to_ansi
+from ..mode_basis import ModeBasis, make_hexike_basis
 from .deformable_mirror import DeformableMirror
 
 class SegmentedDeformableMirror(DeformableMirror):
-    '''A segmented deformable mirror with piston, tip, tilt, and optional Zernike/Hexike control.
+    '''A segmented deformable mirror with piston, tip, tilt, and optional Hexike control.
 
     This deformable mirror class can simulate devices such as those
     made by IrisAO and BMC. All segments are controlled in piston,
     tip and tilt by default. Higher-order aberrations can be
-    optionally enabled for each segment using either circular Zernike 
-    modes or hexagonal Hexike modes.
+    enabled for each segment using hexagonal Hexike modes via a
+    phase screen approach.
 
     Parameters
     ----------
     segments : ModeBasis
         A mode basis containing all segment apertures.
-    num_zernike_modes : int, optional
-        Number of modes per segment beyond piston/tip/tilt. Default is 0.
-    zernike_starting_mode : int, optional
-        Starting Zernike mode index. Default is 1 (includes all Zernike modes).
-        Only used when segment_mode_type='circular'.
-    zernike_indexing : str, optional
-        Indexing scheme: 'noll' or 'ansi'. Default is 'noll'.
-        Only used when segment_mode_type='circular'.
     segment_diameter : float, optional
         Physical diameter of segments in meters. Represents point-to-point length. If None, estimated from segment apertures.
-    segment_mode_type : str, optional
-        Type of modes to use: 'circular' for Zernike modes or 'hexagonal' for Hexike modes.
-        Default is 'circular'.
     hexagon_angle : float, optional
         Rotation angle of hexagons in radians. Default is 0.
-        Only used when segment_mode_type='hexagonal'.
     segment_centers : Grid, optional
         Grid containing center positions of each segment. Required for hexike phase screen approach.
     pupil_grid : Grid, optional
@@ -44,7 +32,6 @@ class SegmentedDeformableMirror(DeformableMirror):
     - segment_id + 0*N: Piston for segment segment_id
     - segment_id + 1*N: Tip for segment segment_id  
     - segment_id + 2*N: Tilt for segment segment_id
-    - segment_id + (2+i)*N: Zernike mode i for segment segment_id (if enabled)
     
     where N is the number of segments.
 
@@ -54,26 +41,16 @@ class SegmentedDeformableMirror(DeformableMirror):
     >>> mirror = SegmentedDeformableMirror(segments)
     >>> mirror.set_segment_actuators(0, 100e-9, 1e-6, 1e-6)
     
-    >>> # PTT + Zernike mirror
-    >>> mirror = SegmentedDeformableMirror(segments, num_zernike_modes=10)
-    >>> mirror.set_segment_zernike_actuator(segment_id=0, zernike_index=5, amplitude=50e-9)
-    
     >>> # PTT + Hexike mirror (phase screen approach)
-    >>> mirror = SegmentedDeformableMirror(segments, segment_mode_type='hexagonal',
+    >>> mirror = SegmentedDeformableMirror(segments,
     ...                                   segment_centers=centers, pupil_grid=grid)
     >>> hexike_coeffs = {0: {4: 100}}  # segment 0, mode 4, 100nm amplitude
     >>> phase_screen = mirror.apply_segment_hexike_aberrations(hexike_coeffs, wavelength)
     '''
-    def __init__(self, segments, num_zernike_modes=0, zernike_starting_mode=1, 
-                 zernike_indexing='noll', segment_diameter=None,
-                 segment_mode_type='circular', hexagon_angle=0,
+    def __init__(self, segments, segment_diameter=None, hexagon_angle=0,
                  segment_centers=None, pupil_grid=None):
-        # Store Zernike configuration
-        self.num_zernike_modes = num_zernike_modes
-        self.zernike_starting_mode = zernike_starting_mode
-        self.zernike_indexing = zernike_indexing
+        # Store configuration
         self.segment_diameter = segment_diameter
-        self.segment_mode_type = segment_mode_type
         self.hexagon_angle = hexagon_angle
         
         # Store geometry for hexike phase screen approach
@@ -85,19 +62,8 @@ class SegmentedDeformableMirror(DeformableMirror):
         self._hexike_phase_screen = None
         self._hexike_coefficients = {}  # Store hexike coefficients: {segment_id: {mode: amplitude}}
         
-        # Validate parameters
-        if num_zernike_modes < 0:
-            raise ValueError("num_zernike_modes must be non-negative")
-        if zernike_indexing not in ['noll', 'ansi']:
-            raise ValueError("zernike_indexing must be 'noll' or 'ansi'")
-        if zernike_starting_mode < 1:
-            raise ValueError("zernike_starting_mode must be >= 1")
-        if segment_mode_type not in ['circular', 'hexagonal']:
-            raise ValueError("segment_mode_type must be 'circular' or 'hexagonal'")
-        
-        # Initialize actuators for PTT + Zernike modes
-        actuators_per_segment = 3 + num_zernike_modes
-        self.actuators = np.zeros(len(segments) * actuators_per_segment)
+        # Initialize actuators for PTT only
+        self.actuators = np.zeros(len(segments) * 3)
         self.input_grid = segments.grid
         
         # Set segments (this will trigger influence function generation)
@@ -123,15 +89,8 @@ class SegmentedDeformableMirror(DeformableMirror):
             raise ValueError(f"Segment {segment_id} appears to be empty")
         
         # Get coordinates where segment is non-zero
-        if segment_mask.ndim == 1:
-            # Field is 1D, convert to physical coordinates
-            x = self.input_grid.x[segment_mask]
-            y = self.input_grid.y[segment_mask]
-        else:
-            # Field is 2D, use np.where
-            y_coords, x_coords = np.where(segment_mask)
-            x = x_coords * abs(self.input_grid.delta[0]) + self.input_grid.zero[0]
-            y = y_coords * abs(self.input_grid.delta[1]) + self.input_grid.zero[1]
+        x = self.input_grid.x[segment_mask]
+        y = self.input_grid.y[segment_mask]
         
         # Calculate extents
         x_extent = x.max() - x.min()
@@ -210,72 +169,6 @@ class SegmentedDeformableMirror(DeformableMirror):
         
         return mode
 
-    def _generate_segment_zernike_modes(self):
-        '''Generate Zernike modes for all segments.
-        
-        Returns
-        -------
-        ModeBasis
-            A mode basis containing all segment-level Zernike modes.
-        '''
-        if self.num_zernike_modes == 0:
-            return ModeBasis([])
-        
-        all_zernike_modes = []
-        
-        for segment_id in range(len(self.segments)):
-            segment = self.segments[segment_id]
-            segment_center = self._get_segment_center(segment_id)
-            
-            # Use provided diameter or estimate from segment
-            if self.segment_diameter is not None:
-                diameter = self.segment_diameter
-            else:
-                diameter = self._estimate_segment_diameter(segment_id)
-            
-            # Create segment-local grid centered on this segment
-            segment_grid = self.input_grid.shifted(-segment_center)
-            
-            # Generate basis for this segment (Zernike or Hexike)
-            if self.segment_mode_type == 'hexagonal':
-                basis = make_hexike_basis(
-                    self.num_zernike_modes,
-                    diameter,
-                    segment_grid,
-                    hexagon_angle=self.hexagon_angle
-                )
-            else:  # circular
-                basis = make_zernike_basis(
-                    self.num_zernike_modes,
-                    diameter,
-                    segment_grid,
-                    starting_mode=self.zernike_starting_mode,
-                    ansi=(self.zernike_indexing == 'ansi'),
-                    radial_cutoff=True
-                )
-            
-            # Apply segment mask and conditionally orthogonalize against PTT
-            for mode in basis:
-                # Mask mode to segment
-                masked_mode = mode * segment
-                
-                # Apply RMS normalization for hexagonal modes
-                if self.segment_mode_type == 'hexagonal':
-                    segment_mask = segment > 0.5
-                    if np.any(segment_mask):
-                        # Calculate RMS over the segment
-                        mode_values = masked_mode[segment_mask]
-                        rms = np.sqrt(np.mean(mode_values**2))
-                        if rms > 0:
-                            masked_mode = masked_mode / rms
-
-                # Convert to sparse matrix and eliminate zeros
-                sparse_mode = scipy.sparse.csr_matrix(masked_mode)
-                sparse_mode.eliminate_zeros()
-                
-                all_zernike_modes.append(sparse_mode)
-        
-        return ModeBasis(all_zernike_modes)
 
     def _generate_ptt_modes(self):
         '''Generate piston, tip, and tilt modes.
@@ -327,13 +220,8 @@ class SegmentedDeformableMirror(DeformableMirror):
         # Generate PTT modes
         tip, tilt = self._generate_ptt_modes()
 
-        # Combine segments, tip, tilt, and optionally Zernike modes
+        # Combine segments, tip, and tilt modes
         self.influence_functions = segments + tip + tilt
-        
-        # Add Zernike modes if requested
-        if self.num_zernike_modes > 0:
-            zernike_modes = self._generate_segment_zernike_modes()
-            self.influence_functions = self.influence_functions + zernike_modes
 
     def get_segment_actuators(self, segment_id):
         '''Get all actuators for an individual segment of the DM.
@@ -346,137 +234,38 @@ class SegmentedDeformableMirror(DeformableMirror):
         Returns
         -------
         tuple
-            If num_zernike_modes == 0: (piston, tip, tilt)
-            If num_zernike_modes > 0: (piston, tip, tilt, z4, z5, z6, ...)
-            Units: piston in meters, tip/tilt in radians, Zernike in meters RMS.
+            (piston, tip, tilt) - Units: piston in meters, tip/tilt in radians.
         '''
-        actuators = []
         num_segments = len(self._segments)
         
-        # PTT actuators
+        # PTT actuators only
         piston = self.actuators[segment_id]
         tip = self.actuators[segment_id + num_segments]  
         tilt = self.actuators[segment_id + 2 * num_segments]
-        actuators.extend([piston, tip, tilt])
         
-        # Zernike actuators
-        for zernike_idx in range(self.num_zernike_modes):
-            actuator_offset = (3 + zernike_idx) * num_segments
-            zernike_value = self.actuators[segment_id + actuator_offset]
-            actuators.append(zernike_value)
-        
-        return tuple(actuators)
+        return (piston, tip, tilt)
 
-    def set_segment_actuators(self, segment_id, *actuator_values):
+    def set_segment_actuators(self, segment_id, piston, tip, tilt):
         '''Set actuators for an individual segment of the DM.
 
         Parameters
         ----------  
         segment_id : int
             The index of the segment for which to set the actuators.
-        *actuator_values : float
-            Actuator values. Must match expected number:
-            - 3 values for PTT-only: (piston, tip, tilt)
-            - 3+N values for PTT+Zernike: (piston, tip, tilt, z4, z5, ...)
-            Units: piston in meters, tip/tilt in radians, Zernike in meters RMS.
+        piston : float
+            Piston actuator value in meters.
+        tip : float
+            Tip actuator value in radians.
+        tilt : float
+            Tilt actuator value in radians.
         '''
-        expected_actuators = 3 + self.num_zernike_modes
-        
-        if len(actuator_values) != expected_actuators:
-            raise ValueError(f"Expected {expected_actuators} actuator values, got {len(actuator_values)}")
-        
         num_segments = len(self._segments)
         
         # Set PTT actuators
-        self.actuators[segment_id] = actuator_values[0]  # piston
-        self.actuators[segment_id + num_segments] = actuator_values[1]  # tip
-        self.actuators[segment_id + 2 * num_segments] = actuator_values[2]  # tilt
-        
-        # Set Zernike actuators
-        for zernike_idx in range(self.num_zernike_modes):
-            actuator_offset = (3 + zernike_idx) * num_segments
-            self.actuators[segment_id + actuator_offset] = actuator_values[3 + zernike_idx]
+        self.actuators[segment_id] = piston
+        self.actuators[segment_id + num_segments] = tip
+        self.actuators[segment_id + 2 * num_segments] = tilt
 
-    def set_segment_zernike_actuator(self, segment_id, zernike_index, amplitude):
-        '''Set a specific Zernike actuator for a segment.
-        
-        Parameters
-        ----------
-        segment_id : int
-            The index of the segment.
-        zernike_index : int  
-            The index of the Zernike mode (0-based relative to starting mode).
-        amplitude : float
-            The amplitude in meters RMS.
-        '''
-        if zernike_index >= self.num_zernike_modes:
-            raise ValueError(f"Zernike index {zernike_index} >= num_zernike_modes {self.num_zernike_modes}")
-        
-        actuator_offset = (3 + zernike_index) * len(self._segments)
-        self.actuators[segment_id + actuator_offset] = amplitude
-
-    def get_segment_zernike_actuator(self, segment_id, zernike_index):
-        '''Get a specific Zernike actuator value for a segment.
-        
-        Parameters
-        ----------
-        segment_id : int
-            The index of the segment.
-        zernike_index : int
-            The index of the Zernike mode (0-based relative to starting mode).
-            
-        Returns
-        -------
-        float
-            The amplitude in meters RMS.
-        '''
-        if zernike_index >= self.num_zernike_modes:
-            raise ValueError(f"Zernike index {zernike_index} >= num_zernike_modes {self.num_zernike_modes}")
-        
-        actuator_offset = (3 + zernike_index) * len(self._segments)
-        return self.actuators[segment_id + actuator_offset]
-
-    @property
-    def num_actuators_per_segment(self):
-        '''The number of actuators per segment (3 + num_zernike_modes).'''
-        return 3 + self.num_zernike_modes
-
-    @property  
-    def total_num_actuators(self):
-        '''The total number of actuators.'''
-        return len(self._segments) * self.num_actuators_per_segment
-
-    def get_zernike_mode_info(self, zernike_index):
-        '''Get information about a specific Zernike mode.
-        
-        Parameters
-        ----------
-        zernike_index : int
-            The index of the Zernike mode (0-based relative to starting mode).
-            
-        Returns
-        -------
-        dict
-            Dictionary containing 'noll_index', 'ansi_index', 'n', 'm' keys.
-        '''
-        if zernike_index >= self.num_zernike_modes:
-            raise ValueError(f"Zernike index {zernike_index} >= num_zernike_modes {self.num_zernike_modes}")
-        
-        if self.zernike_indexing == 'noll':
-            noll_index = self.zernike_starting_mode + zernike_index
-            n, m = noll_to_zernike(noll_index)
-            ansi_index = zernike_to_ansi(n, m)
-        else:  # ansi
-            ansi_index = self.zernike_starting_mode + zernike_index
-            n, m = ansi_to_zernike(ansi_index)
-            noll_index = zernike_to_noll(n, m)
-        
-        return {
-            'noll_index': noll_index,
-            'ansi_index': ansi_index,
-            'n': n,
-            'm': m
-        }
 
     def apply_segment_hexike_aberrations(self, segment_zernike_dict, wavelength):
         '''Apply hexike aberrations to individual segments using phase screen approach.

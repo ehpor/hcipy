@@ -370,3 +370,23 @@ def test_fourier_shear():
     shearer.shear = -shear
     back3 = shearer.forward(sheared)
     assert np.allclose(field, back3)
+
+def test_fourier_rotation():
+    input_grid = make_uniform_grid([32, 32], 1)
+    field = Field(np.random.randn(input_grid.size), input_grid)
+
+    angle = 0.5
+
+    rotator = FourierRotation(input_grid, angle)
+    rotator_reverse = FourierRotation(input_grid, -angle)
+
+    rotated = rotator.forward(field)
+    back = rotator.backward(rotated)
+    assert np.allclose(field, back, atol=1e-6)
+
+    back2 = rotator_reverse.forward(rotated)
+    assert np.allclose(field, back2, atol=1e-6)
+
+    rotator.angle = -angle
+    back3 = rotator.forward(rotated)
+    assert np.allclose(field, back3, atol=1e-6)

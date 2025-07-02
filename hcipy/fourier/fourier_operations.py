@@ -444,4 +444,4 @@ class FourierRotation:
         f2 = self._shear_y._operation(f1, adjoint)
         f3 = self._shear_x._operation(f2, adjoint)
 
-        return f1, f2, f3
+        return f3

@@ -20,6 +20,14 @@ class SeparatedGridTransform(Transform):
 
         self._grid = grid
 
+        x = grid.separated_coords[0]
+        self._ix = np.arange(len(x))
+        self._x = x
+
+        y = grid.separated_coords[1]
+        self._iy = np.arange(len(y))
+        self._y = y
+
     input_dims = 2
     output_dims = 2
     is_separable = True
@@ -27,8 +35,8 @@ class SeparatedGridTransform(Transform):
 
     def transform_non_affine(self, coords):
         # Docstring inherited from parent.
-        x = np.interp(coords[:, 0], np.arange(len(self._grid.separated_coords[0])), self._grid.separated_coords[0])
-        y = np.interp(coords[:, 1], np.arange(len(self._grid.separated_coords[1])), self._grid.separated_coords[1])
+        x = np.interp(coords[:, 0], self._ix, self._x)
+        y = np.interp(coords[:, 1], self._iy, self._y)
 
         return np.column_stack((x, y))
 
@@ -52,18 +60,28 @@ class InverseSeparatedGridTransform(Transform):
 
         self._grid = grid
 
+        x = grid.separated_coords[0]
+        self._ix = np.argsort(x)
+        self._x = x[self._ix]
+
+        y = grid.separated_coords[1]
+        self._iy = np.argsort(y)
+        self._y = y[self._iy]
+
     input_dims = 2
     output_dims = 2
     is_separable = True
     is_affine = False
 
     def transform_non_affine(self, coords):
-        x = np.interp(coords[:, 0], self._grid.separated_coords[0], np.arange(len(self._grid.separated_coords[0])))
-        y = np.interp(coords[:, 1], self._grid.separated_coords[1], np.arange(len(self._grid.separated_coords[1])))
+        # Docstring inherited from parent.
+        x = np.interp(coords[:, 0], self._x, self._ix)
+        y = np.interp(coords[:, 1], self._y, self._iy)
 
         return np.column_stack((x, y))
 
     def inverted(self):
+        # Docstring inherited from parent.
         return SeparatedGridTransform(self._grid)
 
 def imshow_field(
@@ -168,7 +186,7 @@ def imshow_field(
         extent = (min_x, max_x, min_y, max_y)
     elif grid.is_separated:
         transform = SeparatedGridTransform(grid)
-        extent = None
+        extent = (-0.5, grid.dims[0] - 0.5, -0.5, grid.dims[1] - 0.5)
     else:
         raise NotImplementedError('Irregular grids are not implemented.')
 

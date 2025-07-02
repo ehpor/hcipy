@@ -333,3 +333,59 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
         return modes
     else:
         return ModeBasis(modes, grid)
+
+def make_hexike_basis(num_modes, circum_diameter, grid, hexagon_angle=0):
+    '''Make a hexike basis.
+
+    This is based on [Mahajan2006]_. This function creates a Zernike mode basis, then
+    numerically orthogonalizes it using Gramm-Schmidt orthogonalization.
+
+    .. [Mahajan2006] Virendra N. Mahajan and Guang-ming Dai,
+        "Orthonormal polynomials for hexagonal pupils," Opt.
+        Lett. 31, 2462-2464 (2006)
+
+    Parameters
+    ----------
+    num_modes : int
+        The number of hexike modes to compute.
+    circum_diameter : float
+        The circumdiameter of the hexagonal aperture.
+    grid : Grid
+        The grid on which to compute the mode basis.
+    hexagon_angle : float, optional
+        The rotation angle of the hexagon in radians. Default is 0.
+
+    Returns
+    -------
+    ModeBasis
+        The evaluated mode basis of hexike polynomials.
+    '''
+    from ..aperture import make_hexagonal_aperture
+    from .mode_basis import ModeBasis
+    
+    zernike_basis = make_zernike_basis(int(num_modes), circum_diameter, grid)
+    # Create hexagonal aperture for this basis
+    hexagonal_aperture = make_hexagonal_aperture(circum_diameter, hexagon_angle)(grid)
+    sqrt_weights = np.sqrt(grid.weights)
+
+    if np.isscalar(sqrt_weights):
+        sqrt_weights = np.array([sqrt_weights])
+
+    # Un-normalize the zernike modes using the weights of the grid.
+    # Reshape to properly broadcast: (n_pixels,) -> (n_pixels, 1)
+    weights_factor = (hexagonal_aperture * sqrt_weights)[:, np.newaxis]
+    zernike_basis.transformation_matrix *= weights_factor
+
+    # Perform Gramm-Schmidt orthogonalization using a QR decomposition.
+    Q, R = np.linalg.qr(zernike_basis.transformation_matrix)
+
+    # Correct for negative sign of components of the Q matrix.
+    hexike_basis = ModeBasis(Q / np.sign(np.diag(R)), grid)
+
+    # Renormalize the resulting functions using the area of a hexagon and the grid weights.
+    area_hexagon = 3 * np.sqrt(3) / 8 * circum_diameter**2
+    # Reshape sqrt_weights for proper broadcasting
+    normalization_factor = (np.sqrt(area_hexagon) / sqrt_weights)[:, np.newaxis]
+    hexike_basis.transformation_matrix *= normalization_factor
+
+    return hexike_basis

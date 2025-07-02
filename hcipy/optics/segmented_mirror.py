@@ -1,29 +1,42 @@
 import numpy as np
 import scipy.sparse
 
-from ..mode_basis import ModeBasis, make_zernike_basis, noll_to_zernike, ansi_to_zernike, zernike_to_noll, zernike_to_ansi
+from ..mode_basis import ModeBasis, make_zernike_basis, make_hexike_basis, noll_to_zernike, ansi_to_zernike, zernike_to_noll, zernike_to_ansi
 from .deformable_mirror import DeformableMirror
 
 class SegmentedDeformableMirror(DeformableMirror):
-    '''A segmented deformable mirror with piston, tip, tilt, and optional Zernike control.
+    '''A segmented deformable mirror with piston, tip, tilt, and optional Zernike/Hexike control.
 
     This deformable mirror class can simulate devices such as those
     made by IrisAO and BMC. All segments are controlled in piston,
-    tip and tilt by default. Higher-order Zernike aberrations can be
-    optionally enabled for each segment.
+    tip and tilt by default. Higher-order aberrations can be
+    optionally enabled for each segment using either circular Zernike 
+    modes or hexagonal Hexike modes.
 
     Parameters
     ----------
     segments : ModeBasis
         A mode basis containing all segment apertures.
     num_zernike_modes : int, optional
-        Number of Zernike modes per segment beyond piston/tip/tilt. Default is 0.
+        Number of modes per segment beyond piston/tip/tilt. Default is 0.
     zernike_starting_mode : int, optional
         Starting Zernike mode index. Default is 1 (includes all Zernike modes).
+        Only used when segment_mode_type='circular'.
     zernike_indexing : str, optional
         Indexing scheme: 'noll' or 'ansi'. Default is 'noll'.
+        Only used when segment_mode_type='circular'.
     segment_diameter : float, optional
-        Physical diameter of segments in meters. If None, estimated from segment apertures.
+        Physical diameter of segments in meters. Represents point-to-point length. If None, estimated from segment apertures.
+    segment_mode_type : str, optional
+        Type of modes to use: 'circular' for Zernike modes or 'hexagonal' for Hexike modes.
+        Default is 'circular'.
+    hexagon_angle : float, optional
+        Rotation angle of hexagons in radians. Default is 0.
+        Only used when segment_mode_type='hexagonal'.
+    segment_centers : Grid, optional
+        Grid containing center positions of each segment. Required for hexike phase screen approach.
+    pupil_grid : Grid, optional
+        The main pupil grid. Required for hexike phase screen approach.
 
     Notes
     -----
@@ -44,14 +57,34 @@ class SegmentedDeformableMirror(DeformableMirror):
     >>> # PTT + Zernike mirror
     >>> mirror = SegmentedDeformableMirror(segments, num_zernike_modes=10)
     >>> mirror.set_segment_zernike_actuator(segment_id=0, zernike_index=5, amplitude=50e-9)
+    
+    >>> # PTT + Hexike mirror (phase screen approach)
+    >>> mirror = SegmentedDeformableMirror(segments, segment_mode_type='hexagonal',
+    ...                                   segment_centers=centers, pupil_grid=grid)
+    >>> hexike_coeffs = {0: {4: 100}}  # segment 0, mode 4, 100nm amplitude
+    >>> phase_screen = mirror.apply_segment_hexike_aberrations(hexike_coeffs, wavelength)
     '''
     def __init__(self, segments, num_zernike_modes=0, zernike_starting_mode=1, 
-                 zernike_indexing='noll', segment_diameter=None):
+                 zernike_indexing='noll', segment_diameter=None,
+                 segment_mode_type='circular', hexagon_angle=0,
+                 segment_centers=None, pupil_grid=None):
         # Store Zernike configuration
         self.num_zernike_modes = num_zernike_modes
         self.zernike_starting_mode = zernike_starting_mode
         self.zernike_indexing = zernike_indexing
         self.segment_diameter = segment_diameter
+        self.segment_mode_type = segment_mode_type
+        self.hexagon_angle = hexagon_angle
+        
+        # Store geometry for hexike phase screen approach
+        self.segment_centers = segment_centers
+        self.pupil_grid = pupil_grid
+        # Use consistent naming with working code
+        self.segment_point_to_point = segment_diameter
+        
+        # Initialize hexike phase screen system
+        self._hexike_phase_screen = None
+        self._hexike_coefficients = {}  # Store hexike coefficients: {segment_id: {mode: amplitude}}
         
         # Validate parameters
         if num_zernike_modes < 0:
@@ -60,6 +93,8 @@ class SegmentedDeformableMirror(DeformableMirror):
             raise ValueError("zernike_indexing must be 'noll' or 'ansi'")
         if zernike_starting_mode < 1:
             raise ValueError("zernike_starting_mode must be >= 1")
+        if segment_mode_type not in ['circular', 'hexagonal']:
+            raise ValueError("segment_mode_type must be 'circular' or 'hexagonal'")
         
         # Initialize actuators for PTT + Zernike modes
         actuators_per_segment = 3 + num_zernike_modes
@@ -205,24 +240,39 @@ class SegmentedDeformableMirror(DeformableMirror):
             # Create segment-local grid centered on this segment
             segment_grid = self.input_grid.shifted(-segment_center)
             
-            # Generate Zernike basis for this segment  
-            zernike_basis = make_zernike_basis(
-                self.num_zernike_modes,
-                diameter,
-                segment_grid,
-                starting_mode=self.zernike_starting_mode,
-                ansi=(self.zernike_indexing == 'ansi'),
-                radial_cutoff=True
-            )
+            # Generate basis for this segment (Zernike or Hexike)
+            if self.segment_mode_type == 'hexagonal':
+                basis = make_hexike_basis(
+                    self.num_zernike_modes,
+                    diameter,
+                    segment_grid,
+                    hexagon_angle=self.hexagon_angle
+                )
+            else:  # circular
+                basis = make_zernike_basis(
+                    self.num_zernike_modes,
+                    diameter,
+                    segment_grid,
+                    starting_mode=self.zernike_starting_mode,
+                    ansi=(self.zernike_indexing == 'ansi'),
+                    radial_cutoff=True
+                )
             
-            # Apply segment mask and orthogonalize against PTT
-            for mode in zernike_basis:
+            # Apply segment mask and conditionally orthogonalize against PTT
+            for mode in basis:
                 # Mask mode to segment
                 masked_mode = mode * segment
                 
-                # Orthogonalize against existing PTT modes for this segment
-                masked_mode = self._orthogonalize_against_ptt(masked_mode, segment_id)
-                
+                # Add RMS normalization for hexagonal modes
+                if self.segment_mode_type == 'hexagonal':
+                    segment_mask = segment > 0.5
+                    if np.any(segment_mask):
+                        # Calculate RMS over the segment only
+                        mode_values = masked_mode[segment_mask]
+                        rms = np.sqrt(np.mean(mode_values**2))
+                        if rms > 0:
+                            masked_mode = masked_mode / rms
+
                 # Convert to sparse matrix and eliminate zeros
                 sparse_mode = scipy.sparse.csr_matrix(masked_mode)
                 sparse_mode.eliminate_zeros()
@@ -431,3 +481,173 @@ class SegmentedDeformableMirror(DeformableMirror):
             'n': n,
             'm': m
         }
+
+    def apply_segment_hexike_aberrations(self, segment_zernike_dict, wavelength):
+        '''Apply hexike aberrations to individual segments using phase screen approach.
+
+        This method implements the exact algorithm from the working mod2-psfgeneration.py code.
+        It generates hexike modes on-demand for each segment and creates a phase screen.
+
+        Parameters
+        ----------
+        segment_zernike_dict : dict
+            Dictionary mapping segment ID to another dict of {mode: amplitude_nm}.
+            Example: {0: {4: 20, 5: 10}, 5: {6: 15}} applies mode 4=20nm and mode 5=10nm
+            to segment 0, and mode 6=15nm to segment 5.
+        wavelength : float
+            Wavelength in meters.
+
+        Returns
+        -------
+        phase_screen : Field
+            Phase screen containing segment-level hexike aberrations.
+
+        Raises
+        ------
+        ValueError
+            If required geometry parameters are not provided.
+        '''
+        if self.segment_centers is None or self.pupil_grid is None:
+            raise ValueError("segment_centers and pupil_grid must be provided for hexike aberrations")
+        
+        if self.segment_point_to_point is None:
+            raise ValueError("segment_diameter must be provided for hexike aberrations")
+
+        # Store coefficients for automatic application
+        self._hexike_coefficients = segment_zernike_dict.copy()
+
+        # Initialize phase screen
+        phase_screen = self.pupil_grid.zeros()
+
+        # Process each segment that has aberrations
+        for seg_id, mode_dict in segment_zernike_dict.items():
+            if seg_id < len(self.segments):
+                # Get the center of this segment
+                center = self.segment_centers.points[seg_id]
+
+                # Find the maximum mode needed for this segment
+                max_mode_for_segment = max(mode_dict.keys())
+
+                # Create hexike basis for this segment only (on-demand generation)
+                angle = self.hexagon_angle  # Use configured angle
+                from ..mode_basis import make_hexike_basis
+                basis = make_hexike_basis(int(max_mode_for_segment + 1), 
+                                        self.segment_point_to_point,
+                                        self.pupil_grid.shifted(-center), angle)
+
+                # Apply each requested mode
+                for mode, coeff_nm in mode_dict.items():
+                    if mode < len(basis):
+                        # Convert nm to phase in radians
+                        phase_rad = 2 * np.pi * (coeff_nm * 1e-9) / wavelength
+                        # Get the mode as a Field
+                        mode_field = basis[mode]
+                        # Apply segment mask to ensure mode only affects this segment
+                        segment_mask = self.segments[seg_id]
+                        phase_screen += phase_rad * mode_field * segment_mask
+
+        # Store the phase screen for automatic application
+        self._hexike_phase_screen = phase_screen
+        
+        return phase_screen
+
+    def __call__(self, wavefront):
+        '''Apply the segmented deformable mirror to a wavefront.
+        
+        This method applies both the PTT actuator effects (via parent class)
+        and any hexike phase screen aberrations.
+        
+        Parameters
+        ----------
+        wavefront : Wavefront
+            The wavefront to which to apply the mirror.
+            
+        Returns
+        -------
+        Wavefront
+            The wavefront after applying the mirror effects.
+        '''
+        # Apply PTT deformable mirror effects using parent class
+        wf = super().__call__(wavefront)
+        
+        # Apply hexike phase screen if it exists
+        if self._hexike_phase_screen is not None:
+            wf.electric_field *= np.exp(1j * self._hexike_phase_screen)
+        
+        return wf
+
+    def set_segment_hexike_coefficient(self, segment_id, mode, amplitude_nm, wavelength):
+        '''Set a hexike coefficient for a specific segment and mode.
+        
+        Parameters
+        ----------
+        segment_id : int
+            The index of the segment.
+        mode : int
+            The hexike mode index (0-based).
+        amplitude_nm : float
+            The amplitude in nanometers RMS.
+        wavelength : float
+            Wavelength in meters for phase conversion.
+        '''
+        if segment_id not in self._hexike_coefficients:
+            self._hexike_coefficients[segment_id] = {}
+        
+        self._hexike_coefficients[segment_id][mode] = amplitude_nm
+        
+        # Regenerate phase screen with updated coefficients
+        if self._hexike_coefficients:
+            self.apply_segment_hexike_aberrations(self._hexike_coefficients, wavelength)
+
+    def get_segment_hexike_coefficient(self, segment_id, mode):
+        '''Get a hexike coefficient for a specific segment and mode.
+        
+        Parameters
+        ----------
+        segment_id : int
+            The index of the segment.
+        mode : int
+            The hexike mode index (0-based).
+            
+        Returns
+        -------
+        float
+            The amplitude in nanometers RMS, or 0 if not set.
+        '''
+        if segment_id in self._hexike_coefficients:
+            return self._hexike_coefficients[segment_id].get(mode, 0.0)
+        return 0.0
+
+    def clear_hexike_aberrations(self):
+        '''Clear all hexike aberrations and reset phase screen.'''
+        self._hexike_coefficients = {}
+        self._hexike_phase_screen = None
+
+    def get_hexike_coefficients(self):
+        '''Get all current hexike coefficients.
+        
+        Returns
+        -------
+        dict
+            Dictionary mapping segment_id to {mode: amplitude_nm} dicts.
+        '''
+        return self._hexike_coefficients.copy()
+
+    def update_hexike_phase_screen(self, wavelength):
+        '''Regenerate the hexike phase screen from stored coefficients.
+        
+        Parameters
+        ----------
+        wavelength : float
+            Wavelength in meters for phase conversion.
+            
+        Returns
+        -------
+        Field or None
+            The updated phase screen, or None if no coefficients are set.
+        '''
+        if self._hexike_coefficients:
+            return self.apply_segment_hexike_aberrations(self._hexike_coefficients, wavelength)
+        else:
+            self._hexike_phase_screen = None
+            return None

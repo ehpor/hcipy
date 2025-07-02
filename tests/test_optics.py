@@ -76,7 +76,7 @@ def test_statistics_noisy_detector():
 
                 assert np.isclose(expected_std, std_measurement, rtol=2e-02, atol=1e-05)
 
-    # Now we test the flat field separately.
+    # Test flat field functionality separately
     flat_fields = np.linspace(0, 1, 100)
     dark_current = 0
     read_noise = 0
@@ -502,22 +502,22 @@ def test_zernike_spatial_localization():
             energy_others = np.sum(surface[other_segments_mask]**2) if np.any(other_segments_mask) else 0
             total_energy = energy_target + energy_others
             
-            # Test 1: Energy should be primarily in target segment (if mode creates surface change)
+            # Test 1: Energy should be primarily in target segment when mode creates surface change
             if total_energy > 1e-20:
                 energy_fraction = energy_target / total_energy
-                # Some Zernike modes may have very little energy in certain segments (e.g., astigmatism at center)
+                # Some Zernike modes may have minimal energy in certain segments
                 # Focus on testing that when energy exists, it's properly localized
                 if energy_target > 1e-22:  # Mode has significant energy in target segment
                     assert energy_fraction > 0.5, \
                         f"Poor energy localization for segment {segment_id}, mode {zernike_idx}: {energy_fraction:.3f}"
             
-            # Test 2: RMS localization ratio (when mode has energy in target)
+            # Test 2: RMS localization ratio when mode has energy in target
             if energy_others > 0 and energy_target > 1e-22:
                 localization_ratio = np.sqrt(energy_target / energy_others)
                 assert localization_ratio > 2.0, \
                     f"Poor RMS localization for segment {segment_id}, mode {zernike_idx}: ratio = {localization_ratio:.2f}"
             
-            # Test 3: Verify mode creates some surface change somewhere (sanity check)
+            # Test 3: Verify mode creates surface change
             total_rms = np.sqrt(np.mean(surface**2))
             assert total_rms > 1e-11, \
                 f"No surface change detected anywhere for segment {segment_id}, mode {zernike_idx}"
@@ -674,13 +674,13 @@ def test_segmented_hexike_phase_screen():
     assert 4 in all_coeffs[0]
     assert np.isclose(all_coeffs[0][4], 200.0)
     
-    # Test 4: Test wavefront application (combined PTT + hexike)
+    # Test 4: Test wavefront application with combined PTT and hexike effects
     wf = Wavefront(aperture, wavelength)
     
     # Apply PTT to one segment
     mirror.set_segment_actuators(0, 50e-9, 1e-6, 1e-6)  # piston, tip, tilt
     
-    # Apply mirror to wavefront (should include both PTT and hexike effects)
+    # Apply mirror to wavefront, including both PTT and hexike effects
     wf_aberrated = mirror(wf)
     
     # Verify wavefront was modified

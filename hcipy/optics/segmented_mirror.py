@@ -79,7 +79,6 @@ class SegmentedDeformableMirror(DeformableMirror):
         # Store geometry for hexike phase screen approach
         self.segment_centers = segment_centers
         self.pupil_grid = pupil_grid
-        # Use consistent naming with working code
         self.segment_point_to_point = segment_diameter
         
         # Initialize hexike phase screen system
@@ -125,7 +124,7 @@ class SegmentedDeformableMirror(DeformableMirror):
         
         # Get coordinates where segment is non-zero
         if segment_mask.ndim == 1:
-            # Field is 1D (flattened), need to convert to physical coordinates
+            # Field is 1D, convert to physical coordinates
             x = self.input_grid.x[segment_mask]
             y = self.input_grid.y[segment_mask]
         else:
@@ -169,9 +168,6 @@ class SegmentedDeformableMirror(DeformableMirror):
     def _orthogonalize_against_ptt(self, mode, segment_id):
         '''Orthogonalize a mode against piston, tip, and tilt for a specific segment.
         
-        Note: This is called before PTT modes are added to influence_functions,
-        so we need to generate them on-the-fly.
-        
         Parameters
         ----------
         mode : Field
@@ -186,7 +182,7 @@ class SegmentedDeformableMirror(DeformableMirror):
         '''
         segment = self.segments[segment_id]
         
-        # Generate PTT modes on-the-fly (since influence_functions aren't complete yet)
+        # Generate PTT modes for orthogonalization
         segment_mean = segment.mean()
         norm = np.mean(segment**2) - segment_mean**2
         
@@ -263,11 +259,11 @@ class SegmentedDeformableMirror(DeformableMirror):
                 # Mask mode to segment
                 masked_mode = mode * segment
                 
-                # Add RMS normalization for hexagonal modes
+                # Apply RMS normalization for hexagonal modes
                 if self.segment_mode_type == 'hexagonal':
                     segment_mask = segment > 0.5
                     if np.any(segment_mask):
-                        # Calculate RMS over the segment only
+                        # Calculate RMS over the segment
                         mode_values = masked_mode[segment_mask]
                         rms = np.sqrt(np.mean(mode_values**2))
                         if rms > 0:
@@ -282,8 +278,8 @@ class SegmentedDeformableMirror(DeformableMirror):
         return ModeBasis(all_zernike_modes)
 
     def _generate_ptt_modes(self):
-        '''Generate piston, tip, and tilt modes (extracted from existing logic).
-        
+        '''Generate piston, tip, and tilt modes.
+
         Returns
         -------
         tuple
@@ -328,7 +324,7 @@ class SegmentedDeformableMirror(DeformableMirror):
     def segments(self, segments):
         self._segments = segments
 
-        # Generate PTT modes using extracted logic
+        # Generate PTT modes
         tip, tilt = self._generate_ptt_modes()
 
         # Combine segments, tip, tilt, and optionally Zernike modes
@@ -485,8 +481,7 @@ class SegmentedDeformableMirror(DeformableMirror):
     def apply_segment_hexike_aberrations(self, segment_zernike_dict, wavelength):
         '''Apply hexike aberrations to individual segments using phase screen approach.
 
-        This method implements the exact algorithm from the working mod2-psfgeneration.py code.
-        It generates hexike modes on-demand for each segment and creates a phase screen.
+        Generates hexike modes on-demand for each segment and creates a phase screen.
 
         Parameters
         ----------
@@ -521,23 +516,23 @@ class SegmentedDeformableMirror(DeformableMirror):
 
         # Process each segment that has aberrations
         for seg_id, mode_dict in segment_zernike_dict.items():
-            for seg_id, mode_dict in segment_zernike_dict.items():
-                if seg_id >= len(self.segments):
-                    # Warn for non-existent segments
-                    import warnings
-                    warnings.warn(f"Segment {seg_id} does not exist. "
-                                f"Mirror has {len(self.segments)} segments. Skipping.",
-                                UserWarning)
-                    continue
-                
-                if seg_id >= len(self.segment_centers.points):
-                    # Your existing warning
-                    import warnings
-                    warnings.warn(f"Segment {seg_id} has no center information in segment_centers. "
-                                f"Available centers: {len(self.segment_centers.points)}, "
-                                f"requested segment: {seg_id}. Skipping this segment.",
-                                UserWarning)
-                    continue
+
+            if seg_id >= len(self.segments):
+                # Warn for non-existent segments
+                import warnings
+                warnings.warn(f"Segment {seg_id} does not exist. "
+                            f"Mirror has {len(self.segments)} segments. Skipping.",
+                            UserWarning)
+                continue
+            
+            if seg_id >= len(self.segment_centers.points):
+                # Warn for segments without center information
+                import warnings
+                warnings.warn(f"Segment {seg_id} has no center information in segment_centers. "
+                            f"Available centers: {len(self.segment_centers.points)}, "
+                            f"requested segment: {seg_id}. Skipping this segment.",
+                            UserWarning)
+                continue
             
             # Get the center of this segment
             center = self.segment_centers.points[seg_id]
@@ -545,9 +540,8 @@ class SegmentedDeformableMirror(DeformableMirror):
             # Find the maximum mode needed for this segment
             max_mode_for_segment = max(mode_dict.keys())
 
-            # Create hexike basis for this segment only (on-demand generation)
-            angle = self.hexagon_angle  # Use configured angle
-            from ..mode_basis import make_hexike_basis
+            # Create hexike basis for this segment
+            angle = self.hexagon_angle
             basis = make_hexike_basis(int(max_mode_for_segment + 1), 
                                     self.segment_point_to_point,
                                     self.pupil_grid.shifted(-center), angle)

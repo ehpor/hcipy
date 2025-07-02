@@ -19,7 +19,7 @@ class SegmentedDeformableMirror(DeformableMirror):
     num_zernike_modes : int, optional
         Number of Zernike modes per segment beyond piston/tip/tilt. Default is 0.
     zernike_starting_mode : int, optional
-        Starting Zernike mode index. Default is 2 (skipping piston which overlaps with PTT).
+        Starting Zernike mode index. Default is 1 (includes all Zernike modes).
     zernike_indexing : str, optional
         Indexing scheme: 'noll' or 'ansi'. Default is 'noll'.
     segment_diameter : float, optional
@@ -45,7 +45,7 @@ class SegmentedDeformableMirror(DeformableMirror):
     >>> mirror = SegmentedDeformableMirror(segments, num_zernike_modes=10)
     >>> mirror.set_segment_zernike_actuator(segment_id=0, zernike_index=5, amplitude=50e-9)
     '''
-    def __init__(self, segments, num_zernike_modes=0, zernike_starting_mode=2, 
+    def __init__(self, segments, num_zernike_modes=0, zernike_starting_mode=1, 
                  zernike_indexing='noll', segment_diameter=None):
         # Store Zernike configuration
         self.num_zernike_modes = num_zernike_modes

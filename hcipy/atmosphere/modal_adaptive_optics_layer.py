@@ -29,14 +29,14 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         the layer will be reconstructed every call to `evolve_until()`.
     """
     def __init__(self, layer, controlled_modes, lag, framerate=None):
-        super().__init__(self, layer.input_grid, layer.Cn_squared, layer.L0, layer.velocity, layer.height)
-
         self.layer = layer
-        self.controlled_modes = controlled_modes
+
+        super().__init__(layer.input_grid, layer.Cn_squared, layer.L0, layer.velocity, layer.height)
 
         self.transformation_matrix = controlled_modes.transformation_matrix
         self.transformation_matrix_inverse = inverse_tikhonov(self.transformation_matrix, 1e-7)
 
+        self.controlled_modes = controlled_modes
         self.corrected_coeffs = []
         self.lag = round(lag)
         self.framerate = framerate
@@ -86,7 +86,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         """
         if self.framerate is None:
             self.layer.evolve_until(t)
-            self.reconstruct_wavefront()
+            self._reconstruct_wavefront()
 
             return
 
@@ -95,7 +95,6 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         # Evolve and reconstruct in steps, performing reconstruction along the way.
         while self.layer.t < t:
             next_reconstruction_t = (self._last_reconstruction_frame + 1) * dt
-
             next_t = min(next_reconstruction_t, t)
 
             self.layer.evolve_until(next_t)

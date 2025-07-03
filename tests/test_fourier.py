@@ -384,18 +384,18 @@ def test_fourier_rotation_adjoint(angle_deg):
     rotated = rotator.forward(field)
     back = rotator.backward(rotated)
     mse = np.mean(np.abs(field - back)**2)
-    
+
     assert mse < 2e-3
 
     back2 = rotator_reverse.forward(rotated)
     mse2 = np.mean(np.abs(field - back2)**2)
-    
+
     assert mse2 < 2e-3
 
     rotator.angle = -angle
     back3 = rotator.forward(rotated)
     mse3 = np.mean(np.abs(field - back3)**2)
-    
+
     assert mse3 < 2e-3
 
 def test_fourier_rotation_zero_angle():

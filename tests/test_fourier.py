@@ -384,32 +384,18 @@ def test_fourier_rotation_adjoint(angle_deg):
     rotated = rotator.forward(field)
     back = rotator.backward(rotated)
     mse = np.mean(np.abs(field - back)**2)
-    from hcipy import imshow_field
-    import matplotlib.pyplot as plt
-    plt.subplot(1,2,1)
-    imshow_field(field)
-    plt.subplot(1,2,2)
-    imshow_field(back.real)
-    plt.show()
+    
     assert mse < 2e-3
 
     back2 = rotator_reverse.forward(rotated)
     mse2 = np.mean(np.abs(field - back2)**2)
-    plt.subplot(1,2,1)
-    imshow_field(field)
-    plt.subplot(1,2,2)
-    imshow_field(back2.real)
-    plt.show()
+    
     assert mse2 < 2e-3
 
     rotator.angle = -angle
     back3 = rotator.forward(rotated)
     mse3 = np.mean(np.abs(field - back3)**2)
-    plt.subplot(1,2,1)
-    imshow_field(field)
-    plt.subplot(1,2,2)
-    imshow_field(back3.real)
-    plt.show()
+    
     assert mse3 < 2e-3
 
 def test_fourier_rotation_zero_angle():
@@ -417,7 +403,7 @@ def test_fourier_rotation_zero_angle():
     grid = make_uniform_grid([grid_size, grid_size], 1)
     original_image = make_circular_aperture(0.5)(grid)
 
-    rotator = FourierRotation(grid, 0) # 0 degrees rotation
+    rotator = FourierRotation(grid, 0)
     rotated_image = rotator.forward(original_image)
 
     # For zero rotation, the image should be almost identical

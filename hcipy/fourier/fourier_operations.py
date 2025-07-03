@@ -407,6 +407,7 @@ class FourierRotation:
 
         self._shear_x = FourierShear(self._padded_grid, shear=0, shear_dim=0)
         self._shear_y = FourierShear(self._padded_grid, shear=0, shear_dim=1)
+        self._shear_x_double = FourierShear(self._padded_grid, shear=0, shear_dim=0)
 
         self.angle = angle
 
@@ -428,6 +429,7 @@ class FourierRotation:
 
         self._shear_x.shear = np.tan(small_angle / 2)
         self._shear_y.shear = -np.sin(small_angle)
+        self._shear_x_double.shear = 2 * np.tan(small_angle / 2)
 
     def forward(self, field):
         '''Return the forward rotation of the input field.
@@ -468,10 +470,18 @@ class FourierRotation:
         f = Field(f.ravel(), self._padded_grid)
 
         # Perform the shears.
-        for _ in range(self.num_rotations):
-            f = self._shear_x._operation(f, adjoint)
+        # The three-shear decomposition is (shear_x, shear_y, shear_x).
+        # For multiple rotations, the sequence becomes S_x(a), S_y(b), S_x(2a), S_y(b), ..., S_x(a).
+        # This structure explicitly applies the first S_x and S_y, then loops for the intermediate
+        # S_x_double and S_y pairs, and finally applies the last S_x.
+        f = self._shear_x._operation(f, adjoint)
+        f = self._shear_y._operation(f, adjoint)
+
+        for _ in range(self.num_rotations - 1):
+            f = self._shear_x_double._operation(f, adjoint)
             f = self._shear_y._operation(f, adjoint)
-            f = self._shear_x._operation(f, adjoint)
+
+        f = self._shear_x._operation(f, adjoint)
 
         # Crop the field back to its original size and return.
         return Field(f.shaped[self._cropping].ravel(), field.grid)

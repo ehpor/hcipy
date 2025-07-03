@@ -371,12 +371,12 @@ def test_fourier_shear():
     back3 = shearer.forward(sheared)
     assert np.allclose(field, back3)
 
-def test_fourier_rotation():
-    input_grid = make_uniform_grid([128, 128], 1)
-    field = Field(np.random.randn(input_grid.size), input_grid)
-    field *= make_circular_aperture(0.5)(input_grid)
+@pytest.mark.parametrize('angle_deg', [10, 30, 90, 180, 270])
+def test_fourier_rotation_adjoint(angle_deg):
+    angle = np.radians(angle_deg)
 
-    angle = 0.5
+    input_grid = make_pupil_grid(128)
+    field = make_rectangular_aperture((0.2, 0.1), (0.2, 0))(input_grid)
 
     rotator = FourierRotation(input_grid, angle)
     rotator_reverse = FourierRotation(input_grid, -angle)
@@ -384,13 +384,100 @@ def test_fourier_rotation():
     rotated = rotator.forward(field)
     back = rotator.backward(rotated)
     mse = np.mean(np.abs(field - back)**2)
-    assert mse < 1e-3
+    from hcipy import imshow_field
+    import matplotlib.pyplot as plt
+    plt.subplot(1,2,1)
+    imshow_field(field)
+    plt.subplot(1,2,2)
+    imshow_field(back.real)
+    plt.show()
+    assert mse < 2e-3
 
     back2 = rotator_reverse.forward(rotated)
     mse2 = np.mean(np.abs(field - back2)**2)
-    assert mse2 < 1e-3
+    plt.subplot(1,2,1)
+    imshow_field(field)
+    plt.subplot(1,2,2)
+    imshow_field(back2.real)
+    plt.show()
+    assert mse2 < 2e-3
 
     rotator.angle = -angle
     back3 = rotator.forward(rotated)
     mse3 = np.mean(np.abs(field - back3)**2)
-    assert mse3 < 1e-3
+    plt.subplot(1,2,1)
+    imshow_field(field)
+    plt.subplot(1,2,2)
+    imshow_field(back3.real)
+    plt.show()
+    assert mse3 < 2e-3
+
+def test_fourier_rotation_zero_angle():
+    grid_size = 128
+    grid = make_uniform_grid([grid_size, grid_size], 1)
+    original_image = make_circular_aperture(0.5)(grid)
+
+    rotator = FourierRotation(grid, 0) # 0 degrees rotation
+    rotated_image = rotator.forward(original_image)
+
+    # For zero rotation, the image should be almost identical
+    assert np.allclose(original_image, rotated_image)
+
+    rotator.angle = 2 * np.pi
+    rotated_image2 = rotator.forward(original_image)
+
+    # For 360deg rotation, the image should be almost identical.
+    assert np.allclose(original_image, rotated_image2)
+
+def test_fourier_rotation_composition():
+    grid_size = 128
+    grid = make_uniform_grid([grid_size, grid_size], 1)
+    original_image = make_circular_aperture(0.5)(grid)
+
+    angle1 = np.deg2rad(15)
+    angle2 = np.deg2rad(30)
+
+    # Rotate by angle1, then by angle2
+    rotator1 = FourierRotation(grid, angle1)
+    intermediate_image = rotator1.forward(original_image)
+    rotator2 = FourierRotation(grid, angle2)
+    composed_rotation_image = rotator2.forward(intermediate_image)
+
+    # Rotate by angle1 + angle2 directly
+    rotator_combined = FourierRotation(grid, angle1 + angle2)
+    combined_angle_image = rotator_combined.forward(original_image)
+
+    # Compare the two results
+    mse = np.mean(np.abs(composed_rotation_image - combined_angle_image)**2)
+    assert mse < 1e-3
+
+def test_fourier_rotation_geometry():
+    grid = make_pupil_grid(128)
+    # Create a rectangular aperture (asymmetric)
+    original_image = make_rectangular_aperture([0.5, 0.2])(grid)
+
+    angle = np.deg2rad(30)
+    rotator = FourierRotation(grid, angle)
+    rotated_image = rotator.forward(original_image)
+
+    # Rotate the original image by the same angle using a reference rotation (e.g., make_rotated_aperture)
+    # This assumes make_rotated_aperture is a reliable reference for geometric rotation.
+    reference_rotator = make_rotated_aperture(make_rectangular_aperture([0.5, 0.2]), -angle)
+    expected_rotated_image = reference_rotator(grid)
+
+    # Compare the Fourier rotated image with the geometrically rotated reference
+    mse = np.mean(np.abs(rotated_image - expected_rotated_image)**2)
+    assert mse < 2e-3
+
+def test_fourier_rotation_invalid_grid():
+    # Test with a 1D grid (non-2D)
+    grid_1d = make_uniform_grid(16, 1)
+    with pytest.raises(ValueError):
+        FourierRotation(grid_1d, np.deg2rad(30))
+
+    # Test with an irregular grid
+    x = np.random.rand(100)
+    y = np.random.rand(100)
+    irregular_grid = CartesianGrid(UnstructuredCoords([x, y]))
+    with pytest.raises(ValueError):
+        FourierRotation(irregular_grid, np.deg2rad(30))

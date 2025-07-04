@@ -39,7 +39,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         self.controlled_modes = controlled_modes
         self.corrected_coeffs = []
         self.lag = round(lag)
-        self._framerate = framerate
+        self.framerate = framerate
 
         # Initialize reconstruction.
         self._reconstruct_wavefront()

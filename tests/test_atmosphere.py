@@ -184,7 +184,7 @@ def make_modal_ao_layer(framerate):
 def test_modal_ao_evolve_until_none_framerate():
     layer, ao_layer = make_modal_ao_layer(framerate=None)
 
-    with patch.object(ao_layer, '_reconstruct_wavefront', wraps=ao_layer._reconstruct_wavefront) as mock_reconstruct,\
+    with patch.object(ao_layer, '_reconstruct_wavefront', wraps=ao_layer._reconstruct_wavefront) as mock_reconstruct,  \
             patch.object(layer, 'evolve_until', wraps=layer.evolve_until) as mock_evolve:
         ao_layer.evolve_until(10)
 
@@ -197,7 +197,7 @@ def test_modal_ao_evolve_until_none_framerate():
 def test_modal_ao_evolve_until_fixed_framerate():
     layer, ao_layer = make_modal_ao_layer(framerate=1)
 
-    with patch.object(ao_layer, '_reconstruct_wavefront', wraps=ao_layer._reconstruct_wavefront) as mock_reconstruct,\
+    with patch.object(ao_layer, '_reconstruct_wavefront', wraps=ao_layer._reconstruct_wavefront) as mock_reconstruct, \
             patch.object(layer, 'evolve_until', wraps=layer.evolve_until) as mock_evolve:
         ao_layer.evolve_until(2.5)
 
@@ -206,6 +206,7 @@ def test_modal_ao_evolve_until_fixed_framerate():
 
         # Should reconstruct wavefront twice (at t=1 and t=2)
         assert mock_reconstruct.call_count == 2
+
 
 def test_multi_layer_atmosphere():
     r0 = 0.1

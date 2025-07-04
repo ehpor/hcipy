@@ -39,7 +39,10 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         self.controlled_modes = controlled_modes
         self.corrected_coeffs = []
         self.lag = round(lag)
-        self.framerate = framerate
+        self._framerate = framerate
+
+        # Initialize reconstruction.
+        self._reconstruct_wavefront()
 
     @property
     def framerate(self):
@@ -49,9 +52,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
     def framerate(self, framerate):
         self._framerate = framerate
 
-        if self.framerate is None:
-            self._last_reconstruction_frame = 0
-        else:
+        if self.framerate is not None:
             self._last_reconstruction_frame = int(self.layer.t * framerate)
 
     def phase_for(self, wavelength):
@@ -117,7 +118,8 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
             self.corrected_coeffs.pop(0)
         self.corrected_coeffs.append(coeffs)
 
-        self._last_reconstruction_frame += 1
+        if self.framerate is not None:
+            self._last_reconstruction_frame = int(self.layer.t * self.framerate)
 
     @property
     def Cn_squared(self):  # noqa: N802
@@ -154,3 +156,5 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         """
         self.corrected_coeffs = []
         self.layer.reset()
+
+        self._reconstruct_wavefront()

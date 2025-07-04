@@ -175,8 +175,10 @@ def test_atmospheric_layer_reset(layer_cls):
     assert np.allclose(phase_6, phase_7)
 
 def make_modal_ao_layer(framerate):
-    grid = make_uniform_grid([16, 16], 1)
-    layer = InfiniteAtmosphericLayer(grid, 1, 1, 0, 0)
+    grid = make_pupil_grid(32)
+    cn_squared = Cn_squared_from_fried_parameter(1)
+
+    layer = InfiniteAtmosphericLayer(grid, cn_squared, 1, 1, 1)
     ao_layer = ModalAdaptiveOpticsLayer(layer, make_zernike_basis(1, 1, grid), lag=1, framerate=framerate)
 
     return layer, ao_layer
@@ -186,7 +188,14 @@ def test_modal_ao_evolve_until_none_framerate():
 
     with patch.object(ao_layer, '_reconstruct_wavefront', wraps=ao_layer._reconstruct_wavefront) as mock_reconstruct,  \
             patch.object(layer, 'evolve_until', wraps=layer.evolve_until) as mock_evolve:
+        phase_before = ao_layer.phase_for(1)
+        assert phase_before.grid == layer.input_grid
+
         ao_layer.evolve_until(10)
+
+        phase_after = ao_layer.phase_for(1)
+        assert phase_after.grid == layer.input_grid
+        assert not np.allclose(phase_before, phase_after)
 
         # Should evolve the underlying layer to the final time
         assert mock_evolve.call_args == ((10,),)
@@ -199,7 +208,14 @@ def test_modal_ao_evolve_until_fixed_framerate():
 
     with patch.object(ao_layer, '_reconstruct_wavefront', wraps=ao_layer._reconstruct_wavefront) as mock_reconstruct, \
             patch.object(layer, 'evolve_until', wraps=layer.evolve_until) as mock_evolve:
+        phase_before = ao_layer.phase_for(1)
+        assert phase_before.grid == ao_layer.input_grid
+
         ao_layer.evolve_until(2.5)
+
+        phase_after = ao_layer.phase_for(1)
+        assert phase_after.grid == ao_layer.input_grid
+        assert not np.allclose(phase_before, phase_after)
 
         # Should evolve the underlying layer to 1, 2, 2.5
         assert mock_evolve.call_args_list == [((1,),), ((2,),), ((2.5,),)]

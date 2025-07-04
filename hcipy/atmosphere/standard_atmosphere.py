@@ -5,7 +5,7 @@ from ..dev import deprecated_name_changed
 import numpy as np
 
 def make_mauna_kea_atmospheric_layers(input_grid, cn_squared=None, outer_scale=None):
-    '''Create a standardized multi-layer atmosphere.
+    '''Create a multi-layer atmosphere for the Mauna Kea observatory site.
 
     The layer parameters are taken from [Guyon2005]_, in turn derived
     from [Tokovinin2005]_ and are representative for Mauna Kea, Hawaii.

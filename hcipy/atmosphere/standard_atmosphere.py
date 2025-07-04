@@ -3,6 +3,7 @@ from .infinite_atmospheric_layer import InfiniteAtmosphericLayer
 from ..dev import deprecated_name_changed
 
 import numpy as np
+import warnings
 
 def make_mauna_kea_atmospheric_layers(input_grid, cn_squared=None, outer_scale=None):
     '''Create a multi-layer atmosphere for the Mauna Kea observatory site.
@@ -54,6 +55,11 @@ def make_mauna_kea_atmospheric_layers(input_grid, cn_squared=None, outer_scale=N
 def make_standard_atmospheric_layers(input_grid, L0=10):
     '''Make a standard set of atmospheric layers.
 
+    Notes
+    -----
+    This function is deprecated. Use :func:`make_mauna_kea_atmospheric_layers` instead,
+    or, even better,
+
     Parameters
     ----------
     input_grid : Grid
@@ -68,8 +74,8 @@ def make_standard_atmospheric_layers(input_grid, L0=10):
     '''
     return make_mauna_kea_atmospheric_layers(input_grid, outer_scale=L0)
 
-def make_las_campanas_atmospheric_layers(input_grid, cn_squared=None, outer_scale=None):
-    '''Creates a multi-layer atmosphere for the Las Campanas Observatory site.
+def make_las_campanas_atmospheric_layers(input_grid, cn_squared=None, outer_scale=None, r0=0.16, L0=25, wavelength=550e-9):
+    '''Create a multi-layer atmosphere for the Las Campanas Observatory site.
 
     The layer parameters are taken from [Males2019]_ who based it on site testing from [Prieto2010]_ and [Osip2011]_ .
 
@@ -92,6 +98,15 @@ def make_las_campanas_atmospheric_layers(input_grid, cn_squared=None, outer_scal
     outer_scale : scalar or None
         The outer scale of the atmosphere. If this is None (default), then an
         outer scale of 25m is used.
+    r0 : scalar
+        The integrated Cn^2 value for the atmosphere. This parameter is deprecated and
+        should not be used. Use `cn_squared` instead.
+    L0 : scalar
+        The outer scale of the atmosphere. This parameter is deprecated and
+        should not be used. Use `outer_scale` instead.
+    wavelength : scalar
+        The wavelength in meters at which to calculate the Fried parameter (default: 550nm).
+        This parameter is deprecated and should not be used. Use `cn_squared` instead.
 
     Returns
     -------
@@ -103,6 +118,20 @@ def make_las_campanas_atmospheric_layers(input_grid, cn_squared=None, outer_scal
 
     if outer_scale is None:
         outer_scale = 25
+
+    # Detect users using previous signatures and emit deprecation warnings.
+    if r0 != 0.16 or L0 != 25 or wavelength != 550e-9:
+        warnings.warn('The signature of this function has changed. The old signature is deprecated. Please use the new signature.', DeprecationWarning, stacklevel=2)
+
+        cn_squared = Cn_squared_from_fried_parameter(r0, wavelength)
+        outer_scale = L0
+
+    if cn_squared > 1e-6:
+        # While a cn_squared value this high is unlikely for an atmosphere. Most likely they
+        # gave a fried parameter instead of a cn_squared value. But we cannot assume that, so
+        # we will only give a warning and assume the given cn_squared value was correct.
+
+        warnings.warn('The signature of this function has changed. You may have given a fried parameter instead of cn_squared value.', DeprecationWarning, stacklevel=2)
 
     heights = np.array([250, 500, 1000, 2000, 4000, 8000, 16000])
     velocities = np.array([10, 10, 20, 20, 25, 30, 25])

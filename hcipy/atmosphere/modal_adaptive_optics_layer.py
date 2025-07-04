@@ -52,7 +52,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         if self.framerate is None:
             self._last_reconstruction_frame = 0
         else:
-            self._last_reconstruction_frame = int(self.layer.t * self.framerate)
+            self._last_reconstruction_frame = int(self.layer.t * framerate)
 
     def phase_for(self, wavelength):
         """Calculates the phase screen for a given wavelength with AO correction.

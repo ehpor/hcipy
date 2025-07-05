@@ -216,6 +216,9 @@ def imshow_field(
     elif grid.is_separated:
         transform = SeparatedGridTransform(grid)
         extent = (-0.5, grid.dims[0] - 0.5, -0.5, grid.dims[1] - 0.5)
+
+        ((min_x, min_y,),) = transform.transform((extent[0::2],))
+        ((max_x, max_y,),) = transform.transform((extent[1::2],))
     else:
         raise NotImplementedError('Irregular grids are not implemented.')
 
@@ -250,6 +253,12 @@ def imshow_field(
         return 'x=%0.3g, y=%0.3g' % (x, y)
 
     ax.format_coord = format_coord
+
+    # Set the xlim and ylim, if autoscaling is on.
+    if ax.get_autoscalex_on():
+        ax.set_xlim(min(min_x, max_x), max(min_x, max_x), auto=None)
+    if ax.get_autoscaley_on():
+        ax.set_ylim(min(min_y, max_y), max(min_y, max_y), auto=None)
 
     # Set current image for future colorbar creation.
     ax._sci(im)

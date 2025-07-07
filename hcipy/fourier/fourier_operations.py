@@ -266,7 +266,7 @@ class FourierShear:
     input_grid : Grid
         The grid that is expected for the input field.
     shear : scalar
-        The amount of shear to apply to th image.
+        The amount of shear to apply to the image.
     shear_dim : integer
         The dimension to which to apply the shear. A shear along x would
         be a value of 0, a shear along y would be 1.

@@ -88,7 +88,7 @@ def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, 
     aperture_mask = aperture > 0
 
     phase_screen = make_power_law_error(pupil_grid, 1.0, diameter, exponent=exponent, aperture=None)
-    phase_screen = np.real( ff.forward(phase_screen + 0j) )
+    phase_screen = np.real(ff.forward(phase_screen + 0j))
 
     phase_screen_rms = np.std(phase_screen[aperture_mask > 0]) if aperture is not None else np.std(phase_screen)
     phase_screen *= std / phase_screen_rms

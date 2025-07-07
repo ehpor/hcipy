@@ -289,10 +289,13 @@ def make_supersampled_grid(grid, oversampling):
     '''
     oversampling = (np.round(oversampling)).astype('int')
 
+    if np.isscalar(oversampling):
+        oversampling = (oversampling,) * grid.ndim
+
     if grid.is_regular:
-        delta_new = grid.delta / oversampling
-        zero_new = grid.zero - grid.delta / 2 + delta_new / 2
-        dims_new = grid.dims * oversampling
+        delta_new = tuple(d / o for d, o in zip(grid.delta, oversampling))
+        zero_new = tuple(z - d / 2 + dn / 2 for z, d, dn in zip(grid.zero, grid.delta, delta_new))
+        dims_new = tuple(d * o for d, o in zip(grid.dims, oversampling))
 
         return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
     elif grid.is_separated:
@@ -322,10 +325,13 @@ def make_subsampled_grid(grid, undersampling):
     '''
     undersampling = (np.round(undersampling)).astype('int')
 
+    if np.isscalar(undersampling):
+        undersampling = (undersampling,) * grid.ndim
+
     if grid.is_regular:
-        delta_new = grid.delta * undersampling
-        zero_new = grid.zero - grid.delta / 2 + delta_new / 2
-        dims_new = grid.dims // undersampling
+        delta_new = tuple(d * u for d, u in zip(grid.delta, undersampling))
+        zero_new = tuple(z - d / 2 + dn / 2 for z, d, dn in zip(grid.zero, grid.delta, delta_new))
+        dims_new = tuple(d // u for d, u in zip(grid.dims, undersampling))
 
         return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
     elif grid.is_separated:

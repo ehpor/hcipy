@@ -84,7 +84,7 @@ class Field:
     def tensor_shape(self):
         '''The shape of the tensor of the field.
         '''
-        return np.array(self.shape)[:-1]
+        return self.shape[:-1]
 
     @property
     def is_scalar_field(self):

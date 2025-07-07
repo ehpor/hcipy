@@ -42,13 +42,14 @@ class Coords(object):
     def __sub__(self, b):
         '''Subtract `b` from the coordinates separately and return the result.
         '''
-        return self + (-b)
+        res = self.copy()
+        res -= b
+        return res
 
     def __isub__(self, b):
         '''Subtract `b` from the coordinates separately in-place.
         '''
-        self += (-b)
-        return self
+        raise NotImplementedError()
 
     def __mul__(self, f):
         '''Multiply each coordinate with `f` separately and return the result.
@@ -210,6 +211,14 @@ class UnstructuredCoords(Coords):
             self.coords[i] += b[i]
         return self
 
+    def __isub__(self, b):
+        '''Subtract `b` from the coordinates separately in-place
+        '''
+        b = np.ones(len(self.coords)) * b
+        for i in range(len(self.coords)):
+            self.coords[i] -= b[i]
+        return self
+
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
@@ -324,7 +333,7 @@ class SeparatedCoords(Coords):
     def dims(self):
         '''The number of points along each dimension.
         '''
-        return np.array([len(c) for c in self.separated_coords])
+        return tuple(len(c) for c in self.separated_coords)
 
     @property
     def shape(self):
@@ -337,6 +346,13 @@ class SeparatedCoords(Coords):
         '''
         for i in range(len(self)):
             self.separated_coords[i] += b[i]
+        return self
+
+    def __isub__(self, b):
+        '''Subtract `b` from the coordinates separately in-place.
+        '''
+        for i in range(len(self)):
+            self.separated_coords[i] -= b[i]
         return self
 
     def __imul__(self, f):
@@ -516,6 +532,15 @@ class RegularCoords(Coords):
             self.zero = tuple(a + b for a in self.zero)
         return self
 
+    def __isub__(self, b):
+        '''Subtract `b` from the coordinates separately in-place.
+        '''
+        if isinstance(b, Iterable):
+            self.zero = tuple(aa - bb for aa, bb in zip(self.zero, b))
+        else:
+            self.zero = tuple(a - b for a in self.zero)
+        return self
+
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
@@ -549,8 +574,8 @@ class RegularCoords(Coords):
     def reverse(self):
         '''Reverse the ordering of points in-place.
         '''
-        self.delta = tuple(-d for d in self.delta)
         self.zero = tuple(z + d * (n - 1) for z, d, n in zip(self.zero, self.delta, self.dims))
+        self.delta = tuple(-d for d in self.delta)
 
         return self
 

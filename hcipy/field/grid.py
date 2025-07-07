@@ -447,9 +447,9 @@ class Grid(object):
         h.update(self._coordinate_system)
 
         if self.is_regular:
-            h.update(self.delta)
-            h.update(self.dims)
-            h.update(self.zero)
+            h.update(np.array(self.delta))
+            h.update(np.array(self.dims))
+            h.update(np.array(self.zero))
         elif self.is_separated:
             for s in self.separated_coords:
                 h.update(s)

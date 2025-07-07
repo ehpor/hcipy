@@ -1,5 +1,7 @@
 import numpy as np
 import copy
+import math
+from collections.abc import Iterable
 
 class Coords(object):
     '''Base class for coordinates.
@@ -401,23 +403,28 @@ class RegularCoords(Coords):
     zero
         The coordinates for the first point.
     '''
-    def __init__(self, delta, dims, zero=None):
-        if np.isscalar(dims):
-            self.dims = np.array([dims], dtype='int')
-        else:
-            self.dims = np.array(dims, dtype='int')
+    def __init__(self, delta, dims, zero):
+        if not isinstance(delta, Iterable):
+            raise ValueError('Delta should be an iterable.')
 
-        if np.isscalar(delta):
-            self.delta = np.array([delta] * len(self.dims), dtype='float')
-        else:
-            self.delta = np.array(delta, dtype='float')
+        if not isinstance(dims, Iterable):
+            raise ValueError('Dims should be an iterable.')
 
-        if zero is None:
-            self.zero = np.zeros(len(self.dims), dtype='float')
-        elif np.isscalar(zero):
-            self.zero = np.array([zero] * len(self.dims), dtype='float')
-        else:
-            self.zero = np.array(zero, dtype='float')
+        if not isinstance(zero, Iterable):
+            raise ValueError('Zero should be an iterable.')
+
+        delta = tuple(float(d) for d in delta)
+        dims = tuple(int(n) for n in dims)
+        zero = tuple(float(z) for z in zero)
+
+        assert len(delta) == len(dims)
+        assert len(dims) == len(zero)
+
+        print('new coords:', delta, dims, zero)
+
+        self.dims = dims
+        self.delta = delta
+        self.zero = zero
 
     @classmethod
     def from_dict(cls, tree):
@@ -453,9 +460,9 @@ class RegularCoords(Coords):
         '''
         tree = {
             'type': 'regular',
-            'delta': self.delta.tolist(),
-            'dims': self.dims.tolist(),
-            'zero': self.zero.tolist()
+            'delta': self.delta,
+            'dims': self.dims,
+            'zero': self.zero
         }
 
         return tree
@@ -478,7 +485,7 @@ class RegularCoords(Coords):
     def size(self):
         '''The number of points.
         '''
-        return np.prod(self.dims)
+        return math.prod(self.dims)
 
     def __len__(self):
         '''The number of dimensions.
@@ -489,7 +496,7 @@ class RegularCoords(Coords):
     def shape(self):
         '''The shape of an ``numpy.ndarray`` with the right dimensions.
         '''
-        return self.dims[::-1]
+        return tuple(reversed(self.dims))
 
     def __getitem__(self, i):
         '''The `i`-th point for these coordinates.
@@ -503,14 +510,22 @@ class RegularCoords(Coords):
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
         '''
-        self.zero += b
+        if isinstance(b, Iterable):
+            self.zero = tuple(aa + bb for aa, bb in zip(self.zero, b))
+        else:
+            self.zero = tuple(a + b for a in self.zero)
         return self
 
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
-        self.delta *= f
-        self.zero *= f
+        if isinstance(f, Iterable):
+            self.delta = tuple(d * ff for d, ff in zip(self.delta, f))
+            self.zero = tuple(z * ff for z, ff in zip(self.zero, f))
+        else:
+            self.delta = tuple(d * f for d in self.delta)
+            self.zero = tuple(z * f for z in self.zero)
+
         return self
 
     def __eq__(self, other):
@@ -529,14 +544,14 @@ class RegularCoords(Coords):
         if type(self) is not type(other):
             return False
 
-        return np.array_equal(self.regular_coords, other.regular_coords)
+        return self.delta == other.delta and self.dims == other.dims and self.zero == other.zero
 
     def reverse(self):
         '''Reverse the ordering of points in-place.
         '''
-        maximum = self.zero + self.delta * (self.dims - 1)
-        self.delta = -self.delta
-        self.zero = maximum
+        self.delta = tuple(-d for d in self.delta)
+        self.zero = tuple(z + d * (n - 1) for z, d, n in zip(self.zero, self.delta, self.dims))
+
         return self
 
 Coords._add_coordinate_type('unstructured', UnstructuredCoords)

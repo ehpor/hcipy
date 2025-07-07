@@ -103,7 +103,7 @@ def test_general_gaussian_aperture(full_width_half_maximum, shape_parameter):
     name = 'general_gaussian/pupil'
     name += '_small' if full_width_half_maximum < 0.7 else '_large'
     name += '_smallshape' if shape_parameter < 5.0 else '_largeshape'
-    
+
     check_aperture(
         functools.partial(make_general_gaussian_aperture, full_width_half_maximum=full_width_half_maximum),
         pupil_diameter, name,

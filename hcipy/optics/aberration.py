@@ -77,7 +77,7 @@ def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, 
         The surface error calculated on `pupil_grid`.
     '''
     def filter_function(fourier_grid):
-        return 1 - make_general_gaussian_aperture(cutoff_frequency, 15.)(fourier_grid)
+        return 1 - make_general_gaussian_aperture(2 * cutoff_frequency, 15.)(fourier_grid)
 
     ff = FourierFilter(pupil_grid, filter_function, q=2)
 

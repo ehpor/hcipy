@@ -18,6 +18,7 @@ __all__ = [
     'make_rotated_aperture',
     'make_shifted_aperture',
     'make_segmented_aperture',
+    'make_general_gaussian_aperture',
     'make_elt_aperture',
     'make_gmt_aperture',
     'make_tmt_aperture',

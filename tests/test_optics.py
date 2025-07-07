@@ -837,23 +837,23 @@ def test_photonic_lantern():
 def test_power_law_errors():
     pupil_diameter = 1.0
     pupil_grid = make_pupil_grid(64, 2.0)
-    
+
     aperture = evaluate_supersampled(make_circular_aperture(pupil_diameter), pupil_grid, 4)
     large_aperture = evaluate_supersampled(make_circular_aperture(2 * pupil_diameter), pupil_grid, 4)
     zernike_modes = make_zernike_basis(3, pupil_diameter, pupil_grid)
     cutoff_freq = 2 * np.pi * 10 / pupil_diameter
-    
+
     screen = make_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, exponent=-2.5, aperture=None, remove_modes=None)
-    assert abs(np.ptp(screen[large_aperture > 0]) - 0.1) < 1e-10
-    
+    assert abs((np.ptp(screen[large_aperture > 0]) - 0.1) / 0.1) < 1e-10
+
     screen = make_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, exponent=-1.0, aperture=None, remove_modes=None)
-    assert abs(np.ptp(screen[large_aperture > 0]) - 0.1) < 1e-10
+    assert abs((np.ptp(screen[large_aperture > 0]) - 0.1) / 0.1) < 1e-10
 
     screen = make_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, exponent=-4.5, aperture=aperture, remove_modes=zernike_modes)
     assert np.all(np.abs(zernike_modes.coefficients_for(screen)) < 5e-4)
 
     test = make_high_pass_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, cutoff_freq, exponent=-2.5, aperture=None)
-    assert (np.std(test[large_aperture > 0]) - 0.1)/0.1 < 0.01
+    assert (np.std(test[large_aperture > 0]) - 0.1) / 0.1 < 0.01
 
     test = make_high_pass_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, cutoff_freq, exponent=-2.5, aperture=aperture)
-    assert (np.std(test[aperture > 0]) - 0.1)/0.1 < 1e-13
+    assert (np.std(test[aperture > 0]) - 0.1) / 0.1 < 1e-13

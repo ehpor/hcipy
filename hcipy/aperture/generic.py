@@ -890,7 +890,7 @@ def make_general_gaussian_aperture(full_width_half_maximum, shape_parameter=5, c
         shift = center * np.ones(2)
 
     def func(grid):
-        sigma = 0.5 * full_width_half_maximum / (2 * np.log(2))**(1/(2 * shape_parameter))
+        sigma = 0.5 * full_width_half_maximum / (2 * np.log(2))**(1 / (2 * shape_parameter))
         r = grid.shifted(shift).as_('polar').r / sigma
         return Field(np.exp(-1/2 * abs(r)**(2 * shape_parameter)), grid)
 

@@ -52,7 +52,7 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
 
     return Field(screen * aperture, pupil_grid)
 
-def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, exponent=-2.5, aperture=None):
+def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, exponent=-2.5, aperture=None, filter_shape_parameter=15):
     '''Create an error surface from a high-pass filtered power-law power spectral density.
 
     Parameters
@@ -70,6 +70,8 @@ def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, 
     aperture : Field
         The mask over which to calculate the ptv. A circular aperture with diameter
         `diameter` is used if this is not given.
+    filter_shape_parameter : scalar
+        The shape parameter for the general Gaussian high-pass filter fuction. Default value is 15.0
 
     Returns
     -------
@@ -77,7 +79,7 @@ def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, 
         The surface error calculated on `pupil_grid`.
     '''
     def filter_function(fourier_grid):
-        return 1 - make_general_gaussian_aperture(2 * cutoff_frequency, 15.)(fourier_grid)
+        return 1 - make_general_gaussian_aperture(2 * cutoff_frequency, filter_shape_parameter)(fourier_grid)
 
     ff = FourierFilter(pupil_grid, filter_function, q=2)
 

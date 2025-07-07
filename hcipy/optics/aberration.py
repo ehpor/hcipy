@@ -4,8 +4,9 @@ from ..field import Field
 from ..util import SpectralNoiseFactoryFFT, inverse_tikhonov
 from .apodization import SurfaceApodizer
 from ..propagation import FresnelPropagator
-from ..aperture import make_circular_aperture
+from ..aperture import make_circular_aperture, make_general_gaussian_aperture
 from .optical_element import OpticalElement
+from ..fourier import FourierFilter
 
 def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None, remove_modes=None):
     '''Create an error surface from a power-law power spectral density.
@@ -50,6 +51,47 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
         screen -= trans.dot(trans_inv.dot(screen))
 
     return Field(screen * aperture, pupil_grid)
+
+def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, exponent=-2.5, aperture=None):
+    '''Create an error surface from a high-pass filtered power-law power spectral density.
+
+    Parameters
+    ----------
+    pupil_grid : Grid
+        The grid on which to calculate the error.
+    std : scalar
+        The standard deviation of the wavefront aberration in meters.
+    diameter : scalar
+        The diameter over which the ptv is calculated.
+    cutoff_frequency : scalar
+        The cutoff frequency of the high-pass filter.
+    exponent : scalar
+        The exponent of the power law.
+    aperture : Field
+        The mask over which to calculate the ptv. A circular aperture with diameter
+        `diameter` is used if this is not given.
+
+    Returns
+    -------
+    Field
+        The surface error calculated on `pupil_grid`.
+    '''
+    def filter_function(fourier_grid):
+        return 1 - make_general_gaussian_aperture(cutoff_frequency, 15.)(fourier_grid)
+
+    ff = FourierFilter(pupil_grid, filter_function, q=2)
+
+    if aperture is None:
+        aperture = make_circular_aperture(diameter)(pupil_grid)
+    aperture_mask = aperture > 0
+
+    phase_screen = make_power_law_error(pupil_grid, 1.0, diameter, exponent=exponent, aperture=None)
+    phase_screen = np.real( ff.forward(phase_screen + 0j) )
+
+    phase_screen_rms = np.std(phase_screen[aperture_mask > 0]) if aperture is not None else np.std(phase_screen)
+    phase_screen *= std / phase_screen_rms
+
+    return phase_screen * (aperture_mask).astype(float)
 
 class SurfaceAberration(SurfaceApodizer):
     '''A surface aberration with a specific power law.

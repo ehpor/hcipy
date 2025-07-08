@@ -1,4 +1,5 @@
 import numpy as np
+import cmath
 
 from .chirp_z_transform import ChirpZTransform
 from .fourier_transform import FourierTransform, ComputationalComplexity, _get_float_and_complex_dtype
@@ -42,11 +43,11 @@ class ZoomFastFourierTransform(FourierTransform):
         float_dtype, complex_dtype = _get_float_and_complex_dtype(dtype)
 
         if complex_dtype != self._current_dtype:
-            w = np.exp(-1j * self.output_grid.delta * self.input_grid.delta)
-            a = np.exp(1j * self.output_grid.zero * self.input_grid.delta)
+            w = tuple(cmath.exp(-1j * delta_out * delta_in) for delta_out, delta_in in zip(self.output_grid.delta, self.input_grid.delta))
+            a = tuple(cmath.exp(1j * zero_out * delta_in) for zero_out, delta_in in zip(self.output_grid.zero, self.input_grid.delta))
 
-            inv_w = np.exp(1j * self.input_grid.delta * self.output_grid.delta)
-            inv_a = np.exp(-1j * self.input_grid.zero * self.output_grid.delta)
+            inv_w = tuple(cmath.exp(1j * delta_in * delta_out) for delta_in, delta_out in zip(self.input_grid.delta, self.output_grid.delta))
+            inv_a = tuple(cmath.exp(-1j * zero_in * delta_out) for zero_in, delta_out in zip(self.input_grid.zero, self.output_grid.delta))
 
             self.czts = [ChirpZTransform(n, m, ww, aa) for n, m, ww, aa in zip(self.input_grid.dims, self.output_grid.dims, w, a)]
             self.inv_czts = [ChirpZTransform(n, m, ww, aa) for n, m, ww, aa in zip(self.output_grid.dims, self.input_grid.dims, inv_w, inv_a)]

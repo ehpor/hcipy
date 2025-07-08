@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.signal import windows
+import math
 
 from .multi_scale import MultiScaleCoronagraph
 from ..optics import LinearRetarder, Apodizer, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward, Wavefront
@@ -65,18 +66,18 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
         AgnosticOpticalElement.__init__(self)
 
     def make_instance(self, instance_data, input_grid, output_grid, wavelength):
-        pupil_diameter = input_grid.shape * input_grid.delta
+        pupil_diameter = tuple(n * delta for n, delta in zip(input_grid.dims, input_grid.delta))
 
-        levels = int(np.ceil(np.log(self.q / 2) / np.log(self.scaling_factor))) + 1
+        levels = int(math.ceil(math.log(self.q / 2) / math.log(self.scaling_factor))) + 1
         qs = [2 * self.scaling_factor**i for i in range(levels)]
-        num_airys = [input_grid.shape / 2]
+        num_airys = [tuple(n / 2 for n in input_grid.dims)]
 
         focal_grids = []
         instance_data.props = []
         instance_data.jones_matrices = []
 
         for i in range(1, levels):
-            num_airys.append(num_airys[i - 1] * self.window_size / (2 * qs[i - 1] * num_airys[i - 1]))
+            num_airys.append(tuple(n_airy * self.window_size / (2 * qs[i - 1] * n_airy) for n_airy in num_airys[i - 1]))
 
         for i in range(levels):
             q = qs[i]
@@ -97,7 +98,7 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
                 wy = windows.tukey(self.window_size, 1, False)
                 w = np.outer(wy, wx)
 
-                w = np.pad(w, (focal_grid.shape - w.shape) // 2, 'constant').ravel()
+                w = np.pad(w, tuple((n_foc - n_w) // 2 for n_foc, n_w in zip(focal_grid.shape, w.shape)), 'constant').ravel()
                 jones_matrix *= 1 - w
 
             for j in range(i):

@@ -471,8 +471,6 @@ class RegularCoords(Coords):
         assert len(delta) == len(dims)
         assert len(dims) == len(zero)
 
-        print('new coords:', delta, dims, zero)
-
         self.dims = dims
         self.delta = delta
         self.zero = zero

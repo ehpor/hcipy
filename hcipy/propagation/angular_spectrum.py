@@ -47,7 +47,7 @@ class AngularSpectrumPropagator(AgnosticOpticalElement):
             raise ValueError('The input grid must be a regular, Cartesian grid.')
 
         k = 2 * np.pi / wavelength * self.evaluate_parameter(self.refractive_index, input_grid, output_grid, wavelength)
-        L_max = np.max(input_grid.dims * input_grid.delta)
+        L_max = max(n * delta for n, delta in zip(input_grid.dims, input_grid.delta))
 
         if np.any(input_grid.delta < wavelength * abs(self.distance) / L_max):
             def transfer_function(fourier_grid):

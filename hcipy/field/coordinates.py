@@ -133,6 +133,12 @@ class Coords(object):
         '''
         raise NotImplementedError()
 
+    @property
+    def ndim(self):
+        '''The number of dimensions.
+        '''
+        return len(self)
+
     @classmethod
     def _add_coordinate_type(cls, coordinate_type, coordinate_class):
         cls._coordinate_types[coordinate_type] = coordinate_class
@@ -206,25 +212,40 @@ class UnstructuredCoords(Coords):
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
         '''
-        b = np.ones(len(self.coords)) * b
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == self.ndim, 'b must have the same dimensionality as the coords.'
+
         for i in range(len(self.coords)):
             self.coords[i] += b[i]
+
         return self
 
     def __isub__(self, b):
         '''Subtract `b` from the coordinates separately in-place
         '''
-        b = np.ones(len(self.coords)) * b
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == self.ndim, 'b must have the same dimensionality as the coords.'
+
         for i in range(len(self.coords)):
             self.coords[i] -= b[i]
+
         return self
 
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
-        f = np.ones(len(self.coords)) * f
+        if not isinstance(f, Iterable):
+            f = (f,) * self.ndim
+
+        assert len(f) == self.ndim, 'f must have the same dimensionality as the coords.'
+
         for i in range(len(self.coords)):
             self.coords[i] *= f[i]
+
         return self
 
     def __eq__(self, other):
@@ -344,26 +365,40 @@ class SeparatedCoords(Coords):
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
         '''
-        for i in range(len(self)):
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == self.ndim, 'b must have same dimensionality as the coordinates.'
+
+        for i in range(self.ndim):
             self.separated_coords[i] += b[i]
+
         return self
 
     def __isub__(self, b):
         '''Subtract `b` from the coordinates separately in-place.
         '''
-        for i in range(len(self)):
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == self.ndim, 'b must have same dimensionality as the coordinates.'
+
+        for i in range(self.ndim):
             self.separated_coords[i] -= b[i]
+
         return self
 
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
-        if np.isscalar(f):
-            for i in range(len(self)):
-                self.separated_coords[i] *= f
-        else:
-            for i in range(len(self)):
-                self.separated_coords[i] *= f[i]
+        if not isinstance(f, Iterable):
+            f = (f,) * self.ndim
+
+        assert len(f) == self.ndim, 'f must have same dimensionality as the coordinates.'
+
+        for i in range(self.ndim):
+            self.separated_coords[i] *= f[i]
+
         return self
 
     def __eq__(self, other):
@@ -526,30 +561,37 @@ class RegularCoords(Coords):
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
         '''
-        if isinstance(b, Iterable):
-            self.zero = tuple(aa + bb for aa, bb in zip(self.zero, b))
-        else:
-            self.zero = tuple(a + b for a in self.zero)
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
+
+        self.zero = tuple(aa + bb for aa, bb in zip(self.zero, b))
+
         return self
 
     def __isub__(self, b):
         '''Subtract `b` from the coordinates separately in-place.
         '''
-        if isinstance(b, Iterable):
-            self.zero = tuple(aa - bb for aa, bb in zip(self.zero, b))
-        else:
-            self.zero = tuple(a - b for a in self.zero)
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
+
+        self.zero = tuple(aa - bb for aa, bb in zip(self.zero, b))
+
         return self
 
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
-        if isinstance(f, Iterable):
-            self.delta = tuple(d * ff for d, ff in zip(self.delta, f))
-            self.zero = tuple(z * ff for z, ff in zip(self.zero, f))
-        else:
-            self.delta = tuple(d * f for d in self.delta)
-            self.zero = tuple(z * f for z in self.zero)
+        if not isinstance(f, Iterable):
+            f = (f,) * self.ndim
+
+        assert len(f) == self.ndim, 'f must have same dimensionality as the coordinates.'
+
+        self.delta = tuple(d * ff for d, ff in zip(self.delta, f))
+        self.zero = tuple(z * ff for z, ff in zip(self.zero, f))
 
         return self
 

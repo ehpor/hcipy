@@ -196,7 +196,11 @@ class FourierShift:
 
         # Compute the Fourier transform grid for these axes.
         fft_grid = make_fft_grid(self.input_grid, q=1, fov=1)
-        fft_grid = CartesianGrid(RegularCoords(fft_grid.delta[mask], fft_grid.dims[mask], fft_grid.zero[mask]))
+
+        delta = tuple(delta for delta, m in zip(fft_grid.delta, mask) if m)
+        dims = tuple(dim for dim, m in zip(fft_grid.dims, mask) if m)
+        zero = tuple(z for z, m in zip(fft_grid.zero, mask) if m)
+        fft_grid = CartesianGrid(RegularCoords(delta, dims, zero))
 
         # Compute the shift filter on this grid and broadcast to the original field shape.
         shift_filter = _numexpr_grid_shift(-shift, fft_grid).reshape(fft_grid.shape)
@@ -398,10 +402,11 @@ class FourierRotation:
         if not input_grid.is_regular or input_grid.ndim != 2:
             raise ValueError('The input grid should be 2D and regularly spaced.')
 
-        self._padding = input_grid.shape // 2
+        self._padding = tuple(n // 2 for n in input_grid.shape)
 
-        zero = input_grid.zero - input_grid.delta * self._padding[::-1]
-        self._padded_grid = CartesianGrid(RegularCoords(input_grid.delta, input_grid.dims + 2 * np.array(self._padding[::-1]), zero))
+        zero = tuple(zero - delta * padding for zero, delta, padding in zip(input_grid.zero, input_grid.delta, self._padding[::-1]))
+        dims = tuple(n + 2 * padding for n, padding in zip(input_grid.dims, self._padding[::-1]))
+        self._padded_grid = CartesianGrid(RegularCoords(input_grid.delta, dims, zero))
 
         self._cropping = tuple(slice(pad, pad + dim) for pad, dim in zip(self._padding, input_grid.shape))
 

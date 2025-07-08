@@ -362,7 +362,7 @@ def make_hexike_basis(num_modes, circum_diameter, grid, hexagon_angle=0):
     '''
     from ..aperture import make_hexagonal_aperture
     from .mode_basis import ModeBasis
-    
+
     zernike_basis = make_zernike_basis(int(num_modes), circum_diameter, grid)
     # Create hexagonal aperture for this basis
     hexagonal_aperture = make_hexagonal_aperture(circum_diameter, hexagon_angle)(grid)

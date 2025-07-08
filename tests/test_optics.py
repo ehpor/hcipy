@@ -264,93 +264,93 @@ def test_segmented_hexike_phase_screen():
     num_pix = 128
     grid = make_pupil_grid(num_pix)
     wavelength = 500e-9
-    
+
     # Create hexagonal segmented aperture
     num_rings = 1  # 7 segments - enough to test hexike functionality
     segment_positions = make_hexagonal_grid(0.5 / num_rings * np.sqrt(3) / 2, num_rings)
     aperture, segments = make_segmented_aperture(
-        make_hexagonal_aperture(0.5 / num_rings - 0.003, np.pi / 2), 
-        segment_positions, 
+        make_hexagonal_aperture(0.5 / num_rings - 0.003, np.pi / 2),
+        segment_positions,
         return_segments=True
     )
-    
+
     aperture = evaluate_supersampled(aperture, grid, 2)
     segments = evaluate_supersampled(segments, grid, 2)
-    
+
     # Calculate segment centers for hexike phase screen approach
     segment_centers = make_hexagonal_grid(0.5 / num_rings * np.sqrt(3) / 2, num_rings)
     mask = segment_centers.ones(dtype='bool')
     segment_centers_grid = segment_centers.subset(mask)
-    
+
     # Estimate segment diameter (point-to-point for hexagons)
     segment_diameter = 0.5 / num_rings * 2  # approximate point-to-point distance
-    
+
     # Test hexike-enabled segmented mirror
     mirror = SegmentedDeformableMirror(
-        segments, 
+        segments,
         segment_centers=segment_centers_grid,
         pupil_grid=grid,
         segment_diameter=segment_diameter,
-        hexagon_angle=np.pi/2  # flat-top orientation
+        hexagon_angle=np.pi / 2  # flat-top orientation
     )
-    
+
     # Test 1: Verify mirror creation and basic properties
     assert len(mirror.segments) == len(segments)
     assert mirror.segment_centers is not None
     assert mirror.pupil_grid is not None
     assert mirror.segment_point_to_point == segment_diameter
-    
+
     # Test 2: Test hexike aberration application
     segment_hexikes = {
         0: {0: 100, 1: 50},  # Segment 0: mode 0=100nm, mode 1=50nm
         1: {2: 75}           # Segment 1: mode 2=75nm
     }
-    
+
     phase_screen = mirror.apply_segment_hexike_aberrations(segment_hexikes, wavelength)
-    
+
     # Verify phase screen was created
     assert phase_screen is not None
     # Phase screen should have the same number of elements as the grid
     assert len(phase_screen) == grid.size
     assert np.std(phase_screen) > 0  # Phase screen should have variation
-    
+
     # Test 3: Test convenience methods
     mirror.clear_hexike_aberrations()
     mirror.set_segment_hexike_coefficient(0, 4, 200.0, wavelength)
-    
+
     coeff = mirror.get_segment_hexike_coefficient(0, 4)
     assert np.isclose(coeff, 200.0)
-    
+
     all_coeffs = mirror.get_hexike_coefficients()
     assert 0 in all_coeffs
     assert 4 in all_coeffs[0]
     assert np.isclose(all_coeffs[0][4], 200.0)
-    
+
     # Test 4: Test wavefront application with combined PTT and hexike effects
     wf = Wavefront(aperture, wavelength)
-    
+
     # Apply PTT to one segment
     mirror.set_segment_actuators(0, 50e-9, 1e-6, 1e-6)  # piston, tip, tilt
-    
+
     # Apply mirror to wavefront, including both PTT and hexike effects
     wf_aberrated = mirror(wf)
-    
+
     # Verify wavefront was modified
     phase_original = np.angle(wf.electric_field)
     phase_aberrated = np.angle(wf_aberrated.electric_field)
     phase_difference = phase_aberrated - phase_original
-    
+
     assert np.std(phase_difference) > 0, "Wavefront was not modified by mirror"
-    
+
     # Test 5: Test phase screen update
     updated_phase_screen = mirror.update_hexike_phase_screen(wavelength)
     assert updated_phase_screen is not None
-    
+
     # Clear coefficients and verify phase screen is cleared
     mirror.clear_hexike_aberrations()
     cleared_phase_screen = mirror.update_hexike_phase_screen(wavelength)
     assert cleared_phase_screen is None
-    
+
     # Test 6: Test parameter validation
     with pytest.raises(ValueError):
         # Missing required parameters for hexike phase screen

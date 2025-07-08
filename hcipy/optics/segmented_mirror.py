@@ -3,7 +3,6 @@ import scipy.sparse
 
 from ..mode_basis import ModeBasis, make_hexike_basis
 from .deformable_mirror import DeformableMirror
-from ..interpolation import make_linear_interpolator
 
 class SegmentedDeformableMirror(DeformableMirror):
     '''A segmented deformable mirror with piston, tip, tilt, and optional Hexike control.
@@ -31,9 +30,9 @@ class SegmentedDeformableMirror(DeformableMirror):
     -----
     Actuator organization:
     - segment_id + 0*N: Piston for segment segment_id
-    - segment_id + 1*N: Tip for segment segment_id  
+    - segment_id + 1*N: Tip for segment segment_id
     - segment_id + 2*N: Tilt for segment segment_id
-    
+
     where N is the number of segments.
 
     Examples
@@ -41,7 +40,7 @@ class SegmentedDeformableMirror(DeformableMirror):
     >>> # PTT-only mirror (backward compatible)
     >>> mirror = SegmentedDeformableMirror(segments)
     >>> mirror.set_segment_actuators(0, 100e-9, 1e-6, 1e-6)
-    
+
     >>> # PTT + Hexike mirror (phase screen approach)
     >>> mirror = SegmentedDeformableMirror(segments,
     ...                                   segment_centers=centers, pupil_grid=grid)
@@ -53,20 +52,20 @@ class SegmentedDeformableMirror(DeformableMirror):
         # Store configuration
         self.segment_diameter = segment_diameter
         self.hexagon_angle = hexagon_angle
-        
+
         # Store geometry for hexike phase screen approach
         self.segment_centers = segment_centers
         self.pupil_grid = pupil_grid
         self.segment_point_to_point = segment_diameter
-        
+
         # Initialize hexike phase screen system
         self._hexike_phase_screen = None
         self._hexike_coefficients = {}  # Store hexike coefficients: {segment_id: {mode: amplitude}}
-        
+
         # Initialize actuators for PTT only
         self.actuators = np.zeros(len(segments) * 3)
         self.input_grid = segments.grid
-        
+
         # Set segments (this will trigger influence function generation)
         self.segments = segments
 
@@ -80,31 +79,31 @@ class SegmentedDeformableMirror(DeformableMirror):
         '''
         tip = []
         tilt = []
-        
+
         for segment in self._segments:
             segment_mean = segment.mean()
             norm = np.mean(segment**2) - segment_mean**2
-            
+
             # Tip mode generation
             tip_mode = segment * segment.grid.x
             if norm != 0:
                 beta = ((tip_mode * segment).mean() - segment_mean * tip_mode.mean()) / norm
                 tip_mode -= beta * segment
-            
+
             tip_mode = scipy.sparse.csr_matrix(tip_mode)
             tip_mode.eliminate_zeros()
             tip.append(tip_mode)
-            
-            # Tilt mode generation  
+
+            # Tilt mode generation
             tilt_mode = segment * segment.grid.y
             if norm != 0:
                 beta = ((tilt_mode * segment).mean() - segment_mean * tilt_mode.mean()) / norm
                 tilt_mode -= beta * segment
-                
+
             tilt_mode = scipy.sparse.csr_matrix(tilt_mode)
             tilt_mode.eliminate_zeros()
             tilt.append(tilt_mode)
-        
+
         return ModeBasis(tip), ModeBasis(tilt)
 
     @property
@@ -137,19 +136,19 @@ class SegmentedDeformableMirror(DeformableMirror):
             (piston, tip, tilt) - Units: piston in meters, tip/tilt in radians.
         '''
         num_segments = len(self._segments)
-        
+
         # PTT actuators only
         piston = self.actuators[segment_id]
-        tip = self.actuators[segment_id + num_segments]  
+        tip = self.actuators[segment_id + num_segments]
         tilt = self.actuators[segment_id + 2 * num_segments]
-        
+
         return (piston, tip, tilt)
 
     def set_segment_actuators(self, segment_id, piston, tip, tilt):
         '''Set actuators for an individual segment of the DM.
 
         Parameters
-        ----------  
+        ----------
         segment_id : int
             The index of the segment for which to set the actuators.
         piston : float
@@ -160,12 +159,11 @@ class SegmentedDeformableMirror(DeformableMirror):
             Tilt actuator value in radians.
         '''
         num_segments = len(self._segments)
-        
+
         # Set PTT actuators
         self.actuators[segment_id] = piston
         self.actuators[segment_id + num_segments] = tip
         self.actuators[segment_id + 2 * num_segments] = tilt
-
 
     def apply_segment_hexike_aberrations(self, segment_zernike_dict, wavelength):
         '''Apply hexike aberrations to individual segments using phase screen approach.
@@ -193,7 +191,7 @@ class SegmentedDeformableMirror(DeformableMirror):
         '''
         if self.segment_centers is None or self.pupil_grid is None:
             raise ValueError("segment_centers and pupil_grid must be provided for hexike aberrations")
-        
+
         if self.segment_point_to_point is None:
             raise ValueError("segment_diameter must be provided for hexike aberrations")
 
@@ -205,7 +203,7 @@ class SegmentedDeformableMirror(DeformableMirror):
 
         # Process each segment that has aberrations
         for seg_id, mode_dict in segment_zernike_dict.items():
-            
+
             # Skip empty mode dictionaries
             if not mode_dict:
                 continue
@@ -214,19 +212,19 @@ class SegmentedDeformableMirror(DeformableMirror):
                 # Warn for non-existent segments
                 import warnings
                 warnings.warn(f"Segment {seg_id} does not exist. "
-                            f"Mirror has {len(self.segments)} segments. Skipping.",
-                            UserWarning)
+                              f"Mirror has {len(self.segments)} segments. Skipping.",
+                              UserWarning)
                 continue
-            
+
             if seg_id >= len(self.segment_centers.points):
                 # Warn for segments without center information
                 import warnings
                 warnings.warn(f"Segment {seg_id} has no center information in segment_centers. "
-                            f"Available centers: {len(self.segment_centers.points)}, "
-                            f"requested segment: {seg_id}. Skipping this segment.",
-                            UserWarning)
+                              f"Available centers: {len(self.segment_centers.points)}, "
+                              f"requested segment: {seg_id}. Skipping this segment.",
+                              UserWarning)
                 continue
-            
+
             # Get the center of this segment
             center = self.segment_centers.points[seg_id]
 
@@ -235,9 +233,9 @@ class SegmentedDeformableMirror(DeformableMirror):
 
             # Create hexike basis for this segment
             angle = self.hexagon_angle
-            basis = make_hexike_basis(int(max_mode_for_segment + 1), 
-                                    self.segment_point_to_point,
-                                    self.pupil_grid.shifted(-center), angle)
+            basis = make_hexike_basis(int(max_mode_for_segment + 1),
+                                      self.segment_point_to_point,
+                                      self.pupil_grid.shifted(-center), angle)
 
             # Apply each requested mode
             for mode, coeff_nm in mode_dict.items():
@@ -252,20 +250,20 @@ class SegmentedDeformableMirror(DeformableMirror):
 
         # Store the phase screen for automatic application
         self._hexike_phase_screen = phase_screen
-        
+
         return phase_screen
 
     def __call__(self, wavefront):
         '''Apply the segmented deformable mirror to a wavefront.
-        
+
         This method applies both the PTT actuator effects (via parent class)
         and any hexike phase screen aberrations.
-        
+
         Parameters
         ----------
         wavefront : Wavefront
             The wavefront to which to apply the mirror.
-            
+
         Returns
         -------
         Wavefront
@@ -273,16 +271,16 @@ class SegmentedDeformableMirror(DeformableMirror):
         '''
         # Apply PTT deformable mirror effects using parent class
         wf = super().__call__(wavefront)
-        
+
         # Apply hexike phase screen if it exists
         if self._hexike_phase_screen is not None:
             wf.electric_field *= np.exp(1j * self._hexike_phase_screen)
-        
+
         return wf
 
     def set_segment_hexike_coefficient(self, segment_id, mode, amplitude_nm, wavelength):
         '''Set a hexike coefficient for a specific segment and mode.
-        
+
         Parameters
         ----------
         segment_id : int
@@ -296,23 +294,23 @@ class SegmentedDeformableMirror(DeformableMirror):
         '''
         if segment_id not in self._hexike_coefficients:
             self._hexike_coefficients[segment_id] = {}
-        
+
         self._hexike_coefficients[segment_id][mode] = amplitude_nm
-        
+
         # Regenerate phase screen with updated coefficients
         if self._hexike_coefficients:
             self.apply_segment_hexike_aberrations(self._hexike_coefficients, wavelength)
 
     def get_segment_hexike_coefficient(self, segment_id, mode):
         '''Get a hexike coefficient for a specific segment and mode.
-        
+
         Parameters
         ----------
         segment_id : int
             The index of the segment.
         mode : int
             The hexike mode index (0-based).
-            
+
         Returns
         -------
         float
@@ -329,7 +327,7 @@ class SegmentedDeformableMirror(DeformableMirror):
 
     def get_hexike_coefficients(self):
         '''Get all current hexike coefficients.
-        
+
         Returns
         -------
         dict
@@ -339,12 +337,12 @@ class SegmentedDeformableMirror(DeformableMirror):
 
     def update_hexike_phase_screen(self, wavelength):
         '''Regenerate the hexike phase screen from stored coefficients.
-        
+
         Parameters
         ----------
         wavelength : float
             Wavelength in meters for phase conversion.
-            
+
         Returns
         -------
         Field or None

@@ -1,7 +1,7 @@
 import numpy as np
 
-from .fast_fourier_transform import FastFourierTransform
-from ..field import Field, field_dot, field_conjugate_transpose
+from .fast_fourier_transform import FastFourierTransform, make_fft_grid, _numexpr_grid_shift
+from ..field import Field, field_dot, field_conjugate_transpose, CartesianGrid, RegularCoords
 from .._math import fft as _fft_module
 
 
@@ -140,9 +140,7 @@ class FourierFilter(object):
             f = f * tf
 
         # Since f is now guaranteed to not share memory, always allow overwriting.
-        overwrite_x = True
-
-        f = _fft_module.ifftn(f, axes=axes, overwrite_x=overwrite_x)
+        f = _fft_module.ifftn(f, axes=axes, overwrite_x=True)
 
         s = f.shape[:-self.internal_grid.ndim] + (-1,)
         if self.cutout is None:
@@ -151,3 +149,339 @@ class FourierFilter(object):
             res = f[c].reshape(s)
 
         return Field(res, self.input_grid)
+
+class FourierShift:
+    '''An image shifting operator implemented in the Fourier domain.
+
+    This operator is smart enough to ignore dimensions where the
+    shift is zero.
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The grid that is expected for the input field.
+    shift : array_like
+        The shift to apply to any input field.
+
+    Attributes
+    ----------
+    shift : array_like
+        The shift to apply to any input field.
+    '''
+    def __init__(self, input_grid, shift):
+        self.input_grid = input_grid
+        self.output_grid = input_grid
+
+        self.shift = shift
+
+    @property
+    def shift(self):
+        return self._shift
+
+    @shift.setter
+    def shift(self, shift):
+        shift = np.array(shift)
+        self._shift = shift
+
+        # Find out which axes to Fourier transform.
+        mask = shift != 0
+        self._ft_axes = tuple(np.flatnonzero(shift) - 1)
+
+        if not self._ft_axes:
+            # All shifts are zero. We can exit out early.
+            self._shift_filter = None
+            return
+
+        broadcasting_slice = tuple(slice(None) if m else np.newaxis for m in mask[::-1])
+
+        # Compute the Fourier transform grid for these axes.
+        fft_grid = make_fft_grid(self.input_grid, q=1, fov=1)
+        fft_grid = CartesianGrid(RegularCoords(fft_grid.delta[mask], fft_grid.dims[mask], fft_grid.zero[mask]))
+
+        # Compute the shift filter on this grid and broadcast to the original field shape.
+        shift_filter = _numexpr_grid_shift(-shift, fft_grid).reshape(fft_grid.shape)
+        shift_filter = np.fft.ifftshift(shift_filter)
+        shift_filter = shift_filter[broadcasting_slice]
+
+        self._shift_filter = shift_filter
+
+    def forward(self, field):
+        '''Return the forward filtering of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to filter.
+
+        Returns
+        -------
+        Field
+            The filtered field.
+        '''
+        return self._operation(field, adjoint=False)
+
+    def backward(self, field):
+        '''Return the backward (adjoint) filtering of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to filter.
+
+        Returns
+        -------
+        Field
+            The adjoint filtered field.
+        '''
+        return self._operation(field, adjoint=True)
+
+    def _operation(self, field, adjoint):
+        if self._shift_filter is None:
+            return field.astype('complex')
+
+        # Never overwrite the input, so don't use kwargs here.
+        f = _fft_module.fftn(field.shaped, axes=self._ft_axes)
+
+        if adjoint:
+            f *= np.conj(self._shift_filter)
+        else:
+            f *= self._shift_filter
+
+        # Fine to overwrite the input, if supported.
+        f = _fft_module.ifftn(f, axes=self._ft_axes, overwrite_x=True)
+
+        shape = f.shape[:-field.grid.ndim] + (-1,)
+
+        return Field(f.reshape(shape), field.grid)
+
+class FourierShear:
+    '''An image shearing operator implemented in the Fourier domain.
+
+    When given an image I(x, y), this operator will return a new
+    image I(x + a * y, y) when a shearing along the x axis is
+    requested.
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The grid that is expected for the input field.
+    shear : scalar
+        The amount of shear to apply to the image.
+    shear_dim : integer
+        The dimension to which to apply the shear. A shear along x would
+        be a value of 0, a shear along y would be 1.
+
+    Attributes
+    ----------
+    input_grid : Grid
+        The grid assumed for the input of this operator. Read-only.
+    shear : scalar
+        The amount of shear along the axis.
+    shear_dim : integer
+        The dimension along which the shear is applied. Read-only.
+
+    Raises
+    ------
+    ValueError
+        When the input grid is not 2D and regularly spaced.
+    '''
+    def __init__(self, input_grid, shear, shear_dim=0):
+        if not input_grid.is_regular or input_grid.ndim != 2:
+            raise ValueError('The input grid should be 2D and regularly spaced.')
+
+        self._input_grid = input_grid
+        self._shear_dim = shear_dim
+        self.shear = shear
+
+    @property
+    def input_grid(self):
+        return self._input_grid
+
+    @property
+    def shear_dim(self):
+        return self._shear_dim
+
+    @property
+    def fourier_dim(self):
+        return 1 if self.shear_dim == 0 else 0
+
+    @property
+    def shear(self):
+        return self._shear
+
+    @shear.setter
+    def shear(self, shear):
+        fft_grid = make_fft_grid(self.input_grid)
+        fx = np.fft.ifftshift(fft_grid.separated_coords[self.shear_dim])
+
+        y = self.input_grid.separated_coords[self.fourier_dim]
+
+        self._filter = np.exp(-1j * shear * np.outer(y, fx))
+
+        if self.shear_dim == 1:
+            self._filter = self._filter.T
+
+        # Make sure the ordering of the filter is the same as the FFT output.
+        self._filter = np.ascontiguousarray(self._filter)
+
+        self._shear = shear
+
+    def forward(self, field):
+        '''Return the forward shear of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to shear.
+
+        Returns
+        -------
+        Field
+            The sheared field.
+        '''
+        return self._operation(field, adjoint=False)
+
+    def backward(self, field):
+        '''Return the backward (adjoint) shear of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to shear.
+
+        Returns
+        -------
+        Field
+            The adjoint sheared field.
+        '''
+        return self._operation(field, adjoint=True)
+
+    def _operation(self, field, adjoint):
+        # Never overwrite the input, so don't use kwargs here.
+        f = _fft_module.fft(field.shaped, axis=-self.shear_dim - 1)
+
+        if adjoint:
+            f *= np.conj(self._filter)
+        else:
+            f *= self._filter
+
+        # Fine to overwrite the input, if supported.
+        f = _fft_module.ifft(f, axis=-self.shear_dim - 1, overwrite_x=True)
+
+        shape = f.shape[:-field.grid.ndim] + (-1,)
+
+        return Field(f.reshape(shape), field.grid)
+
+class FourierRotation:
+    '''An image rotation operator implemented in the Fourier domain.
+
+    This operator is implemented using three consecutive shearing operations.
+    For rotations larger than 45 degrees, the individual shears do not
+    work anymore. For those larger rotations, we instead use multiple smaller
+    rotations.
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The grid that is expected for the input field.
+    angle : scalar
+        The rotation angle in radians.
+
+    Raises
+    ------
+    ValueError
+        When the input grid is not 2D and regularly spaced.
+    '''
+    def __init__(self, input_grid, angle):
+        self._input_grid = input_grid
+
+        if not input_grid.is_regular or input_grid.ndim != 2:
+            raise ValueError('The input grid should be 2D and regularly spaced.')
+
+        self._padding = input_grid.shape // 2
+
+        zero = input_grid.zero - input_grid.delta * self._padding[::-1]
+        self._padded_grid = CartesianGrid(RegularCoords(input_grid.delta, input_grid.dims + 2 * np.array(self._padding[::-1]), zero))
+
+        self._cropping = tuple(slice(pad, pad + dim) for pad, dim in zip(self._padding, input_grid.shape))
+
+        self._shear_x = FourierShear(self._padded_grid, shear=0, shear_dim=0)
+        self._shear_y = FourierShear(self._padded_grid, shear=0, shear_dim=1)
+        self._shear_x_double = FourierShear(self._padded_grid, shear=0, shear_dim=0)
+
+        self.angle = angle
+
+    @property
+    def angle(self):
+        return self._angle
+
+    @angle.setter
+    def angle(self, angle):
+        self._angle = (angle + np.pi) % (2 * np.pi) - np.pi
+
+        if self.angle == 0:
+            self.num_rotations = 0
+            return
+
+        max_angle = np.deg2rad(45)
+        self.num_rotations = int(np.ceil(abs(self.angle) / max_angle))
+        small_angle = self.angle / self.num_rotations
+
+        self._shear_x.shear = np.tan(small_angle / 2)
+        self._shear_y.shear = -np.sin(small_angle)
+        self._shear_x_double.shear = 2 * np.tan(small_angle / 2)
+
+    def forward(self, field):
+        '''Return the forward rotation of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to rotate.
+
+        Returns
+        -------
+        Field
+            The rotated field.
+        '''
+        return self._operation(field, adjoint=False)
+
+    def backward(self, field):
+        '''Return the backward (adjoint) rotation of the input field.
+
+        Parameters
+        ----------
+        field : Field
+            The field to rotate.
+
+        Returns
+        -------
+        Field
+            The adjoint rotated field.
+        '''
+        return self._operation(field, adjoint=True)
+
+    def _operation(self, field, adjoint):
+        if self.num_rotations == 0:
+            return field
+
+        # Pad the field.
+        f = np.pad(field.shaped, self._padding[::-1])
+        f = Field(f.ravel(), self._padded_grid)
+
+        # Perform the shears.
+        # The three-shear decomposition is (shear_x, shear_y, shear_x).
+        # For multiple rotations, the sequence becomes S_x(a), S_y(b), S_x(2a), S_y(b), ..., S_x(a).
+        # This structure explicitly applies the first S_x and S_y, then loops for the intermediate
+        # S_x_double and S_y pairs, and finally applies the last S_x.
+        f = self._shear_x._operation(f, adjoint)
+        f = self._shear_y._operation(f, adjoint)
+
+        for _ in range(self.num_rotations - 1):
+            f = self._shear_x_double._operation(f, adjoint)
+            f = self._shear_y._operation(f, adjoint)
+
+        f = self._shear_x._operation(f, adjoint)
+
+        # Crop the field back to its original size and return.
+        return Field(f.shaped[self._cropping].ravel(), field.grid)

@@ -870,19 +870,20 @@ def make_keystone_aperture(core_diameter, outer_diameter, num_rings, radial_gap,
     else:
         return func
 
-def make_general_gaussian_aperture(full_width_half_maximum, shape_parameter=5, center=None):
-    '''Make a general Guassian aperture.
+def make_super_gaussian_aperture(full_width_half_maximum, shape_parameter=5, center=None):
+    '''Make a super Guassian aperture.
 
     Parameters
     ----------
     full_width_half_maximum : scalar
-        The Full Width Half Maximum of the general Gaussian.
+        The Full Width Half Maximum of the super Gaussian.
     shape_parameter : scalar
         The shape parameter determines the exponential Gaussian fall off. p=1 is identical to a normal Gaussian and p=0.5 results in a Laplacian distribution.
+
     Returns
     -------
     Field generator
-        The general Gaussian aperture.
+        The super Gaussian aperture.
     '''
     if center is None:
         shift = np.zeros(2)
@@ -891,7 +892,7 @@ def make_general_gaussian_aperture(full_width_half_maximum, shape_parameter=5, c
 
     def func(grid):
         sigma = 0.5 * full_width_half_maximum / (2 * np.log(2))**(1 / (2 * shape_parameter))
-        r = grid.shifted(shift).as_('polar').r / sigma
+        r = grid.shifted(-shift).as_('polar').r / sigma
         return Field(np.exp(-1 / 2 * abs(r)**(2 * shape_parameter)), grid)
 
     return func

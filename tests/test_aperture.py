@@ -98,17 +98,19 @@ def test_obstructed_circular_aperture():
 
 @pytest.mark.parametrize('full_width_half_maximum', [0.5, 1.0])
 @pytest.mark.parametrize('shape_parameter', [1., 10.0])
-def test_general_gaussian_aperture(full_width_half_maximum, shape_parameter):
+@pytest.mark.parametrize('center', [[0.0, 0.0], [0.25, -0.3]])
+def test_super_gaussian_aperture(full_width_half_maximum, shape_parameter, center):
     pupil_diameter = 1.0
-    name = 'general_gaussian/pupil'
+    name = 'super_gaussian/pupil'
     name += '_small' if full_width_half_maximum < 0.7 else '_large'
     name += '_smallshape' if shape_parameter < 5.0 else '_largeshape'
+    name += '_noshift' if np.linalg.norm(center) < 0.1 else '_shifted'
 
     check_aperture(
-        functools.partial(make_general_gaussian_aperture, full_width_half_maximum=full_width_half_maximum),
+        functools.partial(make_super_gaussian_aperture, full_width_half_maximum=full_width_half_maximum),
         pupil_diameter, name,
         check_normalization=False,
-        check_segmentation=False, shape_parameter=shape_parameter
+        check_segmentation=False, shape_parameter=shape_parameter, center=center
     )
 
 @pytest.mark.parametrize('num_rings', [3, 5])

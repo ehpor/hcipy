@@ -4,7 +4,7 @@ from ..field import Field
 from ..util import SpectralNoiseFactoryFFT, inverse_tikhonov
 from .apodization import SurfaceApodizer
 from ..propagation import FresnelPropagator
-from ..aperture import make_circular_aperture, make_general_gaussian_aperture
+from ..aperture import make_circular_aperture, make_super_gaussian_aperture
 from .optical_element import OpticalElement
 from ..fourier import FourierFilter
 
@@ -59,8 +59,8 @@ def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, 
     ----------
     pupil_grid : Grid
         The grid on which to calculate the error.
-    std : scalar
-        The standard deviation of the wavefront aberration in meters.
+    ptv : scalar
+        The peak-to-valley of the wavefront aberration in meters before filtering.
     diameter : scalar
         The diameter over which the ptv is calculated.
     cutoff_frequency : scalar
@@ -79,7 +79,7 @@ def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, 
         The surface error calculated on `pupil_grid`.
     '''
     def filter_function(fourier_grid):
-        return 1 - make_general_gaussian_aperture(2 * cutoff_frequency, filter_shape_parameter)(fourier_grid)
+        return 1 - make_super_gaussian_aperture(2 * cutoff_frequency, filter_shape_parameter)(fourier_grid)
 
     ff = FourierFilter(pupil_grid, filter_function, q=2)
 
@@ -90,8 +90,8 @@ def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, 
     phase_screen = make_power_law_error(pupil_grid, 1.0, diameter, exponent=exponent, aperture=None)
     phase_screen = np.real(ff.forward(phase_screen + 0j))
 
-    phase_screen_rms = np.std(phase_screen[aperture_mask > 0]) if aperture is not None else np.std(phase_screen)
-    phase_screen *= std / phase_screen_rms
+    phase_screen_std = np.std(phase_screen[aperture_mask > 0]) if aperture is not None else np.std(phase_screen)
+    phase_screen *= std / phase_screen_std
 
     return phase_screen * (aperture_mask).astype(float)
 

@@ -480,6 +480,21 @@ def make_shifted_aperture(aperture, shift):
     '''
     return lambda grid: Field(aperture(grid.shifted(-np.array(shift))), grid)
 
+def make_inverted_aperture(aperture):
+    '''Create an inverted version of `aperture`.
+
+    Parameters
+    ----------
+    aperture : Field generator
+        The aperture to invert.
+
+    Returns
+    -------
+    Field generator
+        The inverted aperture.
+    '''
+    return lambda grid: Field(1. - aperture(grid), grid)
+
 def make_segmented_aperture(segment_shape, segment_positions, segment_transmissions=1, return_segments=False):
     '''Create a segmented aperture.
 

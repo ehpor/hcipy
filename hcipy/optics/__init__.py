@@ -1,5 +1,6 @@
 __all__ = [
     'make_power_law_error',
+    'make_high_pass_power_law_error',
     'SurfaceAberration',
     'SurfaceAberrationAtDistance',
     'Apodizer',

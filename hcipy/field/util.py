@@ -520,7 +520,7 @@ def make_uniform_vector_field(field, jones_vector):
     Field
         The expanded vector field
     '''
-    if field.is_scalar_field():
+    if field.is_scalar_field:
         return Field([ei * field for ei in jones_vector], field.grid)
 
 def make_uniform_vector_field_generator(field_generator, jones_vector):

@@ -842,6 +842,9 @@ def test_power_law_errors():
     large_aperture = evaluate_supersampled(make_circular_aperture(2 * pupil_diameter), pupil_grid, 4)
     zernike_modes = make_zernike_basis(3, pupil_diameter, pupil_grid)
     cutoff_freq = 2 * np.pi * 10 / pupil_diameter
+    
+    fft = FastFourierTransform(pupil_grid)
+    fourier_mask = make_circular_aperture(2 * 2 * np.pi * 10 / pupil_diameter)(fft.output_grid)
 
     screen = make_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, exponent=-2.5, aperture=None, remove_modes=None)
     assert abs((np.ptp(screen[large_aperture > 0]) - 0.1) / 0.1) < 1e-10
@@ -852,8 +855,10 @@ def test_power_law_errors():
     screen = make_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, exponent=-4.5, aperture=aperture, remove_modes=zernike_modes)
     assert np.all(np.abs(zernike_modes.coefficients_for(screen)) < 5e-4)
 
-    test = make_high_pass_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, cutoff_freq, exponent=-2.5, aperture=None)
-    assert (np.std(test[large_aperture > 0]) - 0.1) / 0.1 < 0.01
+    screen = make_high_pass_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, cutoff_freq, exponent=-2.5, aperture=None)
+    fk = abs(fft.forward(screen))**2
+    assert np.ptp(fk[fourier_mask>0]) < 1e-6
 
-    test = make_high_pass_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, cutoff_freq, exponent=-2.5, aperture=aperture)
-    assert (np.std(test[aperture > 0]) - 0.1) / 0.1 < 1e-13
+    screen = make_high_pass_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, cutoff_freq, exponent=-2.5, aperture=aperture)
+    fk = abs(fft.forward(screen))**2
+    assert np.ptp(fk[fourier_mask>0]) < 1e-6

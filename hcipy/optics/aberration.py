@@ -52,7 +52,7 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
 
     return Field(screen * aperture, pupil_grid)
 
-def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, exponent=-2.5, aperture=None, filter_shape_parameter=15):
+def make_high_pass_power_law_error(pupil_grid, ptv, diameter, cutoff_frequency, exponent=-2.5, aperture=None, filter_shape_parameter=15):
     '''Create an error surface from a high-pass filtered power-law power spectral density.
 
     Parameters
@@ -71,7 +71,7 @@ def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, 
         The mask over which to calculate the ptv. A circular aperture with diameter
         `diameter` is used if this is not given.
     filter_shape_parameter : scalar
-        The shape parameter for the general Gaussian high-pass filter fuction. Default value is 15.0
+        The shape parameter for the super Gaussian high-pass filter fuction. Default value is 15.0
 
     Returns
     -------
@@ -85,15 +85,12 @@ def make_high_pass_power_law_error(pupil_grid, std, diameter, cutoff_frequency, 
 
     if aperture is None:
         aperture = make_circular_aperture(diameter)(pupil_grid)
-    aperture_mask = aperture > 0
+    aperture_mask = (aperture > 0).astype(float)
 
-    phase_screen = make_power_law_error(pupil_grid, 1.0, diameter, exponent=exponent, aperture=None)
-    phase_screen = np.real(ff.forward(phase_screen + 0j))
+    phase_screen = make_power_law_error(pupil_grid, ptv, diameter, exponent=exponent, aperture=None)
+    phase_screen = ff.forward(phase_screen).real
 
-    phase_screen_std = np.std(phase_screen[aperture_mask > 0]) if aperture is not None else np.std(phase_screen)
-    phase_screen *= std / phase_screen_std
-
-    return phase_screen * (aperture_mask).astype(float)
+    return phase_screen * aperture_mask
 
 class SurfaceAberration(SurfaceApodizer):
     '''A surface aberration with a specific power law.

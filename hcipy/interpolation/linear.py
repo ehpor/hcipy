@@ -26,7 +26,7 @@ def make_linear_interpolator_separated(field, grid=None, fill_value=np.nan):
     else:
         field = Field(field, grid)
 
-    axes_reversed = np.array(grid.separated_coords)
+    axes_reversed = tuple(grid.separated_coords)
     interp = RegularGridInterpolator(axes_reversed, np.asarray(field.shaped), 'linear', False, fill_value)
 
     def interpolator(evaluated_grid):

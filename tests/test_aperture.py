@@ -341,6 +341,13 @@ def test_shifted_aperture():
 
     assert np.allclose(aperture1, aperture2)
 
+def test_inverted_aperture():
+    grid = make_pupil_grid(32, 1.0)
+    aperture1 = 1 - make_circular_aperture(1.0)(grid)
+    aperture2 = make_inverted_aperture(make_circular_aperture(1.0))(grid)
+
+    assert np.allclose(aperture1, aperture2)
+
 @pytest.mark.parametrize('with_spiders', [True, False])
 @pytest.mark.parametrize('with_segment_gaps', [True, False])
 def test_keck_aperture(with_spiders, with_segment_gaps):

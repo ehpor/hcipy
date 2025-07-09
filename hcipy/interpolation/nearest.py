@@ -23,7 +23,7 @@ def make_nearest_interpolator_separated(field, grid=None):
     else:
         field = Field(field, grid)
 
-    axes_reversed = np.array(grid.separated_coords)
+    axes_reversed = tuple(grid.separated_coords)
     interp = RegularGridInterpolator(axes_reversed, field.shaped, 'nearest', False)
 
     def interpolator(evaluated_grid):

@@ -23,10 +23,9 @@ class Detector(object):
     input_grid : Grid
         The grid that is expected as input.
     '''
-    def __init__(self, detector_grid, subsampling=1, subsamping=1):
-        if subsamping != 1 and subsampling == 1:
-            # We were given a subsamping that was changed from the default,
-            # but subsampling was the same.
+    def __init__(self, detector_grid, subsampling=1, subsamping=None):
+        if subsamping is not None:
+            # We were given a subsamping that was changed from the default.
             warnings.warn("The subsamping parameter is deprecated and will be removed in a future version. Please use subsampling instead", DeprecationWarning, stacklevel=2)
             subsampling = subsamping
 
@@ -105,7 +104,7 @@ class NoiselessDetector(Detector):
         this is an array, the subsampling factor will be different for
         each dimension. Default: 1.
     '''
-    def __init__(self, detector_grid, subsampling=1, subsamping=1):
+    def __init__(self, detector_grid, subsampling=1, subsamping=None):
         Detector.__init__(self, detector_grid, subsampling, subsamping)
 
         self.accumulated_charge = 0

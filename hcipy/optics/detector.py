@@ -1,6 +1,7 @@
 import numpy as np
 from ..util import large_poisson
 from ..field import subsample_field, make_supersampled_grid
+import warnings
 
 class Detector(object):
     '''Base class for a detector.
@@ -10,7 +11,7 @@ class Detector(object):
     detector_grid : Grid
         The grid on which the detector returns its images. These indicate
         the centers of the pixels.
-    subsamping : integer or scalar or ndarray
+    subsampling : integer or scalar or ndarray
         The number of subpixels per pixel along one axis. For example, a
         value of 2 indicates that 2x2=4 subpixels are used per pixel. If
         this is a scalar, it will be rounded to the nearest integer. If
@@ -22,12 +23,17 @@ class Detector(object):
     input_grid : Grid
         The grid that is expected as input.
     '''
-    def __init__(self, detector_grid, subsamping=1):
-        self.detector_grid = detector_grid
-        self.subsamping = subsamping
+    def __init__(self, detector_grid, subsampling=1, subsamping=None):
+        if subsamping is not None:
+            # We were given a subsamping that was changed from the default.
+            warnings.warn("The subsamping parameter is deprecated and will be removed in a future version. Please use subsampling instead", DeprecationWarning, stacklevel=2)
+            subsampling = subsamping
 
-        if subsamping > 1:
-            self.input_grid = make_supersampled_grid(detector_grid, subsamping)
+        self.detector_grid = detector_grid
+        self.subsampling = subsampling
+
+        if subsampling > 1:
+            self.input_grid = make_supersampled_grid(detector_grid, subsampling)
         else:
             self.input_grid = detector_grid
 
@@ -91,15 +97,15 @@ class NoiselessDetector(Detector):
     detector_grid : Grid
         The grid on which the detector returns its images. These indicate
         the centers of the pixels.
-    subsamping : integer or scalar or ndarray
+    subsampling : integer or scalar or ndarray
         The number of subpixels per pixel along one axis. For example, a
         value of 2 indicates that 2x2=4 subpixels are used per pixel. If
         this is a scalar, it will be rounded to the nearest integer. If
         this is an array, the subsampling factor will be different for
         each dimension. Default: 1.
     '''
-    def __init__(self, detector_grid, subsamping=1):
-        Detector.__init__(self, detector_grid, subsamping)
+    def __init__(self, detector_grid, subsampling=1, subsamping=None):
+        Detector.__init__(self, detector_grid, subsampling, subsamping)
 
         self.accumulated_charge = 0
 
@@ -222,7 +228,7 @@ class NoisyDetector(Detector):
         else:
             power = wavefront
 
-        self.accumulated_charge += subsample_field(power, subsampling=self.subsamping, new_grid=self.detector_grid, statistic='sum') * dt * weight
+        self.accumulated_charge += subsample_field(power, subsampling=self.subsampling, new_grid=self.detector_grid, statistic='sum') * dt * weight
 
         # Adding the generated dark current.
         self.accumulated_charge += self.dark_current_rate * dt * weight

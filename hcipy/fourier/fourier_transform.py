@@ -164,8 +164,8 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, shift=0, pl
             if planner == 'estimate':
                 # Estimate analytically from complexities.
                 # Convert shapes to float to avoid potential overflows.
-                N_in = input_grid.shape.astype('float') * q
-                N_out = output_grid.shape.astype('float')
+                N_in = np.array(input_grid.shape).astype('float') * q
+                N_out = np.array(output_grid.shape).astype('float')
 
                 if input_grid.ndim == 1:
                     fft = 4 * N_in[0] * np.log2(N_in)

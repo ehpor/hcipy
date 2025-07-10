@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.signal import windows
+import math
 
 from ..optics import OpticalElement, Apodizer, Wavefront
 from ..propagation import FraunhoferPropagator
@@ -41,23 +42,23 @@ class MultiScaleCoronagraph(OpticalElement):
     '''
     def __init__(self, input_grid, complex_mask, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
         self.input_grid = input_grid
-        pupil_diameter = input_grid.shape * input_grid.delta
+        pupil_diameter = tuple(n * delta for n, delta in zip(input_grid.dims, input_grid.delta))
 
         if hasattr(lyot_stop, 'forward') or lyot_stop is None:
             self.lyot_stop = lyot_stop
         else:
             self.lyot_stop = Apodizer(lyot_stop)
 
-        levels = int(np.ceil(np.log(q / 2) / np.log(scaling_factor))) + 1
+        levels = int(math.ceil(math.log(q / 2) / math.log(scaling_factor))) + 1
         qs = [2 * scaling_factor**i for i in range(levels)]
-        num_airys = [input_grid.shape / 2]
+        num_airys = [tuple(n / 2 for n in input_grid.dims)]
 
         focal_grids = []
         self.focal_masks = []
         self.props = []
 
         for i in range(1, levels):
-            num_airys.append(num_airys[i - 1] * window_size / (2 * qs[i - 1] * num_airys[i - 1]))
+            num_airys.append(tuple(n_airy * window_size / (2 * qs[i - 1] * n_airy) for n_airy in num_airys[i - 1]))
 
         for i in range(levels):
             q = qs[i]
@@ -71,7 +72,7 @@ class MultiScaleCoronagraph(OpticalElement):
                 wy = windows.tukey(window_size, 1, False)
                 w = np.outer(wy, wx)
 
-                w = np.pad(w, (focal_grid.shape - w.shape) // 2, 'constant').ravel()
+                w = np.pad(w, tuple((n_foc - n_w) // 2 for n_foc, n_w in zip(focal_grid.shape, w.shape)), 'constant').ravel()
                 focal_mask *= 1 - w
 
             for j in range(i):

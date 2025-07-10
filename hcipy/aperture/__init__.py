@@ -38,6 +38,10 @@ __all__ = [
     'make_jwst_aperture',
     'make_keck_aperture',
     'make_eac2_aperture',
+    'make_subaru_aperture',
+    'make_subaru_lyot_stop',
+    'make_scexao_aperture',
+    'make_scexao_lyot_stop',
 ]
 
 from .generic import *

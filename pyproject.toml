@@ -33,7 +33,8 @@ dependencies = [
     "numexpr",
     "asdf",
     "importlib_metadata",
-    "importlib_resources>=1.4 ; python_version<'3.9'"
+    "importlib_resources>=1.4 ; python_version<'3.9'",
+    "tqdm"
 ]
 
 [project.optional-dependencies]
@@ -75,3 +76,6 @@ include-package-data = true
 
 [tool.setuptools_scm]
 write_to = "hcipy/_version.py"
+
+[project.scripts]
+hcipy_tune_fourier = "hcipy.fourier.tuning:_cli"

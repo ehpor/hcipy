@@ -89,8 +89,20 @@ class SurfaceApodizer(Apodizer):
         The sag in the surface.
     refractive_index : scalar or function
         The refractive index of the material of the plate.
+    nanfill : scalar or string or None
+        What to fill in for surface sag values that are NaNs. Options are a scalar, or
+        one of {'min', 'max'}. If this is None, no NaN correction is performed. The
+        default is 0.
     '''
-    def __init__(self, surface_sag, refractive_index):
+    def __init__(self, surface_sag, refractive_index, nanfill=0):
+        # Correct surface sag NaNs to avoid contaminating the wavefront with NaNs.
+        if np.isscalar(nanfill):
+            surface_sag[np.isnan(surface_sag)] = nanfill
+        elif nanfill == "min":
+            surface_sag[np.isnan(surface_sag)] = np.nanmin(surface_sag)
+        elif nanfill == "max":
+            surface_sag[np.isnan(surface_sag)] = np.nanmax(surface_sag)
+
         self._surface_sag = surface_sag
         self._refractive_index = refractive_index
 

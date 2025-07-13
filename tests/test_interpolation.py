@@ -15,7 +15,7 @@ def make_unstructured_field():
     return hcipy.Field(field, grid)
 
 def make_separated_grid():
-    return hcipy.make_uniform_grid([2, 2], [0.5, 0.5])
+    return hcipy.make_uniform_grid([2, 2], [0.8, 0.8])
 
 def make_unstructured_grid():
     grid = make_separated_grid()
@@ -37,7 +37,7 @@ def test_linear_interpolator(field_in, grid_out):
     interpolator = hcipy.make_linear_interpolator(field_in)
     field_out = interpolator(grid_out)
 
-    expected_values = np.array([2.5, 4.5, 10.5, 12.5])
+    expected_values = np.array([3.5, 5.1, 9.9, 11.5])
     assert np.allclose(field_out, expected_values)
 
 @pytest.mark.parametrize('grid_out', grids)
@@ -46,5 +46,5 @@ def test_nearest_interpolator(field_in, grid_out):
     interpolator = hcipy.make_nearest_interpolator(field_in)
     field_out = interpolator(grid_out)
 
-    expected_values = np.array([0, 2, 8, 10])
+    expected_values = np.array([5, 6, 9, 10])
     assert np.allclose(field_out, expected_values)

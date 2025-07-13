@@ -60,7 +60,8 @@ def make_nearest_interpolator_unstructured(field, grid=None):
     interp = NearestNDInterpolator(grid.points, field)
 
     def interpolator(evaluated_grid):
-        res = interp(grid.points)
+        res = interp(evaluated_grid.points)
+
         return Field(res, evaluated_grid)
 
     return interpolator

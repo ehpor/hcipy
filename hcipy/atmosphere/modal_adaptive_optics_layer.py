@@ -1,5 +1,6 @@
 from .atmospheric_model import AtmosphericLayer
 from ..util import inverse_tikhonov
+import warnings
 
 class ModalAdaptiveOpticsLayer(AtmosphericLayer):
     """An atmospheric layer that simulates modal adaptive optics correction.
@@ -24,6 +25,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
     lag : int
         The number of frames of lag in the adaptive optics system. This has
         to be an integer; if it's not, it will be rounded to the nearest integer.
+        A warning will also be emitted in this case.
     framerate : scalar or None
         The framerate of the adaptive optics system in 1/time. If this is None,
         the layer will be reconstructed every call to `evolve_until()`.
@@ -33,12 +35,16 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 
         super().__init__(layer.input_grid, layer.Cn_squared, layer.L0, layer.velocity, layer.height)
 
+        if lag != round(lag):
+            warnings.warn("The lag will be rounded to an integer. Pass an integer to remove this warning.", warnings.UserWarning, stacklevel=2)
+            lag = round(lag)
+
         self.transformation_matrix = controlled_modes.transformation_matrix
         self.transformation_matrix_inverse = inverse_tikhonov(self.transformation_matrix, 1e-7)
 
         self.controlled_modes = controlled_modes
         self.corrected_coeffs = []
-        self.lag = round(lag)
+        self.lag = lag
         self.framerate = framerate
 
         # Initialize reconstruction.

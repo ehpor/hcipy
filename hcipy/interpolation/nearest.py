@@ -23,12 +23,15 @@ def make_nearest_interpolator_separated(field, grid=None):
     else:
         field = Field(field, grid)
 
-    axes_reversed = np.array(grid.separated_coords)
-    interp = RegularGridInterpolator(axes_reversed, field.shaped, 'nearest', False)
+    # RegularGridInterpolator expects data to be in ij indexing rather than xy. We
+    # need to reverse the axes of the data and the coordinates.
+    data = np.moveaxis(field.shaped, range(-1, -grid.ndim - 1, -1), range(-grid.ndim, 0, 1))
+
+    interp = RegularGridInterpolator(grid.separated_coords, data, 'nearest', False)
 
     def interpolator(evaluated_grid):
-        evaluated_coords = np.flip(np.array(evaluated_grid.coords), 0)
-        res = interp(evaluated_coords.T)
+        res = interp(evaluated_grid.points)
+
         return Field(res.ravel(), evaluated_grid)
 
     return interpolator
@@ -57,7 +60,8 @@ def make_nearest_interpolator_unstructured(field, grid=None):
     interp = NearestNDInterpolator(grid.points, field)
 
     def interpolator(evaluated_grid):
-        res = interp(grid.points)
+        res = interp(evaluated_grid.points)
+
         return Field(res, evaluated_grid)
 
     return interpolator

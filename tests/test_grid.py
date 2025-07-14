@@ -332,3 +332,99 @@ def test_grid_serialization():
     d = grid.to_dict()
     grid2 = Grid.from_dict(d)
     assert grid == grid2
+
+def test_make_uniform_grid():
+    # 1D
+    grid = make_uniform_grid(dims=10, extent=1)
+    assert np.all(grid.shape == (10,))
+    assert np.allclose(grid.delta, 0.1)
+    assert np.allclose(grid.zero, -0.45)
+
+    # 2D
+    grid = make_uniform_grid(dims=[10, 20], extent=[1, 2])
+    assert np.all(grid.shape == (20, 10))
+    assert np.allclose(grid.delta, [0.1, 0.1])
+    assert np.allclose(grid.zero, [-0.45, -0.95])
+
+    # 2D with center
+    grid = make_uniform_grid(dims=11, extent=1, center=0.5, has_center=True)
+    assert np.allclose((grid.points[0] + grid.points[-1]) / 2, 0.5)
+
+def test_make_pupil_grid():
+    grid = make_pupil_grid(dims=10, diameter=1)
+    assert np.all(grid.shape == (10, 10))
+    assert np.allclose(grid.delta, 0.1)
+
+def test_make_focal_grid_from_pupil_grid():
+    pupil_grid = make_pupil_grid(dims=10, diameter=1)
+    focal_grid = make_focal_grid_from_pupil_grid(pupil_grid, q=2, num_airy=5)
+
+    assert np.all(focal_grid.shape == (20, 20))
+
+def test_make_focal_grid():
+    focal_grid = make_focal_grid(q=2, num_airy=5, spatial_resolution=1)
+
+    assert np.all(focal_grid.shape == (20, 20))
+
+def test_make_hexagonal_grid():
+    grid = make_hexagonal_grid(circum_diameter=1, n_rings=3)
+
+    assert grid.size == 37
+
+def test_make_chebyshev_grid():
+    grid = make_chebyshev_grid(dims=[10, 20])
+
+    assert np.all(grid.shape == (20, 10))
+
+def test_make_supersampled_grid():
+    grid = make_uniform_grid(dims=10, extent=1)
+    ss_grid = make_supersampled_grid(grid, oversampling=2)
+
+    assert np.all(ss_grid.shape == (20,))
+    assert np.allclose(ss_grid.delta, 0.05)
+
+def test_make_subsampled_grid():
+    grid = make_uniform_grid(dims=10, extent=1)
+    ss_grid = make_subsampled_grid(grid, undersampling=2)
+
+    assert np.all(ss_grid.shape == (5,))
+    assert np.allclose(ss_grid.delta, 0.2)
+
+def test_subsample_field():
+    grid = make_uniform_grid(dims=10, extent=1)
+    field = Field(np.ones(grid.size), grid)
+
+    subsampled_field = subsample_field(field, subsampling=2)
+
+    assert np.all(subsampled_field.grid.shape == (5,))
+    assert np.allclose(subsampled_field, 1)
+
+def test_evaluate_supersampled():
+    grid = make_uniform_grid(dims=10, extent=1)
+
+    def field_generator(grid):
+        return Field(np.ones(grid.size), grid)
+
+    field = evaluate_supersampled(field_generator, grid, oversampling=2)
+    assert np.all(field.grid.shape == (10,))
+    assert np.allclose(field, 1)
+
+def test_make_uniform_vector_field():
+    grid = make_uniform_grid(dims=10, extent=1)
+
+    scalar_field = Field(np.ones(grid.size), grid)
+    vector_field = make_uniform_vector_field(scalar_field, jones_vector=[1, 1])
+
+    assert vector_field.tensor_order == 1
+    assert np.all(vector_field.tensor_shape == (2,))
+
+def test_make_uniform_vector_field_generator():
+    def field_generator(grid):
+        return Field(np.ones(grid.size), grid)
+
+    vector_field_generator = make_uniform_vector_field_generator(field_generator, jones_vector=[1, 1])
+    grid = make_uniform_grid(dims=10, extent=1)
+    vector_field = vector_field_generator(grid)
+
+    assert vector_field.tensor_order == 1
+    assert np.all(vector_field.tensor_shape == (2,))

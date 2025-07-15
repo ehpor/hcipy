@@ -208,8 +208,8 @@ def imshow_field(
     if grid.is_regular:
         min_x = grid.zero[0] - grid.delta[0] * 0.5
         min_y = grid.zero[1] - grid.delta[1] * 0.5
-        max_x = grid.zero[0] + grid.delta[0] * (grid.shape[0] - 0.5)
-        max_y = grid.zero[1] + grid.delta[1] * (grid.shape[1] - 0.5)
+        max_x = grid.zero[0] + grid.delta[0] * (grid.dims[0] - 0.5)
+        max_y = grid.zero[1] + grid.delta[1] * (grid.dims[1] - 0.5)
 
         transform = None
         extent = (min_x, max_x, min_y, max_y)

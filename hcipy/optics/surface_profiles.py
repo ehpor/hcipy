@@ -1,5 +1,6 @@
 import numpy as np
 from ..field import Field
+import warnings
 
 def _fill_nans(arr, fill_value):
     '''Fill in NaNs with a fill value.
@@ -104,7 +105,13 @@ def conical_surface_sag(radius_of_curvature, conic_constant=0, fill_value=None):
 
         curvature = 1 / radius_of_curvature
         alpha = (1 + conic_constant) * curvature**2 * r**2
-        sag = r**2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
+
+        with warnings.catch_warnings():
+            # Suppress warnings about NaNs being produced if we're filling them in later.
+            if fill_value is not None:
+                warnings.filterwarnings("ignore", category=RuntimeWarning, message="invalid value encountered in sqrt")
+
+            sag = r**2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
 
         sag = _fill_nans(sag, fill_value)
 
@@ -155,7 +162,12 @@ def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_co
         # Start with a conic surface
         curvature = 1 / radius_of_curvature
         alpha = (1 + conic_constant) * curvature**2 * r**2
-        sag = r**2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
+
+        with warnings.catch_warnings():
+            if fill_value is not None:
+                warnings.filterwarnings("ignore", category=RuntimeWarning, message="invalid value encountered in sqrt")
+
+            sag = r**2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
 
         # Add aspheric coefficients
         # Only use the even modes and start at 4, because 0 is piston and 2 is the conic surface

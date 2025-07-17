@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from hcipy import *
 import pytest
 import os
+import warnings
 
 def test_agnostic_apodizer():
     aperture_achromatic = make_circular_aperture(1)
@@ -892,8 +893,12 @@ def test_surface_profile_fill_value():
     radius_of_curvature = 1
     grid_large = make_pupil_grid(128, 2)
 
-    spherical_sag_nan = spherical_surface_sag(radius_of_curvature)(grid_large)
-    assert np.any(np.isnan(spherical_sag_nan))
+    with warnings.catch_warnings():
+        # Suppress the warning about NaNs being produced.
+        warnings.filterwarnings("ignore", category=RuntimeWarning, message="invalid value encountered in sqrt")
+
+        spherical_sag_nan = spherical_surface_sag(radius_of_curvature)(grid_large)
+        assert np.any(np.isnan(spherical_sag_nan))
 
     fill_value = -123
     spherical_sag_filled = spherical_surface_sag(radius_of_curvature, fill_value=fill_value)(grid_large)

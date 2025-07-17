@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from hcipy import *
 import pytest
 import os
+import warnings
 
 def test_agnostic_apodizer():
     aperture_achromatic = make_circular_aperture(1)
@@ -862,3 +863,52 @@ def test_power_law_errors():
     screen = make_high_pass_power_law_error(pupil_grid, 0.1, 2 * pupil_diameter, cutoff_freq, exponent=-2.5, aperture=aperture)
     fk = abs(fft.forward(screen))**2
     assert np.ptp(fk[fourier_mask > 0]) < 1e-6
+
+radius_of_curvature = 1
+conic_constant = -0.5
+aspheric_coefficients = [1e-3, 1e-5]
+
+sags = [
+    pytest.param(spherical_surface_sag(radius_of_curvature), id='spherical'),
+    pytest.param(parabolic_surface_sag(radius_of_curvature), id='parabolic'),
+    pytest.param(conical_surface_sag(radius_of_curvature, conic_constant), id='conical'),
+    pytest.param(even_aspheric_surface_sag(radius_of_curvature, conic_constant, aspheric_coefficients), id='even_aspheric'),
+]
+
+@pytest.mark.parametrize('sag', sags)
+def test_surface_profile_rotational_symmetry(sag):
+    angle = 1
+
+    grid = make_pupil_grid(128, 1)
+    rotated_grid = grid.rotated(angle)
+
+    field_original = sag(grid)
+    field_rotated = sag(rotated_grid)
+
+    assert is_field(field_original)
+    assert is_field(field_rotated)
+    assert np.allclose(field_original, field_rotated, equal_nan=True)
+
+def test_surface_profile_fill_value():
+    radius_of_curvature = 1
+    grid_large = make_pupil_grid(128, 2)
+
+    with warnings.catch_warnings():
+        # Suppress the warning about NaNs being produced.
+        warnings.filterwarnings("ignore", category=RuntimeWarning, message="invalid value encountered in sqrt")
+
+        spherical_sag_nan = spherical_surface_sag(radius_of_curvature)(grid_large)
+        assert np.any(np.isnan(spherical_sag_nan))
+
+    fill_value = -123
+    spherical_sag_filled = spherical_surface_sag(radius_of_curvature, fill_value=fill_value)(grid_large)
+    assert not np.any(np.isnan(spherical_sag_filled))
+    assert np.any(spherical_sag_filled == fill_value)
+
+    spherical_sag_max = spherical_surface_sag(radius_of_curvature, fill_value='max')(grid_large)
+    assert not np.any(np.isnan(spherical_sag_max))
+    assert np.allclose(np.nanmax(spherical_sag_nan), np.max(spherical_sag_max))
+
+    spherical_sag_min = spherical_surface_sag(radius_of_curvature, fill_value='min')(grid_large)
+    assert not np.any(np.isnan(spherical_sag_min))
+    assert np.allclose(np.nanmin(spherical_sag_nan), np.min(spherical_sag_min))

@@ -1,26 +1,29 @@
 The team
 ========
 
-HCIPy was originally developed by a small team of astronomers at Leiden Observatory, but has since received external constributions from scientists and software developers around the world.
+HCIPy was originally developed by a small team of astronomers at Leiden University, but has since received external constributions from scientists and software developers around the world.
 
 Direct contributors to code
 ---------------------------
-* Emiel Por (`@ehpor <https://github.com/ehpor>`__), Space Telescope Science Institute
-* Sebastiaan Haffert (`@syhaffert <https://github.com/syhaffert>`__), University of Arizona
-* Steven Bos (`@spbos <https://github.com/spbos>`__), Leiden Observatory
+* Emiel Por (`@ehpor <https://github.com/ehpor>`__), University of California Santa Cruz
+* Sebastiaan Haffert (`@syhaffert <https://github.com/syhaffert>`__), Leiden University
+* Steven Bos (`@spbos <https://github.com/spbos>`__), Leiden University
 * Maaike van Kooten (`@vkooten <https://github.com/vkooten>`__), NRC Herzberg
-* Vikram Radhakrishnan (`@VikramRadhakrishnan <https://github.com/VikramRadhakrishnan>`__), Leiden Observatory
-* David Doelman (`@dsdoelman <https://github.com/dsdoelman>`__), Leiden Observatory
+* Vikram Radhakrishnan (`@VikramRadhakrishnan <https://github.com/VikramRadhakrishnan>`__), Leiden University
+* David Doelman (`@dsdoelman <https://github.com/dsdoelman>`__), Space Research Organization Netherlands
 * Christoph Keller (`@cukeller <https://github.com/cukeller>`__), Lowell Observatory
 * Iva Laginja (`@ivalaginja <https://github.com/ivalaginja>`__), Université de Paris
 * Jamie Noss (`@jamienoss <https://github.com/jamienoss>`__), Space Telescope Science Institute
 * Rémi Soummer (`@RemiSoummer <https://github.com/RemiSoummer>`__), Space Telescope Science Institute
 * Kathryn St Laurent (`@kstlaurent <https://github.com/kstlaurent>`__), Space Telescope Science Institute
-* Matthew Kenworthy (`@mkenworthy <https://github.com/mkenworthy>`__), Leiden Observatory
-* David Kleingeld (`@dskleingeld <https://github.com/dskleingeld>`__), Leiden Observatory
+* Matthew Kenworthy (`@mkenworthy <https://github.com/mkenworthy>`__), Leiden University
+* David Kleingeld (`@dskleingeld <https://github.com/dskleingeld>`__), Leiden University
 * Gilles Orban de Xivry (`@GillesOrban <https://github.com/GillesOrban>`__), Université de Liège
 * Brett Graham (`@braingram <https://github.com/braingram>`__), Space Telescope Science Institute
 * Rachel Morgan (`@rmnasa <https://github.com/rmnasa>`__), NASA Ames Research Center
+* Miles Lucas (`@mileslucas <https://github.com/mileslucas>`__), University of Hawaii
+* Arielle Bertrou-Cantou (`@abertrou <https://github.com/abertrou>`__), California Institute of Technology
+* Yinzi Xin (`@yinzi-xin <https://github.com/yinzi-xin>`__), California Institute of Technology
 
 Testing and QA
 --------------

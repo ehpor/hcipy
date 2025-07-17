@@ -1,37 +1,77 @@
 import numpy as np
 from ..field import Field
 
-def spherical_surface_sag(radius_of_curvature):
+def _fill_nans(arr, fill_value):
+    '''Fill in NaNs with a fill value.
+
+    Parameters
+    ----------
+    arr : array_like
+        The array in which to replace NaNs.
+    fill_value : scalar or {'min', 'max'} or None
+        The value with which to replace NaNs. If this is None, no
+        NaNs will be replaced and the original array is returned. If
+        this is either 'min' or 'max', the NaNs will be replaced by
+        the minimum or maximum of the array respectively.
+
+    Returns
+    -------
+    array_like
+        The input array with its NaNs replaced.
+    '''
+    if fill_value is None:
+        return arr
+
+    if fill_value == 'max':
+        fill_value = np.nanmax(arr)
+    elif fill_value == 'min':
+        fill_value = np.nanmin(arr)
+
+    arr[~np.isfinite(arr)] = fill_value
+
+    return arr
+
+def spherical_surface_sag(radius_of_curvature, fill_value=None):
     '''Makes a Field generator for the surface sag of an even aspherical surface.
 
     Parameters
     ----------
     radius_of_curvature : scalar
         The radius of curvature of the surface.
+    fill_value : scalar or {'min', 'max'} or None
+        The value with which to replace NaNs. If this is None, no
+        NaNs will be replaced and the original array is returned. If
+        this is either 'min' or 'max', the NaNs will be replaced by
+        the minimum or maximum of the array respectively.
 
     Returns
     -------
     Field generator
         This function can be evaluated on a grid to get the sag profile.
     '''
-    return conical_surface_sag(radius_of_curvature, conic_constant=0)
+    return conical_surface_sag(radius_of_curvature, conic_constant=0, fill_value=fill_value)
 
-def parabolic_surface_sag(radius_of_curvature):
+def parabolic_surface_sag(radius_of_curvature, fill_value=None):
     '''Makes a Field generator for the surface sag of an even aspherical surface.
 
     Parameters
     ----------
     radius_of_curvature : scalar
         The radius of curvature of the surface.
+    fill_value : scalar or {'min', 'max'} or None
+        The value with which to replace NaNs. If this is None, no
+        NaNs will be replaced and the original array is returned. If
+        this is either 'min' or 'max', the NaNs will be replaced by
+        the minimum or maximum of the array respectively.
 
     Returns
     -------
     Field generator
         This function can be evaluated on a grid to get the sag profile.
     '''
-    return conical_surface_sag(radius_of_curvature, conic_constant=-1)
+    return conical_surface_sag(radius_of_curvature, conic_constant=-1, fill_value=fill_value)
 
-def conical_surface_sag(radius_of_curvature, conic_constant=0):
+def conical_surface_sag(radius_of_curvature, conic_constant=0, fill_value=None):
     r'''Makes a Field generator for the surface sag of a conical surface.
 
     The surface profile is defined as:
@@ -45,7 +85,12 @@ def conical_surface_sag(radius_of_curvature, conic_constant=0):
     radius_of_curvature : scalar
         The radius of curvature of the surface.
     conic_constant : scalar
-        The conic constant of the surface
+        The conic constant of the surface.
+    fill_value : scalar or {'min', 'max'} or None
+        The value with which to replace NaNs. If this is None, no
+        NaNs will be replaced and the original array is returned. If
+        this is either 'min' or 'max', the NaNs will be replaced by
+        the minimum or maximum of the array respectively.
 
     Returns
     -------
@@ -60,12 +105,14 @@ def conical_surface_sag(radius_of_curvature, conic_constant=0):
         curvature = 1 / radius_of_curvature
         alpha = (1 + conic_constant) * curvature**2 * r**2
         sag = r**2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
-        sag[np.isnan(sag)] = 0 # propagator will throw an error if there are nan's in this definition, this replaces nans with 0
+
+        sag = _fill_nans(sag, fill_value)
+
         return Field(sag, grid)
 
     return func
 
-def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_coefficients=None):
+def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_coefficients=None, fill_value=None):
     r'''Makes a Field generator for the surface sag of an even aspherical surface.
 
     The surface profile is defined as:
@@ -83,9 +130,14 @@ def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_co
     radius_of_curvature : scalar
         The radius of curvature of the surface.
     conic_constant : scalar
-        The conic constant of the surface
+        The conic constant of the surface.
     aspheric_coefficients : array_like
         Contains the high-order even aspheric coefficients.
+    fill_value : scalar or {'min', 'max'} or None
+        The value with which to replace NaNs. If this is None, no
+        NaNs will be replaced and the original array is returned. If
+        this is either 'min' or 'max', the NaNs will be replaced by
+        the minimum or maximum of the array respectively.
 
     Returns
     -------
@@ -104,12 +156,15 @@ def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_co
         curvature = 1 / radius_of_curvature
         alpha = (1 + conic_constant) * curvature**2 * r**2
         sag = r**2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
-        sag[np.isnan(sag)] = 0 # propagator will throw an error if there are nan's in this definition, this replaces nans with 0
+
         # Add aspheric coefficients
         # Only use the even modes and start at 4, because 0 is piston and 2 is the conic surface
         for ai, coef in enumerate(aspheric_coefficients):
             power_index = 4 + ai * 2
             sag += coef * r**power_index
+
+        sag = _fill_nans(sag, fill_value)
+
         return Field(sag, grid)
 
     return func

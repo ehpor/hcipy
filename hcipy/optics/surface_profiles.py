@@ -32,6 +32,14 @@ def _fill_nans(arr, fill_value):
 
     return arr
 
+def _compute_r2(grid):
+    if grid.is_separated and grid.is_('cartesian'):
+        x, y = grid.separated_coords
+
+        return (x[np.newaxis, :]**2 + y[:, np.newaxis]**2).ravel()
+    else:
+        return grid.as_('polar').r**2
+
 def spherical_surface_sag(radius_of_curvature, fill_value=None):
     '''Makes a Field generator for the surface sag of an even aspherical surface.
 
@@ -99,19 +107,17 @@ def conical_surface_sag(radius_of_curvature, conic_constant=0, fill_value=None):
         This function can be evaluated on a grid to get the sag profile.
     '''
     def func(grid):
-        x = grid.x
-        y = grid.y
-        r = np.hypot(x, y)
+        r2 = _compute_r2(grid)
 
         curvature = 1 / radius_of_curvature
-        alpha = (1 + conic_constant) * curvature**2 * r**2
+        alpha = (1 + conic_constant) * curvature**2 * r2
 
         with warnings.catch_warnings():
             # Suppress warnings about NaNs being produced if we're filling them in later.
             if fill_value is not None:
                 warnings.filterwarnings("ignore", category=RuntimeWarning, message="invalid value encountered in sqrt")
 
-            sag = r**2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
+            sag = r2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
 
         sag = _fill_nans(sag, fill_value)
 
@@ -155,25 +161,23 @@ def even_aspheric_surface_sag(radius_of_curvature, conic_constant=0, aspheric_co
         aspheric_coefficients = []
 
     def func(grid):
-        x = grid.x
-        y = grid.y
-        r = np.hypot(x, y)
+        r2 = _compute_r2(grid)
 
         # Start with a conic surface
         curvature = 1 / radius_of_curvature
-        alpha = (1 + conic_constant) * curvature**2 * r**2
+        alpha = (1 + conic_constant) * curvature**2 * r2
 
         with warnings.catch_warnings():
             if fill_value is not None:
                 warnings.filterwarnings("ignore", category=RuntimeWarning, message="invalid value encountered in sqrt")
 
-            sag = r**2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
+            sag = r2 / (radius_of_curvature * (1 + np.sqrt(1 - alpha)))
 
         # Add aspheric coefficients
         # Only use the even modes and start at 4, because 0 is piston and 2 is the conic surface
         for ai, coef in enumerate(aspheric_coefficients):
             power_index = 4 + ai * 2
-            sag += coef * r**power_index
+            sag += coef * r2**(power_index // 2)
 
         sag = _fill_nans(sag, fill_value)
 

@@ -5,6 +5,7 @@ import mpmath
 import scipy
 
 import pytest
+from unittest.mock import patch
 
 def zernike_variance_von_karman(n, m, R, k0, Cn_squared, wavelength):
     '''Calculate the variance of the Zernike mode (`n`,`m`), using a von Karman turbulence spectrum.
@@ -172,6 +173,56 @@ def test_atmospheric_layer_reset(layer_cls):
     assert np.allclose(phase_4, phase_5)
     assert not np.allclose(phase_5, phase_6)
     assert np.allclose(phase_6, phase_7)
+
+def make_modal_ao_layer(framerate):
+    grid = make_pupil_grid(32)
+    cn_squared = Cn_squared_from_fried_parameter(1)
+
+    layer = InfiniteAtmosphericLayer(grid, cn_squared, 1, 1, 1)
+    ao_layer = ModalAdaptiveOpticsLayer(layer, make_zernike_basis(1, 1, grid), lag=1, framerate=framerate)
+
+    return layer, ao_layer
+
+def test_modal_ao_evolve_until_none_framerate():
+    layer, ao_layer = make_modal_ao_layer(framerate=None)
+
+    with patch.object(ao_layer, '_reconstruct_wavefront', wraps=ao_layer._reconstruct_wavefront) as mock_reconstruct,  \
+            patch.object(layer, 'evolve_until', wraps=layer.evolve_until) as mock_evolve:
+        phase_before = ao_layer.phase_for(1)
+        assert phase_before.grid == layer.input_grid
+
+        ao_layer.evolve_until(10)
+
+        phase_after = ao_layer.phase_for(1)
+        assert phase_after.grid == layer.input_grid
+        assert not np.allclose(phase_before, phase_after)
+
+        # Should evolve the underlying layer to the final time
+        assert mock_evolve.call_args == ((10,),)
+
+        # Should reconstruct wavefront once
+        assert mock_reconstruct.call_count == 1
+
+def test_modal_ao_evolve_until_fixed_framerate():
+    layer, ao_layer = make_modal_ao_layer(framerate=1)
+
+    with patch.object(ao_layer, '_reconstruct_wavefront', wraps=ao_layer._reconstruct_wavefront) as mock_reconstruct, \
+            patch.object(layer, 'evolve_until', wraps=layer.evolve_until) as mock_evolve:
+        phase_before = ao_layer.phase_for(1)
+        assert phase_before.grid == ao_layer.input_grid
+
+        ao_layer.evolve_until(2.5)
+
+        phase_after = ao_layer.phase_for(1)
+        assert phase_after.grid == ao_layer.input_grid
+        assert not np.allclose(phase_before, phase_after)
+
+        # Should evolve the underlying layer to 1, 2, 2.5
+        assert mock_evolve.call_args_list == [((1,),), ((2,),), ((2.5,),)]
+
+        # Should reconstruct wavefront twice (at t=1 and t=2)
+        assert mock_reconstruct.call_count == 2
+
 
 def test_multi_layer_atmosphere():
     r0 = 0.1

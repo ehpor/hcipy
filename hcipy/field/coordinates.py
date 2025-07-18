@@ -1,5 +1,7 @@
 import numpy as np
 import copy
+import math
+from collections.abc import Iterable
 
 class Coords(object):
     '''Base class for coordinates.
@@ -40,13 +42,14 @@ class Coords(object):
     def __sub__(self, b):
         '''Subtract `b` from the coordinates separately and return the result.
         '''
-        return self + (-b)
+        res = self.copy()
+        res -= b
+        return res
 
     def __isub__(self, b):
         '''Subtract `b` from the coordinates separately in-place.
         '''
-        self += (-b)
-        return self
+        raise NotImplementedError()
 
     def __mul__(self, f):
         '''Multiply each coordinate with `f` separately and return the result.
@@ -130,6 +133,12 @@ class Coords(object):
         '''
         raise NotImplementedError()
 
+    @property
+    def ndim(self):
+        '''The number of dimensions.
+        '''
+        return len(self)
+
     @classmethod
     def _add_coordinate_type(cls, coordinate_type, coordinate_class):
         cls._coordinate_types[coordinate_type] = coordinate_class
@@ -203,17 +212,40 @@ class UnstructuredCoords(Coords):
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
         '''
-        b = np.ones(len(self.coords)) * b
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == self.ndim, 'b must have the same dimensionality as the coords.'
+
         for i in range(len(self.coords)):
             self.coords[i] += b[i]
+
+        return self
+
+    def __isub__(self, b):
+        '''Subtract `b` from the coordinates separately in-place
+        '''
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == self.ndim, 'b must have the same dimensionality as the coords.'
+
+        for i in range(len(self.coords)):
+            self.coords[i] -= b[i]
+
         return self
 
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
-        f = np.ones(len(self.coords)) * f
+        if not isinstance(f, Iterable):
+            f = (f,) * self.ndim
+
+        assert len(f) == self.ndim, 'f must have the same dimensionality as the coords.'
+
         for i in range(len(self.coords)):
             self.coords[i] *= f[i]
+
         return self
 
     def __eq__(self, other):
@@ -322,7 +354,7 @@ class SeparatedCoords(Coords):
     def dims(self):
         '''The number of points along each dimension.
         '''
-        return np.array([len(c) for c in self.separated_coords])
+        return tuple(len(c) for c in self.separated_coords)
 
     @property
     def shape(self):
@@ -333,19 +365,40 @@ class SeparatedCoords(Coords):
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
         '''
-        for i in range(len(self)):
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == self.ndim, 'b must have same dimensionality as the coordinates.'
+
+        for i in range(self.ndim):
             self.separated_coords[i] += b[i]
+
+        return self
+
+    def __isub__(self, b):
+        '''Subtract `b` from the coordinates separately in-place.
+        '''
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == self.ndim, 'b must have same dimensionality as the coordinates.'
+
+        for i in range(self.ndim):
+            self.separated_coords[i] -= b[i]
+
         return self
 
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
-        if np.isscalar(f):
-            for i in range(len(self)):
-                self.separated_coords[i] *= f
-        else:
-            for i in range(len(self)):
-                self.separated_coords[i] *= f[i]
+        if not isinstance(f, Iterable):
+            f = (f,) * self.ndim
+
+        assert len(f) == self.ndim, 'f must have same dimensionality as the coordinates.'
+
+        for i in range(self.ndim):
+            self.separated_coords[i] *= f[i]
+
         return self
 
     def __eq__(self, other):
@@ -401,23 +454,26 @@ class RegularCoords(Coords):
     zero
         The coordinates for the first point.
     '''
-    def __init__(self, delta, dims, zero=None):
-        if np.isscalar(dims):
-            self.dims = np.array([dims], dtype='int')
-        else:
-            self.dims = np.array(dims, dtype='int')
+    def __init__(self, delta, dims, zero):
+        if not isinstance(delta, Iterable):
+            raise ValueError('Delta should be an iterable.')
 
-        if np.isscalar(delta):
-            self.delta = np.array([delta] * len(self.dims), dtype='float')
-        else:
-            self.delta = np.array(delta, dtype='float')
+        if not isinstance(dims, Iterable):
+            raise ValueError('Dims should be an iterable.')
 
-        if zero is None:
-            self.zero = np.zeros(len(self.dims), dtype='float')
-        elif np.isscalar(zero):
-            self.zero = np.array([zero] * len(self.dims), dtype='float')
-        else:
-            self.zero = np.array(zero, dtype='float')
+        if not isinstance(zero, Iterable):
+            raise ValueError('Zero should be an iterable.')
+
+        delta = tuple(float(d) for d in delta)
+        dims = tuple(int(n) for n in dims)
+        zero = tuple(float(z) for z in zero)
+
+        assert len(delta) == len(dims)
+        assert len(dims) == len(zero)
+
+        self.dims = dims
+        self.delta = delta
+        self.zero = zero
 
     @classmethod
     def from_dict(cls, tree):
@@ -453,9 +509,9 @@ class RegularCoords(Coords):
         '''
         tree = {
             'type': 'regular',
-            'delta': self.delta.tolist(),
-            'dims': self.dims.tolist(),
-            'zero': self.zero.tolist()
+            'delta': self.delta,
+            'dims': self.dims,
+            'zero': self.zero
         }
 
         return tree
@@ -478,7 +534,7 @@ class RegularCoords(Coords):
     def size(self):
         '''The number of points.
         '''
-        return np.prod(self.dims)
+        return math.prod(self.dims)
 
     def __len__(self):
         '''The number of dimensions.
@@ -489,7 +545,7 @@ class RegularCoords(Coords):
     def shape(self):
         '''The shape of an ``numpy.ndarray`` with the right dimensions.
         '''
-        return self.dims[::-1]
+        return tuple(reversed(self.dims))
 
     def __getitem__(self, i):
         '''The `i`-th point for these coordinates.
@@ -503,14 +559,38 @@ class RegularCoords(Coords):
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
         '''
-        self.zero += b
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
+
+        self.zero = tuple(aa + bb for aa, bb in zip(self.zero, b))
+
+        return self
+
+    def __isub__(self, b):
+        '''Subtract `b` from the coordinates separately in-place.
+        '''
+        if not isinstance(b, Iterable):
+            b = (b,) * self.ndim
+
+        assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
+
+        self.zero = tuple(aa - bb for aa, bb in zip(self.zero, b))
+
         return self
 
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
-        self.delta *= f
-        self.zero *= f
+        if not isinstance(f, Iterable):
+            f = (f,) * self.ndim
+
+        assert len(f) == self.ndim, 'f must have same dimensionality as the coordinates.'
+
+        self.delta = tuple(d * ff for d, ff in zip(self.delta, f))
+        self.zero = tuple(z * ff for z, ff in zip(self.zero, f))
+
         return self
 
     def __eq__(self, other):
@@ -529,14 +609,14 @@ class RegularCoords(Coords):
         if type(self) is not type(other):
             return False
 
-        return np.array_equal(self.regular_coords, other.regular_coords)
+        return self.delta == other.delta and self.dims == other.dims and self.zero == other.zero
 
     def reverse(self):
         '''Reverse the ordering of points in-place.
         '''
-        maximum = self.zero + self.delta * (self.dims - 1)
-        self.delta = -self.delta
-        self.zero = maximum
+        self.zero = tuple(z + d * (n - 1) for z, d, n in zip(self.zero, self.delta, self.dims))
+        self.delta = tuple(-d for d in self.delta)
+
         return self
 
 Coords._add_coordinate_type('unstructured', UnstructuredCoords)

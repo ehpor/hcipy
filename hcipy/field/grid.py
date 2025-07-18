@@ -447,9 +447,9 @@ class Grid(object):
         h.update(self._coordinate_system)
 
         if self.is_regular:
-            h.update(self.delta)
-            h.update(self.dims)
-            h.update(self.zero)
+            h.update(np.array(self.delta))
+            h.update(np.array(self.dims))
+            h.update(np.array(self.zero))
         elif self.is_separated:
             for s in self.separated_coords:
                 h.update(s)
@@ -520,10 +520,9 @@ class Grid(object):
         '''
         from .field import Field
 
-        if tensor_shape is None:
-            shape = [self.size]
-        else:
-            shape = np.concatenate((tensor_shape, [self.size]))
+        shape = (self.size,)
+        if tensor_shape is not None:
+            shape = tuple(tensor_shape) + shape
 
         return Field(np.zeros(shape, dtype), self)
 
@@ -545,10 +544,9 @@ class Grid(object):
         '''
         from .field import Field
 
-        if tensor_shape is None:
-            shape = [self.size]
-        else:
-            shape = np.concatenate((tensor_shape, [self.size]))
+        shape = (self.size,)
+        if tensor_shape is not None:
+            shape = tuple(tensor_shape) + shape
 
         return Field(np.ones(shape, dtype=dtype), self)
 
@@ -570,9 +568,8 @@ class Grid(object):
         '''
         from .field import Field
 
-        if tensor_shape is None:
-            shape = [self.size]
-        else:
-            shape = np.concatenate((tensor_shape, [self.size]))
+        shape = (self.size,)
+        if tensor_shape is not None:
+            shape = tuple(tensor_shape) + shape
 
         return Field(np.empty(shape, dtype=dtype), self)

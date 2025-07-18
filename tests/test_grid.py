@@ -34,8 +34,8 @@ def test_separated_coords():
     coords = SeparatedCoords([[1.0, 2.0, 3.0], [4.0, 5.0]])
     assert coords.size == 6
     assert len(coords) == 2
-    assert np.all(coords.dims == [3, 2])
-    assert np.all(coords.shape == (2, 3))
+    assert coords.dims == (3, 2)
+    assert coords.shape == (2, 3)
     assert np.all(coords.separated_coords[0] == [1, 2, 3])
     assert np.all(coords.separated_coords[1] == [4, 5])
     assert np.allclose(coords[0], [1, 2, 3, 1, 2, 3])
@@ -44,7 +44,7 @@ def test_separated_coords():
     coords_copy = coords.copy()
     assert coords == coords_copy
 
-    coords_copy += np.array([1, 2])
+    coords_copy += (1, 2)
     assert coords != coords_copy
     assert np.allclose(coords_copy.separated_coords[0], [2, 3, 4])
     assert np.allclose(coords_copy.separated_coords[1], [6, 7])
@@ -63,13 +63,13 @@ def test_separated_coords():
     assert coords == coords2
 
 def test_regular_coords():
-    coords = RegularCoords(delta=[0.5, 1], dims=[3, 2], zero=[0, 0])
+    coords = RegularCoords(delta=(0.5, 1), dims=(3, 2), zero=(0, 0))
     assert coords.size == 6
     assert len(coords) == 2
-    assert np.all(coords.dims == [3, 2])
-    assert np.all(coords.shape == (2, 3))
-    assert np.all(coords.delta == [0.5, 1])
-    assert np.all(coords.zero == [0, 0])
+    assert coords.dims == (3, 2)
+    assert coords.shape == (2, 3)
+    assert coords.delta == (0.5, 1)
+    assert coords.zero == (0, 0)
 
     assert np.allclose(coords.separated_coords[0], [0, 0.5, 1])
     assert np.allclose(coords.separated_coords[1], [0, 1])
@@ -79,18 +79,18 @@ def test_regular_coords():
 
     coords_copy = coords.copy()
     assert coords == coords_copy
-    coords_copy += np.array([1, 2])
+    coords_copy += (1, 2)
     assert coords != coords_copy
-    assert np.allclose(coords_copy.zero, [1, 2])
+    assert np.allclose(coords_copy.zero, (1, 2))
 
     coords_copy = coords.copy()
     coords_copy *= 2
-    assert np.allclose(coords_copy.delta, [1, 2])
-    assert np.allclose(coords_copy.zero, [0, 0])
+    assert np.allclose(coords_copy.delta, (1, 2))
+    assert np.allclose(coords_copy.zero, (0, 0))
 
     coords.reverse()
-    assert np.allclose(coords.delta, [-0.5, -1])
-    assert np.allclose(coords.zero, [1, 1])
+    assert np.allclose(coords.delta, (-0.5, -1))
+    assert np.allclose(coords.zero, (1, 1))
 
     d = coords.to_dict()
     coords2 = Coords.from_dict(d)
@@ -110,9 +110,9 @@ def test_coords_arithmetic():
 
     # Separated
     c1 = SeparatedCoords([[1.0, 2.0], [3.0, 4.0]])
-    c2 = c1 + np.array([1, 2])
+    c2 = c1 + (1, 2)
     assert np.allclose(c2.separated_coords[0], [2, 3]) and np.allclose(c2.separated_coords[1], [5, 6])
-    c2 = c1 - np.array([1, 2])
+    c2 = c1 - (1, 2)
     assert np.allclose(c2.separated_coords[0], [0, 1]) and np.allclose(c2.separated_coords[1], [1, 2])
     c2 = c1 * 2
     assert np.allclose(c2.separated_coords[0], [2, 4]) and np.allclose(c2.separated_coords[1], [6, 8])
@@ -120,15 +120,15 @@ def test_coords_arithmetic():
     assert np.allclose(c2.separated_coords[0], [0.5, 1]) and np.allclose(c2.separated_coords[1], [1.5, 2])
 
     # Regular
-    c1 = RegularCoords([1, 2], [3, 4], [5, 6])
-    c2 = c1 + np.array([1, 2])
-    assert np.allclose(c2.zero, [6, 8])
-    c2 = c1 - np.array([1, 2])
-    assert np.allclose(c2.zero, [4, 4])
+    c1 = RegularCoords((1, 2), (3, 4), (5, 6))
+    c2 = c1 + (1, 2)
+    assert np.allclose(c2.zero, (6, 8))
+    c2 = c1 - (1, 2)
+    assert np.allclose(c2.zero, (4, 4))
     c2 = c1 * 2
-    assert np.allclose(c2.delta, [2, 4]) and np.allclose(c2.zero, [10, 12])
+    assert np.allclose(c2.delta, (2, 4)) and np.allclose(c2.zero, (10, 12))
     c2 = c1 / 2
-    assert np.allclose(c2.delta, [0.5, 1]) and np.allclose(c2.zero, [2.5, 3])
+    assert np.allclose(c2.delta, (0.5, 1)) and np.allclose(c2.zero, (2.5, 3))
 
 def test_grid_creation():
     # Unstructured
@@ -146,20 +146,20 @@ def test_grid_creation():
     assert not sg.is_regular
     assert sg.ndim == 2
     assert sg.size == 4
-    assert np.all(sg.dims == [2, 2])
-    assert np.all(sg.shape == (2, 2))
+    assert sg.dims == (2, 2)
+    assert sg.shape == (2, 2)
 
     # Regular
-    rg = Grid(RegularCoords([1, 1], [2, 2]))
+    rg = Grid(RegularCoords((1, 1), (2, 2), (0, 0)))
     assert not rg.is_unstructured
     assert rg.is_separated
     assert rg.is_regular
     assert rg.ndim == 2
     assert rg.size == 4
-    assert np.all(rg.dims == [2, 2])
-    assert np.all(rg.shape == (2, 2))
-    assert np.all(rg.delta == [1, 1])
-    assert np.all(rg.zero == [0, 0])
+    assert rg.dims == (2, 2)
+    assert rg.shape == (2, 2)
+    assert rg.delta == (1, 1)
+    assert rg.zero == (0, 0)
 
 def test_grid_exceptions():
     ug = Grid(UnstructuredCoords([[1, 2], [3, 4]]))
@@ -185,7 +185,7 @@ def test_grid_exceptions():
         sg.regular_coords
 
 def test_grid_subset():
-    grid = CartesianGrid(RegularCoords([1, 1], [10, 10]))
+    grid = CartesianGrid(RegularCoords((1, 1), (10, 10), (0, 0)))
     subset_grid = grid.subset(grid.x > 3)
     assert subset_grid.size < grid.size
     assert np.all(subset_grid.x > 3)
@@ -195,29 +195,29 @@ def test_grid_subset():
     assert subset_grid == subset_grid2
 
 def test_cartesian_grid_transformations():
-    grid = CartesianGrid(RegularCoords([1.0], 8))
+    grid = CartesianGrid(RegularCoords((1.0,), (8,), (0.0,)))
 
     # Scaling
     sgrid = grid.scaled(2)
-    assert np.allclose(sgrid.delta, 2)
+    assert np.allclose(sgrid.delta, (2.0,))
     sgrid.scale(0.5)
-    assert np.allclose(sgrid.delta, 1)
+    assert np.allclose(sgrid.delta, (1.0,))
     assert grid == sgrid
 
     # Shifting
     sgrid = grid.shifted(2)
-    assert np.allclose(sgrid.zero, 2)
+    assert np.allclose(sgrid.zero, (2.0,))
     sgrid.shift(-2)
-    assert np.allclose(sgrid.zero, 0)
+    assert np.allclose(sgrid.zero, (0.0,))
     assert grid == sgrid
 
     # Rotation 2D
-    grid2d = CartesianGrid(RegularCoords([1, 1], [3, 3], zero=[-1, -1]))
+    grid2d = CartesianGrid(RegularCoords((1, 1), (3, 3), zero=(-1, -1)))
     rgrid = grid2d.rotated(np.pi / 2)
     assert np.allclose(rgrid.points, np.array([[1, 1, 1, 0, 0, 0, -1, -1, -1], [-1, 0, 1, -1, 0, 1, -1, 0, 1]]).T)
 
     # Rotation 3D (around the z-axis in this test)
-    grid3d = CartesianGrid(RegularCoords([1, 1, 1], [2, 2, 2]))
+    grid3d = CartesianGrid(RegularCoords((1, 1, 1), (2, 2, 2), (0, 0, 0)))
     rgrid = grid3d.rotated(np.pi / 2, axis=[0, 0, 1])
     assert np.allclose(rgrid.x, -grid3d.y)
     assert np.allclose(rgrid.y, grid3d.x)
@@ -248,7 +248,7 @@ def test_polar_grid_transformations():
 
 def test_coordinate_transformation():
     # 2D
-    grid_cart = CartesianGrid(RegularCoords([1, 1], [3, 3]))
+    grid_cart = CartesianGrid(RegularCoords((1, 1), (3, 3), (0, 0)))
     grid_pol = grid_cart.as_('polar')
     assert grid_pol.is_('polar')
     grid_cart2 = grid_pol.as_('cartesian')
@@ -256,7 +256,7 @@ def test_coordinate_transformation():
     assert np.allclose(grid_cart.points, grid_cart2.points)
 
 def test_grid_reversal():
-    grid = CartesianGrid(RegularCoords([1, 1], [10, 12]))
+    grid = CartesianGrid(RegularCoords((1, 1), (10, 12), (0, 0)))
     rev_grid = grid.reversed()
     assert not grid == rev_grid
     assert np.allclose(grid.points, rev_grid.points[::-1])
@@ -264,13 +264,13 @@ def test_grid_reversal():
     assert grid == rev_grid
 
 def test_grid_closest_to():
-    grid = CartesianGrid(RegularCoords([1, 1], [10, 10]))
+    grid = CartesianGrid(RegularCoords((1, 1), (10, 10), (0, 0)))
     p = [2.1, 3.8]
     idx = grid.closest_to(p)
     assert idx == 42  # Corresponds to point (2, 4).
 
 def test_grid_field_creation():
-    grid = CartesianGrid(RegularCoords([1], 10))
+    grid = CartesianGrid(RegularCoords((1,), (10,), (0,)))
     f_zeros = grid.zeros()
     f_ones = grid.ones()
     f_empty = grid.empty()
@@ -282,18 +282,18 @@ def test_grid_field_creation():
     assert f_ones.grid == grid
     assert f_empty.grid == grid
 
-    assert np.all(f_zeros.shape == (10,))
-    assert np.all(f_ones.shape == (10,))
-    assert np.all(f_empty.shape == (10,))
+    assert f_zeros.shape == (10,)
+    assert f_ones.shape == (10,)
+    assert f_empty.shape == (10,)
 
     f_zeros_t = grid.zeros(tensor_shape=(2, 3))
 
-    assert np.all(f_zeros_t.tensor_shape == (2, 3))
+    assert f_zeros_t.tensor_shape == (2, 3)
     assert f_zeros_t.shape == (2, 3, 10)
 
 def test_grid_weights():
     # Regular grid
-    grid = CartesianGrid(RegularCoords([0.1, 0.2], [10, 20]))
+    grid = CartesianGrid(RegularCoords((0.1, 0.2), (10, 20), (0, 0)))
     assert np.allclose(grid.weights, 0.1 * 0.2)
 
     # Separated grid
@@ -313,7 +313,7 @@ def test_grid_weights():
         assert np.allclose(grid.weights, 1)
 
 def test_grid_serialization():
-    grid = CartesianGrid(RegularCoords([1, 1], [10, 10], [0, 0]))
+    grid = CartesianGrid(RegularCoords((1, 1), (10, 10), (0, 0)))
     d = grid.to_dict()
     grid2 = Grid.from_dict(d)
     assert grid == grid2

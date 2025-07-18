@@ -17,6 +17,7 @@ __all__ = [
     'make_obstruction',
     'make_rotated_aperture',
     'make_shifted_aperture',
+    'make_inverted_aperture',
     'make_segmented_aperture',
     'make_super_gaussian_aperture',
     'make_elt_aperture',

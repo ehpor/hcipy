@@ -13,6 +13,10 @@ __all__ = [
     'MatrixFourierTransform',
     'NaiveFourierTransform',
     'ZoomFastFourierTransform',
+    'compute_fourier_performance_dataset',
+    'fit_fourier_performance_data',
+    'plot_fourier_performance_data',
+    'tune_fourier_transforms',
 ]
 
 from .fourier_transform import *
@@ -22,3 +26,4 @@ from .fourier_operations import *
 from .matrix_fourier_transform import *
 from .naive_fourier_transform import *
 from .zoom_fast_fourier_transform import *
+from .tuning import *

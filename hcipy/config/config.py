@@ -90,12 +90,18 @@ class Configuration(object):
     def __str__(self):
         return str(Configuration._config)
 
-    def reset(self):
+    def reset(self, enable_user_overrides=True):
         '''Reset the configuration to the default configuration.
 
         This default configuration consists of the default parameters in `hcipy/data/default_config.yaml`, which
         can be overridden by a configuration file in `~/.hcipy/hcipy_config.yaml`. This can in turn be overridden
         by a configuration file named `hcipy_config.yaml` located in the current working directory.
+
+        Parameters
+        ----------
+        enable_user_overrides : boolean
+            Whether to enable overrides of the config by the user-specific configuration files.
+            The default is True.
         '''
         Configuration._config = _ConfigurationItem({})
 
@@ -103,7 +109,10 @@ class Configuration(object):
         user_config = Path(os.path.expanduser('~/.hcipy/hcipy_config.yaml'))
         current_working_directory = Path('./hcipy_config.yaml')
 
-        paths = [default_config, user_config, current_working_directory]
+        paths = [default_config]
+
+        if enable_user_overrides:
+            paths.extend([user_config, current_working_directory])
 
         for path in paths:
             try:

@@ -1,7 +1,7 @@
 from __future__ import division
 
 import numpy as np
-from .fourier_transform import FourierTransform, multiplex_for_tensor_fields, _get_float_and_complex_dtype
+from .fourier_transform import FourierTransform, ComputationalComplexity, multiplex_for_tensor_fields, _get_float_and_complex_dtype
 from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration
 import numexpr as ne
@@ -383,3 +383,79 @@ class FastFourierTransform(FourierTransform):
 
         float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
         return Field(res, self.input_grid).astype(complex_dtype, copy=False)
+
+    @classmethod
+    def check_if_supported(cls, input_grid, output_grid):
+        '''Check if the specified grids are supported by the Fast Fourier transform.
+
+        Parameters
+        ----------
+        input_grid : Grid
+            The grid that is expected for the input field.
+        output_grid : Grid
+            The grid that is produced by the Fast Fourier transform.
+
+        Raises
+        ------
+        ValueError
+            If the grids are not supported. The message will indicate why
+            the grids are not supported.
+        '''
+        get_fft_parameters(output_grid, input_grid)
+
+    @classmethod
+    def compute_complexity(cls, input_grid, output_grid):
+        '''Compute the algorithmic complexity for the Fast Fourier transform.
+
+        Parameters
+        ----------
+        input_grid : Grid
+            The grid that is expected for the input field.
+        output_grid : Grid
+            The grid that is produced by the Fast Fourier transform.
+
+        Returns
+        -------
+        AlgorithmicComplexity
+            The algorithmic complexity for this Fourier transform.
+
+        Raises
+        ------
+        ValueError
+            If the grids are not supported. The message will indicate why
+            the grids are not supported.
+        '''
+        q, _, shift = get_fft_parameters(output_grid, input_grid)
+
+        shape = input_grid.shape.astype('float') * q
+
+        N_internal = np.prod(shape)
+        N_input = np.prod(input_grid.shape)
+        N_output = np.prod(output_grid.shape)
+
+        num_complex_multiplications = 0.5 * N_internal * np.log2(N_internal)
+        num_complex_additions = N_internal * np.log2(N_internal)
+
+        # Add complexity for initial multiplication by shift_output.
+        # The multiplication happens on `field.reshape(self.shape_in)` which has N_input elements.
+        if not np.allclose(shift, 0):
+            num_complex_multiplications += N_input
+
+        # Add complexity for final multiplication by shift_input
+        # This multiplication happens on `res` which has N_output elements.
+        num_complex_multiplications += N_output
+
+        # Convert to real operations
+        num_multiplications = 4 * num_complex_multiplications
+        num_additions = 2 * num_complex_multiplications + 2 * num_complex_additions
+        num_operations = num_multiplications + num_additions
+
+        # Predict execution time.
+        prediction_coefficients = Configuration().fourier.fft.execution_time_prediction_coefficients
+        expected_execution_time = FourierTransform._predict_execution_time(num_operations, prediction_coefficients)
+
+        return ComputationalComplexity(
+            num_multiplications=num_multiplications,
+            num_additions=num_additions,
+            expected_execution_time=expected_execution_time
+        )

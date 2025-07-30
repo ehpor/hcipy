@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 from packaging import version
 import scipy.signal
+import os
 
 def make_all_fourier_transforms(input_grid, q, fov, shift):
     fft1 = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift, emulate_fftshifts=True)
@@ -141,7 +142,7 @@ def test_fourier_symmetries_2d(dtype):
                     for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
                         check_symmetry(dtype, scale, shift_output, q, fov, dims)
 
-def test_make_fourier_transform():
+def test_make_fourier_transform_estimate():
     input_grid = make_pupil_grid(128)
 
     ft = make_fourier_transform(input_grid, q=1, fov=1, shift=0.1, planner='estimate')
@@ -166,14 +167,29 @@ def test_make_fourier_transform():
     assert ft.input_grid == input_grid
     assert ft.output_grid == fft_grid
 
-    ft = make_fourier_transform(input_grid, q=1, fov=1, shift=0.1, planner='measure')
-    ft = make_fourier_transform(input_grid, q=8, fov=0.1, shift=0.1, planner='measure')
+    input_grid = make_pupil_grid(1024)
+    fft_grid = make_fft_grid(input_grid, q=8, fov=0.1)
+    ft = make_fourier_transform(input_grid, fft_grid, planner='estimate')
+    assert type(ft) == ZoomFastFourierTransform
+    assert ft.input_grid == input_grid
+    assert ft.output_grid == fft_grid
 
     output_grid = CartesianGrid(UnstructuredCoords([np.random.randn(100), np.random.randn(100)]))
-    ft = make_fourier_transform(input_grid, output_grid)
+    ft = make_fourier_transform(input_grid, output_grid, planner='estimate')
     assert type(ft) == NaiveFourierTransform
     assert ft.input_grid == input_grid
     assert ft.output_grid == output_grid
+
+def test_make_fourier_transform_measure():
+    input_grid = make_pupil_grid(128)
+
+    ft = make_fourier_transform(input_grid, q=1, fov=1, shift=0.1, planner='measure')
+    assert ft.input_grid == input_grid
+    assert isinstance(ft, (FastFourierTransform, MatrixFourierTransform, ZoomFastFourierTransform, NaiveFourierTransform))
+
+    ft = make_fourier_transform(input_grid, q=8, fov=0.1, shift=0.1, planner='measure')
+    assert ft.input_grid == input_grid
+    assert isinstance(ft, (FastFourierTransform, MatrixFourierTransform, ZoomFastFourierTransform, NaiveFourierTransform))
 
 def test_fft_grid_reconstruction():
     for shift_input in [[0, 0], [0.1]]:
@@ -467,3 +483,18 @@ def test_fourier_rotation_invalid_grid():
     irregular_grid = CartesianGrid(UnstructuredCoords([x, y]))
     with pytest.raises(ValueError):
         FourierRotation(irregular_grid, np.deg2rad(30))
+
+def test_performance_tuning(tmpdir):
+    fname = os.path.join(tmpdir, 'tuning_result.pdf')
+    tuned_parameters = tune_fourier_transforms(
+        plot_fname=fname,
+        show_plot=False,
+        Ns=np.array([32, 64]),
+        qs=np.array([1, 2]),
+        fovs=np.array([1, 0.5])
+    )
+
+    assert len(tuned_parameters) > 0
+
+    for value in tuned_parameters.values():
+        assert len(value) > 0

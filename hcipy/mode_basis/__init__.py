@@ -14,6 +14,7 @@ __all__ = [
     'make_lp_modes',
     'make_LP_modes',
     'make_zernike_basis',
+    'make_hexike_basis',
     'zernike',
     'noll_to_zernike',
     'zernike_to_noll',

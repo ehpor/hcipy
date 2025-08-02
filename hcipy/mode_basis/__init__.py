@@ -13,6 +13,7 @@ __all__ = [
     'make_complex_fourier_basis',
     'make_lp_modes',
     'make_LP_modes',
+    'make_hexike_basis',
     'make_zernike_basis',
     'zernike',
     'noll_to_zernike',
@@ -21,7 +22,7 @@ __all__ = [
     'zernike_to_ansi',
     'disk_harmonic',
     'disk_harmonic_energy',
-    'make_disk_harmonic_basis'
+    'make_disk_harmonic_basis',
 ]
 
 from .disk_harmonic import *

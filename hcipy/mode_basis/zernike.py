@@ -1,6 +1,9 @@
 import numpy as np
 from math import sqrt
 
+from .mode_basis import ModeBasis
+from ..aperture import make_hexagonal_aperture
+
 def noll_to_zernike(i):
     '''Get the Zernike index from a Noll index.
 
@@ -333,3 +336,45 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
         return modes
     else:
         return ModeBasis(modes, grid)
+
+def make_hexike_basis(grid, num_modes, circum_diameter, hexagon_angle=0):
+    '''Make a hexike basis.
+
+    This is based on [Mahajan2006]_. This function creates a Zernike mode basis, then
+    numerically orthogonalizes it using Gram-Schmidt orthogonalization.
+
+    .. [Mahajan2006] Virendra N. Mahajan and Guang-ming Dai,
+        "Orthonormal polynomials for hexagonal pupils," Opt.
+        Lett. 31, 2462-2464 (2006)
+
+    Parameters
+    ----------
+    grid : hcipy.Grid
+        The grid on which to compute the mode basis.
+    num_modes : int
+        The number of hexike modes to compute.
+    circum_diameter : float
+        The circumdiameter of the hexagonal aperture.
+    '''
+    zernike_basis = make_zernike_basis(num_modes, circum_diameter, grid)
+    hexagonal_aperture = make_hexagonal_aperture(circum_diameter, hexagon_angle)(grid)
+
+    sqrt_weights = np.sqrt(grid.weights)
+
+    if np.isscalar(sqrt_weights):
+        sqrt_weights = np.array([sqrt_weights])
+
+    # Un-normalize the zernike modes using the weights of the grid.
+    zernike_basis.transformation_matrix *= np.array(hexagonal_aperture * sqrt_weights)[:, np.newaxis]
+
+    # Perform Gramm-Schmidt orthogonalization using a QR decomposition.
+    Q, R = np.linalg.qr(zernike_basis.transformation_matrix)
+
+    # Correct for negative sign of components of the Q matrix.
+    hexike_basis = ModeBasis(Q / np.sign(np.diag(R)), grid)
+
+    # Renormalize the resulting functions using the area of a hexagon and the grid weights.
+    area_hexagon = 3 * np.sqrt(3) / 8 * circum_diameter**2
+    hexike_basis.transformation_matrix *= np.array(np.sqrt(area_hexagon) / sqrt_weights)[:, np.newaxis]
+
+    return hexike_basis

@@ -25,6 +25,58 @@ def test_zernike_indices():
         n, m = ansi_to_zernike(i)
         assert i == zernike_to_ansi(n, m)
 
+def test_hexike_modes():
+    grid = make_pupil_grid(256)
+    aperture_mask = make_hexagonal_aperture(1)(grid) > 0
+
+    num_modes = 2 + 3 + 4 + 5 + 6
+    modes = make_hexike_basis(grid, num_modes, 1)
+
+    assert abs(np.std(modes[0][aperture_mask])) < 2e-2
+
+    for m in modes[1:]:
+        assert abs(np.std(m[aperture_mask]) - 1) < 2e-2
+
+    for i, m in enumerate(modes):
+        zn, zm = noll_to_zernike(i + 1)
+        assert np.allclose(m, hexike(zn, zm, 1, grid=grid))
+
+def test_zernike_ansi_noll():
+    grid = make_pupil_grid(256)
+
+    for index in [1, 4, 5, 6]:
+        mode_ansi = zernike_ansi(index)(grid)
+
+        n, m = ansi_to_zernike(index)
+        mode_nm = zernike(n, m)(grid)
+
+        assert np.allclose(mode_ansi, mode_nm)
+
+        mode_noll = zernike_noll(index)(grid)
+
+        n, m = noll_to_zernike(index)
+        mode_nm = zernike(n, m)(grid)
+
+        assert np.allclose(mode_noll, mode_nm)
+
+def test_hexike_ansi_noll():
+    grid = make_pupil_grid(256)
+
+    for index in [1, 4, 5, 6]:
+        mode_ansi = hexike_ansi(index, 1)(grid)
+
+        n, m = ansi_to_zernike(index)
+        mode_nm = hexike(n, m, 1)(grid)
+
+        assert np.allclose(mode_ansi, mode_nm)
+
+        mode_noll = hexike_noll(index, 1)(grid)
+
+        n, m = noll_to_zernike(index)
+        mode_nm = hexike(n, m, 1)(grid)
+
+        assert np.allclose(mode_noll, mode_nm)
+
 def test_disk_harmonic_modes():
     grid = make_pupil_grid(128)
     aperture_mask = make_circular_aperture(1)(grid) > 0

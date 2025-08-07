@@ -464,6 +464,9 @@ def make_hexike_basis(grid, num_modes, circum_diameter, hexagon_angle=0, cache=N
         valid. You can reuse the cache for future calculations on the same exact grid.
         The given dictionary is updated with the current calculation.
     '''
+    if cache is None:
+        cache = {}
+
     zernike_basis = make_zernike_basis(num_modes, circum_diameter, grid, cache=cache)
     hexagonal_aperture = make_hexagonal_aperture(circum_diameter, hexagon_angle)(grid)
 
@@ -484,8 +487,7 @@ def make_hexike_basis(grid, num_modes, circum_diameter, hexagon_angle=0, cache=N
         # Perform Gramm-Schmidt orthogonalization using a QR decomposition.
         Q, R = np.linalg.qr(zernike_basis.transformation_matrix)
 
-        if cache['R'].shape[0] < R.shape[0]:
-            cache['R'] = R.copy()
+        cache['R'] = R.copy()
 
     # Correct for negative sign of components of the Q matrix.
     hexike_basis = ModeBasis(Q / np.sign(np.diag(R)), grid)

@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.linalg
 from math import sqrt
 
 from .mode_basis import ModeBasis
@@ -288,7 +289,7 @@ def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None):
     n, m = noll_to_zernike(i)
     return zernike(n, m, D, grid, radial_cutoff, cache)
 
-def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_cutoff=True, use_cache=True):
+def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_cutoff=True, use_cache=True, cache=None):
     '''Make a ModeBasis of Zernike polynomials.
 
     Parameters
@@ -326,7 +327,8 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
         polar_grid = grid.as_('polar')
 
     if use_cache:
-        cache = {}
+        if cache is None:
+            cache = {}
     else:
         cache = None
 
@@ -337,7 +339,106 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
     else:
         return ModeBasis(modes, grid)
 
-def make_hexike_basis(grid, num_modes, circum_diameter, hexagon_angle=0):
+def hexike(n, m, circum_diameter, hexagon_angle=0, grid=None, cache=None):
+    '''Evaluate a Hexike polynomial on a grid.
+
+    Parameters
+    ----------
+    n : int
+        The radial Hexike order.
+    m : int
+        The azimuthal Hexike order.
+    circum_diameter : scalar
+        The circum-diameter of the hexagonal aperture.
+    hexagon_angle : float
+        The angle of the hexagon. At an angle of 0, the point of the hexagon points up.
+    grid : Grid or None
+        The grid on which to evaluate the Hexike polynomial. If this is None, a Field
+        generator will be returned.
+    cache : dictionary or None
+        A dictionary containing previously calculated Zernike modes on the same grid.
+        This function is for speedup only, and therefore the cache is expected to be
+        valid. You can reuse the cache for future calculations on the same exact grid.
+        The given dictionary is updated with the current calculation.
+
+    Returns
+    -------
+    Field or Field generator
+        The evaluated Hexike polynomial. If `grid` is None, a Field generator is returned,
+        which evaluates the Hexike polynomial on the supplied grid.
+    '''
+    if grid is None:
+        return lambda grid: hexike(n, m, circum_diameter, hexagon_angle, grid, cache)
+
+    noll_index = zernike_to_noll(n, m)
+
+    basis = make_hexike_basis(grid, noll_index, circum_diameter, hexagon_angle, cache)
+
+    return basis[-1]
+
+def hexike_ansi(i, circum_diameter, hexagon_angle=0, grid=None, cache=None):
+    '''Evaluate a Hexike polynomial on a grid using an ANSI index.
+
+    Parameters
+    ----------
+    n : int
+        The radial Hexike order.
+    m : int
+        The azimuthal Hexike order.
+    circum_diameter : scalar
+        The circum-diameter of the hexagonal aperture.
+    hexagon_angle : float
+        The angle of the hexagon. At an angle of 0, the point of the hexagon points up.
+    grid : Grid or None
+        The grid on which to evaluate the Hexike polynomial. If this is None, a Field
+        generator will be returned.
+    cache : dictionary or None
+        A dictionary containing previously calculated Zernike modes on the same grid.
+        This function is for speedup only, and therefore the cache is expected to be
+        valid. You can reuse the cache for future calculations on the same exact grid.
+        The given dictionary is updated with the current calculation.
+
+    Returns
+    -------
+    Field or Field generator
+        The evaluated Hexike polynomial. If `grid` is None, a Field generator is returned,
+        which evaluates the Hexike polynomial on the supplied grid.
+    '''
+    n, m = ansi_to_zernike(i)
+    return hexike(n, m, circum_diameter, hexagon_angle, grid, cache)
+
+def hexike_noll(i, circum_diameter, hexagon_angle=0, grid=None, cache=None):
+    '''Evaluate a Hexike polynomial on a grid using a Noll index.
+
+    Parameters
+    ----------
+    n : int
+        The radial Hexike order.
+    m : int
+        The azimuthal Hexike order.
+    circum_diameter : scalar
+        The circum-diameter of the hexagonal aperture.
+    hexagon_angle : float
+        The angle of the hexagon. At an angle of 0, the point of the hexagon points up.
+    grid : Grid or None
+        The grid on which to evaluate the Hexike polynomial. If this is None, a Field
+        generator will be returned.
+    cache : dictionary or None
+        A dictionary containing previously calculated Zernike modes on the same grid.
+        This function is for speedup only, and therefore the cache is expected to be
+        valid. You can reuse the cache for future calculations on the same exact grid.
+        The given dictionary is updated with the current calculation.
+
+    Returns
+    -------
+    Field or Field generator
+        The evaluated Hexike polynomial. If `grid` is None, a Field generator is returned,
+        which evaluates the Hexike polynomial on the supplied grid.
+    '''
+    n, m = noll_to_zernike(i)
+    return hexike(n, m, circum_diameter, hexagon_angle, grid, cache)
+
+def make_hexike_basis(grid, num_modes, circum_diameter, hexagon_angle=0, cache=None):
     '''Make a hexike basis.
 
     This is based on [Mahajan2006]_. This function creates a Zernike mode basis, then
@@ -354,9 +455,16 @@ def make_hexike_basis(grid, num_modes, circum_diameter, hexagon_angle=0):
     num_modes : int
         The number of hexike modes to compute.
     circum_diameter : float
-        The circumdiameter of the hexagonal aperture.
+        The circum-diameter of the hexagonal aperture.
+    hexagon_angle : float
+        The angle of the hexagon. At an angle of 0, the point of the hexagon points up.
+    cache : dictionary or None
+        A dictionary containing previously calculated Hexike modes on the same grid.
+        This function is for speedup only, and therefore the cache is expected to be
+        valid. You can reuse the cache for future calculations on the same exact grid.
+        The given dictionary is updated with the current calculation.
     '''
-    zernike_basis = make_zernike_basis(num_modes, circum_diameter, grid)
+    zernike_basis = make_zernike_basis(num_modes, circum_diameter, grid, cache=cache)
     hexagonal_aperture = make_hexagonal_aperture(circum_diameter, hexagon_angle)(grid)
 
     sqrt_weights = np.sqrt(grid.weights)
@@ -367,8 +475,17 @@ def make_hexike_basis(grid, num_modes, circum_diameter, hexagon_angle=0):
     # Un-normalize the zernike modes using the weights of the grid.
     zernike_basis.transformation_matrix *= np.array(hexagonal_aperture * sqrt_weights)[:, np.newaxis]
 
-    # Perform Gramm-Schmidt orthogonalization using a QR decomposition.
-    Q, R = np.linalg.qr(zernike_basis.transformation_matrix)
+    # The QR decomposition is expensive. Let's get it from the cache if already computed.
+    if 'R' in cache and cache['R'].shape[0] >= num_modes:
+        R = cache['R'][:num_modes, :num_modes]
+
+        Q = scipy.linalg.solve_triangular(R, zernike_basis.transformation_matrix, lower=False)
+    else:
+        # Perform Gramm-Schmidt orthogonalization using a QR decomposition.
+        Q, R = np.linalg.qr(zernike_basis.transformation_matrix)
+
+        if cache['R'].shape[0] < R.shape[0]:
+            cache['R'] = R.copy()
 
     # Correct for negative sign of components of the Q matrix.
     hexike_basis = ModeBasis(Q / np.sign(np.diag(R)), grid)

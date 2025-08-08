@@ -3,7 +3,7 @@ import numpy as np
 import scipy
 
 def test_zernike_modes():
-    grid = make_pupil_grid(256)
+    grid = make_pupil_grid(128)
     aperture_mask = make_circular_aperture(1)(grid) > 0
 
     modes = make_zernike_basis(200, 1, grid)
@@ -26,7 +26,7 @@ def test_zernike_indices():
         assert i == zernike_to_ansi(n, m)
 
 def test_hexike_modes():
-    grid = make_pupil_grid(256)
+    grid = make_pupil_grid(128)
     aperture_mask = make_hexagonal_aperture(1)(grid) > 0
 
     num_modes = 2 + 3 + 4 + 5 + 6
@@ -42,7 +42,7 @@ def test_hexike_modes():
         assert np.allclose(m, hexike(zn, zm, 1, grid=grid))
 
 def test_zernike_ansi_noll():
-    grid = make_pupil_grid(256)
+    grid = make_pupil_grid(64)
 
     for index in [1, 4, 5, 6]:
         mode_ansi = zernike_ansi(index)(grid)
@@ -60,7 +60,7 @@ def test_zernike_ansi_noll():
         assert np.allclose(mode_noll, mode_nm)
 
 def test_hexike_ansi_noll():
-    grid = make_pupil_grid(256)
+    grid = make_pupil_grid(64)
 
     for index in [1, 4, 5, 6]:
         mode_ansi = hexike_ansi(index, 1)(grid)
@@ -76,6 +76,20 @@ def test_hexike_ansi_noll():
         mode_nm = hexike(n, m, 1)(grid)
 
         assert np.allclose(mode_noll, mode_nm)
+
+def test_hexike_cache():
+    grid = make_pupil_grid(64)
+    circum_diameter = 1
+    n = 2
+    m = 2
+
+    cache = {}
+    basis = make_hexike_basis(grid, 20, circum_diameter, cache=cache)
+
+    m1 = hexike(n, m, circum_diameter, grid=grid, cache=cache)
+    m2 = basis[zernike_to_noll(n, m) - 1]
+
+    assert np.allclose(m1, m2)
 
 def test_disk_harmonic_modes():
     grid = make_pupil_grid(128)

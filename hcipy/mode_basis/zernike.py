@@ -482,7 +482,7 @@ def make_hexike_basis(grid, num_modes, circum_diameter, hexagon_angle=0, cache=N
     if 'R' in cache and cache['R'].shape[0] >= num_modes:
         R = cache['R'][:num_modes, :num_modes]
 
-        Q = scipy.linalg.solve_triangular(R, zernike_basis.transformation_matrix, lower=False)
+        Q = scipy.linalg.solve_triangular(R, zernike_basis.transformation_matrix.T, trans=1, lower=False, overwrite_b=True).T
     else:
         # Perform Gramm-Schmidt orthogonalization using a QR decomposition.
         Q, R = np.linalg.qr(zernike_basis.transformation_matrix)

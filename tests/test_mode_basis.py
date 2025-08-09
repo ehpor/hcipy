@@ -1,6 +1,7 @@
 from hcipy import *
 import numpy as np
 import scipy
+import pytest
 
 def test_zernike_modes():
     grid = make_pupil_grid(128)
@@ -91,19 +92,33 @@ def test_hexike_cache():
 
     assert np.allclose(m1, m2)
 
-def test_disk_harmonic_modes():
+def test_zernike_cache():
+    grid = make_pupil_grid(64)
+    circum_diameter = 1
+    n = 2
+    m = 2
+
+    cache = {}
+    basis = make_zernike_basis(20, circum_diameter, grid, cache=cache)
+
+    m1 = zernike(n, m, circum_diameter, grid=grid, cache=cache)
+    m2 = basis[zernike_to_noll(n, m) - 1]
+
+    assert np.allclose(m1, m2)
+
+@pytest.mark.parametrize('bc', ['dirichlet', 'neumann'])
+def test_disk_harmonic_modes(bc):
     grid = make_pupil_grid(128)
     aperture_mask = make_circular_aperture(1)(grid) > 0
 
     num_modes = 20
 
-    for bc in ['dirichlet', 'neumann']:
-        modes = make_disk_harmonic_basis(grid, num_modes, bc=bc)
+    modes = make_disk_harmonic_basis(grid, num_modes, bc=bc)
 
-        for i, m1 in enumerate(modes):
-            for j, m2 in enumerate(modes):
-                product = np.sum((m1 * m2)[aperture_mask])
-                assert np.abs(product - np.eye(num_modes)[i, j]) < 1e-2
+    for i, m1 in enumerate(modes):
+        for j, m2 in enumerate(modes):
+            product = np.sum((m1 * m2)[aperture_mask])
+            assert np.abs(product - np.eye(num_modes)[i, j]) < 1e-2
 
 def test_lp_modes():
     grid = make_pupil_grid(128)

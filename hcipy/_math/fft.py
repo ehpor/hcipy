@@ -49,6 +49,8 @@ def _make_func(func_name):
                 threads_attempts = [1]
             else:
                 threads_attempts = [_CPU_COUNT, 1]
+        else:
+            threads_attempts = [threads]
 
         # Try multithreaded first, but fall back upon single-threaded if that doesn't work.
         for threads in threads_attempts:

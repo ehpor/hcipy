@@ -5,8 +5,9 @@ import functools
 import numpy as np
 import scipy
 import warnings
+import os
 
-_CPU_COUNT = get_num_available_cores()
+_CPU_COUNT = os.environ.get('OMP_NUM_THREADS') or get_num_available_cores()
 
 try:
     import mkl_fft

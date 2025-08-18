@@ -3,6 +3,7 @@ from .fast_fourier_transform import FastFourierTransform, make_fft_grid
 from .matrix_fourier_transform import MatrixFourierTransform
 from .zoom_fast_fourier_transform import ZoomFastFourierTransform
 from ..field import CartesianGrid, SeparatedCoords, make_pupil_grid
+from .._math import fft as fft_module
 
 from tqdm import tqdm
 import numpy as np
@@ -11,6 +12,8 @@ import matplotlib.pyplot as plt
 import argparse
 import functools
 import yaml
+import multiprocessing
+import math
 
 def compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs, t_max=0.01):
     """Compute a dataset of performance measurements for a Fourier transform class.
@@ -193,6 +196,81 @@ def tune_fourier_transforms(fourier_transforms=None, plot_fname=None, show_plot=
 
     if plot_fname is not None or show_plot:
         plot_fourier_performance_data(datasets)
+
+        if plot_fname is not None:
+            plt.savefig(plot_fname)
+
+        if show_plot:
+            plt.show()
+        else:
+            plt.close()
+
+    return res
+
+def compute_fft_performance_data(Ns, num_threads, t_max=0.05):
+    for _ in range(1):
+        param_grid = CartesianGrid(SeparatedCoords((Ns, num_threads)))
+        times = param_grid.empty()
+
+        for i, (N, threads) in enumerate(tqdm(param_grid.points)):
+            N = int(N)
+            threads = int(threads)
+
+            a = np.random.randn(N, N).astype('complex128')
+
+            times[i] = _time_it(lambda: fft_module.fft2(a, threads=threads, method='scipy'), t_max=t_max)
+
+    return times
+
+def plot_fft_performance_data(times, ax=None):
+    if ax is None:
+        ax = plt.gca()
+
+    Ns, num_threads = times.grid.separated_coords
+    complexities = Ns**2 * np.log2(Ns)
+
+    ref = None
+
+    for i, threads in enumerate(num_threads):
+        label = f'{threads} thread{"s" if threads != 1 else ""}'
+
+        x = complexities / 1e9
+        y = times.shaped[i] * 1000
+
+        _, f = fit_fourier_performance_data(x, y)
+
+        x_fit = np.exp(np.linspace(np.log(x).min() - 1, np.log(x).max() + 1))
+        if ref is None:
+            ref = f(x)
+            ref_fit = f(x_fit)
+
+        plotted_data = plt.plot(x, y / ref, '.', label=label)
+        c = plotted_data[0].get_color()
+
+        ax.plot(x_fit, f(x_fit) / ref_fit, ls='--', c=c)
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.grid(c='0.7', ls=':')
+    ax.legend()
+
+def tune_fft_performance(plot_fname=None, show_plot=True, Ns=None, num_threads=None):
+    if Ns is None:
+        Ns = 2**np.linspace(4, 12, 9).astype('int')
+
+    if num_threads is None:
+        num_cores = multiprocessing.cpu_count()
+
+        num_threads = set(2**n for n in range(1, math.log2(num_cores)))
+        num_threads.add(num_cores)
+        num_threads.add(num_cores // 2)
+
+        num_threads = sorted(list(num_threads))
+
+    times = compute_fft_performance_data(Ns, num_threads)
+
+    if plot_fname is not None or show_plot:
+        plot_fft_performance_data(times)
 
         if plot_fname is not None:
             plt.savefig(plot_fname)

@@ -381,10 +381,8 @@ def hexike_ansi(i, circum_diameter, hexagon_angle=0, grid=None, cache=None):
 
     Parameters
     ----------
-    n : int
-        The radial Hexike order.
-    m : int
-        The azimuthal Hexike order.
+    i : int
+        The ANSI index.
     circum_diameter : scalar
         The circum-diameter of the hexagonal aperture.
     hexagon_angle : float
@@ -412,10 +410,8 @@ def hexike_noll(i, circum_diameter, hexagon_angle=0, grid=None, cache=None):
 
     Parameters
     ----------
-    n : int
-        The radial Hexike order.
-    m : int
-        The azimuthal Hexike order.
+    i : int
+        The Noll index.
     circum_diameter : scalar
         The circum-diameter of the hexagonal aperture.
     hexagon_angle : float

@@ -1,9 +1,10 @@
 from hcipy import *
 import numpy as np
 import scipy
+import pytest
 
 def test_zernike_modes():
-    grid = make_pupil_grid(256)
+    grid = make_pupil_grid(128)
     aperture_mask = make_circular_aperture(1)(grid) > 0
 
     modes = make_zernike_basis(200, 1, grid)
@@ -25,19 +26,99 @@ def test_zernike_indices():
         n, m = ansi_to_zernike(i)
         assert i == zernike_to_ansi(n, m)
 
-def test_disk_harmonic_modes():
+def test_hexike_modes():
+    grid = make_pupil_grid(128)
+    aperture_mask = make_hexagonal_aperture(1)(grid) > 0
+
+    num_modes = 2 + 3 + 4 + 5 + 6
+    modes = make_hexike_basis(grid, num_modes, 1)
+
+    assert abs(np.std(modes[0][aperture_mask])) < 2e-2
+
+    for m in modes[1:]:
+        assert abs(np.std(m[aperture_mask]) - 1) < 2e-2
+
+    for i, m in enumerate(modes):
+        zn, zm = noll_to_zernike(i + 1)
+        assert np.allclose(m, hexike(zn, zm, 1, grid=grid))
+
+def test_zernike_ansi_noll():
+    grid = make_pupil_grid(64)
+
+    for index in [1, 4, 5, 6]:
+        mode_ansi = zernike_ansi(index)(grid)
+
+        n, m = ansi_to_zernike(index)
+        mode_nm = zernike(n, m)(grid)
+
+        assert np.allclose(mode_ansi, mode_nm)
+
+        mode_noll = zernike_noll(index)(grid)
+
+        n, m = noll_to_zernike(index)
+        mode_nm = zernike(n, m)(grid)
+
+        assert np.allclose(mode_noll, mode_nm)
+
+def test_hexike_ansi_noll():
+    grid = make_pupil_grid(64)
+
+    for index in [1, 4, 5, 6]:
+        mode_ansi = hexike_ansi(index, 1)(grid)
+
+        n, m = ansi_to_zernike(index)
+        mode_nm = hexike(n, m, 1)(grid)
+
+        assert np.allclose(mode_ansi, mode_nm)
+
+        mode_noll = hexike_noll(index, 1)(grid)
+
+        n, m = noll_to_zernike(index)
+        mode_nm = hexike(n, m, 1)(grid)
+
+        assert np.allclose(mode_noll, mode_nm)
+
+def test_hexike_cache():
+    grid = make_pupil_grid(64)
+    circum_diameter = 1
+    n = 2
+    m = 2
+
+    cache = {}
+    basis = make_hexike_basis(grid, 20, circum_diameter, cache=cache)
+
+    m1 = hexike(n, m, circum_diameter, grid=grid, cache=cache)
+    m2 = basis[zernike_to_noll(n, m) - 1]
+
+    assert np.allclose(m1, m2)
+
+def test_zernike_cache():
+    grid = make_pupil_grid(64)
+    circum_diameter = 1
+    n = 2
+    m = 2
+
+    cache = {}
+    basis = make_zernike_basis(20, circum_diameter, grid, cache=cache)
+
+    m1 = zernike(n, m, circum_diameter, grid=grid, cache=cache)
+    m2 = basis[zernike_to_noll(n, m) - 1]
+
+    assert np.allclose(m1, m2)
+
+@pytest.mark.parametrize('bc', ['dirichlet', 'neumann'])
+def test_disk_harmonic_modes(bc):
     grid = make_pupil_grid(128)
     aperture_mask = make_circular_aperture(1)(grid) > 0
 
     num_modes = 20
 
-    for bc in ['dirichlet', 'neumann']:
-        modes = make_disk_harmonic_basis(grid, num_modes, bc=bc)
+    modes = make_disk_harmonic_basis(grid, num_modes, bc=bc)
 
-        for i, m1 in enumerate(modes):
-            for j, m2 in enumerate(modes):
-                product = np.sum((m1 * m2)[aperture_mask])
-                assert np.abs(product - np.eye(num_modes)[i, j]) < 1e-2
+    for i, m1 in enumerate(modes):
+        for j, m2 in enumerate(modes):
+            product = np.sum((m1 * m2)[aperture_mask])
+            assert np.abs(product - np.eye(num_modes)[i, j]) < 1e-2
 
 def test_lp_modes():
     grid = make_pupil_grid(128)

@@ -1,6 +1,57 @@
 Changelog
 =========
 
+0.7.0 (Aug 25, 2025)
+--------------------
+
+This HCIPy release provides further speed improvements for Fourier transforms, new Fourier operators, new telescope pupils, new standard atmospheres, new Hexike modes, among some other minor improvements and bugfixes. See the list of all changes below for a summary. We added support for Python 3.12 and Python 3.13. This version supports Python 3.9+.
+
+What's Changed
+~~~~~~~~~~~~~~
+
+- Fix CI regression and update Python version support by `@ehpor <https://github.com/ehpor>`__ in `#236 <https://github.com/ehpor/hcipy/pull/236>`__
+- Grid coords should be Fields by `@ehpor <https://github.com/ehpor>`__ in `#234 <https://github.com/ehpor/hcipy/pull/234>`__
+- Magellan aperture fix by `@syhaffert <https://github.com/syhaffert>`__ in `#237 <https://github.com/ehpor/hcipy/pull/237>`__
+- Fix removed ``copy_arrays`` parameter in asdf 4.0.0. by `@ehpor <https://github.com/ehpor>`__ in `#245 <https://github.com/ehpor/hcipy/pull/245>`__
+- Make Numpy 2.0 compatible. by `@ehpor <https://github.com/ehpor>`__ in `#246 <https://github.com/ehpor/hcipy/pull/246>`__
+- Replace Azure badge with Github Actions badge. by `@ehpor <https://github.com/ehpor>`__ in `#249 <https://github.com/ehpor/hcipy/pull/249>`__
+- Fiber nulling module by `@yinzi-xin <https://github.com/yinzi-xin>`__ in `#230 <https://github.com/ehpor/hcipy/pull/230>`__
+- Add loop parameters to GifWriter. by `@ehpor <https://github.com/ehpor>`__ in `#240 <https://github.com/ehpor/hcipy/pull/240>`__
+- Make unit tests smaller and use tmpdir for file output. by `@ehpor <https://github.com/ehpor>`__ in `#244 <https://github.com/ehpor/hcipy/pull/244>`__
+- Explicitly check for endianness of the transformation matrix before making it sparse. by `@ehpor <https://github.com/ehpor>`__ in `#263 <https://github.com/ehpor/hcipy/pull/263>`__
+- Create generic keystone aperture and realistic EAC2 aperture. by `@abertrou <https://github.com/abertrou>`__ in `#252 <https://github.com/ehpor/hcipy/pull/252>`__
+- Add tests for all grids and coordinates. by `@ehpor <https://github.com/ehpor>`__ in `#269 <https://github.com/ehpor/hcipy/pull/269>`__
+- Fix rotation of odd-sided regular polygonal apertures. by `@ehpor <https://github.com/ehpor>`__ in `#268 <https://github.com/ehpor/hcipy/pull/268>`__
+- Put test output in temporary directory. by `@ehpor <https://github.com/ehpor>`__ in `#267 <https://github.com/ehpor/hcipy/pull/267>`__
+- Fresnel coefficients by `@syhaffert <https://github.com/syhaffert>`__ in `#255 <https://github.com/ehpor/hcipy/pull/255>`__
+- Non-separated grids for segmented apertures. by `@ehpor <https://github.com/ehpor>`__ in `#265 <https://github.com/ehpor/hcipy/pull/265>`__
+- Fix misc docs issues. by `@ehpor <https://github.com/ehpor>`__ in `#266 <https://github.com/ehpor/hcipy/pull/266>`__
+- Refactoring standardized atmospheres by `@ehpor <https://github.com/ehpor>`__ in `#214 <https://github.com/ehpor/hcipy/pull/214>`__
+- Fourier shift, shear and rotation operators. by `@ehpor <https://github.com/ehpor>`__ in `#180 <https://github.com/ehpor/hcipy/pull/180>`__
+- Use matplotlib transforms for ``imshow_field()`` by `@ehpor <https://github.com/ehpor>`__ in `#271 <https://github.com/ehpor/hcipy/pull/271>`__
+- Add support for Python 3.13. by `@ehpor <https://github.com/ehpor>`__ in `#274 <https://github.com/ehpor/hcipy/pull/274>`__
+- Modal filtered power law error by `@syhaffert <https://github.com/syhaffert>`__ in `#275 <https://github.com/ehpor/hcipy/pull/275>`__
+- Fix typo for subsamping to subsampling. by `@ehpor <https://github.com/ehpor>`__ in `#280 <https://github.com/ehpor/hcipy/pull/280>`__
+- Add tests for grid utils and interpolators by `@ehpor <https://github.com/ehpor>`__ in `#277 <https://github.com/ehpor/hcipy/pull/277>`__
+- Add Subaru and SCExAO apertures by `@mileslucas <https://github.com/mileslucas>`__ in `#243 <https://github.com/ehpor/hcipy/pull/243>`__
+- Fix grid dims and shape mixup. by `@syhaffert <https://github.com/syhaffert>`__ in `#281 <https://github.com/ehpor/hcipy/pull/281>`__
+- Nan fix by `@rmnasa <https://github.com/rmnasa>`__ in `#261 <https://github.com/ehpor/hcipy/pull/261>`__
+- Add new team members and update affiliations. by `@ehpor <https://github.com/ehpor>`__ in `#282 <https://github.com/ehpor/hcipy/pull/282>`__
+- Computational complexity for Fourier transforms by `@ehpor <https://github.com/ehpor>`__ in `#198 <https://github.com/ehpor/hcipy/pull/198>`__
+- Improve the ``ModalAdaptiveOpticsLayer`` class by `@ehpor <https://github.com/ehpor>`__ in `#273 <https://github.com/ehpor/hcipy/pull/273>`__
+- Add Hexike mode basis. by `@ehpor <https://github.com/ehpor>`__ in `#283 <https://github.com/ehpor/hcipy/pull/283>`__
+- Add inverted aperture by `@syhaffert <https://github.com/syhaffert>`__ in `#278 <https://github.com/ehpor/hcipy/pull/278>`__
+
+New Contributors
+~~~~~~~~~~~~~~~~
+
+- `@yinzi-xin <https://github.com/yinzi-xin>`__ made their first contribution in `#230 <https://github.com/ehpor/hcipy/pull/230>`__
+- `@abertrou <https://github.com/abertrou>`__ made their first contribution in `#252 <https://github.com/ehpor/hcipy/pull/252>`__
+- `@mileslucas <https://github.com/mileslucas>`__ made their first contribution in `#243 <https://github.com/ehpor/hcipy/pull/243>`__
+- `@rmnasa <https://github.com/rmnasa>`__ made their first contribution in `#261 <https://github.com/ehpor/hcipy/pull/261>`__
+
+**Full Changelog**: `v0.6.0...v0.7.0 <https://github.com/ehpor/hcipy/compare/v0.6.0...v0.7.0>`__
+
 0.6.0 (Mar 15, 2024)
 --------------------
 

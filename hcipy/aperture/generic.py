@@ -431,21 +431,6 @@ def make_obstructed_circular_aperture(pupil_diameter, central_obscuration_ratio,
         return (pupil_outer - pupil_inner) * spiders
     return func
 
-def make_obstruction(aperture):
-    '''Create an obstruction of `aperture`.
-
-    Parameters
-    ----------
-    aperture : Field generator
-        The aperture to invert.
-
-    Returns
-    -------
-    Field generator
-        The obstruction.
-    '''
-    return lambda grid: 1 - aperture(grid)
-
 def make_rotated_aperture(aperture, angle):
     '''Create a rotated version of `aperture`.
 
@@ -479,6 +464,21 @@ def make_shifted_aperture(aperture, shift):
         The shifted aperture.
     '''
     return lambda grid: Field(aperture(grid.shifted(-np.array(shift))), grid)
+
+def make_inverted_aperture(aperture):
+    '''Create an inverted version of `aperture`.
+
+    Parameters
+    ----------
+    aperture : Field generator
+        The aperture to invert.
+
+    Returns
+    -------
+    Field generator
+        The inverted aperture.
+    '''
+    return lambda grid: 1 - aperture(grid)
 
 def make_segmented_aperture(segment_shape, segment_positions, segment_transmissions=1, return_segments=False):
     '''Create a segmented aperture.
@@ -919,4 +919,8 @@ def regular_polygon_aperture():
 
 @deprecated_name_changed(make_irregular_polygon_aperture)
 def irregular_polygon_aperture():
+    pass
+
+@deprecated_name_changed(make_inverted_aperture)
+def make_obstruction():
     pass

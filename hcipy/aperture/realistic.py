@@ -1,7 +1,7 @@
 import numpy as np
 
 from ..field import make_hexagonal_grid, Field
-from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_shifted_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_obstruction, make_regular_polygon_aperture, make_irregular_polygon_aperture, make_keystone_aperture
+from .generic import make_elliptical_aperture, make_spider, make_circular_aperture, make_hexagonal_aperture, make_segmented_aperture, make_shifted_aperture, make_spider_infinite, make_obstructed_circular_aperture, make_rectangular_aperture, make_inverted_aperture, make_regular_polygon_aperture, make_irregular_polygon_aperture, make_keystone_aperture
 
 import functools
 
@@ -91,7 +91,7 @@ def make_vlt_aperture(
         spider4 = make_spider(spider_start_4, spider_end_4, spider_width)
 
     if with_M3_cover:
-        m3_cover = make_obstruction(make_rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))
+        m3_cover = make_inverted_aperture(make_rectangular_aperture(outer_diameter_M3_stow, center=[outer_diameter_M3_stow / 2, 0]))
 
     if with_spiders:
         if with_M3_cover:
@@ -1254,7 +1254,7 @@ def make_hst_aperture(normalized=False, with_spiders=True, with_pads=True):
     if not with_pads:
         return ota
 
-    pads = [make_obstruction(make_circular_aperture(2 * r, [-v2, v3])) for v3, v2, r in zip(pad_v3, pad_v2, pad_radii)]
+    pads = [make_inverted_aperture(make_circular_aperture(2 * r, [-v2, v3])) for v3, v2, r in zip(pad_v3, pad_v2, pad_radii)]
 
     def func(grid):
         return ota(grid) * pads[0](grid) * pads[1](grid) * pads[2](grid)
@@ -1478,7 +1478,7 @@ def make_jwst_aperture(normalized=False, with_spiders=True, return_segments=Fals
         pupil_diameter = 1
 
     segments = [make_irregular_polygon_aperture(vertices) for vertices in segment_parameters.values()]
-    struts = [make_obstruction(make_irregular_polygon_aperture(vertices)) for vertices in strut_parameters.values()]
+    struts = [make_inverted_aperture(make_irregular_polygon_aperture(vertices)) for vertices in strut_parameters.values()]
 
     def func(grid):
         res = sum((segment(grid) for segment in segments))
@@ -1795,8 +1795,8 @@ def make_scexao_lyot_stop(normalized=False, inner_diameter_fraction=0.307, outer
     mask_spider_width *= spider_fraction
     mask_diameter *= mask_fraction
 
-    mask1 = make_obstruction(make_circular_aperture(diameter=mask_diameter, center=mask_offsets[0]))
-    mask2 = make_obstruction(make_circular_aperture(diameter=mask_diameter, center=mask_offsets[1]))
+    mask1 = make_inverted_aperture(make_circular_aperture(diameter=mask_diameter, center=mask_offsets[0]))
+    mask2 = make_inverted_aperture(make_circular_aperture(diameter=mask_diameter, center=mask_offsets[1]))
     mask_spider = make_spider_infinite(mask_spider_offset, 180 - spider_angle, mask_spider_width)
 
     def func(grid):

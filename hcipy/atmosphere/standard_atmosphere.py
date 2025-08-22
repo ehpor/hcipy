@@ -11,7 +11,7 @@ def make_mauna_kea_atmospheric_layers(input_grid, cn_squared=None, outer_scale=N
     The layer parameters are taken from [Guyon2005]_, in turn derived
     from [Tokovinin2005]_ and are representative for Mauna Kea, Hawaii.
 
-    .. [Guyon 2005] Olivier Guyon, "Limits of Adaptive Optics for
+    .. [Guyon2005] Olivier Guyon, "Limits of Adaptive Optics for
         High-Contrast Imaging", ApJ 629 592 (2005).
 
     .. [Tokovinin2005] A. Tokovinin et al., "Optical Turbulence Profiles

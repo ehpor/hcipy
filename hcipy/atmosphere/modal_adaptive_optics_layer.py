@@ -9,11 +9,11 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
     based on a set of controlled modes, simulating the effect of an adaptive
     optics system with a certain framerate and lag.
 
-    Note
-    ----
+    Notes
+    -----
     This class provides a rudimentary way to simulate AO-system-like residuals
     in an infinite signal-to-noise ratio (SNR) regime. It is not intended as a
-    first-principles simulation of an AO system, but rather as a perfect
+    first-principles simulation of an AO system, but rather as an idealized
     representation of an AO system's ability to correct modes.
 
     Parameters

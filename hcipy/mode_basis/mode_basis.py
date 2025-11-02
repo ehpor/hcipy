@@ -279,7 +279,7 @@ class ModeBasis(object):
             raise NotImplementedError('The mode basis contains non-scalar fields; orthogonalization is not implemented for these.')
 
         q, r = np.linalg.qr(self._transformation_matrix)
-        return ModeBasis(q, self.grid)
+        return ModeBasis(q / np.sign(np.diag(r)), self.grid)
 
     def __getitem__(self, item):
         '''Get the `item`-th mode in the `ModeBasis`.

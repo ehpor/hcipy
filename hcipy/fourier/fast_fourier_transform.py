@@ -436,7 +436,7 @@ class FastFourierTransform(FourierTransform):
         '''
         q, _, shift = get_fft_parameters(output_grid, input_grid)
 
-        shape = input_grid.shape.astype('float') * q
+        shape = np.array(input_grid.shape, dtype='float') * q
 
         N_internal = np.prod(shape)
         N_input = np.prod(input_grid.shape)

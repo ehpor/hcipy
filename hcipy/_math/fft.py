@@ -55,7 +55,10 @@ def _make_func(func_name):
             for method in methods:
                 try:
                     if method == 'mkl' and mkl_fft is not None and mkl_func is not None:
-                        return mkl_func(x, *args, **kwargs, overwrite_x=overwrite_x)
+                        if overwrite_x:
+                            return mkl_func(x, *args, **kwargs, out=np.asarray(x))
+                        else:
+                            return mkl_func(x, *args, **kwargs)
                     elif method == 'fftw' and pyfftw is not None:
                         return pyfftw_func(x, *args, **kwargs, workers=threads, overwrite_x=overwrite_x)
                     elif method == 'scipy':

@@ -6,8 +6,19 @@ from .fourier_transform import FourierTransform, ComputationalComplexity, multip
 from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration
 import numexpr as ne
+import math
 
 from .._math import fft as _fft_module
+
+def _allclose(a, b, rtol=1e-5, atol=1e-8):
+    if len(a) != len(b):
+        return False
+
+    for x, y in zip(a, b):
+        if abs(x - y) > (atol + rtol * abs(y)):
+            return False
+
+    return True
 
 def make_fft_grid(input_grid, q=1, fov=1, shift=0):
     '''Calculate the grid returned by a Fast Fourier Transform.
@@ -74,11 +85,11 @@ def get_fft_parameters(fft_grid, input_grid):
 
     Returns
     -------
-    q : ndarray
+    q : tuple
         The amount of zeropadding detected in the real domain.
-    fov : ndarray
+    fov : tuple
         The amount of cropping detected in the Fourier domain.
-    shift : ndarray
+    shift : tuple
         The amount of shifting detected in the Fourier domain.
 
     Raises
@@ -436,18 +447,18 @@ class FastFourierTransform(FourierTransform):
         '''
         q, _, shift = get_fft_parameters(output_grid, input_grid)
 
-        shape = np.array(input_grid.shape, dtype='float') * q
+        shape = tuple(n * qq for n, qq in zip(input_grid.shape, q))
 
-        N_internal = np.prod(shape)
-        N_input = np.prod(input_grid.shape)
-        N_output = np.prod(output_grid.shape)
+        N_internal = math.prod(shape)
+        N_input = math.prod(input_grid.shape)
+        N_output = math.prod(output_grid.shape)
 
-        num_complex_multiplications = 0.5 * N_internal * np.log2(N_internal)
-        num_complex_additions = N_internal * np.log2(N_internal)
+        num_complex_multiplications = 0.5 * N_internal * math.log2(N_internal)
+        num_complex_additions = N_internal * math.log2(N_internal)
 
         # Add complexity for initial multiplication by shift_output.
         # The multiplication happens on `field.reshape(self.shape_in)` which has N_input elements.
-        if not np.allclose(shift, 0):
+        if not _allclose(shift, (0,) * len(shift)):
             num_complex_multiplications += N_input
 
         # Add complexity for final multiplication by shift_input

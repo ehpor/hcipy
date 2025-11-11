@@ -156,10 +156,10 @@ def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length
     q = _normalize_to_tuple(q, 2, float)
 
     if num_airy is None:
-        fov = 1
+        fov = (1,) * pupil_grid.ndim
     else:
         num_airy = _normalize_to_tuple(num_airy, 2)
-        fov = (num_airy_i / (n / 2) for num_airy_i, n in zip(num_airy, pupil_grid.dims))
+        fov = tuple(num_airy_i / (n / 2) for num_airy_i, n in zip(num_airy, pupil_grid.dims))
 
     if max(fov) > 1:
         import warnings

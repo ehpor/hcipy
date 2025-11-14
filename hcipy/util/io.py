@@ -305,7 +305,7 @@ def write_field(field, filename, fmt=None, overwrite=True):
 
         if field.grid.is_regular:
             w = wcs.WCS(naxis=field.grid.ndim)
-            w.wcs.crpix = np.ones(field.grid.ndim)
+            w.wcs.crpix = (1,) * field.grid.ndim
             w.wcs.cdelt = field.grid.delta
             w.wcs.crval = field.grid.zero
             w.wcs.ctype = ['X', 'Y', 'Z', 'W'][:field.grid.ndim]
@@ -412,7 +412,7 @@ def write_mode_basis(mode_basis, filename, fmt=None, overwrite=True):
             hdulist.append(fits.ImageHDU(np.asarray(modes)))
 
             w = wcs.WCS(naxis=mode_basis.grid.ndim)
-            w.wcs.crpix = np.ones(mode_basis.grid.ndim)
+            w.wcs.crpix = (1,) * mode_basis.grid.ndim
             w.wcs.cdelt = mode_basis.grid.delta
             w.wcs.crval = mode_basis.grid.zero
             w.wcs.ctype = ['X', 'Y', 'Z', 'W'][:mode_basis.grid.ndim]

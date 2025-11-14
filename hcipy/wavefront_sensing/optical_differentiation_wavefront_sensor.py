@@ -106,8 +106,6 @@ def optical_differentiation_surface(filter_size, amplitude_filter, separation, w
 
         filter_3 = amplitude_filter(surface_grid.y / filter_size)
         filter_3 *= filter_mask
-        for f in filter_3:
-            print(f)
 
         filter_4 = -amplitude_filter(-surface_grid.y / filter_size)
         filter_4 *= filter_mask
@@ -150,7 +148,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
         self.output_grid = output_grid
 
         if D is None:
-            D = np.max(input_grid.delta * (input_grid.shape - 1))
+            D = max(delta * (n - 1) for delta, n in zip(input_grid.delta, input_grid.dims))
 
         if separation is None:
             separation = D
@@ -164,7 +162,7 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
             raise ValueError('The requested focal plane sampling is too low to sufficiently sample the wavefront sensor output.')
 
         if num_airy is None:
-            self.num_airy = np.max(input_grid.shape - 1) / 2
+            self.num_airy = max((n - 1) / 2 for n in input_grid.shape)
         else:
             self.num_airy = num_airy
 

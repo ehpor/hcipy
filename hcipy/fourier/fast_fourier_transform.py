@@ -1,12 +1,24 @@
 from __future__ import division
+from collections.abc import Iterable
 
 import numpy as np
 from .fourier_transform import FourierTransform, ComputationalComplexity, multiplex_for_tensor_fields, _get_float_and_complex_dtype
 from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration
 import numexpr as ne
+import math
 
 from .._math import fft as _fft_module
+
+def _allclose(a, b, rtol=1e-5, atol=1e-8):
+    if len(a) != len(b):
+        return False
+
+    for x, y in zip(a, b):
+        if abs(x - y) > (atol + rtol * abs(y)):
+            return False
+
+    return True
 
 def make_fft_grid(input_grid, q=1, fov=1, shift=0):
     '''Calculate the grid returned by a Fast Fourier Transform.
@@ -27,12 +39,12 @@ def make_fft_grid(input_grid, q=1, fov=1, shift=0):
     Grid
         The grid defining the sampling in the Fourier domain.
     '''
-    q = np.ones(input_grid.ndim, dtype='float') * q
-    fov = np.ones(input_grid.ndim, dtype='float') * fov
-    shift = np.ones(input_grid.ndim, dtype='float') * shift
-
-    # Correct q for a discrete zero padding of the input grid.
-    q = np.round(q * input_grid.dims) / input_grid.dims
+    if not isinstance(q, Iterable):
+        q = (q,) * input_grid.ndim
+    if not isinstance(fov, Iterable):
+        fov = (fov,) * input_grid.ndim
+    if not isinstance(shift, Iterable):
+        shift = (shift,) * input_grid.ndim
 
     # Check assumptions
     if not input_grid.is_regular:
@@ -40,9 +52,12 @@ def make_fft_grid(input_grid, q=1, fov=1, shift=0):
     if not input_grid.is_('cartesian'):
         raise ValueError('The input_grid must be cartesian.')
 
-    delta = (2 * np.pi / (input_grid.delta * input_grid.dims)) / q
-    dims = (input_grid.dims * fov * q).astype('int')
-    zero = delta * (-dims / 2 + np.mod(dims, 2) * 0.5) + shift
+    # Correct q for a discrete zero padding of the input grid.
+    q = tuple(round(q_i * d_in) / d_in for q_i, d_in in zip(q, input_grid.dims))
+
+    delta = tuple((2 * np.pi / (d_in * s_in)) / q_i for d_in, s_in, q_i in zip(input_grid.delta, input_grid.dims, q))
+    dims = tuple(int(d_in * f_i * q_i) for d_in, f_i, q_i in zip(input_grid.dims, fov, q))
+    zero = tuple(d_i * (-dim / 2 + (dim % 2) * 0.5) + s_i for d_i, dim, s_i in zip(delta, dims, shift))
 
     return CartesianGrid(RegularCoords(delta, dims, zero))
 
@@ -70,11 +85,11 @@ def get_fft_parameters(fft_grid, input_grid):
 
     Returns
     -------
-    q : ndarray
+    q : tuple
         The amount of zeropadding detected in the real domain.
-    fov : ndarray
+    fov : tuple
         The amount of cropping detected in the Fourier domain.
-    shift : ndarray
+    shift : tuple
         The amount of shifting detected in the Fourier domain.
 
     Raises
@@ -86,30 +101,32 @@ def get_fft_parameters(fft_grid, input_grid):
         raise ValueError('The input grid must be regular to reconstruct an fft grid.')
     if not fft_grid.is_regular:
         raise ValueError('The fft grid is not regular and therefore cannot be an fft grid.')
+    if input_grid.ndim != fft_grid.ndim:
+        raise ValueError('The fft grid does not have the same number of dimensions as input_grid.')
 
-    q = (2 * np.pi / (input_grid.delta * input_grid.dims)) / fft_grid.delta
+    q = tuple((2 * np.pi / (d_in * s_in)) / f_delta for d_in, s_in, f_delta in zip(input_grid.delta, input_grid.dims, fft_grid.delta))
 
-    if np.any(q < 1):
+    if any(q_i < 1 for q_i in q):
         raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} would be < 1.')
 
     # Check that the calculated q corresponds to an integer zeropadding.
-    zeropadded_dims = q * input_grid.dims
-    if np.any(np.abs(zeropadded_dims - np.round(zeropadded_dims)) > 1e-10):
+    zeropadded_dims = tuple(q_i * d_in for q_i, d_in in zip(q, input_grid.dims))
+    if any(abs(zn - round(zn)) > 1e-10 for zn in zeropadded_dims):
         raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} does not correspond to an integer zeropadding.')
 
     # Compute fov.
-    fov = fft_grid.dims / zeropadded_dims
+    fov = tuple(f_dim / zp_dim for f_dim, zp_dim in zip(fft_grid.dims, zeropadded_dims))
 
     # Check if fov would be < 1.
-    if np.any(fft_grid.dims > (zeropadded_dims + 0.5).astype('int')):
+    if any(n > int(zn + 0.5) for n, zn in zip(fft_grid.dims, zeropadded_dims)):
         raise ValueError(f'fft_grid is not an FFT grid of input_grid: fov of {fov} would be > 1 .')
 
     # Correct fov for rounding errors (floating point errors would lead to a different dims).
     dummy_fft_grid = make_fft_grid(input_grid, q, fov)
-    wrong_dims = fft_grid.dims != dummy_fft_grid.dims
-    fov[wrong_dims] = ((fft_grid.dims + 0.5) / (input_grid.dims * q))[wrong_dims]
+    wrong_dims = tuple(n != m for n, m in zip(dummy_fft_grid.dims, fft_grid.dims))
+    fov = tuple((f_dim + 0.5) / (d_in * q_i) if wrong_dim else f for wrong_dim, f, f_dim, d_in, q_i in zip(wrong_dims, fov, fft_grid.dims, input_grid.dims, q))
 
-    shift = fft_grid.zero - fft_grid.delta * (-fft_grid.dims / 2 + np.mod(fft_grid.dims, 2) * 0.5)
+    shift = tuple(f_zero - f_delta * (-f_dim / 2 + (f_dim % 2) * 0.5) for f_zero, f_delta, f_dim in zip(fft_grid.zero, fft_grid.delta, fft_grid.dims))
     return q, fov, shift
 
 def is_fft_grid(grid, input_grid):
@@ -210,10 +227,13 @@ class FastFourierTransform(FourierTransform):
         if not input_grid.is_('cartesian'):
             raise ValueError('The input_grid must be Cartesian.')
 
-        if np.any(q < 1):
+        q_check = (q,) if np.isscalar(q) else q
+        fov_check = (fov,) if np.isscalar(fov) else fov
+
+        if any(q_i < 1 for q_i in q_check):
             raise ValueError('The amount of zeropadding (q) must be larger than 1.')
 
-        if np.any(fov < 0):
+        if any(fov_i < 0 for fov_i in fov_check):
             raise ValueError('The amount of cropping (fov) must be positive.')
 
         self.input_grid = input_grid
@@ -239,32 +259,32 @@ class FastFourierTransform(FourierTransform):
         self.internal_array = np.zeros(self.internal_shape, 'complex')
 
         # Calculate the part of the array in which to insert the input field (for zeropadding).
-        if np.allclose(self.internal_shape, self.shape_in):
+        if self.internal_shape == self.shape_in:
             self.cutout_input = None
         else:
-            cutout_start = (self.internal_shape / 2.).astype('int') - (self.shape_in / 2.).astype('int')
-            cutout_end = cutout_start + self.shape_in
+            cutout_start = tuple(int(internal_dim / 2) - int(input_dim / 2) for internal_dim, input_dim in zip(self.internal_shape, self.shape_in))
+            cutout_end = tuple(start + input_dim for start, input_dim in zip(cutout_start, self.shape_in))
             self.cutout_input = tuple([slice(start, end) for start, end in zip(cutout_start, cutout_end)])
 
         # Calculate the part of the array to extract the output field (for cropping).
-        if np.allclose(self.internal_shape, self.shape_out):
+        if self.internal_shape == self.shape_out:
             self.cutout_output = None
         else:
-            cutout_start = (self.internal_shape / 2.).astype('int') - (self.shape_out / 2.).astype('int')
-            cutout_end = cutout_start + self.shape_out
+            cutout_start = tuple(int(internal_dim / 2) - int(output_dim / 2) for internal_dim, output_dim in zip(self.internal_shape, self.shape_out))
+            cutout_end = tuple(start + output_dim for start, output_dim in zip(cutout_start, self.shape_out))
             self.cutout_output = tuple([slice(start, end) for start, end in zip(cutout_start, cutout_end)])
 
         # Calculate the shift array when the input grid was shifted compared to the native shift
         # expected by the numpy FFT implementation.
-        center = input_grid.zero + input_grid.delta * (np.array(input_grid.dims) // 2)
-        self.shift_input = _numexpr_grid_shift(-center, self.output_grid)
+        center = tuple(zero + delta * (dim // 2) for zero, delta, dim in zip(input_grid.zero, input_grid.delta, input_grid.dims))
+        self.shift_input = _numexpr_grid_shift(tuple(-c for c in center), self.output_grid)
 
         # Remove piston shift (remove central shift phase)
         self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0]
 
         # Calculate the multiplication for emulating the FFTshift (if requested).
         if emulate_fftshifts:
-            f_shift = input_grid.delta * np.array(self.internal_shape[::-1] // 2)
+            f_shift = tuple(delta * (dim // 2) for delta, dim in zip(input_grid.delta, self.internal_shape[::-1]))
             fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
 
             if self.cutout_output:
@@ -285,7 +305,7 @@ class FastFourierTransform(FourierTransform):
 
         # Calculate the multiplication for emulating the FFTshift (if requested).
         if emulate_fftshifts:
-            f_shift = self.input_grid.delta * np.array(self.internal_shape[::-1] // 2)
+            f_shift = tuple(delta * (dim // 2) for delta, dim in zip(self.input_grid.delta, self.internal_shape[::-1]))
             fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
 
             fftshift *= np.exp(-1j * np.dot(f_shift, self.internal_grid.zero))
@@ -427,18 +447,18 @@ class FastFourierTransform(FourierTransform):
         '''
         q, _, shift = get_fft_parameters(output_grid, input_grid)
 
-        shape = input_grid.shape.astype('float') * q
+        shape = tuple(n * qq for n, qq in zip(input_grid.shape, q))
 
-        N_internal = np.prod(shape)
-        N_input = np.prod(input_grid.shape)
-        N_output = np.prod(output_grid.shape)
+        N_internal = math.prod(shape)
+        N_input = math.prod(input_grid.shape)
+        N_output = math.prod(output_grid.shape)
 
-        num_complex_multiplications = 0.5 * N_internal * np.log2(N_internal)
-        num_complex_additions = N_internal * np.log2(N_internal)
+        num_complex_multiplications = 0.5 * N_internal * math.log2(N_internal)
+        num_complex_additions = N_internal * math.log2(N_internal)
 
         # Add complexity for initial multiplication by shift_output.
         # The multiplication happens on `field.reshape(self.shape_in)` which has N_input elements.
-        if not np.allclose(shift, 0):
+        if not _allclose(shift, (0,) * len(shift)):
             num_complex_multiplications += N_input
 
         # Add complexity for final multiplication by shift_input

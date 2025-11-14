@@ -75,9 +75,9 @@ def test_fourier_energy_conservation_1d(dtype, shift_input, scale, shift_output,
     check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims)
 
 @pytest.mark.parametrize('dtype', ['complex128', 'complex64'])
-@pytest.mark.parametrize('shift_input', [[0, 0], [0.1]])
+@pytest.mark.parametrize('shift_input', [[0, 0], [0.1, 0.1]])
 @pytest.mark.parametrize('scale', [1, 2])
-@pytest.mark.parametrize('shift_output', [[0, 0], [0.1]])
+@pytest.mark.parametrize('shift_output', [[0, 0], [0.1, 0.1]])
 @pytest.mark.parametrize('q', [1, 1.23, 3, 4])
 @pytest.mark.parametrize('fov', [1, 0.5, 0.8])
 @pytest.mark.parametrize('dims', [[8, 8], [8, 16], [9, 9], [9, 18]])
@@ -136,7 +136,7 @@ def test_fourier_symmetries_2d(dtype):
     np.random.seed(0)
 
     for scale in [1, 2]:
-        for shift_output in [[0, 0], [0.1]]:
+        for shift_output in [[0, 0], [0.1, 0.1]]:
             for q in [1, 1.23, 3, 4]:
                 for fov in [1, 0.5, 0.8]:
                     for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
@@ -192,9 +192,9 @@ def test_make_fourier_transform_measure():
     assert isinstance(ft, (FastFourierTransform, MatrixFourierTransform, ZoomFastFourierTransform, NaiveFourierTransform))
 
 def test_fft_grid_reconstruction():
-    for shift_input in [[0, 0], [0.1]]:
+    for shift_input in [[0, 0], [0.1, 0.1]]:
             for scale in [1, 2]:
-                for shift_output in [[0, 0], [0.1]]:
+                for shift_output in [[0, 0], [0.1, 0.1]]:
                     for q in [1, 1.234, 3, 4]:
                         for fov in [1, 0.5, 0.8, [0.3, 0.23]]:
                             for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:

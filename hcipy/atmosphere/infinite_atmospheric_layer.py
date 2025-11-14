@@ -110,10 +110,10 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
     def _make_stencils(self):
         # Vertical
-        zero = self.input_grid.zero - np.array([0, self.input_grid.delta[1]])
-        self.new_grid_bottom = CartesianGrid(RegularCoords(self.input_grid.delta, [self.input_grid.dims[0], 1], zero))
+        zero = (self.input_grid.zero[0], self.input_grid.zero[1] - self.input_grid.delta[1])
+        self.new_grid_bottom = CartesianGrid(RegularCoords(self.input_grid.delta, (self.input_grid.dims[0], 1), zero))
 
-        self.stencil_bottom = Field(np.zeros(self.input_grid.size, dtype='bool'), self.input_grid).shaped
+        self.stencil_bottom = self.input_grid.zeros(dtype='bool').shaped
         self.stencil_bottom[:self.stencil_length, :] = True
 
         for i, n in enumerate(self.rng.geometric(0.5, self.input_grid.dims[0])):
@@ -123,10 +123,10 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
         self.num_stencils_vertical = np.sum(self.stencil_bottom)
 
         # Horizontal
-        zero = self.input_grid.zero - np.array([self.input_grid.delta[0], 0])
-        self.new_grid_left = CartesianGrid(RegularCoords(self.input_grid.delta, [1, self.input_grid.dims[1]], zero))
+        zero = (self.input_grid.zero[0] - self.input_grid.delta[0], self.input_grid.zero[1])
+        self.new_grid_left = CartesianGrid(RegularCoords(self.input_grid.delta, (1, self.input_grid.dims[1]), zero))
 
-        self.stencil_left = Field(np.zeros(self.input_grid.size, dtype='bool'), self.input_grid).shaped
+        self.stencil_left = self.input_grid.zeros(dtype='bool').shaped
         self.stencil_left[:, :self.stencil_length] = True
 
         for i, n in enumerate(self.rng.geometric(0.5, self.input_grid.dims[1])):

@@ -514,9 +514,9 @@ def make_segmented_aperture(segment_shape, segment_positions, segment_transmissi
                 segment_sub, mask = segment_shape(grid.shifted(-p), return_with_mask=True)
 
                 if isinstance(mask, tuple):
-                    res.shaped[mask][segment_sub > 0.5] = t
+                    res.shaped[mask] += t * (segment_sub > 0.5)
                 else:
-                    res[mask][segment_sub > 0.5] = t
+                    res[mask] += t * (segment_sub > 0.5)
             else:
                 segment = segment_shape(grid.shifted(-p))
                 res[segment > 0.5] = t

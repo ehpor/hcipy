@@ -190,10 +190,7 @@ def make_regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=No
     else:
         shift = center * np.ones(2)
 
-    epsilon = 1e-6
-
     apothem = np.cos(np.pi / num_sides) * circum_diameter / 2
-    apothem += apothem * epsilon
 
     if center is None:
         shift = np.zeros(2)

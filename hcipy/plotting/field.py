@@ -115,7 +115,7 @@ class InverseSeparatedGridTransform(Transform):
 
 def imshow_field(
         field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None,
-        mask=None, mask_color='k', grid_units=1, *args, **kwargs):
+        mask=None, mask_color='k', grid_units=1, cmap=None, theme='dark', *args, **kwargs):
     '''Display a two-dimensional image on a matplotlib figure.
 
     This function serves as an easy replacement for the matplotlib.pyplot.imshow() function.
@@ -155,6 +155,13 @@ def imshow_field(
     grid_units : scalar or array_like
         The size of a unit square. The grid will be scaled by the inverse of this number before
         plotting. If this is a scalar, an isotropic scaling will be applied.
+    cmap : Colormap or None
+        The colormap with which to plot the image. For a complex field, it will be used to color
+        the phase.
+    theme : {'dark', 'light'}
+        Sets whether the amplitude is visualized on a dark or light background.
+        "dark" uses black for zero amplitude and lightens with increasing amplitude.
+        "light" uses white for zero amplitude and darkens with increasing amplitude.
 
     Returns
     -------
@@ -189,7 +196,7 @@ def imshow_field(
 
     # If field is complex, draw complex
     if np.iscomplexobj(field):
-        f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
+        f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm, cmap=cmap, theme=theme)
         vmin = None
         vmax = None
         norm = None
@@ -265,7 +272,7 @@ def imshow_field(
 
     return im
 
-def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, mask=None, mask_color='k', cmap=None):
+def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, mask=None, mask_color='k', cmap=None, theme='dark'):
     '''Save a two-dimensional field as an image.
 
     Parameters
@@ -297,8 +304,12 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
     mask_color : Color
         The color of the mask, if it is used.
     cmap : Colormap or None
-        The colormap with which to plot the image. It is ignored if a complex
-        field or a vector field is supplied.
+        The colormap with which to plot the image. For a complex field, it will be used to color
+        the phase.
+    theme : {'dark', 'light'}
+        Sets whether the amplitude is visualized on a dark or light background.
+        "dark" uses black for zero amplitude and lightens with increasing amplitude.
+        "light" uses white for zero amplitude and darkens with increasing amplitude.
     '''
     import matplotlib as mpl
     import matplotlib.pyplot as plt
@@ -310,7 +321,7 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
 
     # If field is complex, draw complex
     if np.iscomplexobj(field):
-        f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
+        f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm, cmap=cmap, theme=theme)
         vmin = None
         vmax = None
         norm = None

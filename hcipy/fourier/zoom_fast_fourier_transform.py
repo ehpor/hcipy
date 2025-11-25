@@ -1,4 +1,7 @@
 import numpy as np
+import cmath
+import math
+import scipy.fft
 
 from .chirp_z_transform import ChirpZTransform
 from .fourier_transform import FourierTransform, ComputationalComplexity, _get_float_and_complex_dtype
@@ -42,11 +45,11 @@ class ZoomFastFourierTransform(FourierTransform):
         float_dtype, complex_dtype = _get_float_and_complex_dtype(dtype)
 
         if complex_dtype != self._current_dtype:
-            w = np.exp(-1j * self.output_grid.delta * self.input_grid.delta)
-            a = np.exp(1j * self.output_grid.zero * self.input_grid.delta)
+            w = tuple(cmath.exp(-1j * delta_out * delta_in) for delta_out, delta_in in zip(self.output_grid.delta, self.input_grid.delta))
+            a = tuple(cmath.exp(1j * zero_out * delta_in) for zero_out, delta_in in zip(self.output_grid.zero, self.input_grid.delta))
 
-            inv_w = np.exp(1j * self.input_grid.delta * self.output_grid.delta)
-            inv_a = np.exp(-1j * self.input_grid.zero * self.output_grid.delta)
+            inv_w = tuple(cmath.exp(1j * delta_in * delta_out) for delta_in, delta_out in zip(self.input_grid.delta, self.output_grid.delta))
+            inv_a = tuple(cmath.exp(-1j * zero_in * delta_out) for zero_in, delta_out in zip(self.input_grid.zero, self.output_grid.delta))
 
             self.czts = [ChirpZTransform(n, m, ww, aa) for n, m, ww, aa in zip(self.input_grid.dims, self.output_grid.dims, w, a)]
             self.inv_czts = [ChirpZTransform(n, m, ww, aa) for n, m, ww, aa in zip(self.output_grid.dims, self.input_grid.dims, inv_w, inv_a)]
@@ -58,7 +61,7 @@ class ZoomFastFourierTransform(FourierTransform):
             self.inv_shifts = [s.astype(complex_dtype, copy=False) for s in self.inv_shifts]
 
             self.input_weights = self.input_grid.weights.astype(float_dtype)
-            self.output_weights = (self.output_grid.weights / (2 * np.pi)**self.output_grid.ndim).astype(float_dtype)
+            self.output_weights = (self.output_grid.weights / (2 * math.pi)**self.output_grid.ndim).astype(float_dtype)
 
             self._current_dtype = complex_dtype
 
@@ -172,27 +175,26 @@ class ZoomFastFourierTransform(FourierTransform):
 
         for i, (in_len, out_len) in enumerate(zip(input_grid.shape, output_grid.shape)):
             # Correct czt_len to use next_fast_len
-            import scipy.fft
-            czt_len = np.array(scipy.fft.next_fast_len(in_len + out_len - 1))
+            czt_len = scipy.fft.next_fast_len(in_len + out_len - 1)
 
-            size_per_czt = np.prod(output_grid.shape[:i]) * np.prod(input_grid.shape[i + 1:])
+            size_per_czt = math.prod(output_grid.shape[:i]) * math.prod(input_grid.shape[i + 1:])
 
-            size_before_czt = np.prod(output_grid.shape[:i]) * np.prod(input_grid.shape[i:])
-            size_after_czt = np.prod(output_grid.shape[:i + 1]) * np.prod(input_grid.shape[i + 1:])
+            size_before_czt = math.prod(output_grid.shape[:i]) * math.prod(input_grid.shape[i:])
+            size_after_czt = math.prod(output_grid.shape[:i + 1]) * math.prod(input_grid.shape[i + 1:])
 
             # Multiplication 1 (x = x * self._Awk2 in CZT)
             num_complex_multiplications += size_before_czt
 
             # FFT (in CZT)
-            num_complex_multiplications += 0.5 * czt_len * size_per_czt * np.log2(czt_len)
-            num_complex_additions += czt_len * size_per_czt * np.log2(czt_len)
+            num_complex_multiplications += 0.5 * czt_len * size_per_czt * math.log2(czt_len)
+            num_complex_additions += czt_len * size_per_czt * math.log2(czt_len)
 
             # Multiplication 2 (intermediate *= self._Fwk2 in CZT)
             num_complex_multiplications += czt_len * size_per_czt
 
             # Inverse FFT (in CZT)
-            num_complex_multiplications += 0.5 * czt_len * size_per_czt * np.log2(czt_len)
-            num_complex_additions += czt_len * size_per_czt * np.log2(czt_len)
+            num_complex_multiplications += 0.5 * czt_len * size_per_czt * math.log2(czt_len)
+            num_complex_additions += czt_len * size_per_czt * math.log2(czt_len)
 
             # Multiplication 3 (res = res[..., self._yidx] * self._wk2 in CZT)
             num_complex_multiplications += size_after_czt

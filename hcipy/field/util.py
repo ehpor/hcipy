@@ -1,4 +1,5 @@
 from __future__ import division
+from collections.abc import Iterable
 
 import numpy as np
 from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
@@ -6,17 +7,64 @@ from .field import Field
 from .cartesian_grid import CartesianGrid
 from .grid import Grid
 
+def _normalize_to_tuple(src, size, dtype=None):
+    '''Normalize an input to a tuple.
+
+    This function takes either a scalar or iterable as `src` and outputs a
+    tuple with `size` elements. If the input is an iterable it is converted to
+    a tuple. If the input is a scalar it is repeated `size` times.
+
+    Parameters
+    ----------
+    src : scalar or iterable
+        The input to normalize.
+    size : int
+        The number of elements the output tuple should have.
+    dtype : type or None
+        The type to cast the elements to. If None the type is not cast.
+
+    Returns
+    -------
+    tuple
+       The normalized input.
+    '''
+    if dtype is None:
+        if isinstance(src, Iterable):
+            return tuple(x for x in src)
+        else:
+            return (src,) * size
+    else:
+        if isinstance(src, Iterable):
+            return tuple(dtype(x) for x in src)
+        else:
+            return (dtype(src),) * size
+
+def _find_common_size(*args):
+    '''Find the common size between a number of arguments.
+
+    Parameters
+    ----------
+    args : scalars or iterables
+        The arguments to find a common size for.
+
+    Returns
+    -------
+    int
+        The common size.
+    '''
+    return max(len(arg) if isinstance(arg, Iterable) else 1 for arg in args)
+
 def make_uniform_grid(dims, extent, center=0, has_center=False):
     '''Create a uniformly-spaced :class:`Grid` of a certain shape and size.
 
     Parameters
     ----------
-    dims : scalar or ndarray
+    dims : int or tuple of ints
         The number of points in each dimension. If this is a scalar, it will
         be multiplexed over all dimensions.
-    extent : scalar or ndarray
+    extent : scalar or tuple of floats
         The total extent of the grid in each dimension.
-    center : scalar or ndarray
+    center : scalar or tuple of floats
         The center point. The grid will by symmetric around this point.
     has_center : boolean
         Does the grid has to have the center as one of its points. If this is
@@ -27,17 +75,17 @@ def make_uniform_grid(dims, extent, center=0, has_center=False):
     Grid
         A :class:`Grid` with :class:`RegularCoords`.
     '''
-    num_dims = max(np.array([dims]).shape[-1], np.array([extent]).shape[-1], np.array([center]).shape[-1])
+    num_dims = _find_common_size(dims, extent, center)
 
-    dims = (np.ones(num_dims) * dims).astype('int')
-    extent = (np.ones(num_dims) * extent).astype('float')
-    center = (np.ones(num_dims) * center).astype('float')
+    dims = _normalize_to_tuple(dims, num_dims, int)
+    extent = _normalize_to_tuple(extent, num_dims, float)
+    center = _normalize_to_tuple(center, num_dims, float)
 
-    delta = extent / dims
-    zero = -extent / 2 + center + delta / 2
+    delta = tuple(e / d for e, d in zip(extent, dims))
+    zero = tuple(-e / 2 + c + d / 2 for e, c, d in zip(extent, center, delta))
 
     if has_center:
-        zero -= delta / 2 * (1 - np.mod(dims, 2))
+        zero = tuple(z - d / 2 * (1 - dim % 2) for z, d, dim in zip(zero, delta, dims))
 
     return CartesianGrid(RegularCoords(delta, dims, zero))
 
@@ -49,10 +97,10 @@ def make_pupil_grid(dims, diameter=1):
 
     Parameters
     ----------
-    dims : ndarray or integer
+    dims : tuple of ints or integer
         The number of pixels per dimension. If this is an integer, this number
         of pixels is used for all dimensions.
-    diameter : ndarray or scalar
+    diameter : tuple of floats or scalar
         The diameter of the grid in each dimension. If this is a scalar, this diameter
         is used for all dimensions.
 
@@ -61,7 +109,8 @@ def make_pupil_grid(dims, diameter=1):
     Grid
         A :class:`CartesianGrid` with :class:`RegularCoords`.
     '''
-    diameter = (np.ones(2) * diameter).astype('float')
+    diameter = _normalize_to_tuple(diameter, 2, float)
+
     return make_uniform_grid(dims, diameter)
 
 def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1):
@@ -83,9 +132,9 @@ def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length
     pupil_grid : Grid
         The pupil grid for which the focal grid needs to be calculated. The extent of this Grid
         is used as the diameter of the pupil.
-    q : scalar or array_like
+    q : float or tuple of floats
         The number of pixels per resolution element (= lambda f / D).
-    num_airy : scalar or array_like
+    num_airy : float or tuple of floats
         The spatial extent of the grid in radius in resolution elements (= lambda f / D).
     focal_length : scalar
         The focal length used for calculating the spatial resolution at the focal plane.
@@ -99,15 +148,22 @@ def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length
     '''
     from ..fourier import make_fft_grid
 
-    f_lambda = focal_length * wavelength
-    if num_airy is None:
-        fov = 1
-    else:
-        fov = (num_airy * np.ones(pupil_grid.ndim, dtype='float')) / (pupil_grid.shape / 2)
+    if not pupil_grid.ndim == 2:
+        raise ValueError('The given pupil grid has to be two-dimensional.')
 
-    if np.max(fov) > 1:
+    f_lambda = focal_length * wavelength
+
+    q = _normalize_to_tuple(q, 2, float)
+
+    if num_airy is None:
+        fov = (1,) * pupil_grid.ndim
+    else:
+        num_airy = _normalize_to_tuple(num_airy, 2)
+        fov = tuple(num_airy_i / (n / 2) for num_airy_i, n in zip(num_airy, pupil_grid.dims))
+
+    if max(fov) > 1:
         import warnings
-        warnings.warn('Focal grid is larger than the maximum allowed angle (fov=%.03f). You may see wrapping when doing propagations.' % np.max(fov), stacklevel=2)
+        warnings.warn('Focal grid is larger than the maximum allowed angle (fov=%.03f). You may see wrapping when doing propagations.' % max(fov), stacklevel=2)
 
     uv = make_fft_grid(pupil_grid, q, fov)
     focal_grid = uv.scaled(f_lambda / (2 * np.pi))
@@ -134,19 +190,19 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
 
     Parameters
     ----------
-    q : scalar or array_like
+    q : scalar or tuple of floats
         The number of pixels per resolution element (= lambda f / D).
-    num_airy : scalar or array_like
+    num_airy : scalar or tuple of floats
         The spatial extent of the grid in radius in resolution elements (= lambda f / D).
-    spatial_resolution : scalar    or array_like
+    spatial_resolution : scalar or tuple of floats
         The physical size of a resolution element (= lambda f / D). It this is not given,
         the spatial resolution will be calculated from the given `focal_length`,
         `reference_wavelength` and `pupil_diameter`.
-    pupil_diameter : scalar or array_like
+    pupil_diameter : scalar or tuple of floats
         The diameter of the pupil. If it is an array, this indicates the diameter in x and y.
     focal_length : scalar
         The focal length used for calculating the spatial resolution at the focal plane.
-    f_number : scalar or array_like
+    f_number : scalar or tuple of floats
         The F number, also known as focal ratio, at the focal plane. If this is given, it overrides
         the given pupil diameter and focal length.
     reference_wavelength : scalar
@@ -165,25 +221,37 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
     if isinstance(q, Grid):
         raise ValueError('The function signature was changed as of HCIPy 0.3.0. Please use the new signature (prefered), or use make_focal_grid_from_pupil_grid() if you want to retain old behaviour.')
 
+    if focal_length is not None:
+        focal_length = _normalize_to_tuple(focal_length, 2, float)
+    if spatial_resolution is not None:
+        spatial_resolution = _normalize_to_tuple(spatial_resolution, 2, float)
+    if pupil_diameter is not None:
+        pupil_diameter = _normalize_to_tuple(pupil_diameter, 2, float)
+    if f_number is not None:
+        f_number = _normalize_to_tuple(f_number, 2, float)
+
     if spatial_resolution is None:
         if f_number is None:
             if pupil_diameter is None or focal_length is None:
                 if reference_wavelength is None:
-                    spatial_resolution = 1
+                    spatial_resolution = (1, 1)
                 else:
                     raise ValueError('You only supplied a reference wavelength and forgot to supply either an f_number or a (pupil_diameter, focal_length).')
             else:
-                f_number = focal_length / pupil_diameter
+                f_number = tuple(f / d for f, d in zip(focal_length, pupil_diameter))
 
         if spatial_resolution is None:
             if reference_wavelength is None:
                 raise ValueError('You supplied an f_number or (pupil_diameter, focal_length), and forgot to supply a reference wavelength.')
             else:
-                spatial_resolution = f_number * reference_wavelength
+                spatial_resolution = tuple(f * reference_wavelength for f in f_number)
 
-    delta = spatial_resolution / q * np.ones(2)
-    dims = (2 * num_airy * q * np.ones(2)).astype('int')
-    zero = delta * (-dims / 2 + np.mod(dims, 2) * 0.5)
+    q = _normalize_to_tuple(q, 2)
+    num_airy = _normalize_to_tuple(num_airy, 2)
+
+    delta = tuple(s / q_i for s, q_i in zip(spatial_resolution, q))
+    dims = tuple(int(2 * n * q_i) for n, q_i in zip(num_airy, q))
+    zero = tuple(d * (-dim / 2 + (dim % 2) * 0.5) for d, dim in zip(delta, dims))
 
     return CartesianGrid(RegularCoords(delta, dims, zero))
 
@@ -198,7 +266,7 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
         The number of rings in the grid.
     pointy_top : boolean
         If the hexagons contained in the grid.
-    center : ndarray
+    center : tuple
         The center of the grid in cartesian coordinates.
 
     Returns
@@ -208,7 +276,7 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
         center of the hexagons.
     '''
     if center is None:
-        center = np.zeros(2)
+        center = (0, 0)
 
     apothem = circum_diameter * np.sqrt(3) / 4
 
@@ -246,18 +314,35 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
         return CartesianGrid(UnstructuredCoords((y, x)), weight)
 
 def make_chebyshev_grid(dims, minimum=None, maximum=None):
+    '''Make a Chebyshev grid.
+
+    Parameters
+    ----------
+    dims : tuple of ints
+        The number of points in each dimension.
+    minimum : scalar or tuple of floats
+        The minimum value in each dimension. If a scalar, it will be used for all dimensions.
+        The default is -1.
+    maximum : scalar or tuple of floats
+        The maximum value in each dimension. If a scalar, it will be used for all dimensions.
+        The default is 1.
+
+    Returns
+    -------
+    Grid
+        A :class:`CartesianGrid` with `SeparatedCoords`.
+    '''
     if minimum is None:
         minimum = -1
 
     if maximum is None:
         maximum = 1
 
-    dims = np.array(dims)
-    minimum = np.ones(len(dims)) * minimum
-    maximum = np.ones(len(dims)) * maximum
+    minimum = _normalize_to_tuple(minimum, len(dims), float)
+    maximum = _normalize_to_tuple(maximum, len(dims), float)
 
-    middles = (minimum + maximum) / 2
-    intervals = (maximum - minimum) / 2
+    middles = tuple((min_val + max_val) / 2 for min_val, max_val in zip(minimum, maximum))
+    intervals = tuple((max_val - min_val) / 2 for min_val, max_val in zip(minimum, maximum))
 
     sep_coords = []
     for dim, middle, interval in zip(dims, middles, intervals):
@@ -277,7 +362,7 @@ def make_supersampled_grid(grid, oversampling):
     ----------
     grid : Grid
         The grid that we want to oversample.
-    oversampling : integer or scalar or ndarray
+    oversampling : integer or scalar or tuple of ints
         The factor by which to oversample. If this is a scalar, it will be rounded to
         the nearest integer. If this is an array, a different oversampling factor will
         be used for each dimension.
@@ -287,12 +372,12 @@ def make_supersampled_grid(grid, oversampling):
     Grid
         The oversampled grid.
     '''
-    oversampling = (np.round(oversampling)).astype('int')
+    oversampling = _normalize_to_tuple(oversampling, grid.ndim, round)
 
     if grid.is_regular:
-        delta_new = grid.delta / oversampling
-        zero_new = grid.zero - grid.delta / 2 + delta_new / 2
-        dims_new = grid.dims * oversampling
+        delta_new = tuple(d / o for d, o in zip(grid.delta, oversampling))
+        zero_new = tuple(z - d / 2 + dn / 2 for z, d, dn in zip(grid.zero, grid.delta, delta_new))
+        dims_new = tuple(d * o for d, o in zip(grid.dims, oversampling))
 
         return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
     elif grid.is_separated:
@@ -310,7 +395,7 @@ def make_subsampled_grid(grid, undersampling):
     ----------
     grid : Grid
         The grid that we want to oversample.
-    undersampling : integer or scalar or ndarray
+    undersampling : integer or scalar or tuple of ints
         The factor by which to undersample. If this is a scalar, it will be rounded to
         the nearest integer. If this is an array, a different undersampling factor will
         be used for each dimension.
@@ -320,12 +405,12 @@ def make_subsampled_grid(grid, undersampling):
     Grid
         The undersampled grid.
     '''
-    undersampling = (np.round(undersampling)).astype('int')
+    undersampling = _normalize_to_tuple(undersampling, grid.ndim, round)
 
     if grid.is_regular:
-        delta_new = grid.delta * undersampling
-        zero_new = grid.zero - grid.delta / 2 + delta_new / 2
-        dims_new = grid.dims // undersampling
+        delta_new = tuple(d * u for d, u in zip(grid.delta, undersampling))
+        zero_new = tuple(z - d / 2 + dn / 2 for z, d, dn in zip(grid.zero, grid.delta, delta_new))
+        dims_new = tuple(d // u for d, u in zip(grid.dims, undersampling))
 
         return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
     elif grid.is_separated:
@@ -344,7 +429,7 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
     field : Field
         The field to subsample. The grid of this field must have the right
         dimensions to be able to be subsampled.
-    subsampling : integer or scalar or ndarray
+    subsampling : integer or scalar or tuple of ints
         The subsampling factor. If this is a scalar, it will be rounded to the
         nearest integer. If this is an array, the subsampling factor will be
         different for each dimension.
@@ -367,23 +452,23 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
     Field
         The subsampled field.
     '''
-    subsampling = (np.round(subsampling)).astype('int')
+    subsampling = _normalize_to_tuple(subsampling, field.grid.ndim, round)
 
     if new_grid is None:
         new_grid = make_subsampled_grid(field.grid, subsampling)
 
-    reshape = []
-    axes = []
-    for i, s in enumerate(new_grid.shape):
-        reshape.extend([s, subsampling])
-        axes.append(2 * i + 1)
+    reshape = tuple()
+    axes = tuple()
+    for i, (s, sub) in enumerate(zip(new_grid.shape, reversed(subsampling))):
+        reshape = reshape + (s, sub)
+        axes = axes + (2 * i + 1,)
 
     if field.tensor_order > 0:
-        reshape = list(field.tensor_shape) + reshape
-        axes = np.array(axes) + field.tensor_order
-        new_shape = list(field.tensor_shape) + [-1]
+        reshape = field.tensor_shape + reshape
+        axes = tuple(ax + field.tensor_order for ax in axes)
+        new_shape = field.tensor_shape + (-1,)
     else:
-        new_shape = [-1]
+        new_shape = (-1,)
 
     available_statistics = {
         'mean': np.mean,
@@ -399,18 +484,18 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
 
     if field.grid.is_regular:
         # All weights will be the same, so the array can be combined without taking the weights into account.
-        return Field(available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes)).reshape(tuple(new_shape)), new_grid)
+        return Field(available_statistics[statistic](field.reshape(reshape), axis=axes).reshape(new_shape), new_grid)
     else:
         # Some weights will be different so calculate weighted mean instead.
         if statistic in ['min', 'max', 'sum', 'median', 'nanmedian']:
-            f = available_statistics[statistic](field.reshape(tuple(reshape)), axis=tuple(axes))
-            return Field(f.reshape(tuple(new_shape)), new_grid)
+            f = available_statistics[statistic](field.reshape(reshape), axis=axes)
+            return Field(f.reshape(new_shape), new_grid)
         else:
             # Statistic is mean
             weights = field.grid.weights
-            w = weights.reshape(tuple(reshape)).sum(axis=tuple(axes))
-            f = np.sum((field * weights).reshape(tuple(reshape)), axis=tuple(axes))
-            return Field((f / w).reshape(tuple(new_shape)), new_grid)
+            w = weights.reshape(reshape).sum(axis=axes)
+            f = np.sum((field * weights).reshape(reshape), axis=axes)
+            return Field((f / w).reshape(new_shape), new_grid)
 
 def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean', make_sparse=True):
     '''Evaluate a Field generator on `grid`, with an oversampling.
@@ -422,7 +507,7 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
         each Field generator will be evaluated and stored in a ModeBasis.
     grid : Grid
         The grid on which to evaluate `field_generator`.
-    oversampling : integer or scalar or ndarray
+    oversampling : integer or scalar or tuple of ints
         The factor by which to oversample. If this is a scalar, it will be rounded to
         the nearest integer. If this is an array, a different oversampling factor will
         be used for each dimension.
@@ -459,7 +544,7 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
 
         return ModeBasis(modes, grid)
 
-    oversampling = (np.round(oversampling) * np.ones(grid.ndim)).astype('int')
+    oversampling = _normalize_to_tuple(oversampling, grid.ndim, round)
 
     if grid.is_separated:
         # Use dithered sub grids to get the final supersampled field.
@@ -538,7 +623,6 @@ def make_uniform_vector_field_generator(field_generator, jones_vector):
     Field generator
         This function can be evaluated on a grid to get a Field.
     '''
-
     def func(grid):
         scalar_field = field_generator(grid)
         return Field([ei * scalar_field for ei in jones_vector], grid)

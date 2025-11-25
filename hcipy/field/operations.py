@@ -428,7 +428,7 @@ def field_determinant(a):
     if a.tensor_order > 2:
         raise NotImplementedError()
 
-    if not np.all(a.tensor_shape == a.tensor_shape[0]):
+    if not all(n == a.tensor_shape[0] for n in a.tensor_shape):
         raise ValueError('Need square matrix for determinant.')
 
     # First we need to swap the axes in order to use np.linalg.det

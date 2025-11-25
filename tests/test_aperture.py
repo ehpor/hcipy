@@ -38,63 +38,63 @@ def check_aperture(aperture_function, diameter, name, check_normalization=False,
             os.makedirs(os.path.dirname(fname))
         write_fits(field, fname)
 
-def test_regular_polygon_aperture():
+@pytest.mark.parametrize('num_sides', [6, 5])
+@pytest.mark.parametrize('angle', [0, 15])
+def test_regular_polygon_aperture(num_sides, angle):
     pupil_diameter = 1
 
-    for num_sides in [6, 5]:
-        for angle in [0, 15]:
-            name = 'polygon/pupil'
-            name += '_rotated' if angle != 0 else ''
-            name += '_hex' if num_sides == 6 else '_pent'
+    name = 'polygon/pupil'
+    name += '_rotated' if angle != 0 else ''
+    name += '_hex' if num_sides == 6 else '_pent'
 
-            check_aperture(
-                make_regular_polygon_aperture, pupil_diameter, name,
-                circum_diameter=pupil_diameter, num_sides=num_sides, angle=angle
-            )
+    check_aperture(
+        make_regular_polygon_aperture, pupil_diameter, name,
+        circum_diameter=pupil_diameter, num_sides=num_sides, angle=angle
+    )
 
-def test_circular_aperture():
+@pytest.mark.parametrize('diameter', [1, 0.5])
+def test_circular_aperture(diameter):
     pupil_diameter = 1
 
-    for diameter in [1, 0.5]:
-        name = 'circular/pupil'
-        name += '_small' if diameter < 0.7 else '_large'
+    name = 'circular/pupil'
+    name += '_small' if diameter < 0.7 else '_large'
 
-        # Use a functools.partial() here to avoid the name collision of the diameter argument.
-        check_aperture(functools.partial(make_circular_aperture, diameter=diameter), pupil_diameter, name)
+    # Use a functools.partial() here to avoid the name collision of the diameter argument.
+    check_aperture(functools.partial(make_circular_aperture, diameter=diameter), pupil_diameter, name)
 
-def test_rectangular_aperture():
+@pytest.mark.parametrize('size', [[0.5, 0.5], [1, 0.5]])
+def test_rectangular_aperture(size):
     pupil_diameter = 1
 
-    for size in [[0.5, 0.5], [1, 0.5]]:
-        name = 'rectangular/pupil'
-        name += '_square' if size[0] == size[1] else '_elongated'
+    name = 'rectangular/pupil'
+    name += '_square' if size[0] == size[1] else '_elongated'
 
-        check_aperture(make_rectangular_aperture, pupil_diameter, name, size=size)
+    check_aperture(make_rectangular_aperture, pupil_diameter, name, size=size)
 
-def test_elliptical_aperture():
+@pytest.mark.parametrize('diameters', [[0.5, 0.5], [1, 0.5]])
+def test_elliptical_aperture(diameters):
     pupil_diameter = 1
 
-    for diameters in [[0.5, 0.5], [1, 0.5]]:
-        name = 'ellipse/pupil'
-        name += '_round' if diameters[0] == diameters[1] else '_elongated'
+    name = 'ellipse/pupil'
+    name += '_round' if diameters[0] == diameters[1] else '_elongated'
 
-        check_aperture(make_elliptical_aperture, pupil_diameter, name, diameters=diameters)
+    check_aperture(make_elliptical_aperture, pupil_diameter, name, diameters=diameters)
 
-def test_obstructed_circular_aperture():
+@pytest.mark.parametrize('central_obscuration_ratio', [0.1, 0.3])
+@pytest.mark.parametrize('num_spiders', [3, 5])
+@pytest.mark.parametrize('spider_width', [0.01, 0.03])
+def test_obstructed_circular_aperture(central_obscuration_ratio, num_spiders, spider_width):
     pupil_diameter = 1
 
-    for central_obscuration_ratio in [0.1, 0.3]:
-        for num_spiders in [3, 5]:
-            for spider_width in [0.01, 0.03]:
-                name = 'obstructed_circular/pupil'
-                name += '_small_obscuration' if central_obscuration_ratio < 0.2 else '_large_obscuration'
-                name += f'_{num_spiders}spiders'
-                name += '_thinspiders' if spider_width < 0.02 else '_thickspiders'
+    name = 'obstructed_circular/pupil'
+    name += '_small_obscuration' if central_obscuration_ratio < 0.2 else '_large_obscuration'
+    name += f'_{num_spiders}spiders'
+    name += '_thinspiders' if spider_width < 0.02 else '_thickspiders'
 
-                check_aperture(
-                    make_obstructed_circular_aperture, pupil_diameter, name,
-                    pupil_diameter=pupil_diameter, central_obscuration_ratio=central_obscuration_ratio, num_spiders=num_spiders, spider_width=spider_width
-                )
+    check_aperture(
+        make_obstructed_circular_aperture, pupil_diameter, name,
+        pupil_diameter=pupil_diameter, central_obscuration_ratio=central_obscuration_ratio, num_spiders=num_spiders, spider_width=spider_width
+    )
 
 @pytest.mark.parametrize('full_width_half_maximum', [0.5, 1.0])
 @pytest.mark.parametrize('shape_parameter', [1., 10.0])

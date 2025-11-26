@@ -233,7 +233,7 @@ def imshow_field(
     if np.iscomplexobj(field) or field.tensor_order > 0:
         z = np.rollaxis(z, 0, z.ndim)
 
-    im = ax.imshow(z, extent=extent, origin='lower', aspect=aspect, norm=norm, *args, **kwargs)
+    im = ax.imshow(z, extent=extent, origin='lower', aspect=aspect, norm=norm, cmap=cmap, *args, **kwargs)
 
     if transform is not None:
         im.set_transform(transform + ax.transData)

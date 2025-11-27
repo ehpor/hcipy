@@ -24,30 +24,33 @@ jobs:
       with:
         fetch-depth: 0
         filter: tree:0
+        path: hcipy
 
     - name: Checkout array-api-tests repo
       uses: actions/checkout@v6
       with:
         repository: data-apis/array-api-tests
         submodules: 'true'
+        path: array_api_tests
 
     - name: Set up conda environment
       uses: conda-incubator/setup-miniconda@v3
       with:
         activate-environment: ci-env
         python-version: ${{ matrix.python_version }}
-        environment-file: .github/conda_environments/testing_env.yml
+        environment-file: hcipy/.github/conda_environments/testing_env.yml
         auto-activate-base: false
 
     - name: Install optional dependencies if available
       run: |
         while read requirement; do
           conda install --yes $requirement || true
-        done < .github/conda_environments/optional_dependencies.txt
+        done < hcipy/.github/conda_environments/optional_dependencies.txt
       shell: bash -l {0}
 
     - name: Install our package
       run: |
+        cd hcipy
         pip install -e ".[dev]"
       shell: bash -l {0}
 
@@ -55,7 +58,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install array-api-strict
-        python -m pip install -r requirements.txt
+        python -m pip install -r array_api_tests/requirements.txt
       shell: bash -l {0}
 
     - name: Print package versions
@@ -70,7 +73,7 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest ./tests -ra --cov=./ --cov-report=xml
+        pytest hcipy/tests -ra --cov=./ --cov-report=xml
       shell: bash -l {0}
 
     - name: Run the array_api test suite

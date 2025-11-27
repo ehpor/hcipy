@@ -95,18 +95,32 @@ def test_imshow_field(grid):
     plt.draw()
     plt.clf()
 
+@pytest.mark.parametrize('grid', grids)
+@pytest.mark.parametrize('theme', ['dark', 'light'])
+@pytest.mark.parametrize('cmap', ['hsv', plt.get_cmap('viridis')])
+def test_imshow_field_complex(grid, theme, cmap):
     field = Field(np.random.randn(grid.size) + 1j * np.random.randn(grid.size), grid)
 
-    imshow_field(field)
-    plt.draw()
-    plt.clf()
+    for theme in ['dark', 'light']:
+        imshow_field(field, theme=theme, cmap=cmap)
+        plt.draw()
+        plt.clf()
 
-def test_imsave_field(tmpdir):
-    grid = make_pupil_grid(256)
-
+@pytest.mark.parametrize('grid', grids)
+def test_imsave_field(tmpdir, grid):
     field = Field(np.random.randn(grid.size), grid)
 
     fname = os.path.join(tmpdir, 'field.png')
+    imsave_field(fname, field)
+    assert os.path.isfile(fname)
+
+@pytest.mark.parametrize('grid', grids)
+@pytest.mark.parametrize('theme', ['dark', 'light'])
+@pytest.mark.parametrize('cmap', ['hsv', plt.get_cmap('viridis')])
+def test_imsave_field_complex(tmpdir, grid, theme, cmap):
+    field = Field(np.random.randn(grid.size), grid)
+
+    fname = os.path.join(tmpdir, 'field_complex.png')
     imsave_field(fname, field)
     assert os.path.isfile(fname)
 

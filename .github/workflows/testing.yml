@@ -81,7 +81,7 @@ jobs:
         ARRAY_API_TESTS_MODULE: array_api_strict
         ARRAY_API_STRICT_API_VERSION: 2024.12
       run: |
-        pytest array_api_tests/ -ra -v --cov=./repo --cov-report=xml --cov-append --skips-file array-api-strict-skips.txt
+        pytest array_api_tests/ -ra -v --cov=./repo --cov-report=xml --cov-append --skips-file array_api_tests/array-api-strict-skips.txt
       shell: bash -l {0}
 
     - name: Upload coverage to codecov.io

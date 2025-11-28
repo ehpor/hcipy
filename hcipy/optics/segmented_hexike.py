@@ -41,7 +41,8 @@ class SegmentedHexikeSurface(OpticalElement):
         for mask, center in zip(segment_masks, segment_centers.points):
             local_grid = pupil_grid.shifted(-center)
             local_basis = make_hexike_basis(local_grid, num_modes, segment_circum_diameter, hexagon_angle=hexagon_angle, cache=cache)
-            block = local_basis.transformation_matrix * np.asarray(mask)[:, np.newaxis]
+            local_matrix = np.nan_to_num(local_basis.transformation_matrix)
+            block = local_matrix * np.asarray(mask)[:, np.newaxis]
             basis_blocks.append(block)
 
         if basis_blocks:
@@ -113,7 +114,7 @@ class SegmentedHexikeSurface(OpticalElement):
         return 4 * np.pi * self.surface / wavelength
 
     def forward(self, wavefront):
-        if not np.any(self._coefficients):
+        if not np.any(self._coefficients != 0):
             return wavefront.copy()
 
         phase = 4 * np.pi * self.surface / wavefront.wavelength
@@ -123,7 +124,7 @@ class SegmentedHexikeSurface(OpticalElement):
         return wf
 
     def backward(self, wavefront):
-        if not np.any(self._coefficients):
+        if not np.any(self._coefficients != 0):
             return wavefront.copy()
 
         phase = 4 * np.pi * self.surface / wavefront.wavelength

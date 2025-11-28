@@ -16,12 +16,38 @@ def test_single_segment_mode_matches_basis():
         num_modes=num_modes
     )
 
-    surface.set_segment_coefficients(0, {2: 1}, indexing='noll')
+    surface.set_segment_coefficients(0, {2: 1e-9}, indexing='noll')
 
     segment_circum_diameter = segment_flat_to_flat * 2 / np.sqrt(3)
     expected_basis = make_hexike_basis(pupil_grid, num_modes, segment_circum_diameter, hexagon_angle=np.pi / 2)
 
-    assert np.allclose(surface.surface, expected_basis[1])
+    assert np.allclose(surface.surface, expected_basis[1] * 1e-9)
+
+
+def test_segment_isolation():
+    pupil_grid = make_pupil_grid(64)
+    segment_flat_to_flat = 1
+
+    surface = make_segment_hexike_surface_from_hex_aperture(
+        num_rings=1,
+        segment_flat_to_flat=segment_flat_to_flat,
+        gap_size=0,
+        pupil_grid=pupil_grid,
+        num_modes=3
+    )
+
+    surface.set_segment_coefficients(0, {1: 1e-9}, indexing='noll')
+    current_surface = np.asarray(surface.surface)
+
+    _, segment_generators = make_hexagonal_segmented_aperture(
+        1, segment_flat_to_flat, 0, return_segments=True
+    )
+    segment_masks = [seg(pupil_grid) > 0.5 for seg in segment_generators]
+
+    assert np.any(current_surface[segment_masks[0]] != 0)
+
+    for i in range(1, len(segment_masks)):
+        assert np.allclose(current_surface[segment_masks[i]], 0)
 
 
 def test_phase_scales_with_wavelength():

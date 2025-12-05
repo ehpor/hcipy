@@ -115,7 +115,7 @@ class InverseSeparatedGridTransform(Transform):
 
 def imshow_field(
         field, grid=None, ax=None, vmin=None, vmax=None, aspect='equal', norm=None,
-        mask=None, mask_color='k', grid_units=1, *args, **kwargs):
+        mask=None, mask_color='k', grid_units=1, cmap=None, theme='dark', *args, **kwargs):
     '''Display a two-dimensional image on a matplotlib figure.
 
     This function serves as an easy replacement for the matplotlib.pyplot.imshow() function.
@@ -155,6 +155,13 @@ def imshow_field(
     grid_units : scalar or array_like
         The size of a unit square. The grid will be scaled by the inverse of this number before
         plotting. If this is a scalar, an isotropic scaling will be applied.
+    cmap : Colormap or None
+        The colormap with which to plot the image. For a complex field, it will be used to color
+        the phase.
+    theme : {'dark', 'light'}
+        Sets whether the amplitude is visualized on a dark or light background.
+        "dark" uses black for zero amplitude and lightens with increasing amplitude.
+        "light" uses white for zero amplitude and darkens with increasing amplitude.
 
     Returns
     -------
@@ -189,7 +196,7 @@ def imshow_field(
 
     # If field is complex, draw complex
     if np.iscomplexobj(field):
-        f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
+        f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm, cmap=cmap, theme=theme)
         vmin = None
         vmax = None
         norm = None
@@ -226,7 +233,7 @@ def imshow_field(
     if np.iscomplexobj(field) or field.tensor_order > 0:
         z = np.rollaxis(z, 0, z.ndim)
 
-    im = ax.imshow(z, extent=extent, origin='lower', aspect=aspect, norm=norm, *args, **kwargs)
+    im = ax.imshow(z, extent=extent, origin='lower', aspect=aspect, norm=norm, cmap=cmap, *args, **kwargs)
 
     if transform is not None:
         im.set_transform(transform + ax.transData)
@@ -265,7 +272,7 @@ def imshow_field(
 
     return im
 
-def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, mask=None, mask_color='k', cmap=None):
+def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, mask=None, mask_color='k', cmap=None, theme='dark'):
     '''Save a two-dimensional field as an image.
 
     Parameters
@@ -297,8 +304,12 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
     mask_color : Color
         The color of the mask, if it is used.
     cmap : Colormap or None
-        The colormap with which to plot the image. It is ignored if a complex
-        field or a vector field is supplied.
+        The colormap with which to plot the image. For a complex field, it will be used to color
+        the phase.
+    theme : {'dark', 'light'}
+        Sets whether the amplitude is visualized on a dark or light background.
+        "dark" uses black for zero amplitude and lightens with increasing amplitude.
+        "light" uses white for zero amplitude and darkens with increasing amplitude.
     '''
     import matplotlib as mpl
     import matplotlib.pyplot as plt
@@ -310,7 +321,7 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
 
     # If field is complex, draw complex
     if np.iscomplexobj(field):
-        f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm)
+        f = complex_field_to_rgb(field, rmin=vmin, rmax=vmax, norm=norm, cmap=cmap, theme=theme)
         vmin = None
         vmax = None
         norm = None
@@ -457,7 +468,7 @@ def contourf_field(field, grid=None, ax=None, grid_units=1, *args, **kwargs):
 
     return cs
 
-def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
+def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None, cmap=None):
     '''Convert a complex field to an RGB field.
 
     This function takes a scalar Field with complex numbers and converts it to
@@ -470,9 +481,10 @@ def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
     ----------
     field : scalar Field or ndarray
         The field that we want to convert.
-    theme : ['dark', 'light']
-        Whether to modulate saturation or value as a function of amplitude of the
-        input field. Dark mode modulates value, light mode modulates saturation.
+    theme : {'dark', 'light'}
+        Sets whether the amplitude is visualized on a dark or light background.
+        "dark" uses black for zero amplitude and lightens with increasing amplitude.
+        "light" uses white for zero amplitude and darkens with increasing amplitude.
     rmin : scalar
         The minimum value on the colorbar. If this is not given, then the minimum
         of the absolute value of the Field will be used.
@@ -483,6 +495,10 @@ def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
         A Normalize instance is used to scale the absolute value to the (0, 1) range
         used for the value or saturation for the returned color. If it is not given,
         a linear scale will be used.
+    cmap : Colormap or None
+        The colormap to use for the phase. If this is None, the default hsv colormap
+        will be used.
+
 
     Returns
     -------
@@ -506,20 +522,27 @@ def complex_field_to_rgb(field, theme='dark', rmin=None, rmax=None, norm=None):
             rmax = np.nanmax(np.abs(field))
         norm = mpl.colors.Normalize(rmin, rmax, True)
 
-    hsv = np.zeros((field.size, 3), dtype='float')
-    hsv[..., 0] = np.angle(field) / (2 * np.pi) % 1
+    if cmap is None:
+        cmap = 'hsv'
+
+    try:
+        cmap = mpl.colormaps.get_cmap(cmap)
+    except AttributeError:
+        # For Matplotlib <3.5.
+        cmap = mpl.cm.get_cmap(cmap)
+
+    if theme == 'dark':
+        mixin = np.array((0, 0, 0, 1))
+    elif theme == 'light':
+        mixin = np.array((1, 1, 1, 1))
+    else:
+        raise ValueError('Theme should be either "light" or "dark".')
 
     t = norm(np.abs(field))
-    if theme == 'light':
-        hsv[..., 1] = t
-        hsv[..., 2] = 1
-    elif theme == 'dark':
-        hsv[..., 1] = 1
-        hsv[..., 2] = t
 
-    rgb = mpl.colors.hsv_to_rgb(hsv)
-    alpha = np.isfinite(field)[:, np.newaxis]
+    rgba = cmap(np.angle(field) / (2 * np.pi) % 1)
+    rgba = rgba * t[:, np.newaxis] + mixin * (1 - t[:, np.newaxis])
 
-    res = np.concatenate((rgb, alpha), axis=1)
+    rgba[..., 3] = np.isfinite(field)
 
-    return Field(res.T, field.grid)
+    return Field(rgba.T, field.grid)

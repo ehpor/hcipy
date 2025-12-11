@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse
 
-from ..field import Field, make_hexagonal_grid
+from ..field import make_hexagonal_grid
 from ..mode_basis import ModeBasis, ansi_to_zernike, make_hexike_basis, zernike_to_noll
 from .optical_element import OpticalElement
 from ..aperture import make_hexagonal_segmented_aperture
@@ -55,6 +55,8 @@ class SegmentedHexikeSurface(OpticalElement):
             self._basis = ModeBasis(np.zeros((pupil_grid.size, 0)), pupil_grid)
 
         self._coefficients = np.zeros((self._num_segments, self._num_modes))
+        self._coefficients_for_cached_surface = None
+        self._surface = self.input_grid.zeros()
 
     @property
     def coefficients(self):
@@ -105,7 +107,16 @@ class SegmentedHexikeSurface(OpticalElement):
     @property
     def surface(self):
         '''Current surface height in meters as a Field on `input_grid`.'''
-        return self._basis.linear_combination(self._coefficients.ravel())
+        coeffs = self._coefficients.ravel()
+
+        if self._coefficients_for_cached_surface is not None:
+            if np.all(coeffs == self._coefficients_for_cached_surface):
+                return self._surface
+
+        self._surface = self._basis.linear_combination(coeffs)
+        self._coefficients_for_cached_surface = coeffs.copy()
+
+        return self._surface
 
     @property
     def opd(self):

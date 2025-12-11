@@ -1,7 +1,8 @@
 import numpy as np
+import scipy.sparse
 
 from ..field import Field, make_hexagonal_grid
-from ..mode_basis import ansi_to_zernike, make_hexike_basis, zernike_to_noll
+from ..mode_basis import ModeBasis, ansi_to_zernike, make_hexike_basis, zernike_to_noll
 from .optical_element import OpticalElement
 from ..aperture import make_hexagonal_segmented_aperture
 
@@ -32,20 +33,26 @@ class SegmentedHexikeSurface(OpticalElement):
         self._num_segments = len(segments)
         self._num_modes = num_modes
 
-        basis_blocks = []
-
         segment_masks = [seg(pupil_grid) if callable(seg) else seg for seg in segments]
+
+        modes = []
 
         for mask, center in zip(segment_masks, segment_centers.points):
             local_grid = pupil_grid.shifted(-center)
             local_basis = make_hexike_basis(local_grid, num_modes, segment_circum_diameter, hexagon_angle=hexagon_angle)
-            block = local_basis.transformation_matrix * np.asarray(mask)[:, np.newaxis]
-            basis_blocks.append(block)
+            local_matrix = local_basis.transformation_matrix
+            mask_arr = np.asarray(mask)
 
-        if basis_blocks:
-            self._basis_matrix = np.concatenate(basis_blocks, axis=1)
+            for i in range(num_modes):
+                mode = local_matrix[:, i] * mask_arr
+                mode = scipy.sparse.csr_matrix(mode)
+                mode.eliminate_zeros()
+                modes.append(mode)
+
+        if modes:
+            self._basis = ModeBasis(modes, pupil_grid)
         else:
-            self._basis_matrix = np.zeros((pupil_grid.size, 0))
+            self._basis = ModeBasis(np.zeros((pupil_grid.size, 0)), pupil_grid)
 
         self._coefficients = np.zeros((self._num_segments, self._num_modes))
 
@@ -98,8 +105,7 @@ class SegmentedHexikeSurface(OpticalElement):
     @property
     def surface(self):
         '''Current surface height in meters as a Field on `input_grid`.'''
-        surface = self._basis_matrix.dot(self._coefficients.ravel())
-        return Field(surface, self.input_grid)
+        return self._basis.linear_combination(self._coefficients.ravel())
 
     @property
     def opd(self):

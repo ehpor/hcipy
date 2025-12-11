@@ -39,8 +39,7 @@ class SegmentedHexikeSurface(OpticalElement):
         for mask, center in zip(segment_masks, segment_centers.points):
             local_grid = pupil_grid.shifted(-center)
             local_basis = make_hexike_basis(local_grid, num_modes, segment_circum_diameter, hexagon_angle=hexagon_angle)
-            local_matrix = np.nan_to_num(local_basis.transformation_matrix)
-            block = local_matrix * np.asarray(mask)[:, np.newaxis]
+            block = local_basis.transformation_matrix * np.asarray(mask)[:, np.newaxis]
             basis_blocks.append(block)
 
         if basis_blocks:

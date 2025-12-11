@@ -26,10 +26,8 @@ class SegmentedHexikeSurface(OpticalElement):
         Number of hexike modes per segment (Noll ordered).
     hexagon_angle : float
         Rotation of each hexagon. Default pi/2 for flat-top orientation.
-    cache : dict or None
-        Optional cache passed to `make_hexike_basis` for reuse across segments.
     '''
-    def __init__(self, segments, segment_centers, segment_circum_diameter, pupil_grid, num_modes, hexagon_angle=np.pi / 2, cache=None):
+    def __init__(self, segments, segment_centers, segment_circum_diameter, pupil_grid, num_modes, hexagon_angle=np.pi / 2):
         self.input_grid = pupil_grid
         self._num_segments = len(segments)
         self._num_modes = num_modes
@@ -40,7 +38,7 @@ class SegmentedHexikeSurface(OpticalElement):
 
         for mask, center in zip(segment_masks, segment_centers.points):
             local_grid = pupil_grid.shifted(-center)
-            local_basis = make_hexike_basis(local_grid, num_modes, segment_circum_diameter, hexagon_angle=hexagon_angle, cache=cache)
+            local_basis = make_hexike_basis(local_grid, num_modes, segment_circum_diameter, hexagon_angle=hexagon_angle)
             local_matrix = np.nan_to_num(local_basis.transformation_matrix)
             block = local_matrix * np.asarray(mask)[:, np.newaxis]
             basis_blocks.append(block)
@@ -147,7 +145,7 @@ class SegmentedHexikeSurface(OpticalElement):
         return internal_idx
 
 
-def make_segment_hexike_surface_from_hex_aperture(num_rings, segment_flat_to_flat, gap_size, pupil_grid, num_modes, hexagon_angle=np.pi / 2, cache=None, starting_ring=0):
+def make_segment_hexike_surface_from_hex_aperture(num_rings, segment_flat_to_flat, gap_size, pupil_grid, num_modes, hexagon_angle=np.pi / 2, starting_ring=0):
     '''Factory for SegmentedHexikeSurface on a hexagonal segmented aperture.'''
     _, segment_generators = make_hexagonal_segmented_aperture(num_rings, segment_flat_to_flat, gap_size, starting_ring=starting_ring, return_segments=True)
 
@@ -164,4 +162,4 @@ def make_segment_hexike_surface_from_hex_aperture(num_rings, segment_flat_to_fla
 
     segment_circum_diameter = segment_flat_to_flat * 2 / np.sqrt(3)
 
-    return SegmentedHexikeSurface(segments, segment_centers, segment_circum_diameter, pupil_grid, num_modes, hexagon_angle=hexagon_angle, cache=cache)
+    return SegmentedHexikeSurface(segments, segment_centers, segment_circum_diameter, pupil_grid, num_modes, hexagon_angle=hexagon_angle)

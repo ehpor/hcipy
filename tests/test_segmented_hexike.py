@@ -25,7 +25,7 @@ def test_single_segment_mode_matches_basis():
 
 
 def test_segment_isolation():
-    pupil_grid = make_pupil_grid(64)
+    pupil_grid = make_pupil_grid(64, 4)
     segment_flat_to_flat = 1
 
     surface = make_segment_hexike_surface_from_hex_aperture(
@@ -110,7 +110,7 @@ def test_zero_surface_is_noop():
 
 
 def test_coefficient_interfaces():
-    pupil_grid = make_pupil_grid(16)
+    pupil_grid = make_pupil_grid(16, 4)
     num_modes = 3
 
     surface = make_segment_hexike_surface_from_hex_aperture(
@@ -145,7 +145,7 @@ def test_coefficient_interfaces():
 
 
 def test_starting_ring_subsets_segments():
-    pupil_grid = make_pupil_grid(16)
+    pupil_grid = make_pupil_grid(16, 6)
 
     surface = make_segment_hexike_surface_from_hex_aperture(
         num_rings=2,

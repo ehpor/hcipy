@@ -30,7 +30,11 @@ class SegmentedHexikeSurface(OpticalElement):
     '''
     def __init__(self, segments, segment_centers, segment_circum_diameter, pupil_grid, num_modes, hexagon_angle=np.pi / 2):
         self.input_grid = pupil_grid
-        self._num_segments = len(segments)
+        num_segments = len(segments)
+        if num_segments != segment_centers.size:
+            raise ValueError('segments and segment_centers must have the same length.')
+
+        self._num_segments = num_segments
         self._num_modes = num_modes
 
         segment_masks = [seg(pupil_grid) if callable(seg) else seg for seg in segments]

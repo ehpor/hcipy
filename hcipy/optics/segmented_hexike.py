@@ -96,12 +96,38 @@ class SegmentedHexikeSurface(OpticalElement):
             self._coefficients[segment_id, internal_idx] = height
 
     def set_coefficients_from_dict(self, coeffs_by_segment, indexing='noll'):
-        '''Convenience setter for dict-of-dicts coefficient input.'''
+        '''Set coefficients for multiple segments from a dict-of-dicts.
+
+        Parameters
+        ----------
+        coeffs_by_segment : dict
+            Mapping from segment index to a dict mapping mode index to surface height in
+            meters.
+        indexing : {'noll', 'ansi'}
+            Indexing scheme for supplied mode indices.
+
+        Notes
+        -----
+        This function only updates the coefficients that are explicitly provided. Any
+        coefficients not mentioned in `coeffs_by_segment` will keep their current value.
+        '''
         for seg_id, mode_dict in coeffs_by_segment.items():
             self.set_segment_coefficients(seg_id, mode_dict, indexing=indexing)
 
     def get_segment_coefficients(self, segment_id):
-        '''Get coefficients for a single segment.'''
+        '''Get coefficients for a single segment.
+
+        Parameters
+        ----------
+        segment_id : int
+            Index of the segment.
+
+        Returns
+        -------
+        ndarray
+            The surface height coefficients for the requested segment in meters, with
+            shape ``(num_modes,)``.
+        '''
         return self._coefficients[segment_id].copy()
 
     def flatten(self):
@@ -128,7 +154,18 @@ class SegmentedHexikeSurface(OpticalElement):
         return 2 * self.surface
 
     def phase_for(self, wavelength):
-        '''Phase screen for a given wavelength.'''
+        '''Get the phase in radians for a given wavelength.
+
+        Parameters
+        ----------
+        wavelength : scalar
+            The wavelength at which to calculate the phase deformation.
+
+        Returns
+        -------
+        Field
+            The calculated phase deformation.
+        '''
         return 4 * np.pi * self.surface / wavelength
 
     def forward(self, wavefront):
@@ -165,9 +202,38 @@ class SegmentedHexikeSurface(OpticalElement):
         return internal_idx
 
 
-def make_segment_hexike_surface_from_hex_aperture(num_rings, segment_flat_to_flat, gap_size, pupil_grid, num_modes, hexagon_angle=np.pi / 2, starting_ring=0):
-    '''Factory for SegmentedHexikeSurface on a hexagonal segmented aperture.'''
-    _, segment_generators = make_hexagonal_segmented_aperture(num_rings, segment_flat_to_flat, gap_size, starting_ring=starting_ring, return_segments=True)
+def make_segment_hexike_surface_from_hex_aperture(num_rings, segment_flat_to_flat, gap_size, pupil_grid, num_modes,
+                                                  hexagon_angle=np.pi / 2, starting_ring=0):
+    '''Create a :class:`SegmentedHexikeSurface` on a hexagonal segmented aperture.
+
+    Parameters
+    ----------
+    num_rings : int
+        The number of rings of hexagons to include, not counting the central segment.
+    segment_flat_to_flat : scalar
+        The distance between sides (flat-to-flat) of a single segment.
+    gap_size : scalar
+        The gap between adjacent segments.
+    pupil_grid : Grid
+        The grid on which the surface is defined.
+    num_modes : int
+        The number of hexike modes to compute per segment (Noll ordered).
+    hexagon_angle : float
+        The angle of the hexagon. At an angle of pi/2, the hexagon has a flat-top
+        orientation.
+    starting_ring : int
+        The first ring of segments. This can be used to exclude the center segment (by
+        setting it to one), or the center segment and first ring (by setting it to two).
+        The default (zero) includes the center segment.
+
+    Returns
+    -------
+    SegmentedHexikeSurface
+        The resulting segmented hexike surface.
+    '''
+    _, segment_generators = make_hexagonal_segmented_aperture(
+        num_rings, segment_flat_to_flat, gap_size, starting_ring=starting_ring, return_segments=True
+    )
 
     segments = [seg(pupil_grid) for seg in segment_generators]
 
@@ -182,4 +248,6 @@ def make_segment_hexike_surface_from_hex_aperture(num_rings, segment_flat_to_fla
 
     segment_circum_diameter = segment_flat_to_flat * 2 / np.sqrt(3)
 
-    return SegmentedHexikeSurface(segments, segment_centers, segment_circum_diameter, pupil_grid, num_modes, hexagon_angle=hexagon_angle)
+    return SegmentedHexikeSurface(
+        segments, segment_centers, segment_circum_diameter, pupil_grid, num_modes, hexagon_angle=hexagon_angle
+    )

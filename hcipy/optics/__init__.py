@@ -53,6 +53,8 @@ __all__ = [
     'LinearPolarizingBeamSplitter',
     'CircularPolarizingBeamSplitter',
     'SegmentedDeformableMirror',
+    'SegmentedHexikeSurface',
+    'make_segment_hexike_surface_from_hex_aperture',
     'spherical_surface_sag',
     'parabolic_surface_sag',
     'conical_surface_sag',
@@ -87,6 +89,7 @@ from .micro_lens_array import *
 from .periodic_optical_element import *
 from .polarization import *
 from .segmented_mirror import *
+from .segmented_hexike import *
 from .surface_profiles import *
 from .thin_lens import *
 from .tip_tilt_mirror import *

@@ -115,7 +115,7 @@ class PerfectCoronagraph(OpticalElement):
         ndarray
             The forward transformation_matrix.
         '''
-        return np.eye(self.pupil_grid.size) - self.transformation.dot(self.coeffs * self.transformation_inverse)
+        return np.eye(self.pupil_grid.size) - self.transformation.dot(np.expand_dims(self.coeffs, axis=1) * self.transformation_inverse)
 
     def get_transformation_matrix_backward(self, wavelength=1):
         '''Get the backwards propagation transformation matrix.

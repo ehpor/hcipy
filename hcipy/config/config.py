@@ -13,10 +13,7 @@ class _ConfigurationItem:
             self.update(mapping, allow_creation=True)
 
     def __setattr__(self, name, value):
-        if name not in self.__dict__:
-            raise TypeError("Not allowed to set a non-existent attribute.")
-
-        self.__dict__[name] = value
+        self.update({name: value})
 
     def __getitem__(self, name):
         return self.__dict__[name]
@@ -34,12 +31,11 @@ class _ConfigurationItem:
         allow_creation : bool
             Whether to allow creation of new fields during the update. Default: False.
         '''
-        Configuration._config.update(b)
-
         for key, val in mapping.items():
+            # Check whether the key is already set before.
             if key not in self.__dict__:
                 if not allow_creation:
-                    raise ValueError()
+                    raise TypeError("Not allowed to set a non-existent attribute.")
 
                 if isinstance(val, dict):
                     val = _ConfigurationItem(val)
@@ -48,13 +44,17 @@ class _ConfigurationItem:
 
                 continue
 
+            # Update the existing item either recursively or as a value.
             field = getattr(self, key)
             if isinstance(field, _ConfigurationItem):
                 if not isinstance(val, dict):
-                    raise ValueError()
+                    raise TypeError(f"Not allowed to set the attribute {key} with a non-dict type.")
 
                 field.update(val)
             else:
+                if isinstance(val, dict):
+                    raise TypeError(f"Not allowed to set the attribute {key} with a dict type.")
+
                 self.__dict__[key] = val
 
     def __repr__(self):

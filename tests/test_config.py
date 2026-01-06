@@ -1,11 +1,13 @@
 from hcipy import *
 
 def test_config():
-    Configuration()['test_config'] = 1
-    assert Configuration()['test_config'] == 1
+    old_value = Configuration().core.use_new_style_fields
+    new_value = not old_value
 
-    Configuration().test_config = 2
-    assert Configuration()['test_config'] == 2
+    Configuration().core.use_new_style_fields = new_value
 
-    Configuration().update({'test_section': {'test_value': 3}})
-    assert Configuration().test_section.test_value == 3
+    assert Configuration().core.use_new_style_fields == new_value
+
+    Configuration().reset()
+
+    assert Configuration().core.use_new_style_fields == old_value

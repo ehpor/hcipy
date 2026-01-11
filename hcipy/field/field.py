@@ -58,11 +58,8 @@ class FieldBase:
         if not self.grid.is_separated:
             raise ValueError('This field doesn\'t have a shape.')
 
-        if self.tensor_order > 0:
-            new_shape = np.concatenate([np.array(self.shape)[:-1], self.grid.shape])
-            return self.reshape(new_shape)
-
-        return self.reshape(self.grid.shape)
+        new_shape = self.shape[:-1] + self.grid.shape
+        return self.reshape(new_shape)
 
     def at(self, p):
         '''The value of this field closest to point p.

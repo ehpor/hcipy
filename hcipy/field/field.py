@@ -1,7 +1,7 @@
 import numpy as np
 from ..config import Configuration
 
-class Field:
+class FieldBase:
     '''The value of some physical quantity for each point in some coordinate system.
 
     Parameters
@@ -16,12 +16,6 @@ class Field:
     grid : Grid
         The grid on which the values are defined.
     '''
-    def __new__(cls, arr, grid):
-        if Configuration().core.use_new_style_fields:
-            return super().__new__(NewStyleField)
-        else:
-            return OldStyleField.__new__(OldStyleField, arr, grid)
-
     @property
     def tensor_order(self):
         '''The order of the tensor of the field.
@@ -86,7 +80,7 @@ class Field:
         i = self.grid.closest_to(p)
         return self[..., i]
 
-class OldStyleField(Field, np.ndarray):
+class OldStyleField(FieldBase, np.ndarray):
     '''A Field based on subclassing a Numpy array.
 
     This constitutes an "old-style" Field object. Due to problems and inflexibilities
@@ -217,7 +211,7 @@ def _field_reconstruct(subtype, baseclass, baseshape, basetype):
     return subtype.__new__(subtype, data, grid)
 
 def _unwrap(arg):
-    if isinstance(arg, Field):
+    if isinstance(arg, FieldBase):
         return arg.data
 
     if isinstance(arg, list):
@@ -231,7 +225,7 @@ def _unwrap(arg):
 
     return arg
 
-class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
+class NewStyleField(FieldBase, np.lib.mixins.NDArrayOperatorsMixin):
     '''A Field based on composition rather than subclassing a Numpy array.
 
     This constitutes an "new-style" Field object. A previous version uses subclassing
@@ -298,7 +292,7 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
         # resulting object should be a Field or not. We can likely do better
         # by looking directly at the name of the function that we are executing.
         if isinstance(result, np.ndarray):
-            return Field(result, self.grid)
+            return NewStyleField(result, self.grid)
 
         return result
 
@@ -307,7 +301,7 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
         if np.isscalar(res):
             return res
 
-        return Field(res, self.grid)
+        return NewStyleField(res, self.grid)
 
     def __setitem__(self, indices, values):
         self.data[indices] = values
@@ -368,7 +362,7 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
         return self.data.shape
 
     def astype(self, dtype, *args, **kwargs):
-        return Field(self.data.astype(dtype, *args, **kwargs), self.grid)
+        return NewStyleField(self.data.astype(dtype, *args, **kwargs), self.grid)
 
     def __len__(self):
         return len(self.data)
@@ -413,6 +407,11 @@ class NewStyleField(Field, np.lib.mixins.NDArrayOperatorsMixin):
     transpose = np.transpose
     var = np.var
 
+if Configuration().core.use_new_style_fields:
+    Field = NewStyleField
+else:
+    Field = OldStyleField
+
 def is_field(obj):
     '''Check if the object is an HCIPy Field.
 
@@ -429,4 +428,4 @@ def is_field(obj):
     boolean
         Whether `obj` is an HCIPy Field or not.
     '''
-    return isinstance(obj, Field)
+    return isinstance(obj, FieldBase)

@@ -22,58 +22,6 @@ class Field:
         else:
             return OldStyleField.__new__(OldStyleField, arr, grid)
 
-    @classmethod
-    def from_dict(cls, tree):
-        '''Make a Field from a dictionary, previously created by `to_dict()`.
-
-        Parameters
-        ----------
-        tree : dictionary
-            The dictionary from which to make a new Field object.
-
-        Returns
-        -------
-        Field
-            The created object.
-
-        Raises
-        ------
-        ValueError
-            If the dictionary is not formatted correctly.
-        '''
-        from .grid import Grid
-
-        return cls(np.array(tree['values']), Grid.from_dict(tree['grid']))
-
-    def to_dict(self):
-        '''Convert the object to a dictionary for serialization.
-
-        Returns
-        -------
-        dictionary
-            The created dictionary.
-        '''
-        tree = {
-            'values': np.asarray(self),
-            'grid': self.grid.to_dict()
-        }
-
-        return tree
-
-    def __reduce__(self):
-        '''Return a 3-tuple for pickling the Field.
-
-        Returns
-        -------
-        tuple
-            The reduced version of the Field.
-        '''
-        return (
-            _field_reconstruct,
-            (self.__class__, np.ndarray, (0,), 'b',),
-            self.__getstate__()
-        )
-
     @property
     def tensor_order(self):
         '''The order of the tensor of the field.
@@ -191,6 +139,58 @@ class OldStyleField(Field, np.ndarray):
 
         super().__setstate__((shp, typ, isf, raw))
         self.grid = grid
+
+    @classmethod
+    def from_dict(cls, tree):
+        '''Make a Field from a dictionary, previously created by `to_dict()`.
+
+        Parameters
+        ----------
+        tree : dictionary
+            The dictionary from which to make a new Field object.
+
+        Returns
+        -------
+        Field
+            The created object.
+
+        Raises
+        ------
+        ValueError
+            If the dictionary is not formatted correctly.
+        '''
+        from .grid import Grid
+
+        return cls(np.array(tree['values']), Grid.from_dict(tree['grid']))
+
+    def to_dict(self):
+        '''Convert the object to a dictionary for serialization.
+
+        Returns
+        -------
+        dictionary
+            The created dictionary.
+        '''
+        tree = {
+            'values': np.asarray(self),
+            'grid': self.grid.to_dict()
+        }
+
+        return tree
+
+    def __reduce__(self):
+        '''Return a 3-tuple for pickling the Field.
+
+        Returns
+        -------
+        tuple
+            The reduced version of the Field.
+        '''
+        return (
+            _field_reconstruct,
+            (self.__class__, np.ndarray, (0,), 'b',),
+            self.__getstate__()
+        )
 
 def _field_reconstruct(subtype, baseclass, baseshape, basetype):
     '''Internal function for building a new Field object for pickling.

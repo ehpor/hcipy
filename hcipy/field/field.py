@@ -207,202 +207,729 @@ def _field_reconstruct(subtype, baseclass, baseshape, basetype):
 
     return subtype.__new__(subtype, data, grid)
 
+def _make_binary_operator(Field, op):
+    src = f"""def func(self, other, /):
+        if isinstance(other, Field):
+            return Field(self.data {op} other.data, self.grid)
+        return Field(self.data {op} other, self.grid)"""
+
+    ns = {'Field': Field}
+    exec(src, ns)
+
+    ns['func'].__doc__ = f"Elementwise operator {op}."
+
+    return ns['func']
+
+def _make_inplace_binary_operator(Field, op):
+    src = f"""def func(self, other, /):
+        if isinstance(other, Field):
+            self.data {op}= other.data
+        else:
+            self.data {op}= other
+        return self"""
+
+    ns = {'Field': Field}
+    exec(src, ns)
+
+    ns['func'].__doc__ = f"Elementwise inplace operator {op}."
+
+    return ns['func']
+
+def _make_reflected_binary_operator(Field, op):
+    src = f"""def func(self, other, /):
+        if isinstance(other, Field):
+            return Field(other.data {op} self.data, self.grid)
+        return Field(other {op} self.data, self.grid)"""
+
+    ns = {'Field': Field}
+    exec(src, ns)
+
+    ns['func'].__doc__ = f"Elementwise reflected operator {op}."
+
+    return ns['func']
+
+def _make_array_api_func(func_name, sig):
+    args = [s.strip() for s in sig.split(',')]
+
+    call_args = []
+
+    for i, arg in enumerate(args):
+        if arg in ['/', '*']:
+            continue
+
+        if '=' in arg:
+            # Keyword argument.
+            name = arg.split('=')[0]
+            call_args.append(f'{name}={name}')
+        else:
+            # Positional argument.
+            call_args.append(arg)
+
+    src = f"""def func({', '.join(args)}):
+        xp = {args[0]}.__array_namespace__()
+        return xp.{func_name}({', '.join(call_args)})
+        """
+
+    ns = {}
+    exec(src, ns)
+
+    return ns['func']
+
 def _unwrap(arg):
-    if isinstance(arg, FieldBase):
+    if type(arg) is NewStyleField:
         return arg.data
 
-    if isinstance(arg, list):
+    if type(arg) is tuple:
+        # Fast paths for 2 and 3 length tuples as those are most common.
+        length = len(arg)
+
+        if length == 2:
+            a, b = arg
+            return _unwrap(a), _unwrap(b)
+
+        if length == 3:
+            a, b, c = arg
+            return _unwrap(a), _unwrap(b), _unwrap(c)
+
+        return tuple([_unwrap(x) for x in arg])
+
+    if type(arg) is list:
         return [_unwrap(x) for x in arg]
 
-    if isinstance(arg, dict):
+    if type(arg) is dict:
         return {key: _unwrap(val) for key, val in arg.items()}
-
-    if isinstance(arg, tuple):
-        return tuple(_unwrap(x) for x in arg)
 
     return arg
 
-class NewStyleField(FieldBase, np.lib.mixins.NDArrayOperatorsMixin):
-    '''A Field based on composition rather than subclassing a Numpy array.
-
-    This constitutes an "new-style" Field object. A previous version uses subclassing
-    from Numpy arrays (see :class:`OldStyleField` that had problems and inflexibilities
-    due to the way subclassing works. We are gradually transitioning to "new-style" fields,
-    which use the dispatch mechanism introduced by Numpy 1.13.
+class NewStyleField(FieldBase):
+    '''The value of some physical quantity for each point in some coordinate system.
 
     Parameters
     ----------
-    data : array_like
+    data : array or Field
         An array of values or tensors for each point in the :class:`Grid`.
-    grid : Grid
-        The corresponding :class:`Grid` on which the values are set.
+    grid : Grid or None
+        The corresponding :class:`Grid` on which these values are set. The default (None)
+        indicates that there is no grid associated with this Field.
 
     Attributes
     ----------
-    data : array_like
-        The underlying data as a Numpy array or compatible object.
-    grid : Grid
-        The grid on which the values are defined.
+    data : array
+        An array of values or tensors for each point in the :class:`Grid`.
+    grid : Grid or None
+        The corresponding :class:`Grid` on which these values are set. When this is None,
+        this indicates that there is no grid associated with this Field.
     '''
-    def __init__(self, data, grid):
-        self.data = np.asarray(data)
+    __slots__ = ('data', 'grid')
+
+    def __init__(self, data, grid=None):
+        self.data = data.data if isinstance(data, NewStyleField) else data
         self.grid = grid
 
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        out = kwargs.get('out', ())
+    def __abs__(self):
+        return NewStyleField(abs(self.data), self.grid)
 
-        inputs = _unwrap(inputs)
+    def __pos__(self):
+        return NewStyleField(+self.data, self.grid)
 
-        if out:
-            kwargs['out'] = tuple(x.data if is_field(x) else x for x in out)
+    def __neg__(self):
+        return NewStyleField(-self.data, self.grid)
 
-        result = getattr(ufunc, method)(*inputs, **kwargs)
+    def __invert__(self):
+        return NewStyleField(~self.data, self.grid)
 
-        # Note: this is an extremely simple way of determining whether the
-        # resulting object should be a Field or not. We can likely do better
-        # by looking directly at the name of the function that we are executing.
-        # The current code is fine for most ufuncs.
-        if isinstance(result, np.ndarray):
-            return Field(result, self.grid)
-        else:
-            return result
+    def __bool__(self):
+        return self.data.__bool__()
 
-    def __array__(self, dtype=None, copy=None):
-        if dtype is None or dtype == self.data.dtype:
-            # A no-copy is supported if necessary.
-            if copy:
-                return self.data.copy()
-            else:
-                return self.data
+    def __complex__(self):
+        return complex(self.data)
 
-        if copy is False:
-            raise ValueError(f'copy=False is not supported since the dtypes do not match ({dtype} vs. {self.data.dtype}).')
+    def __float__(self):
+        return float(self.data)
 
-        return self.data.astype(dtype)
+    def __int__(self):
+        return int(self.data)
 
-    def __array_function__(self, func, types, args, kwargs):
-        args = _unwrap(args)
+    def __index__(self):
+        return self.data.__index__()
 
-        result = func(*args, **kwargs)
+    def __getitem__(self, key, /):
+        return NewStyleField(self.data[key], self.grid)
 
-        # Note: this is an extremely simple way of determining whether the
-        # resulting object should be a Field or not. We can likely do better
-        # by looking directly at the name of the function that we are executing.
-        if isinstance(result, np.ndarray):
-            return NewStyleField(result, self.grid)
-
-        return result
-
-    def __getitem__(self, indices):
-        res = self.data[indices]
-        if np.isscalar(res):
-            return res
-
-        return NewStyleField(res, self.grid)
-
-    def __setitem__(self, indices, values):
-        self.data[indices] = values
+    def __setitem__(self, key, value, /):
+        self.data[key] = value
 
         return self
 
-    def __getstate__(self):
-        '''Get the internal state for pickling.
+    @property
+    def dtype(self):
+        '''The data type of the array elements.'''
+        return self.data.dtype
+
+    @property
+    def device(self):
+        '''The hardware device the array data resides on.'''
+        return self.data.device
+
+    @property
+    def mT(self):
+        '''The transpose of a matrix or stack of matrices.'''
+        return NewStyleField(self.data.mT, self.grid)
+
+    @property
+    def ndim(self):
+        '''The nubmer of axes in the array.'''
+        return self.data.ndim
+
+    @property
+    def shape(self):
+        '''The dimensions of the array.'''
+        return self.data.shape
+
+    @property
+    def size(self):
+        '''The number of elements in the array.'''
+        return self.data.size
+
+    @property
+    def T(self):
+        '''Tranpose of the array.'''
+        return NewStyleField(self.data.T, self.grid)
+
+    def __dlpack__(self, *, stream=None, max_version=None, dl_device=None, copy=None):
+        '''Exports the Field for consumption by from_dlpack() as a DLPack capsule.
+
+        Parameters
+        ----------
+        stream : stream or None
+            The stream to use. For CUDA and ROCm, a Python integer representing a pointer to a stream,
+            on devices that support streams. `stream` is provided by the consumer to the producer to
+            instruct the producer to ensure that operations can safely be performed on the array (e.g.,
+            by inserting a dependency between streams via “wait for event”). The pointer must be an
+            integer larger than or equal to -1 (see below for allowed values on each platform). If
+            stream is -1, the value may be used by the consumer to signal “producer must not perform
+            any synchronization”. The ownership of the stream stays with the consumer. On CPU and
+            other device types without streams, only None is accepted.
+        max_version : tuple of ints or None
+            the maximum DLPack version that the consumer (i.e., the caller of `__dlpack__`) supports,
+            in the form of a 2-tuple (major, minor). This method may return a capsule of version
+            `max_version`, or of a different version. This means the consumer must verify the version
+            even when `max_version` is passed.
+        dl_device : tuple or None
+            the DLPack device type. Default is None, meaning the exported capsule should be on the same
+            device as self is. When specified, the format must be a 2-tuple, following that of the
+            return value of array.__dlpack_device__(). If the device type cannot be handled by the
+            producer, this function must raise BufferError.
+        copy : bool or None
+            Whether or not to copy the input. If True, the function must always copy. If False, the
+            function must never copy, and raise a BufferError in case a copy is deemed necessary
+            (e.g. if a cross-device data movement is requested, and it is not possible without a copy).
+            If None, the function must reuse the existing memory buffer if possible and copy otherwise.
+            Default: None.
+
+        Returns
+        -------
+        capsule
+            A DLPack capsule for the Field.
+
+        Raises
+        ------
+        BufferError
+            When the data cannot be exported as DLPack (e.g., incompatible dtype or strides). Other errors
+            are raised when export fails for other reasons (e.g., incorrect arguments passed or out of memory).
+        '''
+        return self.data.__dlpack__(stream=stream, max_version=max_version, dl_device=dl_device, copy=copy)
+
+    def __dlpack_device__(self):
+        '''Returns device type and device ID in DLPack format. Meant for use within `from_dlpack()`.
 
         Returns
         -------
         tuple
-            The state of the Field.
+            The device type and device ID in DLPack format.
         '''
-        data_state = self.data.__reduce__()[2]
-        return data_state + (self.grid,)
+        return self.data.__dlpack_device__()
 
-    def __setstate__(self, state):
-        '''Set the internal state for pickling.
+    def to_device(self, device, /, *, stream=None):
+        '''Copy the Field from the device on which it currently resides to the specified device.
 
         Parameters
         ----------
-        state : tuple
-            The state coming from a __getstate__().
+        device : device
+            A device object.
+        stream : stream or None
+            The stream to use. For CUDA and ROCm, a Python integer representing a pointer to a stream,
+            on devices that support streams. `stream` is provided by the consumer to the producer to
+            instruct the producer to ensure that operations can safely be performed on the array (e.g.,
+            by inserting a dependency between streams via “wait for event”). The pointer must be an
+            integer larger than or equal to -1 (see below for allowed values on each platform). If
+            stream is -1, the value may be used by the consumer to signal “producer must not perform
+            any synchronization”. The ownership of the stream stays with the consumer. On CPU and
+            other device types without streams, only None is accepted.
+
+        Returns
+        -------
+        Field
+            An array with the same data and data type as self and located on the specified device.
         '''
-        _, shp, typ, isf, raw, grid = state
+        return NewStyleField(self.data.to_device(device, stream=stream), self.grid)
 
-        self.data = np.array([])
-        self.data.__setstate__((shp, typ, isf, raw))
-        self.grid = grid
+    def __array_namespace__(self, api_version=None):
+        '''Returns an object that has all the array API functions on it.
 
-    @property
-    def T(self):
-        return np.transpose(self)
+        Parameters
+        ----------
+        api_version : str or None
+            A string representing the version of the array API specification to be returned. If this
+            is None, it will return the namespace corresponding to the latest version of the array API
+            specification. If the given version is invalid or not implemented for the given backend, an
+            error will be raised. Default: None.
 
-    @property
-    def dtype(self):
-        return self.data.dtype
+        Returns
+        -------
+        FieldNamespace
+            An object representing the array API namespace.
+        '''
+        return make_field_namespace(self.data.__array_namespace__(api_version=api_version))
 
-    @property
-    def imag(self):
-        return np.imag(self)
+    def __getstate__(self):
+        '''Return pickle state.
+
+        Returns
+        -------
+        dict
+            The state of the Field.
+
+        Notes
+        -----
+        This method is used internally by pickle. The returned state must be
+        fully pickleable. Array objects are serialized using their native
+        pickle support (NumPy, CuPy, JAX).
+        '''
+        return {
+            'data': self.data,
+            'grid': self.grid,
+        }
+
+    def __setstate__(self, state):
+        '''Restore object state from pickle.
+
+        Parameters
+        ----------
+        state : dict
+            State produced by ``__getstate__``.
+        '''
+        self.data = state["data"]
+        self.grid = state["grid"]
+
+    def __repr__(self):
+        return f"Field(data={self.data}, grid={self.grid})"
+
+    all = _make_array_api_func('all', 'self, /, *, axis=None, keepdims=False')
+    any = _make_array_api_func('any', 'self, /, *, axis=None, keepdims=False')
+    argmax = _make_array_api_func('argmax', 'self, /, *, axis=None, keepdims=False')
+    argmin = _make_array_api_func('argmin', 'self, /, *, axis=None, keepdims=False')
+    #argsort = _make_array_api_func('argsort', 'self, /, *, axis=-1, descending=False, stable=True')
+    argsort = _make_array_api_func('argsort', 'self, /, *, axis=-1, stable=True')
+    astype = _make_array_api_func('astype', 'self, dtype, /, *, copy=True, device=None')
+    clip = _make_array_api_func('clip', 'self, /, min=None, max=None')
+    cumprod = _make_array_api_func('cumulative_prod', 'self, /, *, axis=None, dtype=None, include_initial=False')
+    cumulative_prod = cumprod
+    cumsum = _make_array_api_func('cumulative_sum', 'self, /, *, axis=None, dtype=None, include_initial=False')
+    cumulative_sum = cumsum
+    max = _make_array_api_func('max', 'self, /, *, axis=None, keepdims=False')
+    mean = _make_array_api_func('mean', 'self, /, *, axis=None, keepdims=False')
+    min = _make_array_api_func('min', 'self, /, *, axis=None, keepdims=False')
+    nonzero = _make_array_api_func('nonzero', 'self, /')
+    prod = _make_array_api_func('prod', 'self, /, *, axis=None, dtype=None, keepdims=False')
+    round = _make_array_api_func('round', 'self, /')
+    reshape = _make_array_api_func('reshape', 'self, /, shape, *, copy=None')
+    #sort = _make_array_api_func('sort', 'self, /, *, axis=-1, descending=False, stable=True')
+    sort = _make_array_api_func('sort', 'self, /, *, axis=-1, stable=True')
+    squeeze = _make_array_api_func('squeeze', 'self, /, *, axis=None')
+    std = _make_array_api_func('std', 'self, /, *, axis=None, correction=0.0, keepdim=False')
+    sum = _make_array_api_func('sum', 'self, /, *, axis=None, dtype=None, keepdims=False')
+    var = _make_array_api_func('var', 'self, /, *, axis=None, correction=0.0, keepdim=False')
 
     @property
     def real(self):
-        return np.real(self)
+        xp = self.__array_namespace__()
+        return NewStyleField(xp.real(self.data), self.grid)
 
     @property
-    def size(self):
-        return np.prod(self.shape)
+    def imag(self):
+        xp = self.__array_namespace__()
+        return NewStyleField(xp.imag(self.data), self.grid)
 
-    @property
-    def ndim(self):
-        return len(self.shape)
+    def repeat(self, repeats, /, *, axis=None):
+        xp = self.__array_namespace__()
+        res = xp.repeat(self.data, repeats, axis=axis)
 
-    @property
-    def shape(self):
-        return self.data.shape
+        return NewStyleField(res, self.grid)
 
-    def astype(self, dtype, *args, **kwargs):
-        return NewStyleField(self.data.astype(dtype, *args, **kwargs), self.grid)
+    conj = _make_array_api_func('conj', 'self, /')
+    conjugate = conj
 
-    def __len__(self):
-        return len(self.data)
+    def copy(self, order='C'):
+        xp = self.__array_namespace__()
+        return xp.asarray(self, copy=True)
 
-    def conj(self, *args, **kwargs):
-        return np.conj(self, *args, **kwargs)
+    def ravel(self):
+        return self.reshape((-1,))
 
-    def conjugate(self, *args, **kwargs):
-        return np.conjugate(self, *args, **kwargs)
+    flatten = ravel
 
-    @property
-    def flags(self):
-        return self.data.flags
+    def dot(self, b):
+        xp = self.__array_namespace__()
 
-    all = np.all
-    any = np.any
-    argmax = np.argmax
-    argmin = np.argmin
-    argpartition = np.argpartition
-    argsort = np.argsort
-    clip = np.clip
-    compress = np.compress
-    copy = np.copy
-    cumprod = np.cumprod
-    cumsum = np.cumsum
-    dot = np.dot
-    flatten = np.ravel
-    max = np.max
-    mean = np.mean
-    min = np.min
-    nonzero = np.nonzero
-    prod = np.prod
-    ravel = np.ravel
-    repeat = np.repeat
-    reshape = np.reshape
-    round = np.round
-    sort = np.sort
-    squeeze = np.squeeze
-    std = np.std
-    sum = np.sum
-    trace = np.trace
-    transpose = np.transpose
-    var = np.var
+        a_ndim = self.ndim
+        b_ndim = b.ndim
+
+        # 2D · 2D → matrix multiply
+        if a_ndim == 2 and b_ndim == 2:
+            return xp.matmul(self, b)
+
+        # 1D · 1D OR N-D · 1D
+        if b_ndim == 1:
+            return xp.vecdot(self, b)
+
+        # 1D · N-D (N >= 2)
+        if a_ndim == 1:
+            return xp.vecdot(self[..., None, :], b, axis=-2)
+
+        # General N-D · M-D
+        return xp.vecdot(self[..., None, :], b, axis=-2)
+
+    def to_dict(self):
+        return {
+            "values": self.__array__(),
+            "grid": self.grid.to_dict()
+        }
+
+    trace = None
+    transpose = None
+
+    def __array_function__(self, func, types, args, kwargs):
+        n = len(args)
+
+        # Fast path for the most common 2 or 3 length tuples.
+        if n == 2:
+            a, b = args
+            args = _unwrap(a), _unwrap(b)
+        elif n == 3:
+            a, b, c = args
+            args = _unwrap(a), _unwrap(b), _unwrap(c)
+        else:
+            args = tuple([_unwrap(i) for i in args])
+
+        result = func(*args, **kwargs)
+
+        return NewStyleField(result, self.grid)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        n = len(inputs)
+
+        # Fast path for the most common 2 or 3 length tuples.
+        if n == 2:
+            a, b = inputs
+            inputs = _unwrap(a), _unwrap(b)
+        elif n == 3:
+            a, b, c = inputs
+            inputs = _unwrap(a), _unwrap(b), _unwrap(c)
+        else:
+            inputs = tuple([_unwrap(i) for i in inputs])
+
+        out = kwargs.get('out')
+        if out is not None:
+            kwargs['out'] = tuple([x.data if is_field(x) else x for x in out])
+
+        # Fast path for __call__ method.
+        if method == '__call__':
+            result = ufunc(*inputs, **kwargs)
+        else:
+            result = getattr(ufunc, method)(*inputs, **kwargs)
+
+        return NewStyleField(result, self.grid)
+
+    def __array__(self, dtype=None, copy=None):
+        import numpy as np
+
+        if dtype is None or dtype == self.data.dtype:
+            # A no-copy is supported if necessary.
+            return np.from_dlpack(self.data, copy=copy)
+
+        if copy is False:
+            raise ValueError(f'copy=False is not supported since the dtypes do not match ({dtype} vs. {self.data.dtype}).')
+
+        return np.array(np.from_dlpack(self.data), dtype=dtype, copy=copy)
+
+_aritmetic_and_bitwise_operators = [
+    # Arithmetic
+    ('add', '+'),
+    ('sub', '-'),
+    ('mul', '*'),
+    ('truediv', '/'),
+    ('floordiv', '//'),
+    ('mod', '%'),
+    ('pow', '**'),
+    ('matmul', '@'),
+
+    # Bitwise
+    ('and', '&'),
+    ('or', '|'),
+    ('xor', '^'),
+    ('lshift', '<<'),
+    ('rshift', '>>'),
+]
+
+_comparison_operators = [
+    ('lt', '<'),
+    ('le', '<='),
+    ('gt', '>'),
+    ('ge', '>='),
+    ('eq', '=='),
+    ('ne', '!=')
+]
+
+for name, symbol in _aritmetic_and_bitwise_operators:
+    setattr(NewStyleField, f'__{name}__', _make_binary_operator(NewStyleField, symbol))
+    setattr(NewStyleField, f'__i{name}__', _make_inplace_binary_operator(NewStyleField, symbol))
+    setattr(NewStyleField, f'__r{name}__', _make_reflected_binary_operator(NewStyleField, symbol))
+
+for name, symbol in _comparison_operators:
+    setattr(NewStyleField, f'__{name}__', _make_binary_operator(NewStyleField, symbol))
+
+def _make_array_api_namespace_func(func, args, num_array_args=0):
+    args = [arg.strip() for arg in args.split(',')]
+
+    call_args = []
+
+    for i, arg in enumerate(args):
+        if arg in ['/', '*']:
+            continue
+
+        if '=' in arg:
+            # Keyword argument.
+            name = arg.split('=')[0]
+            call_args.append(f'{name}={name}')
+        else:
+            # Positional argument.
+            if i < num_array_args:
+                # Inline xp._unwrap() for performance reasons.
+                call_args.append(f'{arg}.data if isinstance({arg}, Field) else {arg}')
+            else:
+                call_args.append(arg)
+
+    grid_src = ''.join(f'{arg}.grid if isinstance({arg}, Field) else ' for arg in args[:num_array_args])
+    grid_src += 'None'
+
+    src = f"""def {func.__name__}(self, {', '.join(args)}):
+        data = func({', '.join(call_args)})
+        grid = {grid_src}
+        return Field(data, grid)
+        """
+
+    ns = {'func': func, 'Field': NewStyleField}
+    exec(src, ns)
+
+    ns[func.__name__].__doc__ = func.__doc__
+
+    return ns[func.__name__]
+
+UNARY_OPS = [
+    "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh",
+    "bitwise_invert", "ceil", "clip", "conj", "cos", "cosh", "exp", "expm1",
+    "floor", "imag", "isfinite", "isinf", "isnan", "log", "log1p", "log2", "log10",
+    "logical_not", "negative", "positive", "real", "reciprocal", "round",
+    "sign", "signbit", "sin", "sinh", "square", "sqrt", "tan", "tanh", "trunc",
+]
+
+BINARY_OPS = [
+    "add", "bitwise_and", "bitwise_left_shift", "bitwise_or", "bitwise_right_shift", "bitwise_xor",
+    "copysign", "divide", "equal", "floor_divide", "greater", "greater_equal", "hypot",
+    "less", "less_equal", "logaddexp", "logical_and", "logical_or", "logical_xor",
+    "maximum", "minimum", "multiply", "nextafter", "not_equal", "pow",
+    "remainder", "subtract",
+]
+
+CONSTANTS = [
+    "pi", "e", "inf", "nan", "newaxis"
+]
+
+FEEDTHROUGH_FUNCS = [
+    "__array_namespace_info__",
+    "can_cast", "finfo", "iinfo", "result_type"
+]
+
+OTHER_FUNCS = [
+    "meshgrid",
+    "broadcast_arrays",
+    "concat",
+    "stack",
+]
+
+ZERO_ARG_FUNCS = {
+    "arange": "start, /, stop=None, step=1, *, dtype=None, device=None",
+    "empty": "shape, *, dtype=None, device=None",
+    "eye": "n_rows, n_cols=None, /, *, k=0, dtype=None, device=None",
+    "from_dlpack": "x, /, *, device=None, copy=None",
+    "full": "shape, fill_value, *, dtype=None",
+    "linspace": "start, stop, /, num, *, dtype=None",
+    "ones": "shape, *, dtype=None, device=None",
+    "zeros": "shape, *, dtype=None, device=None",
+}
+
+ONE_ARG_FUNCS = {
+    "all": "x, /, *, axis=None, keepdims=False",
+    "any": "x, /, *, axis=None, keepdims=False",
+    "argmax": "x, /, *, axis=None, keepdims=False",
+    "argmin": "x, /, *, axis=None, keepdims=False",
+    "argsort": "x, /, *, axis=-1, descending=False, stable=True",
+    "asarray": "obj, /, *, dtype=None, device=None, copy=None",
+    "astype": "x, dtype, /, *, copy=True, device=None",
+    "broadcast_to": "x, dtype, /, *, copy=True, device=None",
+    "clip": "x, /, min=None, max=None",
+    "count_nonzero": "x, /, *, axis=None, keepdims=False",
+    "cumulative_prod": "x, /, *, axis=None, dtype=None",
+    "cumulative_sum": "x, /, *, axis=None, dtype=None",
+    "diff": "x, /, *, axis=-1, prepend=None, append=None",
+    "empty_like": "x, /, *, dtype=None, device=None",
+    "expand_dims": "x, /, *, axis=0",
+    "flip": "x, /, *, axis=None",
+    "full_like": "x, /, fill_value, *, dtype=None, device=None",
+    "matrix_transpose": "x, /",
+    "max": "x, /, *, axis=None, keepdims=False",
+    "mean": "x, /, *, axis=None, keepdims=False",
+    "min": "x, /, *, axis=None, keepdims=False",
+    "moveaxis": "x, source, destination, /",
+    "nonzero": "x",
+    "ones_like": "x, /, *, dtype=None, device=None",
+    "permute_dims": "x, /, axes",
+    "prod": "x, /, *, axis=None, dtype=None, keepdims=False",
+    "repeat": "x, repeats, /, *, axis=None",
+    "reshape": "x, /, shape, copy=None",
+    "roll": "x, /, shift, *, axis=None",
+    #"sort": "x, /, *, axis=-1, descending=False, stable=True",
+    "sort": "x, /, *, axis=-1, stable=True",  # Numpy doesn't support the descending keyword yet.
+    "squeeze": "x, /, axis",
+    "std": "x, /, *, axis=None, correction=0.0, keepdims=False",
+    "sum": "x, /, *, axis=None, dtype=None, keepdims=False",
+    "tile": "x, repetitions, /",
+    "tril": "x, /, *, k=0",
+    "triu": "x, /, *, k=0",
+    "unique_all": "x, /",
+    "unique_counts": "x, /",
+    "unique_inverse": "x, /",
+    "unique_values": "x, /",
+    "unstack": "x, /, *, axis=0",
+    "var": "x, /, *, axis=None, correction=0.0, keepdims=False",
+    "zeros_like": "x, /, *, dtype=None, device=None",
+}
+
+TWO_ARG_FUNCS = {
+    "matmul":  "x1, x2, /",
+    "searchsorted": "x1, x2, /, *, side='left', sorter=None",
+    "take_along_axis": "x, indices, /, *, axis=-1",
+    "take": "x, indices, /, *, axis=None",
+    "tensordot": "x1, x2, /, *, axes=2",
+    "vecdot": "x1, x2, /, *, axis=-1",
+}
+
+THREE_ARG_FUNCS = {
+    "where": "condition, x1, x2, /",
+}
+
+for func in UNARY_OPS:
+    ONE_ARG_FUNCS[func] = "x, /"
+
+for func in BINARY_OPS:
+    TWO_ARG_FUNCS[func] = "x1, x2, /"
+
+# Global cache for FieldNamespace instances.
+_field_namespace_cache = {}
+_last_backend = None
+_last_field_namespace = None
+
+def make_field_namespace(backend):
+    """
+    Create a FieldNamespace object with all pre-bound Array API functions
+    for a given backend.
+    """
+    global _field_namespace_cache
+    global _last_backend
+    global _last_field_namespace
+
+    # Fast path in case of repeated calls to make_field_namespace().
+    if backend is _last_backend:
+        return _last_field_namespace
+
+    # Look up in cache.
+    key = id(backend)
+
+    if key in _field_namespace_cache:
+        namespace = _field_namespace_cache[key]
+
+        _last_backend = backend
+        _last_field_namespace = namespace
+
+        return namespace
+
+    # Create a new Field namespace.
+    class FieldNamespace:
+        __slots__ = ("backend",)
+
+        def __init__(self, backend):
+            self.backend = backend
+
+        def _unwrap(self, x):
+            return x.data if isinstance(x, NewStyleField) else x
+
+    setattr(FieldNamespace, "__array_api_version__", backend.__array_api_version__)
+
+    # Set constants.
+    for const_name in CONSTANTS:
+        backend_const = getattr(backend, const_name)
+        setattr(FieldNamespace, const_name, backend_const)
+
+    # Set feedthrough functions.
+    for func_name in FEEDTHROUGH_FUNCS:
+        func = getattr(backend, func_name)
+        setattr(FieldNamespace, func_name, func)
+
+    # Set zero-array-argument functions.
+    for func_name, sig in ZERO_ARG_FUNCS.items():
+        func = getattr(backend, func_name)
+        wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=0)
+        setattr(FieldNamespace, func_name, wrapper_func)
+
+    # Set one-array-argument functions.
+    for func_name, sig in ONE_ARG_FUNCS.items():
+        func = getattr(backend, func_name)
+        wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=1)
+        setattr(FieldNamespace, func_name, wrapper_func)
+
+    # Set two-array-argument functions.
+    for func_name, sig in TWO_ARG_FUNCS.items():
+        func = getattr(backend, func_name)
+        wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=2)
+        setattr(FieldNamespace, func_name, wrapper_func)
+
+    # Set three-array-argument functions.
+    for func_name, sig in THREE_ARG_FUNCS.items():
+        func = getattr(backend, func_name)
+        wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=3)
+        setattr(FieldNamespace, func_name, wrapper_func)
+
+    # Create the namespace.
+    namespace = FieldNamespace(backend)
+
+    # Add new namespace to cache and return.
+    _field_namespace_cache[key] = namespace
+
+    _last_backend = backend
+    _last_field_namespace = namespace
+
+    return namespace
 
 if Configuration().core.use_new_style_fields:
     Field = NewStyleField

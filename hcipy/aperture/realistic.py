@@ -1604,6 +1604,66 @@ def make_keck_aperture(normalized=False, with_spiders=True, with_segment_gaps=Tr
     else:
         return func
 
+def make_eac1_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, segment_transmissions=1, return_segments=False):
+    '''Makes an off-axis EAC 1-type pupil.
+
+    This pupil is based on the Exploratory Analytic Case (EAC) 1 design. The parameters are derived
+    from the HWO-GOMAP Sci-Eng-Interface repository linked below.
+    source: https://github.com/HWO-GOMAP-Working-Groups/Sci-Eng-Interface/blob/main/hwo_sci_eng/obs_config/Tel/EAC1.yaml
+
+    Parameters
+    ----------
+    normalized : boolean
+        If this is True, the outer diameter will be scaled to 1. Otherwise, the
+        diameter of the pupil will be 7.225765 meters.
+    with_segment_gaps : boolean
+        Include the gaps between individual segments in the aperture.
+    gap_padding : scalar
+        Arbitrary padding of gap size to represent gaps on smaller arrays - this effectively
+        makes the gaps larger and the segments smaller to preserve the same segment pitch.
+    segment_transmissions : scalar or array_like
+        The transmission for each of the segments. If this is a scalar, this transmission
+        will be used for all segments.
+    return_segments : boolean
+        If this is True, the segments will also be returned as a list of Field generators.
+
+    Returns
+    -------
+    aperture : Field generator
+        The EAC 1 aperture.
+    segments : list of Field generators
+        The segments. Only returned when `return_segments` is True.
+    '''
+    pupil_diameter = 7.225765  # meter, circumscribed diameter
+    actual_segment_point_to_point = 1.65  # meter
+    actual_segment_gap = 0.006  # meter
+    num_rings = 2  # number of full rings of hexagons around the central segment
+
+    if normalized:
+        actual_segment_point_to_point /= pupil_diameter
+        actual_segment_gap /= pupil_diameter
+        pupil_diameter = 1.0
+
+    # padding out the segmentation gaps so they are visible and not sub-pixel
+    segment_gap = actual_segment_gap * gap_padding
+    if not with_segment_gaps:
+        segment_gap = 0
+
+    actual_segment_flat_diameter = np.sqrt(3) / 2 * actual_segment_point_to_point
+    segment_flat_diameter = actual_segment_flat_diameter - (segment_gap - actual_segment_gap)
+    segment_circum_diameter = 2 / np.sqrt(3) * segment_flat_diameter
+
+    segment_positions = make_hexagonal_grid(actual_segment_flat_diameter + actual_segment_gap, num_rings, pointy_top=False)
+    segment = make_hexagonal_aperture(segment_circum_diameter, np.pi / 2)
+
+    segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=return_segments)
+    if return_segments:
+        segmented_aperture, segments = segmented_aperture
+
+        return segmented_aperture, segments
+    else:
+        return segmented_aperture
+
 def make_eac2_aperture(normalized=False, with_segment_gaps=True, gap_padding=1, segment_transmissions=1, return_segments=False):
     '''Makes an off-axis EAC 2-type pupil.
 

@@ -767,7 +767,7 @@ def _make_array_api_namespace_func(func, args, num_array_args=0):
 
 UNARY_OPS = [
     "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh",
-    "bitwise_invert", "ceil", "clip", "conj", "cos", "cosh", "exp", "expm1",
+    "bitwise_invert", "ceil", "conj", "cos", "cosh", "exp", "expm1",
     "floor", "imag", "isfinite", "isinf", "isnan", "log", "log1p", "log2", "log10",
     "logical_not", "negative", "positive", "real", "reciprocal", "round",
     "sign", "signbit", "sin", "sinh", "square", "sqrt", "tan", "tanh", "trunc",

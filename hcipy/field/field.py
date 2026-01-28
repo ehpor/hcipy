@@ -601,10 +601,35 @@ class NewStyleField(FieldBase):
         return xp.vecdot(self[..., None, :], b, axis=-2)
 
     def to_dict(self):
+        '''Convert the Field to a dict.
+
+        Returns
+        -------
+        dict
+            The created dict.
+        '''
         return {
             "values": self.__array__(),
             "grid": self.grid.to_dict()
         }
+
+    @classmethod
+    def from_dict(cls, val):
+        '''Create a Field from a dict.
+
+        Parameters
+        ----------
+        val : dict
+            A dictionary generated from Field.to_dict().
+
+        Returns
+        -------
+        Field
+            The created field.
+        '''
+        from .grid import Grid
+
+        return cls(val['values'], Grid.from_dict(val['grid']))
 
     trace = None
     transpose = None

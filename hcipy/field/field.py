@@ -378,7 +378,7 @@ class NewStyleField(FieldBase):
 
     @property
     def ndim(self):
-        '''The nubmer of axes in the array.'''
+        '''The number of axes in the array.'''
         return self.data.ndim
 
     @property

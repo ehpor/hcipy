@@ -637,8 +637,10 @@ class NewStyleField(FieldBase):
     def __array_function__(self, func, types, args, kwargs):
         n = len(args)
 
-        # Fast path for the most common 2 or 3 length tuples.
-        if n == 2:
+        # Fast path for the most common 1, 2 or 3 length tuples.
+        if n == 1:
+            args = (_unwrap(args[0]),)
+        elif n == 2:
             a, b = args
             args = _unwrap(a), _unwrap(b)
         elif n == 3:
@@ -654,8 +656,10 @@ class NewStyleField(FieldBase):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         n = len(inputs)
 
-        # Fast path for the most common 2 or 3 length tuples.
-        if n == 2:
+        # Fast path for the most common 1, 2 or 3 length tuples.
+        if n == 1:
+            inputs = (_unwrap(inputs[0]),)
+        elif n == 2:
             a, b = inputs
             inputs = _unwrap(a), _unwrap(b)
         elif n == 3:

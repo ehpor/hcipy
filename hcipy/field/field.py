@@ -529,7 +529,7 @@ class NewStyleField(FieldBase):
     any = _make_array_api_func('any', 'self, /, *, axis=None, keepdims=False')
     argmax = _make_array_api_func('argmax', 'self, /, *, axis=None, keepdims=False')
     argmin = _make_array_api_func('argmin', 'self, /, *, axis=None, keepdims=False')
-    #argsort = _make_array_api_func('argsort', 'self, /, *, axis=-1, descending=False, stable=True')
+    # argsort = _make_array_api_func('argsort', 'self, /, *, axis=-1, descending=False, stable=True')
     argsort = _make_array_api_func('argsort', 'self, /, *, axis=-1, stable=True')
     astype = _make_array_api_func('astype', 'self, dtype, /, *, copy=True, device=None')
     clip = _make_array_api_func('clip', 'self, /, min=None, max=None')
@@ -544,7 +544,7 @@ class NewStyleField(FieldBase):
     prod = _make_array_api_func('prod', 'self, /, *, axis=None, dtype=None, keepdims=False')
     round = _make_array_api_func('round', 'self, /')
     reshape = _make_array_api_func('reshape', 'self, /, shape, *, copy=None')
-    #sort = _make_array_api_func('sort', 'self, /, *, axis=-1, descending=False, stable=True')
+    # sort = _make_array_api_func('sort', 'self, /, *, axis=-1, descending=False, stable=True')
     sort = _make_array_api_func('sort', 'self, /, *, axis=-1, stable=True')
     squeeze = _make_array_api_func('squeeze', 'self, /, *, axis=None')
     std = _make_array_api_func('std', 'self, /, *, axis=None, correction=0.0, keepdim=False')
@@ -838,7 +838,7 @@ ONE_ARG_FUNCS = {
     "repeat": "x, repeats, /, *, axis=None",
     "reshape": "x, /, shape, copy=None",
     "roll": "x, /, shift, *, axis=None",
-    #"sort": "x, /, *, axis=-1, descending=False, stable=True",
+    # "sort": "x, /, *, axis=-1, descending=False, stable=True",
     "sort": "x, /, *, axis=-1, stable=True",  # Numpy doesn't support the descending keyword yet.
     "squeeze": "x, /, axis",
     "std": "x, /, *, axis=None, correction=0.0, keepdims=False",
@@ -856,7 +856,7 @@ ONE_ARG_FUNCS = {
 }
 
 TWO_ARG_FUNCS = {
-    "matmul":  "x1, x2, /",
+    "matmul": "x1, x2, /",
     "searchsorted": "x1, x2, /, *, side='left', sorter=None",
     "take_along_axis": "x, indices, /, *, axis=-1",
     "take": "x, indices, /, *, axis=None",

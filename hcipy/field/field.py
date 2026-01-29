@@ -354,7 +354,8 @@ class NewStyleField(FieldBase):
         return self.data.__index__()
 
     def __getitem__(self, key, /):
-        return NewStyleField(self.data[key], self.grid)
+        xp = self.data.__array_namespace__()
+        return NewStyleField(xp.asarray(self.data[key]), self.grid)
 
     def __setitem__(self, key, value, /):
         self.data[key] = value
@@ -591,7 +592,7 @@ class NewStyleField(FieldBase):
 
         # 1D · 1D OR N-D · 1D
         if b_ndim == 1:
-            return xp.vecdot(self, b)
+            return xp.asarray(xp.vecdot(self, b))
 
         # 1D · N-D (N >= 2)
         if a_ndim == 1:

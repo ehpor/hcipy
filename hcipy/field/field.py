@@ -752,7 +752,7 @@ def _make_array_api_namespace_func(func, args, num_array_args=0):
     grid_src = ''.join(f'{arg}.grid if isinstance({arg}, Field) else ' for arg in args[:num_array_args])
     grid_src += 'None'
 
-    src = f"""def {func.__name__}(self, {', '.join(args)}):
+    src = f"""def {func.__name__}({', '.join(args)}):
         data = func({', '.join(call_args)})
         grid = {grid_src}
         return Field(data, grid)
@@ -874,6 +874,12 @@ for func in UNARY_OPS:
 for func in BINARY_OPS:
     TWO_ARG_FUNCS[func] = "x1, x2, /"
 
+def _make_namespace(slots):
+    class Namespace:
+        __slots__ = slots
+
+    return Namespace()
+
 # Global cache for FieldNamespace instances.
 _field_namespace_cache = {}
 _last_backend = None
@@ -904,53 +910,52 @@ def make_field_namespace(backend):
         return namespace
 
     # Create a new Field namespace.
-    class FieldNamespace:
-        __slots__ = ("backend",)
+    slots = ("__array_api_version__",)
+    slots += tuple(CONSTANTS)
+    slots += tuple(FEEDTHROUGH_FUNCS)
+    slots += tuple(ZERO_ARG_FUNCS.keys())
+    slots += tuple(ONE_ARG_FUNCS.keys())
+    slots += tuple(TWO_ARG_FUNCS.keys())
+    slots += tuple(THREE_ARG_FUNCS.keys())
 
-        def __init__(self, backend):
-            self.backend = backend
+    namespace = _make_namespace(slots)
 
-        def _unwrap(self, x):
-            return x.data if isinstance(x, NewStyleField) else x
-
-    setattr(FieldNamespace, "__array_api_version__", backend.__array_api_version__)
+    # Set Array API version.
+    namespace.__array_api_version__ = backend.__array_api_version__
 
     # Set constants.
     for const_name in CONSTANTS:
         backend_const = getattr(backend, const_name)
-        setattr(FieldNamespace, const_name, backend_const)
+        setattr(namespace, const_name, backend_const)
 
     # Set feedthrough functions.
     for func_name in FEEDTHROUGH_FUNCS:
         func = getattr(backend, func_name)
-        setattr(FieldNamespace, func_name, func)
+        setattr(namespace, func_name, func)
 
     # Set zero-array-argument functions.
     for func_name, sig in ZERO_ARG_FUNCS.items():
         func = getattr(backend, func_name)
         wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=0)
-        setattr(FieldNamespace, func_name, wrapper_func)
+        setattr(namespace, func_name, wrapper_func)
 
     # Set one-array-argument functions.
     for func_name, sig in ONE_ARG_FUNCS.items():
         func = getattr(backend, func_name)
         wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=1)
-        setattr(FieldNamespace, func_name, wrapper_func)
+        setattr(namespace, func_name, wrapper_func)
 
     # Set two-array-argument functions.
     for func_name, sig in TWO_ARG_FUNCS.items():
         func = getattr(backend, func_name)
         wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=2)
-        setattr(FieldNamespace, func_name, wrapper_func)
+        setattr(namespace, func_name, wrapper_func)
 
     # Set three-array-argument functions.
     for func_name, sig in THREE_ARG_FUNCS.items():
         func = getattr(backend, func_name)
         wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=3)
-        setattr(FieldNamespace, func_name, wrapper_func)
-
-    # Create the namespace.
-    namespace = FieldNamespace(backend)
+        setattr(namespace, func_name, wrapper_func)
 
     # Add new namespace to cache and return.
     _field_namespace_cache[key] = namespace

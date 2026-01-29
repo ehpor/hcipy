@@ -874,6 +874,55 @@ for func in UNARY_OPS:
 for func in BINARY_OPS:
     TWO_ARG_FUNCS[func] = "x1, x2, /"
 
+FFT_FUNCS = {
+    'fft': 'x, /, *, n=None, axis=-1, norm="backward"',
+    'ifft': 'x, /, *, n=None, axis=-1, norm="backward"',
+    'fftn': 'x, /, *, s=None, axes=None, norm="backward"',
+    'ifftn': 'x, /, *, s=None, axes=None, norm="backward"',
+    'rfft': 'x, /, *, n=None, axis=-1, norm="backward"',
+    'irfft': 'x, /, *, n=None, axis=-1, norm="backward"',
+    'rfftn': 'x, /, *, s=None, axes=None, norm="backward"',
+    'irfftn': 'x, /, *, s=None, axes=None, norm="backward"',
+    'hfft': 'x, /, *, n=None, axis=-1, norm="backward"',
+    'ihfft': 'x, /, *, n=None, axis=-1, norm="backward"',
+    'fftshift': 'x, /, *, axes=None',
+    'ifftshift': 'x, /, *, axes=None',
+}
+
+FFT_FREQ_FUNCS = {
+    'fftfreq': 'n, /, *, d=1.0, dtype=None, device=None',
+    'rfftfreq': 'n, /, *, d=1.0, dtype=None, device=None',
+}
+
+LINALG_ONE_ARG_FUNCS = {
+    'cholesky': 'x, /, *, upper=False',
+    'det': 'x, /',
+    'diagonal': 'x, /, *, offset=0',
+    'eigh': 'x, /',  # Tuple as output
+    'eigvalsh': 'x, /',
+    'inv': 'x, /',
+    'matrix_norm': 'x, /, *, keepdims',
+    'matrix_power': 'x, n, /',
+    'matrix_rank': 'x, /, *, rtol=None',
+    'matrix_transpose': 'x, /',
+    'pinv': 'x, /, *, rtol=None',
+    'qr': 'x, /, *, mode="reduced"',  # Tuple as output
+    'slogdet': 'x, /',  # Tuple as output
+    'svd': 'x, /, *, full_matrices=True',  # Tuple as output
+    'svdvals': 'x, /',
+    'trace': 'x, /, *, offset=0, dtype=None',
+    'vector_norm': 'x, /, *, axis=None, keepdims=False, ord=2',
+}
+
+LINALG_TWO_ARG_FUNCS = {
+    'cross': 'x1, x2, /, *, axis=-1',
+    'matmul': 'x1, x2, /',
+    'outer': 'x1, x2, /',
+    'solve': 'x1, x2, /',
+    'tensordot': 'x1, x2, /, *, axis=2',
+    'vecdot': 'x1, x2, /, *, axis=-1',
+}
+
 def _make_namespace(slots):
     class Namespace:
         __slots__ = slots
@@ -917,6 +966,10 @@ def make_field_namespace(backend):
     slots += tuple(ONE_ARG_FUNCS.keys())
     slots += tuple(TWO_ARG_FUNCS.keys())
     slots += tuple(THREE_ARG_FUNCS.keys())
+    if hasattr(backend, 'fft'):
+        slots += ('fft',)
+    if hasattr(backend, 'linalg'):
+        slots += ('linalg',)
 
     namespace = _make_namespace(slots)
 
@@ -956,6 +1009,44 @@ def make_field_namespace(backend):
         func = getattr(backend, func_name)
         wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=3)
         setattr(namespace, func_name, wrapper_func)
+
+    # Add FFT extension if it exists on this backend.
+    if hasattr(backend, 'fft'):
+        slots = tuple(FFT_FUNCS.keys()) + tuple(FFT_FREQ_FUNCS.keys())
+        fft_namespace = _make_namespace(slots)
+
+        # Set the FFT functions.
+        for func_name, sig in FFT_FUNCS.items():
+            func = getattr(backend.fft, func_name)
+            wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=1)
+            setattr(fft_namespace, func_name, wrapper_func)
+
+        # Set the FFT freq functions.
+        for func_name, sig in FFT_FUNCS.items():
+            func = getattr(backend.fft, func_name)
+            wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=0)
+            setattr(fft_namespace, func_name, wrapper_func)
+
+        namespace.fft = fft_namespace
+
+    # Add LinAlg extension if it exists on this backend.
+    if hasattr(backend, 'linalg'):
+        slots = tuple(LINALG_ONE_ARG_FUNCS.keys()) + tuple(LINALG_TWO_ARG_FUNCS.keys())
+        linalg_namespace = _make_namespace(slots)
+
+        # Set the one-arg functions.
+        for func_name, sig in LINALG_ONE_ARG_FUNCS.items():
+            func = getattr(backend.linalg, func_name)
+            wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=1)
+            setattr(linalg_namespace, func_name, wrapper_func)
+
+        # Set the two-arg functions.
+        for func_name, sig in LINALG_TWO_ARG_FUNCS.items():
+            func = getattr(backend.linalg, func_name)
+            wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=2)
+            setattr(linalg_namespace, func_name, wrapper_func)
+
+        namespace.linalg = linalg_namespace
 
     # Add new namespace to cache and return.
     _field_namespace_cache[key] = namespace

@@ -733,7 +733,11 @@ CONSTANTS = [
 
 FEEDTHROUGH_FUNCS = [
     "__array_namespace_info__",
-    "can_cast", "finfo", "iinfo", "result_type"
+    "can_cast", "finfo", "iinfo", "result_type",
+    "bool",
+    "int8", "int16", "int32", "int64",
+    "uint8", "uint16", "uint32", "uint64",
+    "float32", "float64", "complex64", "complex128",
 ]
 
 OTHER_FUNCS = [

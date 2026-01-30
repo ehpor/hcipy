@@ -531,7 +531,7 @@ class NewStyleField(FieldBase):
     argmax = _make_array_api_func('argmax', 'self, /, *, axis=None, keepdims=False')
     argmin = _make_array_api_func('argmin', 'self, /, *, axis=None, keepdims=False')
     # argsort = _make_array_api_func('argsort', 'self, /, *, axis=-1, descending=False, stable=True')
-    argsort = _make_array_api_func('argsort', 'self, /, *, axis=-1, stable=True')
+    argsort = _make_array_api_func('argsort', 'self, /, *, axis=-1, stable=True')  # Numpy doesn't support the descending keyword yet.
     astype = _make_array_api_func('astype', 'self, dtype, /, *, copy=True, device=None')
     clip = _make_array_api_func('clip', 'self, /, min=None, max=None')
     cumprod = _make_array_api_func('cumulative_prod', 'self, /, *, axis=None, dtype=None, include_initial=False')
@@ -546,7 +546,7 @@ class NewStyleField(FieldBase):
     round = _make_array_api_func('round', 'self, /')
     reshape = _make_array_api_func('reshape', 'self, /, shape, *, copy=None')
     # sort = _make_array_api_func('sort', 'self, /, *, axis=-1, descending=False, stable=True')
-    sort = _make_array_api_func('sort', 'self, /, *, axis=-1, stable=True')
+    sort = _make_array_api_func('sort', 'self, /, *, axis=-1, stable=True')  # Numpy doesn't support the descending keyword yet.
     squeeze = _make_array_api_func('squeeze', 'self, /, *, axis=None')
     std = _make_array_api_func('std', 'self, /, *, axis=None, correction=0.0, keepdim=False')
     sum = _make_array_api_func('sum', 'self, /, *, axis=None, dtype=None, keepdims=False')
@@ -712,7 +712,7 @@ def _make_array_api_namespace_func(func, args, num_array_args=0):
     return ns[func.__name__]
 
 UNARY_OPS = [
-    "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh",
+    "abs", "acos", "acosh", "asin", "asinh", "atan", "atanh",
     "bitwise_invert", "ceil", "conj", "cos", "cosh", "exp", "expm1",
     "floor", "imag", "isfinite", "isinf", "isnan", "log", "log1p", "log2", "log10",
     "logical_not", "negative", "positive", "real", "reciprocal", "round",
@@ -720,7 +720,7 @@ UNARY_OPS = [
 ]
 
 BINARY_OPS = [
-    "add", "bitwise_and", "bitwise_left_shift", "bitwise_or", "bitwise_right_shift", "bitwise_xor",
+    "add", "atan2", "bitwise_and", "bitwise_left_shift", "bitwise_or", "bitwise_right_shift", "bitwise_xor",
     "copysign", "divide", "equal", "floor_divide", "greater", "greater_equal", "hypot",
     "less", "less_equal", "logaddexp", "logical_and", "logical_or", "logical_xor",
     "maximum", "minimum", "multiply", "nextafter", "not_equal", "pow",
@@ -738,6 +738,7 @@ FEEDTHROUGH_FUNCS = [
     "int8", "int16", "int32", "int64",
     "uint8", "uint16", "uint32", "uint64",
     "float32", "float64", "complex64", "complex128",
+    "isdtype",
 ]
 
 OTHER_FUNCS = [
@@ -753,7 +754,7 @@ ZERO_ARG_FUNCS = {
     "eye": "n_rows, n_cols=None, /, *, k=0, dtype=None, device=None",
     "from_dlpack": "x, /, *, device=None, copy=None",
     "full": "shape, fill_value, *, dtype=None",
-    "linspace": "start, stop, /, num, *, dtype=None",
+    "linspace": "start, stop, /, num, *, dtype=None, endpoint=True",
     "ones": "shape, *, dtype=None, device=None",
     "zeros": "shape, *, dtype=None, device=None",
 }
@@ -763,14 +764,15 @@ ONE_ARG_FUNCS = {
     "any": "x, /, *, axis=None, keepdims=False",
     "argmax": "x, /, *, axis=None, keepdims=False",
     "argmin": "x, /, *, axis=None, keepdims=False",
-    "argsort": "x, /, *, axis=-1, descending=False, stable=True",
+    # "argsort": "x, /, *, axis=-1, descending=False, stable=True",
+    "argsort": "x, /, *, axis=-1, stable=True",  # Numpy doesn't support the descending keyword yet.
     "asarray": "obj, /, *, dtype=None, device=None, copy=None",
     "astype": "x, dtype, /, *, copy=True, device=None",
-    "broadcast_to": "x, dtype, /, *, copy=True, device=None",
+    "broadcast_to": "x, /, shape",
     "clip": "x, /, min=None, max=None",
     "count_nonzero": "x, /, *, axis=None, keepdims=False",
-    "cumulative_prod": "x, /, *, axis=None, dtype=None",
-    "cumulative_sum": "x, /, *, axis=None, dtype=None",
+    "cumulative_prod": "x, /, *, axis=None, dtype=None, include_initial=False",
+    "cumulative_sum": "x, /, *, axis=None, dtype=None, include_initial=False",
     "diff": "x, /, *, axis=-1, prepend=None, append=None",
     "empty_like": "x, /, *, dtype=None, device=None",
     "expand_dims": "x, /, *, axis=0",
@@ -851,7 +853,7 @@ LINALG_ONE_ARG_FUNCS = {
     'eigh': 'x, /',  # Tuple as output
     'eigvalsh': 'x, /',
     'inv': 'x, /',
-    'matrix_norm': 'x, /, *, keepdims',
+    'matrix_norm': 'x, /, *, keepdims=False, ord="fro"',
     'matrix_power': 'x, n, /',
     'matrix_rank': 'x, /, *, rtol=None',
     'matrix_transpose': 'x, /',
@@ -869,7 +871,7 @@ LINALG_TWO_ARG_FUNCS = {
     'matmul': 'x1, x2, /',
     'outer': 'x1, x2, /',
     'solve': 'x1, x2, /',
-    'tensordot': 'x1, x2, /, *, axis=2',
+    'tensordot': 'x1, x2, /, *, axes=2',
     'vecdot': 'x1, x2, /, *, axis=-1',
 }
 
@@ -973,7 +975,7 @@ def make_field_namespace(backend):
             setattr(fft_namespace, func_name, wrapper_func)
 
         # Set the FFT freq functions.
-        for func_name, sig in FFT_FUNCS.items():
+        for func_name, sig in FFT_FREQ_FUNCS.items():
             func = getattr(backend.fft, func_name)
             wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=0)
             setattr(fft_namespace, func_name, wrapper_func)

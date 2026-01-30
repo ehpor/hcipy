@@ -636,16 +636,7 @@ class NewStyleField(FieldBase):
     transpose = None
 
     def __array__(self, dtype=None, copy=None):
-        import numpy as np
-
-        if dtype is None or dtype == self.data.dtype:
-            # A no-copy is supported if necessary.
-            return np.from_dlpack(self.data, copy=copy)
-
-        if copy is False:
-            raise ValueError(f'copy=False is not supported since the dtypes do not match ({dtype} vs. {self.data.dtype}).')
-
-        return np.array(np.from_dlpack(self.data), dtype=dtype, copy=copy)
+        raise NotImplementedError("This Field cannot be used directly with Numpy. Use the Array API namespace instead.")
 
 _aritmetic_and_bitwise_operators = [
     # Arithmetic

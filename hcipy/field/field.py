@@ -757,8 +757,8 @@ ZERO_ARG_FUNCS = {
     "empty": "shape, *, dtype=None, device=None",
     "eye": "n_rows, n_cols=None, /, *, k=0, dtype=None, device=None",
     "from_dlpack": "x, /, *, device=None, copy=None",
-    "full": "shape, fill_value, *, dtype=None",
-    "linspace": "start, stop, /, num, *, dtype=None, endpoint=True",
+    "full": "shape, fill_value, *, dtype=None, device=None",
+    "linspace": "start, stop, /, num, *, dtype=None, device=None, endpoint=True",
     "ones": "shape, *, dtype=None, device=None",
     "zeros": "shape, *, dtype=None, device=None",
 }

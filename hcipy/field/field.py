@@ -909,7 +909,7 @@ def make_field_namespace(backend):
         return namespace
 
     # Create a new Field namespace.
-    slots = ("__array_api_version__",)
+    slots = ("__array_api_version__", "__name__")
     slots += tuple(CONSTANTS)
     slots += tuple(FEEDTHROUGH_FUNCS)
     slots += tuple(ZERO_ARG_FUNCS.keys())
@@ -925,6 +925,7 @@ def make_field_namespace(backend):
 
     # Set Array API version.
     namespace.__array_api_version__ = backend.__array_api_version__
+    namespace.__name__ = f'hcipy({backend.__name__})'
 
     # Set constants.
     for const_name in CONSTANTS:

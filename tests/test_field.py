@@ -1,4 +1,5 @@
 from hcipy import *
+import hcipy
 import numpy as np
 import copy
 import contextlib
@@ -254,73 +255,57 @@ def test_grid_supersampled():
     assert np.allclose(g2.x, g4.x)
     assert np.allclose(g2.y, g4.y)
 
-@contextlib.contextmanager
-def temporary_config(key, value):
-    conf = Configuration()
-
-    keys = key.split('.')
-
-    for k in keys[:-1]:
-        conf = getattr(conf, k)
-
-    old_value = getattr(conf, keys[-1])
-
-    setattr(conf, keys[-1], value)
-
-    yield
-
-    setattr(conf, keys[-1], old_value)
-
-@pytest.mark.parametrize('use_new_style_fields', [True, False])
-def test_field_arithmetic(use_new_style_fields):
+@pytest.mark.parametrize('Field', [hcipy.field.NewStyleField, hcipy.field.OldStyleField])
+def test_field_arithmetic(Field):
     grid = make_pupil_grid(16)
 
     M = np.random.randn(grid.size, grid.size)
 
-    with temporary_config('core.use_new_style_fields', use_new_style_fields):
-        a = Field(np.ones(grid.size), grid)
-        b = Field(np.ones(grid.size), grid)
+    a = Field(np.ones(grid.size), grid)
+    b = Field(np.ones(grid.size), grid)
 
-        assert np.allclose(a, b)
-        assert np.allclose(a + b, 2)
-        assert np.allclose(a - b, 0)
-        assert np.allclose(a * b, a)
+    xp = a.__array_namespace__()
 
-        assert is_field(a + b)
-        assert is_field(a - b)
-        assert is_field(a * b)
-        assert is_field(np.exp(2j * a))
+    assert np.allclose(a, b)
+    assert np.allclose(a + b, 2)
+    assert np.allclose(a - b, 0)
+    assert np.allclose(a * b, a)
 
-        assert is_field(a.conj())
-        assert is_field(a.conjugate())
-        assert is_field(a.clip(-1, 1))
-        assert is_field(a.repeat(10))
+    assert is_field(a + b)
+    assert is_field(a - b)
+    assert is_field(a * b)
+    assert is_field(np.exp(2j * a))
 
-        assert a.size == a.grid.size
-        assert is_field(a.astype('bool'))
-        assert np.allclose(a.sum(), np.asarray(a).sum())
+    assert is_field(a.conj())
+    assert is_field(a.conjugate())
+    assert is_field(a.clip(-1, 1))
+    assert is_field(a.repeat(10))
 
-        a[0] = 6
-        a[1:2] = 3
+    assert a.size == a.grid.size
+    assert is_field(a.astype('bool'))
+    assert np.allclose(a.sum(), np.asarray(a).sum())
 
-        assert a[0] == 6
-        assert a[1] == 3
+    a[0] = 6
+    a[1:2] = 3
 
-        assert not is_field(np.asarray(a))
+    assert a[0] == 6
+    assert a[1] == 3
 
-        assert not is_field(M.dot(a))
+    assert not is_field(np.asarray(a))
 
-        assert np.allclose(a.imag, 0)
+    assert not is_field(M.dot(a))
 
-@pytest.mark.parametrize('use_new_style_fields', [True, False])
-def test_field_pickle(use_new_style_fields):
+    assert np.allclose(a.imag, 0)
+
+@pytest.mark.parametrize('Field', [hcipy.field.NewStyleField, hcipy.field.OldStyleField])
+def test_field_pickle(Field):
     grid = make_pupil_grid(16)
 
-    with temporary_config('core.use_new_style_fields', use_new_style_fields):
-        a = Field(np.ones(grid.size), grid)
+    a = Field(np.ones(grid.size), grid)
 
-        state = pickle.dumps(a)
-        b = pickle.loads(state)
+    state = pickle.dumps(a)
+    b = pickle.loads(state)
 
-        assert np.allclose(a, b)
-        assert a.grid == b.grid
+    assert np.allclose(a, b)
+    assert a.grid == b.grid
+

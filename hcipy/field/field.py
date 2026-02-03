@@ -714,35 +714,59 @@ for name, symbol in _aritmetic_and_bitwise_operators:
 for name, symbol in _comparison_operators:
     setattr(NewStyleField, f'__{name}__', _make_binary_operator(NewStyleField, symbol))
 
-def _make_array_api_namespace_func(func, args, num_array_args=0):
+def _make_array_api_namespace_func(func, args, num_array_args=0, tuple_output_fields=None):
+    # Pre-formatting args.
     args = [arg.strip() for arg in args.split(',')]
+    arg_names = [arg.split('=')[0] for arg in args]
+    array_arg_names = [arg for arg in arg_names if arg not in ['/', '*']][:num_array_args]
+
+    # Define source.
+    src = [
+        f"def {func.__name__}({', '.join(args)}):",
+        "  grid = None"
+    ]
+
+    # Make all array arguments into the underlying backend array format.
+    for arg in array_arg_names:
+        src += [
+            f'  if isinstance({arg}, Field):',
+            f'    grid = {arg}.grid',
+            f'    {arg} = {arg}.data'
+        ]
 
     call_args = []
+    is_positional_only = '/' in args
 
-    for i, arg in enumerate(args):
-        if arg in ['/', '*']:
+    for arg in args:
+        if arg == '/':
+            is_positional_only = False
+            continue
+
+        if arg == '*':
             continue
 
         if '=' in arg:
-            # Keyword argument.
             name = arg.split('=')[0]
-            call_args.append(f'{name}={name}')
+
+            if is_positional_only:
+                # Positional argument with default.
+                call_args.append(name)
+            else:
+                # Keyword argument.
+                call_args.append(f'{name}={name}')
         else:
             # Positional argument.
-            if i < num_array_args:
-                # Inline xp._unwrap() for performance reasons.
-                call_args.append(f'{arg}.data if isinstance({arg}, Field) else {arg}')
-            else:
-                call_args.append(arg)
+            call_args.append(arg)
 
-    grid_src = ''.join(f'{arg}.grid if isinstance({arg}, Field) else ' for arg in args[:num_array_args])
-    grid_src += 'None'
+    src += [f"  data = func({', '.join(call_args)})"]
 
-    src = f"""def {func.__name__}({', '.join(args)}):
-        data = func({', '.join(call_args)})
-        grid = {grid_src}
-        return Field(data, grid)
-        """
+    if tuple_output_fields is None:
+        src += ['  return Field(data, grid)']
+    else:
+        tuple_output_fields = (f'{name}=Field(data.{name}, None)' for i, name in enumerate(tuple_output_fields))
+        src += [f'  return data.__class__({", ".join(tuple_output_fields)})']
+
+    src = '\n'.join(src)
 
     ns = {'func': func, 'Field': NewStyleField}
     exec(src, ns)

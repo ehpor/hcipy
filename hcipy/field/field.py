@@ -1118,7 +1118,7 @@ def make_field_namespace(backend):
         linalg_namespace.eigh = _make_array_api_namespace_func(backend.linalg.eigh, 'x, /', num_array_args=1, tuple_output_fields=['eigenvalues', 'eigenvectors'])
         linalg_namespace.qr = _make_array_api_namespace_func(backend.linalg.qr, 'x, /, *, mode="reduced"', num_array_args=1, tuple_output_fields=['Q', 'R'])
         linalg_namespace.slogdet = _make_array_api_namespace_func(backend.linalg.slogdet, 'x, /', num_array_args=1, tuple_output_fields=['sign', 'logabsdet'])
-        linalg_namespace.svd = _make_array_api_namespace_func(backend.linalg.svd, 'x, /, *, full_matrices=False', num_array_args=1, tuple_output_fields=['U', 'S', 'Vh'])
+        linalg_namespace.svd = _make_array_api_namespace_func(backend.linalg.svd, 'x, /, *, full_matrices=True', num_array_args=1, tuple_output_fields=['U', 'S', 'Vh'])
 
         namespace.linalg = linalg_namespace
 

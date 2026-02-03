@@ -558,15 +558,35 @@ class NewStyleField(FieldBase):
 
     @property
     def real(self):
+        '''The real part of the field.'''
         xp = self.__array_namespace__()
         return NewStyleField(xp.real(self.data), self.grid)
 
     @property
     def imag(self):
+        '''The imaginary part of the field.'''
         xp = self.__array_namespace__()
         return NewStyleField(xp.imag(self.data), self.grid)
 
     def repeat(self, repeats, /, *, axis=None):
+        '''Repeat elements of a field.
+
+        Parameters
+        ----------
+        repeats : int or array of ints
+            The number of repetitions for each element.
+
+        axis : int, optional
+            The axis (dimension) along which to repeat elements. If
+            this is None (default), the field is is flattened first
+            after which elements are repeated. The flattened field
+            is returned.
+
+        Returns
+        -------
+        Field
+            The output field containing repeated elements.
+        '''
         xp = self.__array_namespace__()
         res = xp.repeat(self.data, repeats, axis=axis)
 
@@ -575,11 +595,27 @@ class NewStyleField(FieldBase):
     conj = _make_array_api_func('conj', 'self, /')
     conjugate = conj
 
-    def copy(self, order='C'):
+    def copy(self):
+        '''Create a copy of the field.
+
+        Returns
+        -------
+        Field
+            The copied field.
+        '''
         xp = self.__array_namespace__()
         return xp.asarray(self, copy=True)
 
     def ravel(self):
+        '''Return a flattened field.
+
+        A copy is made only when needed.
+
+        Returns
+        -------
+        Field
+            A contiguous 1-D field with the same datatype.
+        '''
         return self.reshape((-1,))
 
     flatten = ravel

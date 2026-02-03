@@ -805,13 +805,6 @@ FEEDTHROUGH_FUNCS = [
     "isdtype",
 ]
 
-OTHER_FUNCS = [
-    "meshgrid",
-    "broadcast_arrays",
-    "concat",
-    "stack",
-]
-
 ZERO_ARG_FUNCS = {
     "arange": "start, /, stop=None, step=1, *, dtype=None, device=None",
     "empty": "shape, *, dtype=None, device=None",
@@ -833,7 +826,6 @@ ONE_ARG_FUNCS = {
     "asarray": "obj, /, *, dtype=None, device=None, copy=None",
     "astype": "x, dtype, /, *, copy=True, device=None",
     "broadcast_to": "x, /, shape",
-    "clip": "x, /, min=None, max=None",
     "count_nonzero": "x, /, *, axis=None, keepdims=False",
     "cumulative_prod": "x, /, *, axis=None, dtype=None, include_initial=False",
     "cumulative_sum": "x, /, *, axis=None, dtype=None, include_initial=False",
@@ -851,7 +843,6 @@ ONE_ARG_FUNCS = {
     "ones_like": "x, /, *, dtype=None, device=None",
     "permute_dims": "x, /, axes",
     "prod": "x, /, *, axis=None, dtype=None, keepdims=False",
-    "repeat": "x, repeats, /, *, axis=None",
     "reshape": "x, /, shape, copy=None",
     "roll": "x, /, shift, *, axis=None",
     # "sort": "x, /, *, axis=-1, descending=False, stable=True",
@@ -862,17 +853,14 @@ ONE_ARG_FUNCS = {
     "tile": "x, repetitions, /",
     "tril": "x, /, *, k=0",
     "triu": "x, /, *, k=0",
-    "unique_all": "x, /",
-    "unique_counts": "x, /",
-    "unique_inverse": "x, /",
     "unique_values": "x, /",
-    "unstack": "x, /, *, axis=0",
     "var": "x, /, *, axis=None, correction=0.0, keepdims=False",
     "zeros_like": "x, /, *, dtype=None, device=None",
 }
 
 TWO_ARG_FUNCS = {
     "matmul": "x1, x2, /",
+    "repeat": "x, repeats, /, *, axis=None",
     "searchsorted": "x1, x2, /, *, side='left', sorter=None",
     "take_along_axis": "x, indices, /, *, axis=-1",
     "take": "x, indices, /, *, axis=None",
@@ -881,6 +869,7 @@ TWO_ARG_FUNCS = {
 }
 
 THREE_ARG_FUNCS = {
+    "clip": "x, /, min=None, max=None",
     "where": "condition, x1, x2, /",
 }
 
@@ -914,17 +903,11 @@ LINALG_ONE_ARG_FUNCS = {
     'cholesky': 'x, /, *, upper=False',
     'det': 'x, /',
     'diagonal': 'x, /, *, offset=0',
-    'eigh': 'x, /',  # Tuple as output
     'eigvalsh': 'x, /',
     'inv': 'x, /',
     'matrix_norm': 'x, /, *, keepdims=False, ord="fro"',
     'matrix_power': 'x, n, /',
-    'matrix_rank': 'x, /, *, rtol=None',
     'matrix_transpose': 'x, /',
-    'pinv': 'x, /, *, rtol=None',
-    'qr': 'x, /, *, mode="reduced"',  # Tuple as output
-    'slogdet': 'x, /',  # Tuple as output
-    'svd': 'x, /, *, full_matrices=True',  # Tuple as output
     'svdvals': 'x, /',
     'trace': 'x, /, *, offset=0, dtype=None',
     'vector_norm': 'x, /, *, axis=None, keepdims=False, ord=2',
@@ -933,11 +916,31 @@ LINALG_ONE_ARG_FUNCS = {
 LINALG_TWO_ARG_FUNCS = {
     'cross': 'x1, x2, /, *, axis=-1',
     'matmul': 'x1, x2, /',
+    'matrix_rank': 'x, /, *, rtol=None',
     'outer': 'x1, x2, /',
+    'pinv': 'x, /, *, rtol=None',
     'solve': 'x1, x2, /',
     'tensordot': 'x1, x2, /, *, axes=2',
     'vecdot': 'x1, x2, /, *, axis=-1',
 }
+
+MISC_FUNCS = (
+    'meshgrid',
+    'broadcast_arrays',
+    'concat',
+    'stack',
+    'unique_all',
+    'unique_counts',
+    'unique_inverse',
+    'unstack',
+)
+
+LINALG_MISC_FUNCS = (
+    'eigh',
+    'qr',
+    'slogdet',
+    'svd',
+)
 
 def _make_namespace(slots):
     class Namespace:
@@ -982,6 +985,7 @@ def make_field_namespace(backend):
     slots += tuple(ONE_ARG_FUNCS.keys())
     slots += tuple(TWO_ARG_FUNCS.keys())
     slots += tuple(THREE_ARG_FUNCS.keys())
+    slots += tuple(MISC_FUNCS)
     if hasattr(backend, 'fft'):
         slots += ('fft',)
     if hasattr(backend, 'linalg'):
@@ -1027,6 +1031,54 @@ def make_field_namespace(backend):
         wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=3)
         setattr(namespace, func_name, wrapper_func)
 
+    def _meshgrid(*arrays, indexing='xy'):
+        res = backend.meshgrid(*tuple(arr.data if isinstance(arr, NewStyleField) else arr for arr in arrays), indexing=indexing)
+
+        return [NewStyleField(arr, None) for arr in res]
+
+    def _broadcast_arrays(*arrays):
+        res = backend.broadcast_arrays(*tuple(arr.data if isinstance(arr, NewStyleField) else arr for arr in arrays))
+
+        return [NewStyleField(arr, None) for arr in res]
+
+    def _concat(arrays, /, *, axis=0):
+        res = backend.concat(tuple(arr.data if isinstance(arr, NewStyleField) else arr for arr in arrays), axis=axis)
+
+        return NewStyleField(res, None)
+
+    def _stack(arrays, /, *, axis=0):
+        res = backend.stack(tuple(arr.data if isinstance(arr, NewStyleField) else arr for arr in arrays), axis=axis)
+
+        return NewStyleField(res, None)
+
+    def _nonzero(x, /):
+        res = backend.nonzero(x.data if isinstance(x, NewStyleField) else x)
+        return tuple(NewStyleField(arr, None) for arr in res)
+
+    def _unstack(x, /, *, axis=0):
+        res = backend.unstack(x.data if isinstance(x, NewStyleField) else x, axis=axis)
+        return tuple(NewStyleField(arr, None) for arr in res)
+
+    _unique_all = _make_array_api_namespace_func(backend.unique_all, 'x, /', num_array_args=1, tuple_output_fields=['values', 'indices', 'inverse_indices', 'counts'])
+    _unique_counts = _make_array_api_namespace_func(backend.unique_counts, 'x, /', num_array_args=1, tuple_output_fields=['values', 'counts'])
+    _unique_inverse = _make_array_api_namespace_func(backend.unique_inverse, 'x, /', num_array_args=1, tuple_output_fields=['values', 'inverse_indices'])
+
+    misc_funcs = {
+        'meshgrid': _meshgrid,
+        'broadcast_arrays': _broadcast_arrays,
+        'concat': _concat,
+        'stack': _stack,
+        'unique_all': _unique_all,
+        'unique_counts': _unique_counts,
+        'unique_inverse': _unique_inverse,
+        'nonzero': _nonzero,
+        'unstack': _unstack,
+    }
+
+    for func_name, func in misc_funcs.items():
+        func.__doc__ = getattr(backend, func_name).__doc__
+        setattr(namespace, func_name, func)
+
     # Add FFT extension if it exists on this backend.
     if hasattr(backend, 'fft'):
         slots = tuple(FFT_FUNCS.keys()) + tuple(FFT_FREQ_FUNCS.keys())
@@ -1048,7 +1100,7 @@ def make_field_namespace(backend):
 
     # Add LinAlg extension if it exists on this backend.
     if hasattr(backend, 'linalg'):
-        slots = tuple(LINALG_ONE_ARG_FUNCS.keys()) + tuple(LINALG_TWO_ARG_FUNCS.keys())
+        slots = tuple(LINALG_ONE_ARG_FUNCS.keys()) + tuple(LINALG_TWO_ARG_FUNCS.keys()) + LINALG_MISC_FUNCS
         linalg_namespace = _make_namespace(slots)
 
         # Set the one-arg functions.
@@ -1062,6 +1114,11 @@ def make_field_namespace(backend):
             func = getattr(backend.linalg, func_name)
             wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=2)
             setattr(linalg_namespace, func_name, wrapper_func)
+
+        linalg_namespace.eigh = _make_array_api_namespace_func(backend.linalg.eigh, 'x, /', num_array_args=1, tuple_output_fields=['eigenvalues', 'eigenvectors'])
+        linalg_namespace.qr = _make_array_api_namespace_func(backend.linalg.qr, 'x, /, *, mode="reduced"', num_array_args=1, tuple_output_fields=['Q', 'R'])
+        linalg_namespace.slogdet = _make_array_api_namespace_func(backend.linalg.slogdet, 'x, /', num_array_args=1, tuple_output_fields=['sign', 'logabsdet'])
+        linalg_namespace.svd = _make_array_api_namespace_func(backend.linalg.svd, 'x, /, *, full_matrices=False', num_array_args=1, tuple_output_fields=['U', 'S', 'Vh'])
 
         namespace.linalg = linalg_namespace
 

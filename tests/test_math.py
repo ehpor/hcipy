@@ -1,7 +1,7 @@
 import pytest
 import hcipy
 import numpy as np
-from hcipy._math.random import RandomState
+from hcipy._math.random import RandomGenerator
 
 
 def _parameters():
@@ -58,9 +58,9 @@ def test_fft_acceleration(func, method, dtype_in, dtype_out):
         assert y_method.dtype == dtype_out
 
 
-def test_random_state_distribution(xp):
+def test_random_generator_distribution(xp):
     # Get samples from the Standard Normal distribution.
-    rng = RandomState(xp, seed=42)
+    rng = RandomGenerator(xp, seed=42)
     samples = rng.normal(size=(10000,))
 
     # Basic statistical tests for normal distribution
@@ -68,28 +68,28 @@ def test_random_state_distribution(xp):
     assert np.isclose(float(xp.std(samples)), 1.0, atol=0.05)
 
 
-def test_random_state_poisson(xp):
+def test_random_generator_poisson(xp):
     # Get samples from the Poisson distribution.
-    rng = RandomState(xp, seed=42)
+    rng = RandomGenerator(xp, seed=42)
     samples = rng.poisson(lam=2.0, size=(10000,))
 
     # Basic statistical tests for poisson distribution
     assert np.isclose(float(xp.mean(samples)), 2.0, atol=0.1)
 
 
-def test_random_state_gamma(xp):
+def test_random_generator_gamma(xp):
     # Get samples from the Gamma distribution.
-    rng = RandomState(xp, seed=42)
+    rng = RandomGenerator(xp, seed=42)
     samples = rng.gamma(scale=2.0, shape_param=2.0, size=(10000,))
 
     # Basic statistical tests (mean should be shape * scale = 2 * 2 = 4)
     assert np.isclose(float(xp.mean(samples)), 4.0, atol=0.5)
 
 
-def test_random_state_reproducible(xp):
-    # Create two RandomState objects with same seed
-    rng1 = RandomState(xp, seed=123)
-    rng2 = RandomState(xp, seed=123)
+def test_random_generator_reproducible(xp):
+    # Create two RandomGenerator objects with same seed
+    rng1 = RandomGenerator(xp, seed=123)
+    rng2 = RandomGenerator(xp, seed=123)
 
     # Generate samples
     samples1 = rng1.normal(size=(100,))
@@ -98,14 +98,13 @@ def test_random_state_reproducible(xp):
     assert np.allclose(samples1, samples2)
 
 
-def test_random_state_copy(xp):
+def test_random_generator_copy(xp):
     # Create initial rngs
-    rng1 = RandomState(xp, seed=42)
+    rng1 = RandomGenerator(xp, seed=42)
     rng2 = rng1.copy()
 
     # Generate some samples
     samples1 = rng1.normal(size=(10,))
-
 
     # Generate samples from copied rng
     samples2 = rng2.normal(size=(10,))
@@ -114,8 +113,8 @@ def test_random_state_copy(xp):
     assert np.allclose(samples1, samples2)
 
 
-def test_random_state_different_sizes(xp):
-    rng = RandomState(xp, seed=42)
+def test_random_generator_different_sizes(xp):
+    rng = RandomGenerator(xp, seed=42)
 
     # Test scalar output
     arr_0d = rng.normal()

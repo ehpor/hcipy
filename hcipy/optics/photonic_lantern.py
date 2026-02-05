@@ -23,8 +23,7 @@ class PhotonicLantern(OpticalElement):
 
         if normalize_modes:
             self.lantern_modes = [m / np.sqrt(np.sum(np.abs(m)**2 * self.input_grid.weights)) for m in self.lantern_modes]
-        
-        self.lantern_modes = ModeBasis(self.lantern_modes)
+            self.lantern_modes = ModeBasis(self.lantern_modes)
 
         self.output_grid = CartesianGrid(RegularCoords([1, 1], [self.num_modes, 1], np.zeros(2)))
         self.output_grid.weights = 1

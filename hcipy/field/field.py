@@ -283,10 +283,11 @@ def _unwrap(arg):
         # Fast paths for 2 and 3 length tuples as those are most common.
         length = len(arg)
 
+        if length == 1:
+            return (_unwrap(arg[0]),)
         if length == 2:
             a, b = arg
             return _unwrap(a), _unwrap(b)
-
         if length == 3:
             a, b, c = arg
             return _unwrap(a), _unwrap(b), _unwrap(c)
@@ -823,7 +824,6 @@ ONE_ARG_FUNCS = {
     "argmin": "x, /, *, axis=None, keepdims=False",
     # "argsort": "x, /, *, axis=-1, descending=False, stable=True",
     "argsort": "x, /, *, axis=-1, stable=True",  # Numpy doesn't support the descending keyword yet.
-    "asarray": "obj, /, *, dtype=None, device=None, copy=None",
     "astype": "x, dtype, /, *, copy=True, device=None",
     "broadcast_to": "x, /, shape",
     "count_nonzero": "x, /, *, axis=None, keepdims=False",
@@ -861,7 +861,6 @@ ONE_ARG_FUNCS = {
 TWO_ARG_FUNCS = {
     "matmul": "x1, x2, /",
     "repeat": "x, repeats, /, *, axis=None",
-    "searchsorted": "x1, x2, /, *, side='left', sorter=None",
     "take_along_axis": "x, indices, /, *, axis=-1",
     "take": "x, indices, /, *, axis=None",
     "tensordot": "x1, x2, /, *, axes=2",
@@ -925,9 +924,11 @@ LINALG_TWO_ARG_FUNCS = {
 }
 
 MISC_FUNCS = (
+    'asarray',
     'meshgrid',
     'broadcast_arrays',
     'concat',
+    'searchsorted',
     'stack',
     'unique_all',
     'unique_counts',
@@ -1031,6 +1032,12 @@ def make_field_namespace(backend):
         wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=3)
         setattr(namespace, func_name, wrapper_func)
 
+    # Make miscelaneous functions that code generation cannot easily generate.
+    def _asarray(obj, /, *, dtype=None, device=None, copy=None):
+        grid = obj.grid if isinstance(obj, NewStyleField) else None
+
+        return NewStyleField(backend.asarray(_unwrap(obj), dtype=dtype, device=device, copy=copy), grid)
+
     def _meshgrid(*arrays, indexing='xy'):
         res = backend.meshgrid(*tuple(arr.data if isinstance(arr, NewStyleField) else arr for arr in arrays), indexing=indexing)
 
@@ -1046,9 +1053,23 @@ def make_field_namespace(backend):
 
         return NewStyleField(res, None)
 
+    def _searchsorted(x1, x2, /, *, side='left', sorter=None):
+        grid = None
+
+        if isinstance(x2, NewStyleField):
+            grid = x2.grid
+            x2 = x2.data
+        if isinstance(x1, NewStyleField):
+            grid = x1.grid
+            x1 = x1.data
+        if isinstance(sorter, NewStyleField):
+            sorter = sorter.data
+
+        res = backend.searchsorted(x1, x2, side=side, sorter=sorter)
+        return NewStyleField(res, grid)
+
     def _stack(arrays, /, *, axis=0):
         res = backend.stack(tuple(arr.data if isinstance(arr, NewStyleField) else arr for arr in arrays), axis=axis)
-
         return NewStyleField(res, None)
 
     def _nonzero(x, /):
@@ -1064,17 +1085,20 @@ def make_field_namespace(backend):
     _unique_inverse = _make_array_api_namespace_func(backend.unique_inverse, 'x, /', num_array_args=1, tuple_output_fields=['values', 'inverse_indices'])
 
     misc_funcs = {
+        'asarray': _asarray,
         'meshgrid': _meshgrid,
         'broadcast_arrays': _broadcast_arrays,
         'concat': _concat,
+        'searchsorted': _searchsorted,
         'stack': _stack,
+        'nonzero': _nonzero,
+        'unstack': _unstack,
         'unique_all': _unique_all,
         'unique_counts': _unique_counts,
         'unique_inverse': _unique_inverse,
-        'nonzero': _nonzero,
-        'unstack': _unstack,
     }
 
+    # Set miscelaneous functions.
     for func_name, func in misc_funcs.items():
         func.__doc__ = getattr(backend, func_name).__doc__
         setattr(namespace, func_name, func)
@@ -1115,6 +1139,7 @@ def make_field_namespace(backend):
             wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=2)
             setattr(linalg_namespace, func_name, wrapper_func)
 
+        # Set miscelaneous linalg extension functions.
         linalg_namespace.eigh = _make_array_api_namespace_func(backend.linalg.eigh, 'x, /', num_array_args=1, tuple_output_fields=['eigenvalues', 'eigenvectors'])
         linalg_namespace.qr = _make_array_api_namespace_func(backend.linalg.qr, 'x, /, *, mode="reduced"', num_array_args=1, tuple_output_fields=['Q', 'R'])
         linalg_namespace.slogdet = _make_array_api_namespace_func(backend.linalg.slogdet, 'x, /', num_array_args=1, tuple_output_fields=['sign', 'logabsdet'])

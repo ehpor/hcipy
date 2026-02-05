@@ -2,7 +2,6 @@ from hcipy import *
 import hcipy
 import numpy as np
 import copy
-import contextlib
 import pytest
 import pickle
 
@@ -255,26 +254,42 @@ def test_grid_supersampled():
     assert np.allclose(g2.x, g4.x)
     assert np.allclose(g2.y, g4.y)
 
+def allclose(x1, x2, /, *, rtol=1e-5, atol=1e-8):
+    xp = x1.__array_namespace__()
+
+    try:
+        diff = xp.abs(x1 - x2)
+    except Exception:
+        return False
+
+    tolerance = atol + rtol * xp.abs(x2)
+    close = diff <= tolerance
+
+    return xp.all(close)
+
 @pytest.mark.parametrize('Field', [hcipy.field.NewStyleField, hcipy.field.OldStyleField])
 def test_field_arithmetic(Field):
     grid = make_pupil_grid(16)
 
     M = np.random.randn(grid.size, grid.size)
 
-    a = Field(np.ones(grid.size), grid)
-    b = Field(np.ones(grid.size), grid)
+    a_data = np.ones(grid.size)
+    b_data = np.ones(grid.size)
+
+    a = Field(a_data, grid)
+    b = Field(b_data, grid)
 
     xp = a.__array_namespace__()
 
-    assert np.allclose(a, b)
-    assert np.allclose(a + b, 2)
-    assert np.allclose(a - b, 0)
-    assert np.allclose(a * b, a)
+    assert allclose(a, b)
+    assert allclose(a + b, 2)
+    assert allclose(a - b, 0)
+    assert allclose(a * b, a)
 
     assert is_field(a + b)
     assert is_field(a - b)
     assert is_field(a * b)
-    assert is_field(np.exp(2j * a))
+    assert is_field(xp.exp(2j * a))
 
     assert is_field(a.conj())
     assert is_field(a.conjugate())
@@ -283,7 +298,7 @@ def test_field_arithmetic(Field):
 
     assert a.size == a.grid.size
     assert is_field(a.astype('bool'))
-    assert np.allclose(a.sum(), np.asarray(a).sum())
+    assert allclose(a.sum(), a_data.sum())
 
     a[0] = 6
     a[1:2] = 3
@@ -291,11 +306,11 @@ def test_field_arithmetic(Field):
     assert a[0] == 6
     assert a[1] == 3
 
-    assert not is_field(np.asarray(a))
+    assert not is_field(a_data)
 
-    assert not is_field(M.dot(a))
+    assert not is_field(M.dot(a_data))
 
-    assert np.allclose(a.imag, 0)
+    assert allclose(a.imag, 0)
 
 @pytest.mark.parametrize('Field', [hcipy.field.NewStyleField, hcipy.field.OldStyleField])
 def test_field_pickle(Field):
@@ -306,6 +321,6 @@ def test_field_pickle(Field):
     state = pickle.dumps(a)
     b = pickle.loads(state)
 
-    assert np.allclose(a, b)
+    assert allclose(a, b)
     assert a.grid == b.grid
 

@@ -1,7 +1,7 @@
 from array_api_compat import is_numpy_namespace, is_torch_namespace, is_jax_namespace, is_cupy_namespace
 import copy
 
-class RandomState:
+class RandomGenerator:
     '''A class that provides a consistent API for random number generation across different array API namespaces.
 
     Parameters
@@ -28,20 +28,21 @@ class RandomState:
                 self._rng.manual_seed(seed)
         elif is_jax_namespace(xp):
             from jax import random
+
             self._jax_random = random
             self._rng = random.PRNGKey(seed or 0)
         else:
             raise ValueError(f"Unsupported namespace: {xp}")
 
     def copy(self):
-        '''Return a new RandomState object that is an independent copy of the current state.
+        '''Return a new RandomGenerator object that is an independent copy of the current state.
 
         Returns
         -------
-        RandomState
-            A new RandomState object with the same internal state as the current object.
+        RandomGenerator
+            A new RandomGenerator object with the same internal state as the current object.
         '''
-        new_rng = RandomState.__new__(RandomState)
+        new_rng = RandomGenerator.__new__(RandomGenerator)
         new_rng.xp = self.xp
         new_rng._jax_random = self._jax_random
 

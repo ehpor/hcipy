@@ -13,14 +13,17 @@ class PhotonicLantern(OpticalElement):
         The modes corresponding to the lantern ports.
     wavelength : scalar
         The wavelength of the simulation.
+    normalize_modes : bool
+        Normalize the modes to unit power or not. Default is True.
     '''
-    def __init__(self, lantern_modes):
+    def __init__(self, lantern_modes, normalize_modes=True):
         self.lantern_modes = lantern_modes
         self.num_modes = len(self.lantern_modes)
         self.input_grid = self.lantern_modes.grid
 
-        self.lantern_modes = [m / np.sqrt(np.sum(np.abs(m)**2 * self.input_grid.weights)) for m in self.lantern_modes]
-        self.lantern_modes = ModeBasis(self.lantern_modes)
+        if normalize_modes:
+            self.lantern_modes = [m / np.sqrt(np.sum(np.abs(m)**2 * self.input_grid.weights)) for m in self.lantern_modes]
+            self.lantern_modes = ModeBasis(self.lantern_modes)
 
         self.output_grid = CartesianGrid(RegularCoords([1, 1], [self.num_modes, 1], np.zeros(2)))
         self.output_grid.weights = 1

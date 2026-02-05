@@ -1,6 +1,7 @@
 import pytest
 import hcipy
 import numpy as np
+from hcipy._math.random import RandomState
 
 
 def _parameters():
@@ -55,3 +56,79 @@ def test_fft_acceleration(func, method, dtype_in, dtype_out):
 
         assert np.allclose(y_numpy, y_method, rtol=rtol, atol=rtol)
         assert y_method.dtype == dtype_out
+
+
+def test_random_state_distribution(xp):
+    # Get samples from the Standard Normal distribution.
+    rng = RandomState(xp, seed=42)
+    samples = rng.normal(size=(10000,))
+
+    # Basic statistical tests for normal distribution
+    assert np.isclose(float(xp.mean(samples)), 0.0, atol=0.05)
+    assert np.isclose(float(xp.std(samples)), 1.0, atol=0.05)
+
+
+def test_random_state_poisson(xp):
+    # Get samples from the Poisson distribution.
+    rng = RandomState(xp, seed=42)
+    samples = rng.poisson(lam=2.0, size=(10000,))
+
+    # Basic statistical tests for poisson distribution
+    assert np.isclose(float(xp.mean(samples)), 2.0, atol=0.1)
+
+
+def test_random_state_gamma(xp):
+    # Get samples from the Gamma distribution.
+    rng = RandomState(xp, seed=42)
+    samples = rng.gamma(scale=2.0, shape_param=2.0, size=(10000,))
+
+    # Basic statistical tests (mean should be shape * scale = 2 * 2 = 4)
+    assert np.isclose(float(xp.mean(samples)), 4.0, atol=0.5)
+
+
+def test_random_state_reproducible(xp):
+    # Create two RandomState objects with same seed
+    rng1 = RandomState(xp, seed=123)
+    rng2 = RandomState(xp, seed=123)
+
+    # Generate samples
+    samples1 = rng1.normal(size=(100,))
+    samples2 = rng2.normal(size=(100,))
+
+    assert np.allclose(samples1, samples2)
+
+
+def test_random_state_copy(xp):
+    # Create initial rngs
+    rng1 = RandomState(xp, seed=42)
+    rng2 = rng1.copy()
+
+    # Generate some samples
+    samples1 = rng1.normal(size=(10,))
+
+
+    # Generate samples from copied rng
+    samples2 = rng2.normal(size=(10,))
+
+    # Should be identical
+    assert np.allclose(samples1, samples2)
+
+
+def test_random_state_different_sizes(xp):
+    rng = RandomState(xp, seed=42)
+
+    # Test scalar output
+    arr_0d = rng.normal()
+    assert arr_0d.shape == tuple()
+
+    # Test 1D array
+    arr_1d = rng.normal(size=5)
+    assert arr_1d.shape == (5,)
+
+    # Test 2D array
+    arr_2d = rng.normal(size=(3, 4))
+    assert arr_2d.shape == (3, 4)
+
+    # Test 3D array
+    arr_3d = rng.normal(size=(2, 3, 4))
+    assert arr_3d.shape == (2, 3, 4)

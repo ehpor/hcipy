@@ -102,6 +102,11 @@ class Grid(object):
         else:
             indices = criterium
 
+        # Handle NewStyleField by extracting underlying data
+        from .field import NewStyleField
+        if isinstance(indices, NewStyleField):
+            indices = indices.data
+
         new_coords = [c[indices] for c in self.coords]
 
         if np.isscalar(self.weights):
@@ -234,7 +239,8 @@ class Grid(object):
             for p in grid.points:
                 print(p)
         '''
-        return np.array(self.coords).T
+        xp = self.coords.xp
+        return xp.asarray(self.coords).T
 
     @property
     def is_separated(self):
@@ -447,15 +453,15 @@ class Grid(object):
         h.update(self._coordinate_system)
 
         if self.is_regular:
-            h.update(np.array(self.delta))
-            h.update(np.array(self.dims))
-            h.update(np.array(self.zero))
+            h.update(np.asarray(self.delta))
+            h.update(np.asarray(self.dims))
+            h.update(np.asarray(self.zero))
         elif self.is_separated:
             for s in self.separated_coords:
-                h.update(s)
+                h.update(np.asarray(s))
         else:
             for s in self.coords:
-                h.update(s)
+                h.update(np.asarray(s))
 
         return h.intdigest()
 
@@ -499,8 +505,9 @@ class Grid(object):
         int
             The index of the closest point.
         '''
-        rel_points = self.points - np.array(p) * np.ones(self.ndim)
-        return np.argmin(np.sum(rel_points**2, axis=-1))
+        xp = self.coords.xp
+        rel_points = self.points - xp.asarray(p) * xp.ones(self.ndim)
+        return xp.argmin(xp.sum(rel_points**2, axis=-1))
 
     def zeros(self, tensor_shape=None, dtype=None):
         '''Create a field of zeros from this `Grid`.
@@ -524,7 +531,8 @@ class Grid(object):
         if tensor_shape is not None:
             shape = tuple(tensor_shape) + shape
 
-        return Field(np.zeros(shape, dtype), self)
+        xp = self.coords.xp
+        return Field(xp.zeros(shape, dtype=dtype), self)
 
     def ones(self, tensor_shape=None, dtype=None):
         '''Create a field of ones from this `Grid`.
@@ -548,7 +556,8 @@ class Grid(object):
         if tensor_shape is not None:
             shape = tuple(tensor_shape) + shape
 
-        return Field(np.ones(shape, dtype=dtype), self)
+        xp = self.coords.xp
+        return Field(xp.ones(shape, dtype=dtype), self)
 
     def empty(self, tensor_shape=None, dtype=None):
         '''Create an empty Field from this `Grid`.
@@ -572,4 +581,5 @@ class Grid(object):
         if tensor_shape is not None:
             shape = tuple(tensor_shape) + shape
 
-        return Field(np.empty(shape, dtype=dtype), self)
+        xp = self.coords.xp
+        return Field(xp.empty(shape, dtype=dtype), self)

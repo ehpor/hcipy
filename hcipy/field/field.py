@@ -1,5 +1,6 @@
 import numpy as np
 from ..config import Configuration
+from .._math import fft as hcipy_fft
 
 class FieldBase:
     '''The value of some physical quantity for each point in some coordinate system.
@@ -1108,9 +1109,17 @@ def make_field_namespace(backend):
         slots = tuple(FFT_FUNCS.keys()) + tuple(FFT_FREQ_FUNCS.keys())
         fft_namespace = _make_namespace(slots)
 
+        # Check if backend is NumPy to use faster HCIPy FFT implementations.
+        is_numpy_backend = backend.__name__ == 'numpy'
+
         # Set the FFT functions.
         for func_name, sig in FFT_FUNCS.items():
-            func = getattr(backend.fft, func_name)
+            if is_numpy_backend:
+                # Replace Numpy FFTs with the optimized HCIPy implementations.
+                func = getattr(hcipy_fft, func_name)
+            else:
+                # Use backend's array API implementation.
+                func = getattr(backend.fft, func_name)
             wrapper_func = _make_array_api_namespace_func(func, sig, num_array_args=1)
             setattr(fft_namespace, func_name, wrapper_func)
 

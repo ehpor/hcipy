@@ -3,6 +3,8 @@ import copy
 import warnings
 import xxhash
 
+from .backends import to_numpy
+
 class Grid(object):
     '''A set of points on some coordinate system.
 
@@ -453,15 +455,15 @@ class Grid(object):
         h.update(self._coordinate_system)
 
         if self.is_regular:
-            h.update(np.asarray(self.delta))
-            h.update(np.asarray(self.dims))
-            h.update(np.asarray(self.zero))
+            h.update(to_numpy(self.delta).tobytes())
+            h.update(str(self.dims).encode())
+            h.update(to_numpy(self.zero).tobytes())
         elif self.is_separated:
             for s in self.separated_coords:
-                h.update(np.asarray(s))
+                h.update(to_numpy(s).tobytes())
         else:
             for s in self.coords:
-                h.update(np.asarray(s))
+                h.update(to_numpy(s).tobytes())
 
         return h.intdigest()
 

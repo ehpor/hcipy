@@ -68,8 +68,8 @@ def test_regular_coords():
     assert len(coords) == 2
     assert coords.dims == (3, 2)
     assert coords.shape == (2, 3)
-    assert coords.delta == (0.5, 1)
-    assert coords.zero == (0, 0)
+    assert tuple(coords.delta) == (0.5, 1)
+    assert tuple(coords.zero) == (0, 0)
 
     assert np.allclose(coords.separated_coords[0], [0, 0.5, 1])
     assert np.allclose(coords.separated_coords[1], [0, 1])
@@ -158,8 +158,8 @@ def test_grid_creation():
     assert rg.size == 4
     assert rg.dims == (2, 2)
     assert rg.shape == (2, 2)
-    assert rg.delta == (1, 1)
-    assert rg.zero == (0, 0)
+    assert tuple(rg.delta) == (1, 1)
+    assert tuple(rg.zero) == (0, 0)
 
 def test_grid_exceptions():
     ug = Grid(UnstructuredCoords([[1, 2], [3, 4]]))

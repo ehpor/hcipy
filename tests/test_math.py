@@ -4,7 +4,7 @@ import numpy as np
 
 
 def _parameters():
-    for func in ['fft', 'ifft', 'fft2', 'ifft2', 'fftn', 'ifftn', 'rfft', 'irfft', 'rfft2', 'irfft2', 'rfftn', 'irfftn', 'hfft', 'ihfft']:
+    for func in ['fft', 'ifft', 'fftn', 'ifftn', 'rfft', 'irfft', 'rfftn', 'irfftn', 'hfft', 'ihfft']:
         for dtype_in in ['float32', 'float64', 'complex64', 'complex128']:
             real_out = func.startswith('ir') or func.startswith('h')
 

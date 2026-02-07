@@ -7,22 +7,31 @@ from ..config import Configuration
 
 def _infer_xp(arrays):
     """Infer xp from input arrays.
-    
+
     Parameters
     ----------
     arrays : list or tuple
         Input arrays to infer xp from
-        
+
     Returns
     -------
     xp : module
-        The inferred xp module, or numpy as fallback
+        The inferred xp module, or numpy as fallback (in legacy mode)
+
+    Raises
+    ------
+    ValueError
+        If xp cannot be inferred and use_new_style_fields is True
     """
     if arrays is not None and len(arrays) > 0:
         try:
             return array_api_compat.array_namespace(*arrays)
         except (ValueError, TypeError):
             pass
+
+    # If we get here, xp could not be inferred
+    if Configuration().core.use_new_style_fields:
+        raise ValueError("xp must be specified when arrays don't provide it")
     return np
 
 
@@ -228,11 +237,15 @@ class UnstructuredCoords(Coords):
     Parameters
     ----------
     coords : list or tuple
-        A tuple of a list of positions for each dimension. The backend is
-        inferred from the input arrays.
+        A tuple of a list of positions for each dimension.
+    xp : module, optional
+        The array namespace (e.g., numpy, cupy, jax.numpy). If not provided,
+        it will be inferred from the input arrays.
     '''
-    def __init__(self, coords):
-        self._xp = _infer_xp(coords)
+    def __init__(self, coords, xp=None):
+        if xp is None:
+            xp = _infer_xp(coords)
+        self._xp = xp
         self.coords = [self._xp.asarray(c) for c in coords]
 
     @classmethod
@@ -383,16 +396,20 @@ class SeparatedCoords(Coords):
     Parameters
     ----------
     separated_coords : list or tuple
-        A tuple of a list of coordinates along each dimension. The backend is
-        inferred from the input arrays.
+        A tuple of a list of coordinates along each dimension.
+    xp : module, optional
+        The array namespace (e.g., numpy, cupy, jax.numpy). If not provided,
+        it will be inferred from the input arrays.
 
     Attributes
     ----------
     separated_coords
         A tuple of a list of coordinates along each dimension.
     '''
-    def __init__(self, separated_coords):
-        self._xp = _infer_xp(separated_coords)
+    def __init__(self, separated_coords, xp=None):
+        if xp is None:
+            xp = _infer_xp(separated_coords)
+        self._xp = xp
         # Make a copy to avoid modification from outside the class
         self.separated_coords = [self._xp.asarray(s, dtype='float', copy=True) for s in separated_coords]
 
@@ -565,16 +582,13 @@ class RegularCoords(Coords):
     ----------
     delta : array_like
         The spacing between the points.
-    dims : array_like
+    dims : tuple
         The number of points along each dimension.
     zero : array_like
         The coordinates for the first point.
     xp : module, optional
         The array namespace (e.g., numpy, cupy, jax.numpy). If not provided,
-        it will be inferred from the input arrays. If provided and arrays have
-        a different backend, an error will be raised. For RegularCoords, since
-        the parameters are scalars, xp must be explicitly provided if 
-        use_new_style_fields is True.
+        it will be inferred from the delta and zero arrays.
 
     Attributes
     ----------
@@ -586,33 +600,27 @@ class RegularCoords(Coords):
         The coordinates for the first point.
     '''
     def __init__(self, delta, dims, zero, xp=None):
-        if not isinstance(delta, Iterable):
-            raise ValueError('Delta should be an iterable.')
-
         if not isinstance(dims, Iterable):
             raise ValueError('Dims should be an iterable.')
 
-        if not isinstance(zero, Iterable):
-            raise ValueError('Zero should be an iterable.')
-
-        delta = tuple(float(d) for d in delta)
-        dims = tuple(int(n) for n in dims)
-        zero = tuple(float(z) for z in zero)
-
-        assert len(delta) == len(dims)
-        assert len(dims) == len(zero)
-
-        # For RegularCoords, we can't infer xp from scalar parameters
-        # So xp must be provided explicitly if use_new_style_fields is True
+        # Try to infer xp from delta and zero if not provided
         if xp is None:
-            if Configuration().core.use_new_style_fields:
-                raise ValueError("xp must be specified for RegularCoords with new-style Fields")
-            xp = np
-        
+            try:
+                xp = _infer_xp([delta, zero])
+            except ValueError:
+                # _infer_xp already raises ValueError for new-style fields
+                raise
+
         self._xp = xp
-        self.dims = dims
-        self.delta = delta
-        self.zero = zero
+
+        # Convert to arrays - accept tuples, lists, or arrays
+        self.delta = xp.asarray(delta, dtype=float)
+        self.dims = tuple(int(n) for n in dims)
+        self.zero = xp.asarray(zero, dtype=float)
+
+        # Validate dimensions match
+        assert len(self.delta) == len(self.dims), 'delta and dims must have same length'
+        assert len(self.dims) == len(self.zero), 'dims and zero must have same length'
 
     @classmethod
     def from_dict(cls, tree):
@@ -636,7 +644,17 @@ class RegularCoords(Coords):
         if tree['type'] != 'regular':
             raise ValueError('The type of coordinates should be "regular".')
 
-        return cls(tree['delta'], tree['dims'], tree['zero'])
+        # Restore xp from stored name
+        if tree.get('xp_name') == 'numpy':
+            xp = np
+        elif 'xp_name' in tree:
+            import importlib
+            xp = importlib.import_module(tree['xp_name'])
+        else:
+            # Backward compatibility: default to numpy
+            xp = np
+
+        return cls(tree['delta'], tree['dims'], tree['zero'], xp=xp)
 
     def to_dict(self):
         '''Convert the object to a dictionary for serialization.
@@ -646,11 +664,13 @@ class RegularCoords(Coords):
         dictionary
             The created dictionary.
         '''
+        # Convert arrays to lists for JSON serialization, store xp name
         tree = {
             'type': 'regular',
-            'delta': self.delta,
+            'delta': self.delta.tolist(),
             'dims': self.dims,
-            'zero': self.zero
+            'zero': self.zero.tolist(),
+            'xp_name': self._xp.__name__
         }
 
         return tree
@@ -658,19 +678,18 @@ class RegularCoords(Coords):
     def __getstate__(self):
         '''Get state for pickling.
         '''
+        # Convert arrays to lists for pickling
         return {
-            'delta': self.delta,
+            'delta': self.delta.tolist(),
             'dims': self.dims,
-            'zero': self.zero,
+            'zero': self.zero.tolist(),
             'xp_name': self._xp.__name__
         }
 
     def __setstate__(self, state):
         '''Restore state from pickle.
         '''
-        self.delta = state['delta']
         self.dims = state['dims']
-        self.zero = state['zero']
         # Restore xp from module name
         if state['xp_name'] == 'numpy':
             self._xp = np
@@ -678,6 +697,9 @@ class RegularCoords(Coords):
             # For other backends, import dynamically
             import importlib
             self._xp = importlib.import_module(state['xp_name'])
+        # Convert lists back to arrays
+        self.delta = self._xp.asarray(state['delta'], dtype=float)
+        self.zero = self._xp.asarray(state['zero'], dtype=float)
 
     @property
     def separated_coords(self):
@@ -727,7 +749,7 @@ class RegularCoords(Coords):
 
         assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
 
-        self.zero = tuple(aa + bb for aa, bb in zip(self.zero, b))
+        self.zero = self.zero + self._xp.asarray(b, dtype=float)
 
         return self
 
@@ -739,7 +761,7 @@ class RegularCoords(Coords):
 
         assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
 
-        self.zero = tuple(aa - bb for aa, bb in zip(self.zero, b))
+        self.zero = self.zero - self._xp.asarray(b, dtype=float)
 
         return self
 
@@ -751,8 +773,9 @@ class RegularCoords(Coords):
 
         assert len(f) == self.ndim, 'f must have same dimensionality as the coordinates.'
 
-        self.delta = tuple(d * ff for d, ff in zip(self.delta, f))
-        self.zero = tuple(z * ff for z, ff in zip(self.zero, f))
+        f_arr = self._xp.asarray(f, dtype=float)
+        self.delta = self.delta * f_arr
+        self.zero = self.zero * f_arr
 
         return self
 
@@ -772,13 +795,16 @@ class RegularCoords(Coords):
         if type(self) is not type(other):
             return False
 
-        return self.delta == other.delta and self.dims == other.dims and self.zero == other.zero
+        # Use xp.all() for array comparison (Array API compatible)
+        delta_equal = self._xp.all(self.delta == other.delta)
+        zero_equal = self._xp.all(self.zero == other.zero)
+        return delta_equal and self.dims == other.dims and zero_equal
 
     def reverse(self):
         '''Reverse the ordering of points in-place.
         '''
-        self.zero = tuple(z + d * (n - 1) for z, d, n in zip(self.zero, self.delta, self.dims))
-        self.delta = tuple(-d for d in self.delta)
+        self.zero = self.zero + self.delta * (self._xp.asarray(self.dims) - 1)
+        self.delta = -self.delta
 
         return self
 

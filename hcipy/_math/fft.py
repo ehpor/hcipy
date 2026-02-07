@@ -24,11 +24,12 @@ except ImportError:
 def _make_1d_fft(func_name):
     """Create a 1D FFT function with minimal runtime overhead.
     """
+    mkl_func = None
     if mkl_fft is not None:
         try:
             mkl_func = getattr(mkl_fft, func_name)
         except AttributeError:
-            mkl_func = None
+            pass
 
     if pyfftw is not None:
         fftw_func = getattr(pyfftw.interfaces.scipy_fft, func_name)
@@ -81,11 +82,12 @@ def _make_1d_fft(func_name):
 def _make_nd_fft(func_name):
     """Create an N-D FFT function with minimal runtime overhead.
     """
+    mkl_func = None
     if mkl_fft is not None:
         try:
             mkl_func = getattr(mkl_fft, func_name)
         except AttributeError:
-            mkl_func = None
+            pass
 
     if pyfftw is not None:
         fftw_func = getattr(pyfftw.interfaces.scipy_fft, func_name)

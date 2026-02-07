@@ -4,6 +4,7 @@ from .cpu import get_num_available_cores
 import numpy as np
 import scipy
 import warnings
+import array_api_compat
 
 _CPU_COUNT = get_num_available_cores()
 
@@ -20,6 +21,10 @@ try:
     pyfftw.interfaces.cache.set_keepalive_time(30)
 except ImportError:
     pyfftw = None
+
+def _is_numpy_array(x):
+    """Check if the input is a NumPy array."""
+    return x.__class__.__module__.startswith("numpy")
 
 def _make_1d_fft(func_name):
     """Create a 1D FFT function with minimal runtime overhead.
@@ -40,6 +45,11 @@ def _make_1d_fft(func_name):
     real_out = func_name.startswith('ir') or func_name.startswith('h')
 
     def fft_1d(x, /, *, n=None, axis=-1, norm='backward', overwrite_x=False, method=None, threads=None):
+        # If the array is not a Numpy array, defer to the native implementation.
+        if not _is_numpy_array(x):
+            xp = array_api_compat.array_namespace(x)
+            return getattr(xp.fft, func_name)(x, n=n, axis=axis, norm=norm)
+
         methods = Configuration().fourier.fft.method if method is None else [method]
         threads_attempts = ([1] if x.size < 256**2 else [_CPU_COUNT, 1]) if threads is None else [threads]
 
@@ -98,6 +108,11 @@ def _make_nd_fft(func_name):
     real_out = func_name.startswith('ir') or func_name.startswith('h')
 
     def fft_nd(x, /, *, s=None, axes=None, norm='backward', overwrite_x=False, method=None, threads=None):
+        # If the array is not a Numpy array, defer to the native implementation.
+        if not _is_numpy_array(x):
+            xp = array_api_compat.array_namespace(x)
+            return getattr(xp.fft, func_name)(x, s=s, axes=axes, norm=norm)
+
         methods = Configuration().fourier.fft.method if method is None else [method]
         threads_attempts = ([1] if x.size < 256**2 else [_CPU_COUNT, 1]) if threads is None else [threads]
 

@@ -63,7 +63,7 @@ def compile_tutorial(tutorial_name, force_recompile=False):
                 return title, level, description, thumb_dest.split('/', 1)[-1], False
 
     # Execute notebook if not already executed
-    already_executed = any(c.get('outputs') or c.get('execution_count') for c in notebook.cells if c.cell_type == 'code')
+    already_executed = any(len(c.get('outputs', [])) or c.get('execution_count') for c in notebook.cells if c.cell_type == 'code')
 
     resources = {'metadata': {'path': os.path.dirname(notebook_path)}}
 
@@ -228,6 +228,7 @@ def compile_all_tutorials():
     tutorials = {}
     tutorial_names = sorted(os.listdir('tutorial_notebooks/'))
     tutorial_names = [name for name in tutorial_names if 'checkpoint' not in name]
+    tutorial_names = [name for name in tutorial_names if not name.startswith('.')]
 
     with_errors = False
 

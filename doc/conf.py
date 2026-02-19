@@ -37,15 +37,18 @@ extensions = ['sphinx.ext.autodoc',
     'numpydoc',
     'nbsphinx']
 
+# nbsphinx configuration
+nbsphinx_execute = 'always'
+nbsphinx_timeout = 600  # 10 minutes timeout per notebook
+nbsphinx_kernel_name = 'python3'
+
 numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
+# Note: nbsphinx automatically adds support for .ipynb files, so do not include them here.
 source_suffix = '.rst'
 
 # The master toctree document.
@@ -53,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'HCIPy'
-copyright = u'2017-2022, Emiel Por'
+copyright = u'2017-2026, Emiel Por'
 author = u'Emiel Por'
 
 # The version info for the project you're documenting, acts as replacement for

@@ -56,12 +56,12 @@ Operations on this field will automatically use the GPU:
 .. code-block:: python
 
    # Get the backend module for backend-agnostic operations
-   xp = field.__array_interface__()
+   xp = field.__array_namespace__()
 
    # Perform GPU-accelerated computations
    result = xp.sin(field) * 2 + 1
 
-In this example, the ``field`` object wraps a CuPy array, so all mathematical operations are executed on the GPU. The ``__array_interface__()`` method returns the backend module (in this case, CuPy), which you can use for backend-agnostic operations that work with both CPU and GPU arrays.
+In this example, the ``field`` object wraps a CuPy array, so all mathematical operations are executed on the GPU. The ``__array_namespace__()`` method returns the backend module (in this case, CuPy), which you can use for backend-agnostic operations that work with both CPU and GPU arrays.
 
 Note that backend selection is explicit - HCIPy does not automatically switch to GPU backends even when available. You must intentionally create fields using a backend that uses GPU acceleration. This design gives you full control over where computations occur and allows you to mix CPU and GPU operations in the same script by creating different fields with different backends.
 

@@ -1,5 +1,39 @@
 import numpy as np
 import array_api_compat
+from ..config import Configuration
+
+
+def _infer_xp(*arrays):
+    """Infer xp from input arrays.
+
+    Parameters
+    ----------
+    *arrays : arrays
+        Variable number of input arrays to infer xp from
+
+    Returns
+    -------
+    xp : module
+        The inferred xp module, or numpy as fallback (in legacy mode)
+
+    Raises
+    ------
+    ValueError
+        If xp cannot be inferred and use_new_style_fields is True
+    """
+    # Filter out None values
+    arrays = tuple(a for a in arrays if a is not None)
+    
+    if len(arrays) > 0:
+        try:
+            return array_api_compat.array_namespace(*arrays)
+        except (ValueError, TypeError):
+            pass
+
+    # If we get here, xp could not be inferred
+    if Configuration().core.use_new_style_fields:
+        raise ValueError("xp must be specified when arrays don't provide it")
+    return np
 
 
 def to_numpy(arr):

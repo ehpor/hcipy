@@ -148,7 +148,8 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
         self.output_grid = output_grid
 
         if D is None:
-            D = max(delta * (n - 1) for delta, n in zip(input_grid.delta, input_grid.dims))
+            xp = input_grid.xp
+            D = xp.max(input_grid.delta * (xp.asarray(input_grid.dims) - 1))
 
         if separation is None:
             separation = D
@@ -162,7 +163,8 @@ class OpticalDifferentiationWavefrontSensorOptics(WavefrontSensorOptics):
             raise ValueError('The requested focal plane sampling is too low to sufficiently sample the wavefront sensor output.')
 
         if num_airy is None:
-            self.num_airy = max((n - 1) / 2 for n in input_grid.shape)
+            xp = input_grid.xp
+            self.num_airy = xp.max((xp.asarray(input_grid.shape) - 1) / 2)
         else:
             self.num_airy = num_airy
 

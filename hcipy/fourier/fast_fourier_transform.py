@@ -276,15 +276,16 @@ class FastFourierTransform(FourierTransform):
 
         # Calculate the shift array when the input grid was shifted compared to the native shift
         # expected by the numpy FFT implementation.
-        center = tuple(zero + delta * (dim // 2) for zero, delta, dim in zip(input_grid.zero, input_grid.delta, input_grid.dims))
-        self.shift_input = _numexpr_grid_shift(tuple(-c for c in center), self.output_grid)
+        xp = input_grid.xp
+        center = input_grid.zero + input_grid.delta * (xp.asarray(input_grid.dims) // 2)
+        self.shift_input = _numexpr_grid_shift(-center, self.output_grid)
 
         # Remove piston shift (remove central shift phase)
         self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0]
 
         # Calculate the multiplication for emulating the FFTshift (if requested).
         if emulate_fftshifts:
-            f_shift = tuple(delta * (dim // 2) for delta, dim in zip(input_grid.delta, self.internal_shape[::-1]))
+            f_shift = input_grid.delta * (xp.asarray(self.internal_shape[::-1]) // 2)
             fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
 
             if self.cutout_output:
@@ -305,7 +306,7 @@ class FastFourierTransform(FourierTransform):
 
         # Calculate the multiplication for emulating the FFTshift (if requested).
         if emulate_fftshifts:
-            f_shift = tuple(delta * (dim // 2) for delta, dim in zip(self.input_grid.delta, self.internal_shape[::-1]))
+            f_shift = self.input_grid.delta * (xp.asarray(self.internal_shape[::-1]) // 2)
             fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
 
             fftshift *= np.exp(-1j * np.dot(f_shift, self.internal_grid.zero))

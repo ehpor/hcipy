@@ -133,7 +133,7 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
         # Oversampling is necessary to see all frequencies in the output wavefront sensor plane
         # and we require at least 2 pixels per spatial resolution element for the default case.
         qmin = xp.max((output_grid.delta * xp.asarray(output_grid.dims)) / (input_grid.delta * xp.asarray(input_grid.dims)))
-        qmin = xp.ceil(xp.max(qmin, 2))
+        qmin = xp.ceil(max(qmin, 2))
 
         if q is None:
             q = qmin

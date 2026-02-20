@@ -3,6 +3,8 @@ import copy
 import warnings
 import xxhash
 
+from .backends import to_numpy
+
 class Grid(object):
     '''A set of points on some coordinate system.
 
@@ -101,6 +103,11 @@ class Grid(object):
             indices = criterium(self) != 0
         else:
             indices = criterium
+
+        # Handle NewStyleField by extracting underlying data
+        from .field import NewStyleField
+        if isinstance(indices, NewStyleField):
+            indices = indices.data
 
         new_coords = [c[indices] for c in self.coords]
 
@@ -234,7 +241,8 @@ class Grid(object):
             for p in grid.points:
                 print(p)
         '''
-        return np.array(self.coords).T
+        xp = self.coords.xp
+        return xp.asarray(self.coords).T
 
     @property
     def is_separated(self):
@@ -304,6 +312,12 @@ class Grid(object):
     @staticmethod
     def _add_coordinate_system(name, grid_class):
         Grid._coordinate_systems[name] = grid_class
+
+    @property
+    def xp(self):
+        '''The backend of this grid.
+        '''
+        return self.coords.xp
 
     def __getitem__(self, i):
         '''The `i`-th point in this grid.
@@ -447,15 +461,15 @@ class Grid(object):
         h.update(self._coordinate_system)
 
         if self.is_regular:
-            h.update(np.array(self.delta))
-            h.update(np.array(self.dims))
-            h.update(np.array(self.zero))
+            h.update(to_numpy(self.delta).tobytes())
+            h.update(str(self.dims).encode())
+            h.update(to_numpy(self.zero).tobytes())
         elif self.is_separated:
             for s in self.separated_coords:
-                h.update(s)
+                h.update(to_numpy(s).tobytes())
         else:
             for s in self.coords:
-                h.update(s)
+                h.update(to_numpy(s).tobytes())
 
         return h.intdigest()
 
@@ -499,8 +513,9 @@ class Grid(object):
         int
             The index of the closest point.
         '''
-        rel_points = self.points - np.array(p) * np.ones(self.ndim)
-        return np.argmin(np.sum(rel_points**2, axis=-1))
+        xp = self.xp
+        rel_points = self.points - xp.asarray(p) * xp.ones(self.ndim)
+        return xp.argmin(xp.sum(rel_points**2, axis=-1))
 
     def zeros(self, tensor_shape=None, dtype=None):
         '''Create a field of zeros from this `Grid`.
@@ -524,7 +539,7 @@ class Grid(object):
         if tensor_shape is not None:
             shape = tuple(tensor_shape) + shape
 
-        return Field(np.zeros(shape, dtype), self)
+        return Field(self.xp.zeros(shape, dtype=dtype), self)
 
     def ones(self, tensor_shape=None, dtype=None):
         '''Create a field of ones from this `Grid`.
@@ -548,7 +563,7 @@ class Grid(object):
         if tensor_shape is not None:
             shape = tuple(tensor_shape) + shape
 
-        return Field(np.ones(shape, dtype=dtype), self)
+        return Field(self.xp.ones(shape, dtype=dtype), self)
 
     def empty(self, tensor_shape=None, dtype=None):
         '''Create an empty Field from this `Grid`.
@@ -572,4 +587,4 @@ class Grid(object):
         if tensor_shape is not None:
             shape = tuple(tensor_shape) + shape
 
-        return Field(np.empty(shape, dtype=dtype), self)
+        return Field(self.xp.empty(shape, dtype=dtype), self)

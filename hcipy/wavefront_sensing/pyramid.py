@@ -122,8 +122,9 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
         self.input_grid = input_grid
         self.output_grid = output_grid
 
+        xp = input_grid.xp
         if pupil_diameter is None:
-            pupil_diameter = max(delta * n for delta, n in zip(input_grid.delta, input_grid.shape))
+            pupil_diameter = xp.max(input_grid.delta * xp.asarray(input_grid.dims))
 
         if separation is None:
             separation = pupil_diameter
@@ -131,8 +132,8 @@ class PyramidWavefrontSensorOptics(WavefrontSensorOptics):
         # Create the intermediate focal grid
         # Oversampling is necessary to see all frequencies in the output wavefront sensor plane
         # and we require at least 2 pixels per spatial resolution element for the default case.
-        qmin = max((delta_out * n_out) / (delta_in * n_in) for delta_in, n_in, delta_out, n_out in zip(input_grid.delta, input_grid.dims, output_grid.delta, output_grid.dims))
-        qmin = math.ceil(max(qmin, 2))
+        qmin = xp.max((output_grid.delta * xp.asarray(output_grid.dims)) / (input_grid.delta * xp.asarray(input_grid.dims)))
+        qmin = xp.ceil(max(qmin, 2))
 
         if q is None:
             q = qmin

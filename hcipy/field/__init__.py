@@ -1,11 +1,15 @@
 __all__ = [
     'Grid',
     'Field',
+    'OldStyleField',
+    'NewStyleField',
+    'make_field_namespace',
     'CartesianGrid',
     'PolarGrid',
     'UnstructuredCoords',
     'SeparatedCoords',
     'RegularCoords',
+    'to_numpy',
     'field_einsum',
     'field_dot',
     'field_trace',
@@ -44,3 +48,4 @@ from .polar_grid import *
 from .spherical_grid import *
 from .field import *
 from .util import *
+from .backends import to_numpy

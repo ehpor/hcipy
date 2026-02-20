@@ -551,9 +551,9 @@ class NewStyleField(FieldBase):
     # sort = _make_array_api_func('sort', 'self, /, *, axis=-1, descending=False, stable=True')
     sort = _make_array_api_func('sort', 'self, /, *, axis=-1, stable=True')  # Numpy doesn't support the descending keyword yet.
     squeeze = _make_array_api_func('squeeze', 'self, /, *, axis=None')
-    std = _make_array_api_func('std', 'self, /, *, axis=None, correction=0.0, keepdim=False')
+    std = _make_array_api_func('std', 'self, /, *, axis=None, correction=0.0, keepdims=False')
     sum = _make_array_api_func('sum', 'self, /, *, axis=None, dtype=None, keepdims=False')
-    var = _make_array_api_func('var', 'self, /, *, axis=None, correction=0.0, keepdim=False')
+    var = _make_array_api_func('var', 'self, /, *, axis=None, correction=0.0, keepdims=False')
 
     @property
     def real(self):

@@ -42,7 +42,9 @@ class MultiScaleCoronagraph(OpticalElement):
     '''
     def __init__(self, input_grid, complex_mask, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
         self.input_grid = input_grid
-        pupil_diameter = tuple(n * delta for n, delta in zip(input_grid.dims, input_grid.delta))
+
+        xp = input_grid.xp
+        pupil_diameter = xp.asarray(input_grid.dims) * input_grid.delta
 
         if hasattr(lyot_stop, 'forward') or lyot_stop is None:
             self.lyot_stop = lyot_stop

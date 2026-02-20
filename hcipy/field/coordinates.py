@@ -3,36 +3,7 @@ import copy
 import math
 from collections.abc import Iterable
 import array_api_compat
-from ..config import Configuration
-
-def _infer_xp(arrays):
-    """Infer xp from input arrays.
-
-    Parameters
-    ----------
-    arrays : list or tuple
-        Input arrays to infer xp from
-
-    Returns
-    -------
-    xp : module
-        The inferred xp module, or numpy as fallback (in legacy mode)
-
-    Raises
-    ------
-    ValueError
-        If xp cannot be inferred and use_new_style_fields is True
-    """
-    if arrays is not None and len(arrays) > 0:
-        try:
-            return array_api_compat.array_namespace(*arrays)
-        except (ValueError, TypeError):
-            pass
-
-    # If we get here, xp could not be inferred
-    if Configuration().core.use_new_style_fields:
-        raise ValueError("xp must be specified when arrays don't provide it")
-    return np
+from .backends import _infer_xp
 
 
 class Coords(object):
@@ -244,7 +215,7 @@ class UnstructuredCoords(Coords):
     '''
     def __init__(self, coords, xp=None):
         if xp is None:
-            xp = _infer_xp(coords)
+            xp = _infer_xp(*coords)
         self._xp = xp
         self.coords = [self._xp.asarray(c) for c in coords]
 
@@ -408,7 +379,7 @@ class SeparatedCoords(Coords):
     '''
     def __init__(self, separated_coords, xp=None):
         if xp is None:
-            xp = _infer_xp(separated_coords)
+            xp = _infer_xp(*separated_coords)
         self._xp = xp
         # Make a copy to avoid modification from outside the class
         self.separated_coords = [self._xp.asarray(s, dtype='float', copy=True) for s in separated_coords]
@@ -606,7 +577,7 @@ class RegularCoords(Coords):
         # Try to infer xp from delta and zero if not provided
         if xp is None:
             try:
-                xp = _infer_xp([delta, zero])
+                xp = _infer_xp(delta, zero)
             except ValueError:
                 # _infer_xp already raises ValueError for new-style fields
                 raise

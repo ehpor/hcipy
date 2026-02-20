@@ -365,8 +365,6 @@ class NewStyleField(FieldBase):
 
         self.data[key] = value
 
-        return self
-
     @property
     def dtype(self):
         '''The data type of the array elements.'''

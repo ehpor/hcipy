@@ -313,6 +313,12 @@ class Grid(object):
     def _add_coordinate_system(name, grid_class):
         Grid._coordinate_systems[name] = grid_class
 
+    @property
+    def xp(self):
+        '''The backend of this grid.
+        '''
+        return self.coords.xp
+
     def __getitem__(self, i):
         '''The `i`-th point in this grid.
         '''
@@ -507,7 +513,7 @@ class Grid(object):
         int
             The index of the closest point.
         '''
-        xp = self.coords.xp
+        xp = self.xp
         rel_points = self.points - xp.asarray(p) * xp.ones(self.ndim)
         return xp.argmin(xp.sum(rel_points**2, axis=-1))
 
@@ -533,8 +539,7 @@ class Grid(object):
         if tensor_shape is not None:
             shape = tuple(tensor_shape) + shape
 
-        xp = self.coords.xp
-        return Field(xp.zeros(shape, dtype=dtype), self)
+        return Field(self.xp.zeros(shape, dtype=dtype), self)
 
     def ones(self, tensor_shape=None, dtype=None):
         '''Create a field of ones from this `Grid`.
@@ -558,8 +563,7 @@ class Grid(object):
         if tensor_shape is not None:
             shape = tuple(tensor_shape) + shape
 
-        xp = self.coords.xp
-        return Field(xp.ones(shape, dtype=dtype), self)
+        return Field(self.xp.ones(shape, dtype=dtype), self)
 
     def empty(self, tensor_shape=None, dtype=None):
         '''Create an empty Field from this `Grid`.
@@ -583,5 +587,4 @@ class Grid(object):
         if tensor_shape is not None:
             shape = tuple(tensor_shape) + shape
 
-        xp = self.coords.xp
-        return Field(xp.empty(shape, dtype=dtype), self)
+        return Field(self.xp.empty(shape, dtype=dtype), self)

@@ -942,7 +942,7 @@ def test_damped_oscillator_vibration():
         vib.evolve_until(0.3)
 
     # Test that invalid driving_psd raises ValueError
-    with pytest.raises(ValueError, match="driving psd"):
+    with pytest.raises(ValueError, match="driving_psd must be"):
         DampedOscillatorVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=-1e-12)
 
     # Test that invalid damping ratio raises ValueError

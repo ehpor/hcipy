@@ -61,6 +61,7 @@ __all__ = [
     'even_aspheric_surface_sag',
     'TipTiltMirror',
     'SimpleVibration',
+    'DampedOscillatorVibration',
     'Wavefront',
     'ThinLens',
     'Prism',

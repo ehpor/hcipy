@@ -912,3 +912,39 @@ def test_surface_profile_fill_value():
     spherical_sag_min = spherical_surface_sag(radius_of_curvature, fill_value='min')(grid_large)
     assert not np.any(np.isnan(spherical_sag_min))
     assert np.allclose(np.nanmin(spherical_sag_nan), np.min(spherical_sag_min))
+
+def test_damped_oscillator_vibration():
+    pupil_grid = make_pupil_grid(32)
+    mode = pupil_grid.x
+
+    # Test white noise driven oscillator with driving PSD of 1e-12 m^2/Hz
+    driving_psd = 1e-12  # m^2/Hz
+    vib = DampedOscillatorVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd)
+
+    # Store initial displacement
+    disp0 = vib.displacement
+
+    # Test evolve_until
+    vib.evolve_until(0.5)
+    assert vib.t == 0.5
+
+    # Test that evolution produces different values
+    assert vib.displacement != disp0
+
+    # Test forward/backward roundtrip
+    wf = Wavefront(pupil_grid.ones(), wavelength=1e-6)
+    wf_fwd = vib.forward(wf)
+    wf_bwd = vib.backward(wf_fwd)
+    assert np.allclose(wf.electric_field, wf_bwd.electric_field)
+
+    # Test that backward evolution raises ValueError
+    with pytest.raises(ValueError, match="Cannot evolve backward in time"):
+        vib.evolve_until(0.3)
+
+    # Test that invalid driving_psd raises ValueError
+    with pytest.raises(ValueError, match="driving psd"):
+        DampedOscillatorVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=-1e-12)
+
+    # Test that invalid damping ratio raises ValueError
+    with pytest.raises(ValueError, match="damping ratio"):
+        DampedOscillatorVibration(mode, natural_frequency=10.0, damping_ratio=0, driving_psd=driving_psd)

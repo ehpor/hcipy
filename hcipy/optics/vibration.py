@@ -75,13 +75,22 @@ class DampedOscillatorVibration(OpticalElement):
         if damping_ratio <= 0:
             raise ValueError(f"The damping ratio must be positive, got {damping_ratio}.")
 
-        # Initialize state for position and velocity from stationary distribution
-        var_x = self.driving_psd / (4 * self.damping_ratio * self._omega_0**3)
-        var_v = self.driving_psd * self._omega_0 / (4 * self.damping_ratio)
+        # Pre-compute continuous-time state matrix and stationary covariance
+        self._A_cont = np.array([[0, 1], [-self._omega_0**2, -2*self.damping_ratio*self._omega_0]])
+        
+        # Input matrix (noise affects velocity)
+        B = np.array([[0], [1]])
+        
+        # Noise intensity
+        Q_cont = B @ np.array([[self.driving_psd]]) @ B.T
+        
+        # Solve continuous Lyapunov equation for stationary covariance
+        self._P = solve_continuous_lyapunov(self._A_cont, -Q_cont)
 
+        # Initialize state for position and velocity from stationary distribution
         self._state = np.array([
-            self.rng.standard_normal() * np.sqrt(var_x),
-            self.rng.standard_normal() * np.sqrt(var_v)
+            self.rng.standard_normal() * np.sqrt(self._P[0, 0]),
+            self.rng.standard_normal() * np.sqrt(self._P[1, 1])
         ])
 
     @property
@@ -137,44 +146,6 @@ class DampedOscillatorVibration(OpticalElement):
         '''
         return self._state[0]
 
-    def _compute_state_transition_matrix(self, dt):
-        '''Compute state transition matrix for a given timestep.
-
-        For a damped harmonic oscillator, the state vector is [x, v] where x is position
-        and v is velocity. The state transition matrix A is derived from the continuous-time
-        dynamics: dx/dt = v, dv/dt = -ω₀²x - 2ζω₀v.
-
-        The exact solution for free evolution (no forcing) is:
-        x(t+dt) = a*x(t) + b*v(t)
-        v(t+dt) = c*x(t) + d*v(t)
-
-        Parameters
-        ----------
-        dt : scalar
-            The timestep in seconds.
-
-        Returns
-        -------
-        A : ndarray
-            The 2x2 state transition matrix [[a, b], [c, d]].
-        '''
-        omega_0 = self._omega_0
-        zeta = self.damping_ratio
-
-        omega_d = omega_0 * np.sqrt(1 - zeta**2)
-        decay = np.exp(-zeta * omega_0 * dt)
-
-        cos_wdt = np.cos(omega_d * dt)
-        sin_wdt = np.sin(omega_d * dt)
-
-        # State transition matrix elements
-        a = decay * (cos_wdt + zeta * omega_0 / omega_d * sin_wdt)
-        b = decay * sin_wdt / omega_d
-        c = -omega_0**2 * decay * sin_wdt / omega_d
-        d = decay * (cos_wdt - zeta * omega_0 / omega_d * sin_wdt)
-
-        return np.array([[a, b], [c, d]])
-
     def evolve_until(self, t):
         '''Evolve the oscillator until time t.
 
@@ -199,33 +170,18 @@ class DampedOscillatorVibration(OpticalElement):
         if delta_t == 0:
             return
 
-        omega_0 = self._omega_0
-        zeta = self.damping_ratio
-
-        # Continuous-time state matrix
-        A_cont = np.array([[0, 1], [-omega_0**2, -2*zeta*omega_0]])
-
-        # Input matrix (noise affects velocity)
-        B = np.array([[0], [1]])
-
-        # Noise intensity
-        Q_cont = B @ np.array([[self.driving_psd]]) @ B.T
-
-        # Solve continuous Lyapunov equation for stationary covariance
-        P = solve_continuous_lyapunov(A_cont, -Q_cont)
-
         # Discrete-time state transition matrix
-        A_disc = expm(A_cont * delta_t)
-
+        A_disc = expm(self._A_cont * delta_t)
+        
         # Discrete-time noise covariance from discrete Lyapunov equation
-        Q_disc = P - A_disc @ P @ A_disc.T
-
+        Q_disc = self._P - A_disc @ self._P @ A_disc.T
+        
         # Ensure positive semi-definite by symmetrizing
         Q_disc = (Q_disc + Q_disc.T) / 2
-
+        
         # Generate noise vector from multivariate normal with covariance Q_disc
         noise = self.rng.multivariate_normal([0, 0], Q_disc)
-
+        
         # Evolve state
         self._state = A_disc @ self._state + noise
         self._t = t

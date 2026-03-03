@@ -919,7 +919,7 @@ def test_damped_oscillator_vibration():
 
     # Test white noise driven oscillator with driving PSD of 1e-12 m^2/Hz
     driving_psd = 1e-12  # m^2/Hz
-    vib = DampedOscillatorVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd)
+    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd)
 
     # Store initial displacement
     disp0 = vib.displacement
@@ -943,11 +943,11 @@ def test_damped_oscillator_vibration():
 
     # Test that invalid driving_psd raises ValueError
     with pytest.raises(ValueError, match="driving_psd must be"):
-        DampedOscillatorVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=-1e-12)
+        DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=-1e-12)
 
     # Test that invalid damping ratio raises ValueError
     with pytest.raises(ValueError, match="damping ratio"):
-        DampedOscillatorVibration(mode, natural_frequency=10.0, damping_ratio=0, driving_psd=driving_psd)
+        DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0, driving_psd=driving_psd)
 
 def test_damped_oscillator_vibration_stationary_distribution():
     pupil_grid = make_pupil_grid(32)
@@ -955,17 +955,17 @@ def test_damped_oscillator_vibration_stationary_distribution():
 
     # Test that stationary distribution matches theoretical RMS
     driving_psd = 1e-12  # m^2/Hz
-    vib = DampedOscillatorVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd)
-    
+    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd)
+
     # Evolve for 5000 timesteps to reach stationary distribution
     positions = []
     for i in range(5000):
         vib.evolve_until(i * 0.01)
         positions.append(vib.displacement)
-    
+
     # Check that measured RMS matches theoretical within 15%
     rms_measured = np.std(positions[100:])  # Skip initial transient
     rms_target = vib.rms_displacement
     ratio = rms_measured / rms_target
-    
+
     assert 0.85 < ratio < 1.15, f"RMS ratio {ratio:.3f} is outside acceptable range [0.85, 1.15]"

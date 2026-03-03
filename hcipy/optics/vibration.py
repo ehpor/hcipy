@@ -37,7 +37,7 @@ class SimpleVibration(OpticalElement):
         wf.electric_field *= np.exp(-1j * (self.mode * self.amplitude / wf.wavelength * np.sin(self.phase)))
         return wf
 
-class DampedOscillatorVibration(OpticalElement):
+class DampedHarmonicVibration(OpticalElement):
     '''A damped harmonic oscillator vibration model driven by white noise.
 
     This class models a damped harmonic oscillator with natural frequency and
@@ -76,14 +76,14 @@ class DampedOscillatorVibration(OpticalElement):
             raise ValueError(f"The damping ratio must be positive, got {damping_ratio}.")
 
         # Pre-compute continuous-time state matrix and stationary covariance
-        self._A_cont = np.array([[0, 1], [-self._omega_0**2, -2*self.damping_ratio*self._omega_0]])
-        
+        self._A_cont = np.array([[0, 1], [-self._omega_0**2, -2 * self.damping_ratio * self._omega_0]])
+
         # Input matrix (noise affects velocity)
         B = np.array([[0], [1]])
-        
+
         # Noise intensity
         Q_cont = B @ np.array([[self.driving_psd]]) @ B.T
-        
+
         # Solve continuous Lyapunov equation for stationary covariance
         self._P = solve_continuous_lyapunov(self._A_cont, -Q_cont)
 
@@ -172,16 +172,16 @@ class DampedOscillatorVibration(OpticalElement):
 
         # Discrete-time state transition matrix
         A_disc = expm(self._A_cont * delta_t)
-        
+
         # Discrete-time noise covariance from discrete Lyapunov equation
         Q_disc = self._P - A_disc @ self._P @ A_disc.T
-        
+
         # Ensure positive semi-definite by symmetrizing
         Q_disc = (Q_disc + Q_disc.T) / 2
-        
+
         # Generate noise vector from multivariate normal with covariance Q_disc
         noise = self.rng.multivariate_normal([0, 0], Q_disc)
-        
+
         # Evolve state
         self._state = A_disc @ self._state + noise
         self._t = t

@@ -6,8 +6,8 @@ class SimpleVibration(OpticalElement):
     def __init__(self, mode, amplitude, frequency, phase_0=0):
         self.mode = mode
         self.amplitude = amplitude
-        self.frequency = frequency
         self.phase_0 = phase_0
+        self._frequency = frequency
         self.t = 0
 
     @property
@@ -16,7 +16,7 @@ class SimpleVibration(OpticalElement):
 
     @frequency.setter
     def frequency(self, frequency):
-        delta_phase = 2 * np.pi * (self.frequency + self.frequency)
+        delta_phase = 2 * np.pi * (self._frequency - frequency) * self.t
         self.phase_0 += delta_phase
         self._frequency = frequency
 

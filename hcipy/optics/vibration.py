@@ -5,6 +5,10 @@ from .optical_element import OpticalElement
 class SimpleVibration(OpticalElement):
     '''A simple vibration model.
 
+    This models a purely sinusoidal vibration of a single mode (such as tip or tilt).
+    No noise is added: the motion is purely sinusoidal with a single frequency. However,
+    the frequency and amplitude can be changed on the fly, if necessary.
+
     Parameters
     ----------
     mode : Field

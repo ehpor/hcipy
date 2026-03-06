@@ -5,6 +5,7 @@ __all__ = [
     'SpectralNoiseFFT',
     'SpectralNoiseFactoryMultiscale',
     'SpectralNoiseMultiscale',
+    'StateSpaceDynamics',
     'large_poisson',
     'large_gamma',
     'make_emccd_noise',
@@ -26,6 +27,7 @@ __all__ = [
 ]
 
 from .spectral_noise import *
+from .stochastic_dynamics import *
 from .stats import *
 from .matrix_inversion import *
 from .singular_value_decomposition import *

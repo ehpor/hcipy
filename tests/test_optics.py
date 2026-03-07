@@ -969,3 +969,57 @@ def test_damped_oscillator_vibration_stationary_distribution():
     ratio = rms_measured / rms_target
 
     assert 0.85 < ratio < 1.15, f"RMS ratio {ratio:.3f} is outside acceptable range [0.85, 1.15]"
+
+def test_dynamic_surface_aberration_mode_count_mismatch():
+    from hcipy.util import StateSpaceDynamics, ar_to_state_space
+
+    ar_coeffs = np.array([0.5, -0.3])
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance=0.01, dt=0.01)
+    dynamics = StateSpaceDynamics(A, B, C)
+
+    grid = make_pupil_grid(16)
+    mode = grid.ones()
+    modes = ModeBasis([mode, mode])
+
+    with pytest.raises(ValueError):
+        DynamicSurfaceAberration(modes, dynamics, refractive_index=1.5)
+
+def test_dynamic_surface_aberration_forward_backward():
+    from hcipy.util import StateSpaceDynamics, ar_to_state_space
+
+    ar_coeffs = np.array([0.5, -0.3])
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance=0.01, dt=0.01)
+    dynamics = StateSpaceDynamics(A, B, C, seed=42)
+
+    grid = make_pupil_grid(16)
+    mode = grid.ones()
+    modes = ModeBasis([mode])
+
+    vib = DynamicSurfaceAberration(modes, dynamics, refractive_index=1.5)
+    vib.evolve_until(0.5)
+
+    wf = Wavefront(mode)
+    wf_fwd = vib.forward(wf)
+    wf_back = vib.backward(wf)
+
+    assert np.allclose(wf.electric_field, vib.backward(vib.forward(wf)).electric_field)
+    assert np.allclose(wf.electric_field, vib.forward(vib.backward(wf)).electric_field)
+
+def test_dynamic_surface_aberration_refractive_index():
+    from hcipy.util import StateSpaceDynamics, ar_to_state_space
+
+    ar_coeffs = np.array([0.5, -0.3])
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance=0.01, dt=0.01)
+    dynamics = StateSpaceDynamics(A, B, C, seed=42)
+
+    grid = make_pupil_grid(16)
+    mode = grid.ones()
+    modes = ModeBasis([mode])
+
+    # Test with refractive_index as float
+    vib_float = DynamicSurfaceAberration(modes, dynamics, refractive_index=1.5)
+    vib_float.evolve_until(0.1)
+
+    # Test with refractive_index as callable (chromatic)
+    vib_callable = DynamicSurfaceAberration(modes, dynamics, refractive_index=lambda wl: 1.5 + 0.1/wl)
+    vib_callable.evolve_until(0.1)

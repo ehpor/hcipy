@@ -62,6 +62,7 @@ __all__ = [
     'TipTiltMirror',
     'SimpleVibration',
     'DampedHarmonicVibration',
+    'DynamicSurfaceAberration',
     'Wavefront',
     'ThinLens',
     'Prism',

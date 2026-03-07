@@ -12,7 +12,8 @@ class StateSpaceDynamics:
         \frac{\mathrm{d} x}{\mathrm{d}t} = Ax + Bw,
 
     where x is the internal state, :math:`A` is the transition matrix, :math:`B`
-    is the noise matrix, and :math:`w` is white noise with unit variance.
+    is the noise matrix, and :math:`w` is white noise with unit variance. The model
+    must be stable: all eigenvalues of :math:`A` must have negative real parts.
 
     The observation equation
 
@@ -60,12 +61,22 @@ class StateSpaceDynamics:
         self._rng = np.random.default_rng(seed)
 
         noise_covariance = self.noise_matrix @ self.noise_matrix.T
-        self._P = solve_continuous_lyapunov(self.transition_matrix, -noise_covariance)
+        try:
+            self._P = solve_continuous_lyapunov(self.transition_matrix, -noise_covariance)
+        except np.linalg.LinAlgError as e:
+            eigenvalues = np.linalg.eigvals(self.transition_matrix)
+
+            if np.any(np.real(eigenvalues) > 0):
+                raise ValueError(f"The system is unstable.") from e
+
+            raise ValueError(f"Cannot solve Lyapunov equation.") from e
 
         if initial_state is None:
             eigenvalues, eigenvectors = np.linalg.eigh(self._P)
             eigenvalues = np.maximum(eigenvalues, 0)
+
             L = eigenvectors @ np.diag(np.sqrt(eigenvalues))
+
             self._state = L @ self._rng.standard_normal(n_states)
         else:
             self._state = initial_state

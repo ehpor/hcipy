@@ -999,8 +999,6 @@ def test_dynamic_surface_aberration_forward_backward():
     vib.evolve_until(0.5)
 
     wf = Wavefront(mode)
-    wf_fwd = vib.forward(wf)
-    wf_back = vib.backward(wf)
 
     assert np.allclose(wf.electric_field, vib.backward(vib.forward(wf)).electric_field)
     assert np.allclose(wf.electric_field, vib.forward(vib.backward(wf)).electric_field)
@@ -1021,5 +1019,5 @@ def test_dynamic_surface_aberration_refractive_index():
     vib_float.evolve_until(0.1)
 
     # Test with refractive_index as callable (chromatic)
-    vib_callable = DynamicSurfaceAberration(modes, dynamics, refractive_index=lambda wl: 1.5 + 0.1/wl)
+    vib_callable = DynamicSurfaceAberration(modes, dynamics, refractive_index=lambda wl: 1.5 + 0.1 / wl)
     vib_callable.evolve_until(0.1)

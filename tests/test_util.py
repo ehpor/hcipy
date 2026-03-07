@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import pytest
 from hcipy import *
 
 def test_grid_io():
@@ -139,3 +140,107 @@ def test_emccd_noise():
     noise = make_emccd_noise(photo_electron_flux * np.ones((num_trials, num_runs)), read_noise, emgain)
 
     assert abs(np.std(np.mean(noise, axis=0) / emgain - photo_electron_flux) - sigma) / sigma < 1e-2
+
+def test_state_space_dynamics_stationary_distribution():
+    ar_coeffs = np.array([0.5, -0.3])
+    noise_variance = 0.01
+    dt = 0.01
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance, dt)
+
+    samples = []
+    for i in range(1000):
+        dynamics = StateSpaceDynamics(A, B, C, seed=i)
+        samples.append(dynamics.state)
+
+    samples = np.array(samples)
+    empirical_cov = np.cov(samples.T)
+
+    dynamics = StateSpaceDynamics(A, B, C)
+    theoretical_cov = dynamics.stationary_covariance
+
+    relative_error = np.linalg.norm(empirical_cov - theoretical_cov) / np.linalg.norm(theoretical_cov)
+    assert relative_error < 0.1
+
+def test_state_space_dynamics_explicit_initial_state():
+    ar_coeffs = np.array([0.5, -0.3])
+    noise_variance = 0.01
+    dt = 0.01
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance, dt)
+
+    initial_state = np.array([0.1, 0.2])
+    dynamics = StateSpaceDynamics(A, B, C, initial_state=initial_state, seed=42)
+
+    assert np.allclose(dynamics.state, initial_state)
+
+def test_state_space_dynamics_backwards_evolution():
+    ar_coeffs = np.array([0.5, -0.3])
+    noise_variance = 0.01
+    dt = 0.01
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance, dt)
+
+    dynamics = StateSpaceDynamics(A, B, C, seed=42)
+    dynamics.evolve_until(1.0)
+
+    with pytest.raises(ValueError):
+        dynamics.evolve_until(0.5)
+
+def test_state_space_dynamics_long_term_stationarity():
+    ar_coeffs = np.array([0.5, -0.3])
+    noise_variance = 0.01
+    dt = 0.01
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance, dt)
+
+    samples = []
+    for i in range(1000):
+        dynamics = StateSpaceDynamics(A, B, C, seed=i)
+        dynamics.evolve_until(10.0)
+        samples.append(dynamics.state)
+
+    samples = np.array(samples)
+    empirical_cov = np.cov(samples.T)
+
+    dynamics = StateSpaceDynamics(A, B, C)
+    theoretical_cov = dynamics.stationary_covariance
+
+    relative_error = np.linalg.norm(empirical_cov - theoretical_cov) / np.linalg.norm(theoretical_cov)
+    assert relative_error < 0.1
+
+def test_ar_to_state_space():
+    ar_coeffs = np.array([0.5, -0.3])
+    noise_variance = 0.01
+    dt = 0.01
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance, dt)
+
+    # Check stability (all eigenvalues should have negative real parts)
+    eigenvalues = np.linalg.eigvals(A)
+    assert all(np.real(eigenvalues) < 0)
+
+    # Check shapes
+    assert A.shape == (2, 2)
+    assert B.shape == (2, 1)
+    assert C.shape == (1, 2)
+
+    # Check that C selects first state
+    assert np.allclose(C, np.array([[1, 0]]))
+
+    # Check that noise goes to first state
+    assert B[0, 0] > 0
+    assert B[1, 0] == 0
+
+def test_make_random_state_space():
+    A = make_random_state_space(n_states=4, bandwidth=2.0, seed=42)
+
+    eigenvalues = np.linalg.eigvals(A)
+    assert all(np.real(eigenvalues) < 0)
+
+def test_make_continuous_time_companion():
+    poles = np.array([-0.5, -0.3])
+    A, C = make_continuous_time_companion_matrix(poles)
+
+    eigenvalues = np.linalg.eigvals(A)
+    eigenvalues_sorted = np.sort(np.real(eigenvalues))
+    poles_sorted = np.sort(poles)
+
+    assert np.allclose(eigenvalues_sorted, poles_sorted)
+    assert C.shape == (1, 2)
+    assert np.allclose(C, np.array([[1, 0]]))

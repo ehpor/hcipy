@@ -142,9 +142,137 @@ class StateSpaceDynamics:
         eigenvalues = np.maximum(eigenvalues, 0)
         L = eigenvectors @ np.diag(np.sqrt(eigenvalues))
 
-        noise = L @ self._rng.standard_normal(self.n_states)
+        noise = L @ self._rng.standard_normal(self.num_states)
 
         self._state = A_disc @ self._state + noise
         self._t = t
 
-def make_continuous_time_companion(poles):
+def make_continuous_time_companion_matrix(poles):
+    """Create a continuous-time companion matrix from poles.
+
+    For a system with poles p1, p2, ..., pn, creates the controllable
+    companion form state matrix that has these poles as eigenvalues.
+
+    Parameters
+    ----------
+    poles : array_like
+        Poles (eigenvalues) of the system. For stable systems, poles
+        should have negative real parts.
+
+    Returns
+    -------
+    transition_matrix : ndarray
+        Companion form state matrix (n x n).
+    observation_matrix : ndarray
+        Observation matrix (1 x n), selects the first state.
+    """
+    n = len(poles)
+
+    coeffs = np.poly(poles)
+
+    transition_matrix = np.zeros((n, n))
+    transition_matrix[0, :] = -coeffs[1:n + 1]
+    transition_matrix[1:, :-1] = np.eye(n - 1)
+
+    observation_matrix = np.zeros((1, n))
+    observation_matrix[0, 0] = 1.0
+
+    return transition_matrix, observation_matrix
+
+def ar_to_state_space(ar_coefficients, noise_variance, dt):
+    """Convert a discrete-time AR(p) model to continuous-time state space.
+
+    Converts a discrete-time autoregressive model:
+
+    .. math::
+
+        x_k = a_1 x_{k-1} + a_2 x_{k-2} + \cdots + a_p x_{k-p} + w_k
+
+    to an equivalent continuous-time state space model.
+
+    Parameters
+    ----------
+    ar_coefficients : array_like
+        AR coefficients :math:`[a_1, a_2, ..., a_p]` for the discrete-time model.
+    noise_variance : float
+        Variance of the discrete-time driving noise.
+    dt : float
+        Sampling time of the discrete-time AR model.
+
+    Returns
+    -------
+    transition_matrix : ndarray
+        Continuous-time state transition matrix (:math:`p` x :math:`p`).
+    noise_matrix : ndarray
+        Continuous-time noise matrix (:math:`p` x 1).
+    observation_matrix : ndarray
+        Observation matrix (1 x :math:`p`), selects the first state.
+    """
+    ar_coefficients = np.asarray(ar_coefficients)
+    p = len(ar_coefficients)
+
+    # Discrete-time companion matrix (state = [x[k-1], x[k-2], ..., x[k-p]])
+    A_disc = np.zeros((p, p))
+    A_disc[0, :] = ar_coefficients
+    A_disc[1:, :-1] = np.eye(p - 1)
+
+    # Get discrete-time poles (eigenvalues of companion matrix)
+    disc_poles = np.linalg.eigvals(A_disc)
+
+    # Convert discrete-time poles to continuous-time poles
+    # For stable discrete-time system: |z| < 1, so ln(z) has negative real part
+    # Continuous-time pole: s = ln(z) / dt
+    cont_poles = np.log(disc_poles) / dt
+
+    # Create continuous-time companion matrix from continuous-time poles
+    transition_matrix, observation_matrix = make_continuous_time_companion_matrix(cont_poles)
+
+    # Noise matrix: discrete noise acts on first state
+    # For continuous-time: need to scale appropriately
+    # The continuous noise intensity is noise_variance / dt (approximate for small dt)
+    noise_matrix = np.zeros((p, 1))
+    noise_matrix[0, 0] = np.sqrt(noise_variance / dt)
+
+    return transition_matrix, noise_matrix, observation_matrix
+
+def make_random_state_space(n_states, bandwidth=1.0, seed=None):
+    """Generate a random stable state space transition matrix.
+
+    Creates a random state transition matrix with stable eigenvalues
+    (all have negative real parts). Useful for testing or generating
+    synthetic dynamics models.
+
+    Parameters
+    ----------
+    n_states : int
+        Number of internal states.
+    bandwidth : float, optional
+        Approximate bandwidth of the dynamics. Larger values give faster
+        dynamics. Default is 1.0.
+    seed : int, optional
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    transition_matrix : ndarray
+        Random stable state transition matrix (n_states x n_states).
+    """
+    rng = np.random.default_rng(seed)
+
+    eigenvalues = []
+    while len(eigenvalues) < n_states:
+        eig_real = -rng.uniform(0.1, 1.0) * bandwidth
+        eig_imag = rng.uniform(-bandwidth, bandwidth)
+
+        eigenvalues.append(complex(eig_real, eig_imag))
+
+        if len(eigenvalues) < n_states and eig_imag != 0:
+            eigenvalues.append(complex(eig_real, -eig_imag))
+
+    eigenvalues = np.array(eigenvalues[:n_states])
+
+    q, r = np.linalg.qr(rng.standard_normal((n_states, n_states)))
+    transition_matrix = q @ np.diag(eigenvalues) @ q.conj().T
+    transition_matrix = np.real(transition_matrix)
+
+    return transition_matrix

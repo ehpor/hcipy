@@ -69,7 +69,7 @@ class DampedHarmonicVibration(OpticalElement):
         Random seed for reproducibility. Default is None.
     '''
     def __init__(self, mode, natural_frequency, damping_ratio, driving_psd, refractive_index=1.0, seed=None):
-        if driving_psd <= 0:
+        if driving_psd < 0:
             raise ValueError(f"driving_psd must be non-negative, got {driving_psd}.")
 
         if damping_ratio <= 0:
@@ -112,8 +112,15 @@ class DampedHarmonicVibration(OpticalElement):
 
     @property
     def oscillation_frequency(self):
-        '''The oscillation frequency in Hz.
+        '''The frequency of the damped oscillation in Hz.
+
+        For critically damped (damping_ratio = 1) and overdamped
+        (damping_ratio > 1) systems, the oscillator does not oscillate
+        and this returns NaN.
         '''
+        if self.damping_ratio >= 1:
+            return np.nan
+
         return self.natural_frequency * np.sqrt(1 - self.damping_ratio**2)
 
     @property

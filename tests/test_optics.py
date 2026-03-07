@@ -938,7 +938,7 @@ def test_damped_oscillator_vibration():
     assert np.allclose(wf.electric_field, wf_bwd.electric_field)
 
     # Test that backward evolution raises ValueError
-    with pytest.raises(ValueError, match="Cannot evolve backward in time"):
+    with pytest.raises(ValueError, match="Backwards evolution not allowed"):
         vib.evolve_until(0.3)
 
     # Test that invalid driving_psd raises ValueError

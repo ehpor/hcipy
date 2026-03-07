@@ -7,7 +7,7 @@ __all__ = [
     'SpectralNoiseMultiscale',
     'StateSpaceDynamics',
     'ar_to_state_space',
-    'make_continuous_time_companion',
+    'make_continuous_time_companion_matrix',
     'make_random_state_space',
     'large_poisson',
     'large_gamma',

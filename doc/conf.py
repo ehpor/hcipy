@@ -33,6 +33,7 @@
 extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
+    'sphinx.ext.linkcode',
     'sphinx_automodapi.automodapi',
     'numpydoc',
     'nbsphinx']
@@ -63,6 +64,39 @@ author = u'Emiel Por'
 # The full version, including alpha/beta/rc tags.
 import hcipy
 release = str(hcipy.__version__)
+
+
+def linkcode_resolve(domain, info):
+    import inspect
+    import os
+
+    if domain != 'py' or not info['module']:
+        return None
+
+    try:
+        mod = __import__(info['module'], fromlist=[''])
+        obj = mod
+        for part in info['fullname'].split('.'):
+            obj = getattr(obj, part)
+        # Unwrap decorators
+        obj = inspect.unwrap(obj)
+        source_file = inspect.getfile(obj)
+        source_lines, start_line = inspect.getsourcelines(obj)
+    except Exception:
+        return None
+
+    # Path relative to the repo root
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    try:
+        rel_path = os.path.relpath(source_file, repo_root)
+    except ValueError:
+        return None
+
+    # Use the version tag for released builds, otherwise fall back to master
+    tag = release if not release.endswith('.dev0') and '+' not in release else 'master'
+
+    end_line = start_line + len(source_lines) - 1
+    return f'https://github.com/ehpor/hcipy/blob/{tag}/{rel_path}#L{start_line}-L{end_line}'
 
 # The short X.Y version.
 version = release

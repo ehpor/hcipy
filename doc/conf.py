@@ -82,7 +82,7 @@ def linkcode_resolve(domain, info):
         obj = inspect.unwrap(obj)
         source_file = inspect.getfile(obj)
         source_lines, start_line = inspect.getsourcelines(obj)
-    except Exception:
+    except (ImportError, AttributeError, TypeError, OSError):
         return None
 
     # Path relative to the repo root
@@ -92,8 +92,15 @@ def linkcode_resolve(domain, info):
     except ValueError:
         return None
 
+    # Validate that the resolved path is within the repository
+    if os.path.isabs(rel_path):
+        return None
+    normalized = os.path.normpath(rel_path)
+    if normalized == '..' or normalized.startswith('..' + os.path.sep):
+        return None
+
     # Use the version tag for released builds, otherwise fall back to master
-    tag = release if not release.endswith('.dev0') and '+' not in release else 'master'
+    tag = f'v{release}' if not release.endswith('.dev0') and '+' not in release else 'master'
 
     end_line = start_line + len(source_lines) - 1
     return f'https://github.com/ehpor/hcipy/blob/{tag}/{rel_path}#L{start_line}-L{end_line}'

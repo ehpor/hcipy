@@ -805,7 +805,6 @@ CONSTANTS = [
 
 FEEDTHROUGH_FUNCS = [
     "__array_namespace_info__",
-    "can_cast", "finfo", "iinfo", "result_type",
     "bool",
     "int8", "int16", "int32", "int64",
     "uint8", "uint16", "uint32", "uint64",
@@ -818,7 +817,6 @@ ZERO_ARG_FUNCS = {
     "empty": "shape, *, dtype=None, device=None",
     "eye": "n_rows, n_cols=None, /, *, k=0, dtype=None, device=None",
     "from_dlpack": "x, /, *, device=None, copy=None",
-    "full": "shape, fill_value, *, dtype=None, device=None",
     "linspace": "start, stop, /, num, *, dtype=None, device=None, endpoint=True",
     "ones": "shape, *, dtype=None, device=None",
     "zeros": "shape, *, dtype=None, device=None",
@@ -836,11 +834,9 @@ ONE_ARG_FUNCS = {
     "count_nonzero": "x, /, *, axis=None, keepdims=False",
     "cumulative_prod": "x, /, *, axis=None, dtype=None, include_initial=False",
     "cumulative_sum": "x, /, *, axis=None, dtype=None, include_initial=False",
-    "diff": "x, /, *, axis=-1, prepend=None, append=None",
     "empty_like": "x, /, *, dtype=None, device=None",
-    "expand_dims": "x, /, *, axis=0",
+    "expand_dims": "x, /, axis=0",
     "flip": "x, /, *, axis=None",
-    "full_like": "x, /, fill_value, *, dtype=None, device=None",
     "matrix_transpose": "x, /",
     "max": "x, /, *, axis=None, keepdims=False",
     "mean": "x, /, *, axis=None, keepdims=False",
@@ -935,12 +931,19 @@ MISC_FUNCS = (
     'meshgrid',
     'broadcast_arrays',
     'concat',
+    'diff',
+    'full',
+    'full_like',
     'searchsorted',
     'stack',
     'unique_all',
     'unique_counts',
     'unique_inverse',
     'unstack',
+    'result_type',
+    'can_cast',
+    'finfo',
+    'iinfo',
 )
 
 LINALG_MISC_FUNCS = (
@@ -1087,6 +1090,51 @@ def make_field_namespace(backend):
         res = backend.unstack(x.data if isinstance(x, NewStyleField) else x, axis=axis)
         return tuple(NewStyleField(arr, None) for arr in res)
 
+    def _diff(x, /, *, axis=-1, n=1, prepend=None, append=None):
+        if isinstance(append, NewStyleField):
+            append = append.data
+        if isinstance(prepend, NewStyleField):
+            prepend = prepend.data
+        if isinstance(x, NewStyleField):
+            x = x.data
+
+        res = backend.diff(x, axis=axis, n=n, prepend=prepend, append=append)
+
+        return NewStyleField(res, None)
+
+    def _full(shape, fill_value, *, dtype=None, device=None):
+        if isinstance(fill_value, NewStyleField):
+            fill_value = fill_value.data
+
+        res = backend.full(shape, fill_value, dtype=dtype, device=device)
+
+        return NewStyleField(res, None)
+
+    def _full_like(x, /, fill_value, *, dtype=None, device=None):
+        grid = None
+
+        if isinstance(fill_value, NewStyleField):
+            fill_value = fill_value.data
+        if isinstance(x, NewStyleField):
+            grid = x.grid
+            x = x.data
+
+        res = backend.full_like(x, fill_value, dtype=dtype, device=device)
+
+        return NewStyleField(res, grid)
+
+    def _result_type(*arrays_and_dtypes):
+        return backend.result_type(*tuple(x.data if isinstance(x, NewStyleField) else x for x in arrays_and_dtypes))
+
+    def _can_cast(from_, to, /):
+        return backend.can_cast(from_.data if isinstance(from_, NewStyleField) else from_, to)
+
+    def _finfo(type, /):
+        return backend.finfo(type.data if isinstance(type, NewStyleField) else type)
+
+    def _iinfo(type, /):
+        return backend.iinfo(type.data if isinstance(type, NewStyleField) else type)
+
     _unique_all = _make_array_api_namespace_func(backend.unique_all, 'x, /', num_array_args=1, tuple_output_fields=['values', 'indices', 'inverse_indices', 'counts'])
     _unique_counts = _make_array_api_namespace_func(backend.unique_counts, 'x, /', num_array_args=1, tuple_output_fields=['values', 'counts'])
     _unique_inverse = _make_array_api_namespace_func(backend.unique_inverse, 'x, /', num_array_args=1, tuple_output_fields=['values', 'inverse_indices'])
@@ -1100,9 +1148,16 @@ def make_field_namespace(backend):
         'stack': _stack,
         'nonzero': _nonzero,
         'unstack': _unstack,
+        'diff': _diff,
+        'full': _full,
+        'full_like': _full_like,
         'unique_all': _unique_all,
         'unique_counts': _unique_counts,
         'unique_inverse': _unique_inverse,
+        'result_type': _result_type,
+        'can_cast': _can_cast,
+        'finfo': _finfo,
+        'iinfo': _iinfo,
     }
 
     # Set miscelaneous functions.

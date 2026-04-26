@@ -356,11 +356,20 @@ class NewStyleField(FieldBase):
 
     def __getitem__(self, key, /):
         xp = self.data.__array_namespace__()
-        key = key.data if isinstance(key, NewStyleField) else key
+
+        if isinstance(key, tuple):
+            key = tuple(k.data if isinstance(k, NewStyleField) else k for k in key)
+        else:
+            key = key.data if isinstance(key, NewStyleField) else key
+
         return NewStyleField(xp.asarray(self.data[key]), self.grid)
 
     def __setitem__(self, key, value, /):
-        key = key.data if isinstance(key, NewStyleField) else key
+        if isinstance(key, tuple):
+            key = tuple(k.data if isinstance(k, NewStyleField) else k for k in key)
+        else:
+            key = key.data if isinstance(key, NewStyleField) else key
+
         value = value.data if isinstance(value, NewStyleField) else value
 
         self.data[key] = value

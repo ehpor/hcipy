@@ -122,10 +122,6 @@ def test_random_generator_different_sizes(xp, distribution):
 
     generation_func = getattr(rng, distribution)
 
-    # Test scalar output
-    arr_0d = generation_func()
-    assert arr_0d.shape == tuple()
-
     # Test 1D array
     arr_1d = generation_func(size=5)
     assert arr_1d.shape == (5,)

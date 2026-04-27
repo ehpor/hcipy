@@ -1,5 +1,65 @@
 from array_api_compat import is_numpy_namespace, is_torch_namespace, is_jax_namespace, is_cupy_namespace
 import copy
+import math
+
+
+def _torch_gamma(scale=1.0, shape=1.0, size=None, generator=None):
+    '''Sample from Gamma(shape, scale) distribution using pytorch.
+
+    Pytorch does not support a generator argument for gamma, so we need to implement it.
+
+    Parameters
+    ----------
+    scale : float
+        The scale parameter of the Gamma distribution.
+    shape : float
+        The shape parameters of the Gamma distribution.
+    size : tuple or None
+        The size of the output tensor.
+    generator : torch.Generator or None
+        The random number generator to use.
+
+    Returns
+    -------
+    torch.Tensor
+        The Gamma-distributed generated samples.
+    '''
+    import torch
+
+    if size is None:
+        size = (1,)
+
+    n = math.prod(size)
+
+    # For shape < 1, use the boost: if X ~ Gamma(a+1), then X*U^(1/a) ~ Gamma(a)
+    boost = shape < 1
+    a = shape + 1.0 if boost else shape
+
+    d = a - 1.0 / 3.0
+    c = 1.0 / math.sqrt(9.0 * d)
+
+    samples = []
+    while len(samples) < n:
+        batch = max(n - len(samples), 16)
+        x = torch.randn(batch, generator=generator)
+        v = (1.0 + c * x) ** 3
+
+        u = torch.rand(batch, generator=generator)
+
+        squeeze = u < 1.0 - 0.0331 * x ** 4
+        log_check = torch.log(u) < 0.5 * x ** 2 + d * (1.0 - v + torch.log(v.clamp(min=1e-10)))
+
+        accepted_mask = (v > 0) & (squeeze | log_check)
+        samples.append((d * v)[accepted_mask])
+
+    samples = torch.cat(samples)[:n]
+
+    if boost:
+        u = torch.rand(n, generator=generator)
+        samples = samples * u ** (1.0 / shape)
+
+    return (samples * scale).reshape(size)
+
 
 class RandomGenerator:
     '''A class that provides a consistent API for random number generation across different array API namespaces.
@@ -137,7 +197,7 @@ class RandomGenerator:
         if is_numpy_namespace(self.xp) or is_cupy_namespace(self.xp):
             return self._rng.gamma(shape_param, scale, size)
         elif is_torch_namespace(self.xp):
-            return self.xp.gamma(shape_param, (1.0 / scale), size=size, generator=self._rng)
+            return _torch_gamma(scale, shape_param, size=size, generator=self._rng)
         elif is_jax_namespace(self.xp):
             self._rng, subkey = self._jax_random.split(self._rng)
             return self._jax_random.gamma(subkey, shape_param, size) * scale

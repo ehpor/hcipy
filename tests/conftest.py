@@ -35,8 +35,8 @@ def get_backend(backend_name):
             pytest.skip(f'{backend_name} not available')
     elif backend_name == 'jax':
         try:
-            import jax
-            return jax
+            import jax.numpy as jnp
+            return jnp
         except ImportError:
             pytest.skip(f'{backend_name} not available')
     else:

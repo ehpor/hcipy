@@ -136,6 +136,8 @@ class RandomGenerator:
         """
         if size is None:
             size = (1,)
+        elif not isinstance(size, tuple):
+            size = (size,)
 
         if is_numpy_namespace(self.xp) or is_cupy_namespace(self.xp):
             return self._rng.normal(mean, std, size)
@@ -163,12 +165,14 @@ class RandomGenerator:
         """
         if size is None:
             size = (1,)
+        elif not isinstance(size, tuple):
+            size = (size,)
 
         if is_numpy_namespace(self.xp) or is_cupy_namespace(self.xp):
             return self._rng.poisson(lam, size)
         elif is_torch_namespace(self.xp):
             lam = self.xp.ones(size=size) * lam
-            return self.xp.poisson(lam, size=size, generator=self._rng)
+            return self.xp.poisson(lam, generator=self._rng)
         elif is_jax_namespace(self.xp):
             self._rng, subkey = self._jax_random.split(self._rng)
             return self._jax_random.poisson(subkey, lam, size)
@@ -193,6 +197,8 @@ class RandomGenerator:
         """
         if size is None:
             size = (1,)
+        elif not isinstance(size, tuple):
+            size = (size,)
 
         if is_numpy_namespace(self.xp) or is_cupy_namespace(self.xp):
             return self._rng.gamma(shape_param, scale, size)

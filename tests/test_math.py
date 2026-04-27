@@ -2,6 +2,7 @@ import pytest
 import hcipy
 import numpy as np
 from hcipy._math.random import RandomGenerator
+import math
 
 
 def _parameters():
@@ -76,6 +77,7 @@ def test_random_generator_poisson(xp, lam):
 
     # Basic statistical tests for poisson distribution
     assert np.isclose(float(xp.mean(samples)), lam, atol=0.1)
+    assert np.isclose(float(xp.std(samples)), math.sqrt(lam), atol=0.1)
 
 
 @pytest.mark.parametrize('scale, shape', ((2.0, 2.0), (1.0, 3.0)))
@@ -85,7 +87,8 @@ def test_random_generator_gamma(xp, scale, shape):
     samples = rng.gamma(scale=scale, shape_param=shape, size=(10000,))
 
     # Basic statistical tests (mean should be shape * scale)
-    assert np.isclose(float(xp.mean(samples)), shape * scale, atol=0.5)
+    assert np.isclose(float(xp.mean(samples)), shape * scale, atol=0.1)
+    assert np.isclose(float(xp.std(samples)), math.sqrt(shape) * scale, atol=0.1)
 
 
 @pytest.mark.parametrize('distribution', ['normal', 'gamma', 'poisson'])

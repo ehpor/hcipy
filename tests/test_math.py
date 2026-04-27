@@ -80,7 +80,7 @@ def test_random_generator_poisson(xp, lam):
     assert np.isclose(float(xp.std(samples)), math.sqrt(lam), atol=0.1)
 
 
-@pytest.mark.parametrize('scale, shape', ((2.0, 2.0), (1.0, 3.0)))
+@pytest.mark.parametrize('scale, shape', ((2.0, 2.0), (1.0, 3.0), (1.0, 0.5)))
 def test_random_generator_gamma(xp, scale, shape):
     # Get samples from the Gamma distribution.
     rng = RandomGenerator(xp, seed=42)

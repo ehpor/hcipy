@@ -75,7 +75,7 @@ class RandomGenerator:
             normal distribution.
         """
         if size is None:
-            size = ()
+            size = (1,)
 
         if is_numpy_namespace(self.xp) or is_cupy_namespace(self.xp):
             return self._rng.normal(mean, std, size)
@@ -102,11 +102,12 @@ class RandomGenerator:
             Poisson distribution.
         """
         if size is None:
-            size = ()
+            size = (1,)
 
         if is_numpy_namespace(self.xp) or is_cupy_namespace(self.xp):
             return self._rng.poisson(lam, size)
         elif is_torch_namespace(self.xp):
+            lam = self.xp.ones(size=size) * lam
             return self.xp.poisson(lam, size=size, generator=self._rng)
         elif is_jax_namespace(self.xp):
             self._rng, subkey = self._jax_random.split(self._rng)
@@ -131,7 +132,7 @@ class RandomGenerator:
             Gamma distribution.
         """
         if size is None:
-            size = ()
+            size = (1,)
 
         if is_numpy_namespace(self.xp) or is_cupy_namespace(self.xp):
             return self._rng.gamma(shape_param, scale, size)

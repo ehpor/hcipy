@@ -7,6 +7,7 @@ def _torch_gamma(scale=1.0, shape=1.0, size=None, generator=None):
     '''Sample from Gamma(shape, scale) distribution using pytorch.
 
     Pytorch does not support a generator argument for gamma, so we need to implement it.
+    This implementation uses the Marsaglia-Tsang method.
 
     Parameters
     ----------
@@ -33,30 +34,35 @@ def _torch_gamma(scale=1.0, shape=1.0, size=None, generator=None):
 
     # For shape < 1, use the boost: if X ~ Gamma(a+1), then X*U^(1/a) ~ Gamma(a)
     boost = shape < 1
-    a = shape + 1.0 if boost else shape
+    a = shape + 1 if boost else shape
 
-    d = a - 1.0 / 3.0
-    c = 1.0 / math.sqrt(9.0 * d)
+    d = a - 1 / 3
+    c = 1 / math.sqrt(9.0 * d)
+
+    # Use batches, be conservative. Average acceptance rate is ~98% so a factor of 2x is appropriate.
+    batch_size = max(n * 2, 2**16)
 
     samples = []
-    while len(samples) < n:
-        batch = max(n - len(samples), 16)
-        x = torch.randn(batch, generator=generator)
-        v = (1.0 + c * x) ** 3
+    num_samples = 0
+    while num_samples < n:
+        x = torch.randn(batch_size, generator=generator)
+        v = (1 + c * x)**3
 
-        u = torch.rand(batch, generator=generator)
+        u = torch.rand(batch_size, generator=generator)
 
-        squeeze = u < 1.0 - 0.0331 * x ** 4
-        log_check = torch.log(u) < 0.5 * x ** 2 + d * (1.0 - v + torch.log(v.clamp(min=1e-10)))
+        squeeze = u < 1 - 0.0331 * x**4
+        log_check = torch.log(u) < 0.5 * x**2 + d * (1 - v + torch.log(v.clamp(min=1e-10)))
 
         accepted_mask = (v > 0) & (squeeze | log_check)
         samples.append((d * v)[accepted_mask])
+
+        num_samples += torch.sum(accepted_mask)
 
     samples = torch.cat(samples)[:n]
 
     if boost:
         u = torch.rand(n, generator=generator)
-        samples = samples * u ** (1.0 / shape)
+        samples = samples * u ** (1 / shape)
 
     return (samples * scale).reshape(size)
 

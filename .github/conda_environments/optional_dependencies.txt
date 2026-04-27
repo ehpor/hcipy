@@ -1,1 +1,3 @@
 mkl_fft
+jax
+pytorch

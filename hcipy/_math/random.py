@@ -110,7 +110,7 @@ class RandomGenerator:
             new_rng._rng = copy.deepcopy(self._rng)
         elif is_torch_namespace(self.xp):
             new_rng._rng = self.xp.Generator()
-            new_rng._rng.set_state(self.xp.get_rng_state())
+            new_rng._rng.set_state(self._rng.get_state())
         elif is_jax_namespace(self.xp):
             new_rng._rng = self._rng  # Immutable, safe to share reference
 

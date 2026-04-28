@@ -3,7 +3,7 @@ import copy
 import math
 from collections.abc import Iterable
 import array_api_compat
-from .backends import _infer_xp
+from .._math.backends import infer_xp
 
 
 class Coords(object):
@@ -215,7 +215,7 @@ class UnstructuredCoords(Coords):
     '''
     def __init__(self, coords, xp=None):
         if xp is None:
-            xp = _infer_xp(*coords)
+            xp = infer_xp(*coords)
         self._xp = xp
         self.coords = [self._xp.asarray(c) for c in coords]
 
@@ -379,7 +379,7 @@ class SeparatedCoords(Coords):
     '''
     def __init__(self, separated_coords, xp=None):
         if xp is None:
-            xp = _infer_xp(*separated_coords)
+            xp = infer_xp(*separated_coords)
         self._xp = xp
         # Make a copy to avoid modification from outside the class
         self.separated_coords = [self._xp.asarray(s, dtype='float', copy=True) for s in separated_coords]
@@ -577,9 +577,9 @@ class RegularCoords(Coords):
         # Try to infer xp from delta and zero if not provided
         if xp is None:
             try:
-                xp = _infer_xp(delta, zero)
+                xp = infer_xp(delta, zero)
             except ValueError:
-                # _infer_xp already raises ValueError for new-style fields
+                # infer_xp already raises ValueError for new-style fields
                 raise
 
         self._xp = xp

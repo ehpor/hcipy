@@ -3,7 +3,7 @@ import copy
 import warnings
 import xxhash
 
-from .backends import to_numpy
+from .._math.backends import to_numpy, is_scalar
 
 class Grid(object):
     '''A set of points on some coordinate system.
@@ -111,7 +111,7 @@ class Grid(object):
 
         new_coords = [c[indices] for c in self.coords]
 
-        if np.isscalar(self.weights):
+        if is_scalar(self.weights):
             new_weights = self.weights
         else:
             new_weights = self.weights[indices]

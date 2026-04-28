@@ -143,13 +143,13 @@ class CartesianGrid(Grid):
         R = _get_rotation_matrix(self.ndim, angle, axis)
         xp = self.coords.xp
 
-        coords = xp.einsum('ik,kn->in', R, xp.asarray(self.coords))
+        coords = xp.einsum('ik,kn->in', R, xp.stack(list(self.coords)))
         return CartesianGrid(UnstructuredCoords(list(coords)))
 
     @staticmethod
     def _get_automatic_weights(coords):
         if coords.is_regular:
-            return np.prod(coords.delta)
+            return coords.xp.prod(coords.delta)
         elif coords.is_separated:
             weights = []
             for i in range(len(coords)):

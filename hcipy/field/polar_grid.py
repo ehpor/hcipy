@@ -105,22 +105,26 @@ class PolarGrid(Grid):
 def _cartesian_to_polar(self):
     from .coordinates import UnstructuredCoords
 
-    xp = self.coords.xp
     x = self.x
     y = self.y
+
+    xp = x.__array_namespace__()
     r = xp.hypot(x, y)
     theta = xp.arctan2(y, x)
+
     return PolarGrid(UnstructuredCoords([r, theta]))
 
 def _polar_to_cartesian(self):
     from .coordinates import UnstructuredCoords
     from .cartesian_grid import CartesianGrid
 
-    xp = self.coords.xp
     r = self.r
     theta = self.theta
+
+    xp = r.__array_namespace__()
     x = r * xp.cos(theta)
     y = r * xp.sin(theta)
+
     return CartesianGrid(UnstructuredCoords([x, y]))
 
 Grid._add_coordinate_system('polar', PolarGrid)

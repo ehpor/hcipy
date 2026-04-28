@@ -219,7 +219,7 @@ class UnstructuredCoords(Coords):
         if xp is None:
             xp = infer_xp(*coords)
         self._xp = xp
-        self.coords = [self._xp.asarray(c) for c in coords]
+        self.coords = [self._xp.asarray(c, copy=True) for c in coords]
 
     @classmethod
     def from_dict(cls, tree):
@@ -284,7 +284,7 @@ class UnstructuredCoords(Coords):
     def size(self):
         '''The number of points.
         '''
-        return self.coords[0].size
+        return len(self.coords[0])
 
     def __len__(self):
         '''The number of dimensions.
@@ -351,13 +351,16 @@ class UnstructuredCoords(Coords):
         if type(self) is not type(other):
             return False
 
-        return all(self._xp.array_equal(s, o) for s, o in zip(self.coords, other.coords))
+        if self.size != other.size:
+            return False
+
+        return all(self._xp.all(s == o) for s, o in zip(self.coords, other.coords))
 
     def reverse(self):
         '''Reverse the ordering of points in-place.
         '''
         for i in range(len(self.coords)):
-            self.coords[i] = self.coords[i][::-1]
+            self.coords[i] = self._xp.flip(self.coords[i], (-1,))
         return self
 
 
@@ -384,7 +387,7 @@ class SeparatedCoords(Coords):
             xp = infer_xp(*separated_coords)
         self._xp = xp
         # Make a copy to avoid modification from outside the class
-        self.separated_coords = [self._xp.asarray(s, dtype='float', copy=True) for s in separated_coords]
+        self.separated_coords = [self._xp.asarray(s, copy=True) for s in separated_coords]
 
     @classmethod
     def from_dict(cls, tree):
@@ -535,7 +538,10 @@ class SeparatedCoords(Coords):
             return False
 
         for s, o in zip(self.separated_coords, other.separated_coords):
-            if not self._xp.array_equal(s, o):
+            if len(s) != len(o):
+                return False
+
+            if not self._xp.all(s == o):
                 return False
 
         return True
@@ -544,7 +550,7 @@ class SeparatedCoords(Coords):
         '''Reverse the ordering of points in-place.
         '''
         for i in range(len(self)):
-            self.separated_coords[i] = self.separated_coords[i][::-1]
+            self.separated_coords[i] = self._xp.flip(self.separated_coords[i], (-1,))
         return self
 
 

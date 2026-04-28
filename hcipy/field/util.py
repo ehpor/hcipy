@@ -1,8 +1,10 @@
 from __future__ import division
 from collections.abc import Iterable
+import math
 
 import numpy as np
 from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
+from .._math.backends import infer_xp
 from .field import Field
 from .cartesian_grid import CartesianGrid
 from .grid import Grid
@@ -54,7 +56,7 @@ def _find_common_size(*args):
     '''
     return max(len(arg) if isinstance(arg, Iterable) else 1 for arg in args)
 
-def make_uniform_grid(dims, extent, center=0, has_center=False):
+def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
     '''Create a uniformly-spaced :class:`Grid` of a certain shape and size.
 
     Parameters
@@ -62,13 +64,16 @@ def make_uniform_grid(dims, extent, center=0, has_center=False):
     dims : int or tuple of ints
         The number of points in each dimension. If this is a scalar, it will
         be multiplexed over all dimensions.
-    extent : scalar or tuple of floats
-        The total extent of the grid in each dimension.
-    center : scalar or tuple of floats
-        The center point. The grid will by symmetric around this point.
+    extent : scalar or array_like
+        The total extent of the grid in each dimension. Can be an xp array for differentiability.
+    center : scalar or array_like
+        The center point. The grid will by symmetric around this point. Can be an xp array for differentiability.
     has_center : boolean
         Does the grid has to have the center as one of its points. If this is
         False, this does not mean that the grid will not have the center.
+    xp : module, optional
+        The array namespace to use. If not provided, will be inferred from extent/center if they are arrays,
+        otherwise defaults to numpy.
 
     Returns
     -------
@@ -76,20 +81,35 @@ def make_uniform_grid(dims, extent, center=0, has_center=False):
         A :class:`Grid` with :class:`RegularCoords`.
     '''
     num_dims = _find_common_size(dims, extent, center)
-
     dims = _normalize_to_tuple(dims, num_dims, int)
-    extent = _normalize_to_tuple(extent, num_dims, float)
-    center = _normalize_to_tuple(center, num_dims, float)
 
-    delta = tuple(e / d for e, d in zip(extent, dims))
-    zero = tuple(-e / 2 + c + d / 2 for e, c, d in zip(extent, center, delta))
+    # Determine xp from inputs if not provided
+    if xp is None:
+        xp = infer_xp(extent, center)
+
+    # Convert to xp arrays (preserves differentiability if inputs are xp arrays)
+    # Ensure at least 1D arrays for proper broadcasting
+    extent = xp.asarray(extent)
+    center = xp.asarray(center)
+
+    # If scalars provided, broadcast to match num_dims
+    if extent.ndim == 0:
+        extent = xp.broadcast_to(extent, (num_dims,))
+    if center.ndim == 0:
+        center = xp.broadcast_to(center, (num_dims,))
+
+    dims_arr = xp.asarray(dims)
+
+    # Array math for differentiability
+    delta = extent / dims_arr
+    zero = -extent / 2 + center + delta / 2
 
     if has_center:
-        zero = tuple(z - d / 2 * (1 - dim % 2) for z, d, dim in zip(zero, delta, dims))
+        zero = zero - delta / 2 * (1 - dims_arr % 2)
 
     return CartesianGrid(RegularCoords(delta, dims, zero))
 
-def make_pupil_grid(dims, diameter=1):
+def make_pupil_grid(dims, diameter=1, xp=None):
     '''Makes a new :class:`Grid`, meant for descretisation of a pupil-plane wavefront.
 
     This grid is symmetric around the origin, and therefore has no point exactly on
@@ -100,18 +120,26 @@ def make_pupil_grid(dims, diameter=1):
     dims : tuple of ints or integer
         The number of pixels per dimension. If this is an integer, this number
         of pixels is used for all dimensions.
-    diameter : tuple of floats or scalar
-        The diameter of the grid in each dimension. If this is a scalar, this diameter
-        is used for all dimensions.
+    diameter : scalar or array_like
+        The diameter of the grid in each dimension. Can be an xp array for differentiability.
+    xp : module, optional
+        The array namespace to use. If not provided, will be inferred from diameter if it's an array,
+        otherwise defaults to numpy.
 
     Returns
     -------
     Grid
         A :class:`CartesianGrid` with :class:`RegularCoords`.
     '''
-    diameter = _normalize_to_tuple(diameter, 2, float)
+    # Ensure 2D grid for pupil grids
+    if xp is None:
+        xp = infer_xp(diameter)
 
-    return make_uniform_grid(dims, diameter)
+    diameter = xp.asarray(diameter)
+    if diameter.ndim == 0:
+        diameter = xp.broadcast_to(diameter, (2,))
+
+    return make_uniform_grid(dims, diameter, xp=xp)
 
 def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length=1, wavelength=1):
     '''Make a grid for a focal plane from a pupil grid.
@@ -170,7 +198,7 @@ def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length
 
     return focal_grid
 
-def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, focal_length=None, f_number=None, reference_wavelength=None):
+def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, focal_length=None, f_number=None, reference_wavelength=None, xp=None):
     r'''Make a grid for a focal plane.
 
     This grid will be a CartesianGrid with RegularCoords, and supports different resolutions, samplings,
@@ -190,23 +218,23 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
 
     Parameters
     ----------
-    q : scalar or tuple of floats
-        The number of pixels per resolution element (= lambda f / D).
-    num_airy : scalar or tuple of floats
-        The spatial extent of the grid in radius in resolution elements (= lambda f / D).
-    spatial_resolution : scalar or tuple of floats
-        The physical size of a resolution element (= lambda f / D). It this is not given,
-        the spatial resolution will be calculated from the given `focal_length`,
-        `reference_wavelength` and `pupil_diameter`.
-    pupil_diameter : scalar or tuple of floats
-        The diameter of the pupil. If it is an array, this indicates the diameter in x and y.
-    focal_length : scalar
-        The focal length used for calculating the spatial resolution at the focal plane.
-    f_number : scalar or tuple of floats
-        The F number, also known as focal ratio, at the focal plane. If this is given, it overrides
-        the given pupil diameter and focal length.
+    q : scalar or array_like
+        The number of pixels per resolution element (= lambda f / D). Can be an xp array for differentiability.
+    num_airy : scalar or array_like
+        The spatial extent of the grid in radius in resolution elements (= lambda f / D). Can be an xp array for differentiability.
+    spatial_resolution : scalar or array_like
+        The physical size of a resolution element (= lambda f / D). Can be an xp array for differentiability.
+    pupil_diameter : scalar or array_like
+        The diameter of the pupil. Can be an xp array for differentiability.
+    focal_length : scalar or array_like
+        The focal length used for calculating the spatial resolution at the focal plane. Can be an xp array for differentiability.
+    f_number : scalar or array_like
+        The F number, also known as focal ratio, at the focal plane. Can be an xp array for differentiability.
     reference_wavelength : scalar
         The reference wavelength used for calculating the spatial resolution at the focal plane.
+    xp : module, optional
+        The array namespace to use. If not provided, will be inferred from input arrays if they are xp arrays,
+        otherwise defaults to numpy.
 
     Returns
     -------
@@ -221,53 +249,88 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
     if isinstance(q, Grid):
         raise ValueError('The function signature was changed as of HCIPy 0.3.0. Please use the new signature (prefered), or use make_focal_grid_from_pupil_grid() if you want to retain old behaviour.')
 
+    # Determine xp from inputs if not provided
+    if xp is None:
+        xp = infer_xp(q, num_airy, spatial_resolution, pupil_diameter, focal_length, f_number)
+
+    # Convert all optical parameters to xp arrays (preserves differentiability)
     if focal_length is not None:
-        focal_length = _normalize_to_tuple(focal_length, 2, float)
+        focal_length = xp.asarray(focal_length)
     if spatial_resolution is not None:
-        spatial_resolution = _normalize_to_tuple(spatial_resolution, 2, float)
+        spatial_resolution = xp.asarray(spatial_resolution)
     if pupil_diameter is not None:
-        pupil_diameter = _normalize_to_tuple(pupil_diameter, 2, float)
+        pupil_diameter = xp.asarray(pupil_diameter)
     if f_number is not None:
-        f_number = _normalize_to_tuple(f_number, 2, float)
+        f_number = xp.asarray(f_number)
 
     if spatial_resolution is None:
         if f_number is None:
             if pupil_diameter is None or focal_length is None:
                 if reference_wavelength is None:
-                    spatial_resolution = (1, 1)
+                    spatial_resolution = xp.asarray([1.0, 1.0])
                 else:
                     raise ValueError('You only supplied a reference wavelength and forgot to supply either an f_number or a (pupil_diameter, focal_length).')
             else:
-                f_number = tuple(f / d for f, d in zip(focal_length, pupil_diameter))
+                f_number = focal_length / pupil_diameter
 
         if spatial_resolution is None:
             if reference_wavelength is None:
                 raise ValueError('You supplied an f_number or (pupil_diameter, focal_length), and forgot to supply a reference wavelength.')
             else:
-                spatial_resolution = tuple(f * reference_wavelength for f in f_number)
+                spatial_resolution = f_number * reference_wavelength
 
-    q = _normalize_to_tuple(q, 2)
-    num_airy = _normalize_to_tuple(num_airy, 2)
+    q = xp.asarray(q)
+    num_airy = xp.asarray(num_airy)
+    spatial_resolution = xp.asarray(spatial_resolution)
 
-    delta = tuple(s / q_i for s, q_i in zip(spatial_resolution, q))
-    dims = tuple(int(2 * n * q_i) for n, q_i in zip(num_airy, q))
-    zero = tuple(d * (-dim / 2 + (dim % 2) * 0.5) for d, dim in zip(delta, dims))
+    delta = spatial_resolution / q
+
+    # Determine the dimensionality
+    num_dims = max(q.ndim, num_airy.ndim)
+    if num_dims == 0:
+        # Both scalars - assume 2D for focal grids
+        num_dims = 2
+        dims = (int(2 * float(num_airy) * float(q)),) * num_dims
+        delta = xp.broadcast_to(delta, (num_dims,))
+    else:
+        # At least one is an array
+        if q.ndim == 0:
+            # q is scalar, broadcast to match num_airy
+            q_vals = [float(q)] * len(num_airy)
+            num_airy_vals = num_airy.tolist()
+        elif num_airy.ndim == 0:
+            # num_airy is scalar, broadcast to match q
+            q_vals = q.tolist()
+            num_airy_vals = [float(num_airy)] * len(q)
+        else:
+            # Both are arrays
+            q_vals = q.tolist()
+            num_airy_vals = num_airy.tolist()
+        dims = tuple(int(2 * n * q_i) for n, q_i in zip(num_airy_vals, q_vals))
+        if delta.ndim == 0:
+            delta = xp.broadcast_to(delta, (len(dims),))
+
+    dims_arr = xp.asarray(dims)
+    zero = delta * (-dims_arr / 2 + (dims_arr % 2) * 0.5)
 
     return CartesianGrid(RegularCoords(delta, dims, zero))
 
-def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None):
+def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None, xp=None):
     '''Make a regular hexagonal grid.
 
     Parameters
     ----------
-    circum_diameter : scalar
-        The circum diameter of the hexagons in the grid.
+    circum_diameter : scalar or array_like
+        The circum diameter of the hexagons in the grid. Can be an xp array for differentiability.
     n_rings : integer
         The number of rings in the grid.
     pointy_top : boolean
         If the hexagons contained in the grid.
-    center : tuple
-        The center of the grid in cartesian coordinates.
+    center : array_like
+        The center of the grid in cartesian coordinates. Can be an xp array for differentiability.
+    xp : module, optional
+        The array namespace to use. If not provided, will be inferred from inputs if they are arrays,
+        otherwise defaults to numpy.
 
     Returns
     -------
@@ -275,10 +338,17 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
         A :class:`CartesianGrid` with `UnstructuredCoords`, indicating the
         center of the hexagons.
     '''
-    if center is None:
-        center = (0, 0)
+    # Determine xp from inputs if not provided
+    if xp is None:
+        xp = infer_xp(circum_diameter, center)
 
-    apothem = circum_diameter * np.sqrt(3) / 4
+    if center is None:
+        center = xp.asarray([0.0, 0.0])
+    else:
+        center = xp.asarray(center)
+
+    circum_diameter = xp.asarray(circum_diameter)
+    apothem = circum_diameter * math.sqrt(3) / 4
 
     q = [0]
     r = [0]
@@ -303,29 +373,34 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None)
         q += [n] * n
         r += list(range(-n, 0))
 
-    x = (-np.array(q) + np.array(r)) * circum_diameter / 2 + center[0]
-    y = (np.array(q) + np.array(r)) * apothem * 2 + center[1]
+    q_arr = xp.asarray(q)
+    r_arr = xp.asarray(r)
+    x = (-q_arr + r_arr) * circum_diameter / 2 + center[0]
+    y = (q_arr + r_arr) * apothem * 2 + center[1]
 
-    weight = 2 * apothem**2 * np.sqrt(3)
+    weight = 2 * apothem**2 * math.sqrt(3)
 
     if pointy_top:
-        return CartesianGrid(UnstructuredCoords((x, y)), weight)
+        return CartesianGrid(UnstructuredCoords((x, y), xp=xp), weight)
     else:
-        return CartesianGrid(UnstructuredCoords((y, x)), weight)
+        return CartesianGrid(UnstructuredCoords((y, x), xp=xp), weight)
 
-def make_chebyshev_grid(dims, minimum=None, maximum=None):
+def make_chebyshev_grid(dims, minimum=None, maximum=None, xp=None):
     '''Make a Chebyshev grid.
 
     Parameters
     ----------
     dims : tuple of ints
         The number of points in each dimension.
-    minimum : scalar or tuple of floats
-        The minimum value in each dimension. If a scalar, it will be used for all dimensions.
+    minimum : scalar or array_like
+        The minimum value in each dimension. Can be an xp array for differentiability.
         The default is -1.
-    maximum : scalar or tuple of floats
-        The maximum value in each dimension. If a scalar, it will be used for all dimensions.
+    maximum : scalar or array_like
+        The maximum value in each dimension. Can be an xp array for differentiability.
         The default is 1.
+    xp : module, optional
+        The array namespace to use. If not provided, will be inferred from inputs if they are arrays,
+        otherwise defaults to numpy.
 
     Returns
     -------
@@ -338,19 +413,27 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None):
     if maximum is None:
         maximum = 1
 
-    minimum = _normalize_to_tuple(minimum, len(dims), float)
-    maximum = _normalize_to_tuple(maximum, len(dims), float)
+    # Determine xp from inputs if not provided
+    if xp is None:
+        xp = infer_xp(minimum, maximum)
 
-    middles = tuple((min_val + max_val) / 2 for min_val, max_val in zip(minimum, maximum))
-    intervals = tuple((max_val - min_val) / 2 for min_val, max_val in zip(minimum, maximum))
+    # Convert to xp arrays (preserves differentiability)
+    minimum = xp.asarray(minimum)
+    maximum = xp.asarray(maximum)
+
+    middles = (minimum + maximum) / 2
+    intervals = (maximum - minimum) / 2
 
     sep_coords = []
-    for dim, middle, interval in zip(dims, middles, intervals):
-        c = np.cos(np.pi * (2 * np.arange(dim) + 1) / (2.0 * dim))
+    for i, dim in enumerate(dims):
+        c = xp.cos(xp.pi * (2 * xp.arange(dim) + 1) / (2.0 * dim))
+        # Handle both scalar and array middles/intervals
+        middle = middles if middles.ndim == 0 else middles[i]
+        interval = intervals if intervals.ndim == 0 else intervals[i]
         c = middle + interval * c
         sep_coords.append(c)
 
-    return CartesianGrid(SeparatedCoords(sep_coords))
+    return CartesianGrid(SeparatedCoords(sep_coords, xp=xp))
 
 def make_supersampled_grid(grid, oversampling):
     '''Make a new grid that oversamples by a factor `oversampling`.
@@ -375,8 +458,10 @@ def make_supersampled_grid(grid, oversampling):
     oversampling = _normalize_to_tuple(oversampling, grid.ndim, round)
 
     if grid.is_regular:
-        delta_new = tuple(d / o for d, o in zip(grid.delta, oversampling))
-        zero_new = tuple(z - d / 2 + dn / 2 for z, d, dn in zip(grid.zero, grid.delta, delta_new))
+        xp = grid.xp
+        oversampling_arr = xp.asarray(oversampling)
+        delta_new = grid.delta / oversampling_arr
+        zero_new = grid.zero - grid.delta / 2 + delta_new / 2
         dims_new = tuple(d * o for d, o in zip(grid.dims, oversampling))
 
         return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
@@ -408,8 +493,10 @@ def make_subsampled_grid(grid, undersampling):
     undersampling = _normalize_to_tuple(undersampling, grid.ndim, round)
 
     if grid.is_regular:
-        delta_new = tuple(d * u for d, u in zip(grid.delta, undersampling))
-        zero_new = tuple(z - d / 2 + dn / 2 for z, d, dn in zip(grid.zero, grid.delta, delta_new))
+        xp = grid.xp
+        undersampling_arr = xp.asarray(undersampling)
+        delta_new = grid.delta * undersampling_arr
+        zero_new = grid.zero - grid.delta / 2 + delta_new / 2
         dims_new = tuple(d // u for d, u in zip(grid.dims, undersampling))
 
         return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))

@@ -3,6 +3,7 @@ import numpy as np
 from .coordinates import UnstructuredCoords
 from .field import Field
 from .grid import Grid
+from .._math.backends import is_scalar, infer_xp
 
 from functools import reduce
 import operator
@@ -10,25 +11,46 @@ import operator
 def _prod(iterable):
     return reduce(operator.mul, iterable, 1)
 
-def _get_rotation_matrix(ndim, angle, axis=None):
+def _get_rotation_matrix(ndim, angle, axis=None, xp=None):
+    if xp is None:
+        xp = infer_xp(angle, axis)
+
     if ndim == 1:
         raise ValueError('Rotation of a one-dimensional grid is not possible.')
     elif ndim > 3:
         raise NotImplementedError()
 
+    # Convert to array if scalar.
+    angle = xp.asarray(angle)
+
     if ndim == 2:
-        return np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
+        cos_a = xp.cos(angle)
+        sin_a = xp.sin(angle)
+
+        return xp.stack([
+            xp.stack([cos_a, -sin_a]),
+            xp.stack([sin_a, cos_a]),
+        ])
+
     elif ndim == 3:
         if axis is None:
             raise ValueError('An axis must be supplied when rotating a three-dimensional grid.')
 
-        axis = np.array(axis).astype('float')
-        if np.all(np.array(axis.shape) != (3,)):
-            raise ValueError('The axis must be a 3-vector.')
-        axis /= np.sqrt(axis.dot(axis))
+        axis = xp.asarray(axis)
 
-        K = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
-        return np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * K.dot(K)
+        if axis.shape != (3,):
+            raise ValueError('The axis must be a 3-vector.')
+
+        axis = axis / xp.sqrt(xp.sum(axis * axis))
+
+        zero = xp.asarray(0, dtype=axis.dtype)
+        K = xp.stack([
+            xp.stack([ zero, -axis[2], axis[1]]),
+            xp.stack([ axis[2], zero, -axis[0]]),
+            xp.stack([-axis[1], axis[0], zero]),
+        ])
+
+        return xp.eye(3, dtype=K.dtype) + xp.sin(angle) * K + (1 - xp.cos(angle)) * (K @ K)
 
 class CartesianGrid(Grid):
     '''A grid representing a N-dimensional Cartesian coordinate system.
@@ -72,10 +94,10 @@ class CartesianGrid(Grid):
         Grid
             Itself to allow for chaining these transformations.
         '''
-        if np.isscalar(scale):
-            self.weights *= np.abs(scale)**self.ndim
+        if is_scalar(scale):
+            self.weights *= self.xp.abs(self.xp.asarray(scale))**self.ndim
         else:
-            self.weights *= np.prod(np.abs(scale))
+            self.weights *= self.xp.prod(self.xp.abs(scale))
 
         self.coords *= scale
 
@@ -116,10 +138,11 @@ class CartesianGrid(Grid):
         Grid
             Itself to allow for chaining these transformations.
         '''
-        R = _get_rotation_matrix(self.ndim, angle, axis)
+        xp = self.coords.xp
+        R = _get_rotation_matrix(self.ndim, angle, axis, xp=xp)
 
-        coords = np.einsum('ik,kn->in', R, np.array(self.coords))
-        self.coords = UnstructuredCoords(coords)
+        coords = xp.einsum('ik,kn->in', R, xp.asarray(self.coords))
+        self.coords = UnstructuredCoords(list(coords))
         return self
 
     def rotated(self, angle, axis=None):
@@ -138,23 +161,34 @@ class CartesianGrid(Grid):
         Grid
             The rotated grid.
         '''
-        R = _get_rotation_matrix(self.ndim, angle, axis)
+        xp = self.coords.xp
+        R = _get_rotation_matrix(self.ndim, angle, axis, xp=xp)
 
-        coords = np.einsum('ik,kn->in', R, np.array(self.coords))
-        return CartesianGrid(UnstructuredCoords(coords))
+        coords = xp.einsum('ik,kn->in', R, xp.stack(list(self.coords)))
+        return CartesianGrid(UnstructuredCoords(list(coords)))
 
     @staticmethod
     def _get_automatic_weights(coords):
-        if coords.is_regular:
-            return np.prod(coords.delta)
-        elif coords.is_separated:
-            weights = []
-            for i in range(len(coords)):
-                x = coords.separated_coords[i]
-                w = (x[2:] - x[:-2]) / 2.
-                w = np.concatenate(([x[1] - x[0]], w, [x[-1] - x[-2]]))
-                weights.append(w)
+        xp = coords.xp
 
-            return _prod(np.ix_(*weights[::-1])).ravel()
+        if coords.is_regular:
+            return xp.prod(coords.delta)
+        elif coords.is_separated:
+            weights = None
+            n = coords.ndim
+            for i, x in enumerate(coords.separated_coords):
+                w = (x[2:] - x[:-2]) / 2
+                w = xp.concat([
+                    xp.reshape(x[1] - x[0], (1,)),
+                    w,
+                    xp.reshape(x[-1] - x[-2], (1,)),
+                ])
+
+                shape = (1,) * (n - i - 1) + (-1,) + (1,) * i
+                w = xp.reshape(w, shape)
+
+                weights = w if weights is None else weights * w
+
+            return xp.reshape(weights, (-1,))
 
 Grid._add_coordinate_system('cartesian', CartesianGrid)

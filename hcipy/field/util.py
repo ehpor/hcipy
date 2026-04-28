@@ -89,8 +89,8 @@ def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
 
     # Convert to xp arrays (preserves differentiability if inputs are xp arrays)
     # Ensure at least 1D arrays for proper broadcasting
-    extent = xp.asarray(extent, dtype=float)
-    center = xp.asarray(center, dtype=float)
+    extent = xp.asarray(extent)
+    center = xp.asarray(center)
 
     # If scalars provided, broadcast to match num_dims
     if extent.ndim == 0:
@@ -135,7 +135,7 @@ def make_pupil_grid(dims, diameter=1, xp=None):
     if xp is None:
         xp = infer_xp(diameter)
 
-    diameter = xp.asarray(diameter, dtype=float)
+    diameter = xp.asarray(diameter)
     if diameter.ndim == 0:
         diameter = xp.broadcast_to(diameter, (2,))
 
@@ -255,19 +255,19 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
 
     # Convert all optical parameters to xp arrays (preserves differentiability)
     if focal_length is not None:
-        focal_length = xp.asarray(focal_length, dtype=float)
+        focal_length = xp.asarray(focal_length)
     if spatial_resolution is not None:
-        spatial_resolution = xp.asarray(spatial_resolution, dtype=float)
+        spatial_resolution = xp.asarray(spatial_resolution)
     if pupil_diameter is not None:
-        pupil_diameter = xp.asarray(pupil_diameter, dtype=float)
+        pupil_diameter = xp.asarray(pupil_diameter)
     if f_number is not None:
-        f_number = xp.asarray(f_number, dtype=float)
+        f_number = xp.asarray(f_number)
 
     if spatial_resolution is None:
         if f_number is None:
             if pupil_diameter is None or focal_length is None:
                 if reference_wavelength is None:
-                    spatial_resolution = xp.asarray([1, 1], dtype=float)
+                    spatial_resolution = xp.asarray([1.0, 1.0])
                 else:
                     raise ValueError('You only supplied a reference wavelength and forgot to supply either an f_number or a (pupil_diameter, focal_length).')
             else:
@@ -279,9 +279,9 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
             else:
                 spatial_resolution = f_number * reference_wavelength
 
-    q = xp.asarray(q, dtype=float)
-    num_airy = xp.asarray(num_airy, dtype=float)
-    spatial_resolution = xp.asarray(spatial_resolution, dtype=float)
+    q = xp.asarray(q)
+    num_airy = xp.asarray(num_airy)
+    spatial_resolution = xp.asarray(spatial_resolution)
 
     delta = spatial_resolution / q
 
@@ -343,11 +343,11 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
         xp = infer_xp(circum_diameter, center)
 
     if center is None:
-        center = xp.asarray([0, 0], dtype=float)
+        center = xp.asarray([0.0, 0.0])
     else:
-        center = xp.asarray(center, dtype=float)
+        center = xp.asarray(center)
 
-    circum_diameter = xp.asarray(circum_diameter, dtype=float)
+    circum_diameter = xp.asarray(circum_diameter)
     apothem = circum_diameter * math.sqrt(3) / 4
 
     q = [0]
@@ -418,8 +418,8 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None, xp=None):
         xp = infer_xp(minimum, maximum)
 
     # Convert to xp arrays (preserves differentiability)
-    minimum = xp.asarray(minimum, dtype=float)
-    maximum = xp.asarray(maximum, dtype=float)
+    minimum = xp.asarray(minimum)
+    maximum = xp.asarray(maximum)
 
     middles = (minimum + maximum) / 2
     intervals = (maximum - minimum) / 2

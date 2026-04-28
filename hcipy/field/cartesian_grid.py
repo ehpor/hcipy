@@ -41,12 +41,13 @@ def _get_rotation_matrix(ndim, angle, axis=None, xp=None):
         if axis.shape != (3,):
             raise ValueError('The axis must be a 3-vector.')
 
-        axis = axis / xp.sqrt(xp.vecdot(axis, axis))
+        axis = axis / xp.sqrt(xp.sum(axis * axis))
 
+        zero = xp.asarray(0, dtype=axis.dtype)
         K = xp.stack([
-            xp.stack([ 0, -axis[2], axis[1]]),
-            xp.stack([ axis[2], 0, -axis[0]]),
-            xp.stack([-axis[1], axis[0], 0]),
+            xp.stack([ zero, -axis[2], axis[1]]),
+            xp.stack([ axis[2], zero, -axis[0]]),
+            xp.stack([-axis[1], axis[0], zero]),
         ])
 
         return xp.eye(3, dtype=K.dtype) + xp.sin(angle) * K + (1 - xp.cos(angle)) * (K @ K)

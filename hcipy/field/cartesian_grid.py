@@ -3,6 +3,7 @@ import numpy as np
 from .coordinates import UnstructuredCoords
 from .field import Field
 from .grid import Grid
+from .._math.backends import is_scalar, infer_xp
 
 from functools import reduce
 import operator
@@ -72,7 +73,7 @@ class CartesianGrid(Grid):
         Grid
             Itself to allow for chaining these transformations.
         '''
-        if np.isscalar(scale):
+        if is_scalar(scale):
             self.weights *= np.abs(scale)**self.ndim
         else:
             self.weights *= np.prod(np.abs(scale))

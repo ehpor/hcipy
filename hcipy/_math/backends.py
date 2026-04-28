@@ -3,7 +3,7 @@ import array_api_compat
 from ..config import Configuration
 
 
-def _infer_xp(*arrays):
+def infer_xp(*arrays):
     """Infer xp from input arrays.
 
     Parameters
@@ -23,7 +23,7 @@ def _infer_xp(*arrays):
     """
     # Filter out None values
     arrays = tuple(a for a in arrays if a is not None)
-    
+
     if len(arrays) > 0:
         try:
             return array_api_compat.array_namespace(*arrays)
@@ -82,3 +82,24 @@ def to_numpy(arr):
         return np.asarray(arr)
     except Exception as e:
         raise ValueError(f"Cannot convert {type(arr).__name__} to numpy: {e}")
+
+def is_scalar(element):
+    '''Check whether an element is a scalar.
+
+    Parameters
+    ----------
+    element : any
+        The element to check.
+
+    Returns
+    -------
+    bool
+        Whether the element is a scalar.
+    '''
+    ndim = getattr(element, 'ndim', None)
+    if ndim is None:
+        # Plain Python scalar, no array structure
+        return True
+
+    shape = getattr(element, 'shape', ())
+    return all(n == 1 for n in shape)

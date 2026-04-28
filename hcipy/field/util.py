@@ -1,9 +1,10 @@
 from __future__ import division
 from collections.abc import Iterable
+import math
 
 import numpy as np
 from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
-from .backends import _infer_xp
+from .._math.backends import infer_xp
 from .field import Field
 from .cartesian_grid import CartesianGrid
 from .grid import Grid
@@ -84,7 +85,7 @@ def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
 
     # Determine xp from inputs if not provided
     if xp is None:
-        xp = _infer_xp(extent, center)
+        xp = infer_xp(extent, center)
 
     # Convert to xp arrays (preserves differentiability if inputs are xp arrays)
     # Ensure at least 1D arrays for proper broadcasting
@@ -132,7 +133,7 @@ def make_pupil_grid(dims, diameter=1, xp=None):
     '''
     # Ensure 2D grid for pupil grids
     if xp is None:
-        xp = _infer_xp(diameter)
+        xp = infer_xp(diameter)
 
     diameter = xp.asarray(diameter, dtype=float)
     if diameter.ndim == 0:
@@ -250,7 +251,7 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
 
     # Determine xp from inputs if not provided
     if xp is None:
-        xp = _infer_xp(q, num_airy, spatial_resolution, pupil_diameter, focal_length, f_number)
+        xp = infer_xp(q, num_airy, spatial_resolution, pupil_diameter, focal_length, f_number)
 
     # Convert all optical parameters to xp arrays (preserves differentiability)
     if focal_length is not None:
@@ -339,7 +340,7 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
     '''
     # Determine xp from inputs if not provided
     if xp is None:
-        xp = _infer_xp(circum_diameter, center)
+        xp = infer_xp(circum_diameter, center)
 
     if center is None:
         center = xp.asarray([0, 0], dtype=float)
@@ -347,7 +348,7 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
         center = xp.asarray(center, dtype=float)
 
     circum_diameter = xp.asarray(circum_diameter, dtype=float)
-    apothem = circum_diameter * xp.sqrt(3) / 4
+    apothem = circum_diameter * math.sqrt(3) / 4
 
     q = [0]
     r = [0]
@@ -377,7 +378,7 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
     x = (-q_arr + r_arr) * circum_diameter / 2 + center[0]
     y = (q_arr + r_arr) * apothem * 2 + center[1]
 
-    weight = 2 * apothem**2 * xp.sqrt(3)
+    weight = 2 * apothem**2 * math.sqrt(3)
 
     if pointy_top:
         return CartesianGrid(UnstructuredCoords((x, y), xp=xp), weight)
@@ -414,7 +415,7 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None, xp=None):
 
     # Determine xp from inputs if not provided
     if xp is None:
-        xp = _infer_xp(minimum, maximum)
+        xp = infer_xp(minimum, maximum)
 
     # Convert to xp arrays (preserves differentiability)
     minimum = xp.asarray(minimum, dtype=float)

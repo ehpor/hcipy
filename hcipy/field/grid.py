@@ -242,7 +242,7 @@ class Grid(object):
                 print(p)
         '''
         xp = self.coords.xp
-        return xp.asarray(self.coords).T
+        return xp.stack(list(self.coords), axis=-1)
 
     @property
     def is_separated(self):

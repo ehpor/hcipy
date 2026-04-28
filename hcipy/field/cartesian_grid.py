@@ -94,9 +94,9 @@ class CartesianGrid(Grid):
             Itself to allow for chaining these transformations.
         '''
         if is_scalar(scale):
-            self.weights *= np.abs(scale)**self.ndim
+            self.weights *= self.xp.abs(self.xp.asarray(scale))**self.ndim
         else:
-            self.weights *= np.prod(np.abs(scale))
+            self.weights *= self.xp.prod(self.xp.abs(scale))
 
         self.coords *= scale
 
@@ -168,16 +168,26 @@ class CartesianGrid(Grid):
 
     @staticmethod
     def _get_automatic_weights(coords):
-        if coords.is_regular:
-            return coords.xp.prod(coords.delta)
-        elif coords.is_separated:
-            weights = []
-            for i in range(len(coords)):
-                x = coords.separated_coords[i]
-                w = (x[2:] - x[:-2]) / 2.
-                w = np.concatenate(([x[1] - x[0]], w, [x[-1] - x[-2]]))
-                weights.append(w)
+        xp = coords.xp
 
-            return _prod(np.ix_(*weights[::-1])).ravel()
+        if coords.is_regular:
+            return xp.prod(coords.delta)
+        elif coords.is_separated:
+            weights = None
+            n = coords.ndim
+            for i, x in enumerate(coords.separated_coords):
+                w = (x[2:] - x[:-2]) / 2
+                w = xp.concat([
+                    xp.reshape(x[1] - x[0], (1,)),
+                    w,
+                    xp.reshape(x[-1] - x[-2], (1,)),
+                ])
+
+                shape = (1,) * (n - i - 1) + (-1,) + (1,) * i
+                w = xp.reshape(w, shape)
+
+                weights = w if weights is None else weights * w
+
+            return xp.reshape(weights, (-1,))
 
 Grid._add_coordinate_system('cartesian', CartesianGrid)

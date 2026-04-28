@@ -591,9 +591,9 @@ class RegularCoords(Coords):
         self._xp = xp
 
         # Convert to arrays - accept tuples, lists, or arrays
-        self.delta = xp.asarray(delta, dtype=float)
+        self.delta = xp.asarray(delta) * 1.0
         self.dims = tuple(int(n) for n in dims)
-        self.zero = xp.asarray(zero, dtype=float)
+        self.zero = xp.asarray(zero) * 1.0
 
         # Validate dimensions match
         assert len(self.delta) == len(self.dims), 'delta and dims must have same length'
@@ -675,8 +675,8 @@ class RegularCoords(Coords):
             import importlib
             self._xp = importlib.import_module(state['xp_name'])
         # Convert lists back to arrays
-        self.delta = self._xp.asarray(state['delta'], dtype=float)
-        self.zero = self._xp.asarray(state['zero'], dtype=float)
+        self.delta = self._xp.asarray(state['delta'])
+        self.zero = self._xp.asarray(state['zero'])
 
     @property
     def separated_coords(self):
@@ -726,7 +726,7 @@ class RegularCoords(Coords):
 
         assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
 
-        self.zero = self.zero + self._xp.asarray(b, dtype=float)
+        self.zero = self.zero + self._xp.asarray(b)
 
         return self
 
@@ -738,7 +738,7 @@ class RegularCoords(Coords):
 
         assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
 
-        self.zero = self.zero - self._xp.asarray(b, dtype=float)
+        self.zero = self.zero - self._xp.asarray(b)
 
         return self
 
@@ -750,7 +750,7 @@ class RegularCoords(Coords):
 
         assert len(f) == self.ndim, 'f must have same dimensionality as the coordinates.'
 
-        f_arr = self._xp.asarray(f, dtype=float)
+        f_arr = self._xp.asarray(f)
         self.delta = self.delta * f_arr
         self.zero = self.zero * f_arr
 

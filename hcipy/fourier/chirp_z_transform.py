@@ -60,7 +60,7 @@ class ChirpZTransform:
             self.nfft = next_fast_len(self.n + self.m - 1)
 
             self._Awk2 = self.a**-k[:self.n] * wk2[:self.n]
-            self._Fwk2 = _fft_module.fft(1 / np.hstack((wk2[self.n - 1:0:-1], wk2[:self.m])), self.nfft)
+            self._Fwk2 = _fft_module.fft(1 / np.hstack((wk2[self.n - 1:0:-1], wk2[:self.m])), n=self.nfft)
             self._wk2 = wk2[:self.m]
             self._yidx = slice(self.n - 1, self.n + self.m - 1)
 
@@ -95,7 +95,7 @@ class ChirpZTransform:
         # Perform the CZT.
         x = x * self._Awk2
 
-        intermediate = _fft_module.fft(x, self.nfft)
+        intermediate = _fft_module.fft(x, n=self.nfft)
         intermediate *= self._Fwk2
         res = _fft_module.ifft(intermediate)
 

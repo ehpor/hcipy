@@ -912,3 +912,18 @@ def test_surface_profile_fill_value():
     spherical_sag_min = spherical_surface_sag(radius_of_curvature, fill_value='min')(grid_large)
     assert not np.any(np.isnan(spherical_sag_min))
     assert np.allclose(np.nanmin(spherical_sag_nan), np.min(spherical_sag_min))
+
+def test_simple_vibration_phase_matching():
+    pupil_grid = make_pupil_grid(32)
+    mode = pupil_grid.x
+
+    vib = SimpleVibration(mode, 1e-6, 10, phase_0=0)
+    vib.t = 0.5
+
+    # Store the phase before setting a new frequency.
+    phase_before = vib.phase
+    vib.frequency = 20
+    phase_after = vib.phase
+
+    # Check that the phase varies contiguously with time and is not affected by changing the frequency.
+    assert np.isclose(phase_before, phase_after)

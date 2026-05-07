@@ -2,11 +2,69 @@ import numpy as np
 import copy
 import math
 from collections.abc import Iterable
+import array_api_compat
+from .._math.backends import infer_xp
+
 
 class Coords(object):
     '''Base class for coordinates.
     '''
     _coordinate_types = {}
+
+    @property
+    def xp(self):
+        '''The array namespace (e.g., numpy, cupy, jax.numpy) used by these coordinates.
+        '''
+        return self._xp
+
+    def __copy__(self):
+        '''Make a shallow copy of the coordinates.
+
+        This method is required because the Coords stores a reference to a module
+        (the xp/backend), and modules cannot be copied. The xp module is shared
+        between the original and the copy.
+
+        Returns
+        -------
+        Coords
+            A shallow copy of the coordinates.
+        '''
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo):
+        '''Make a deep copy of the coordinates.
+
+        This method is required because the Coords stores a reference to a module
+        (the xp/backend), and modules cannot be deep copied. The xp module is shared
+        between the original and the copy, while all other attributes are deep copied.
+
+        Parameters
+        ----------
+        memo : dict
+            A dictionary to store objects that have already been copied,
+            used to handle circular references.
+
+        Returns
+        -------
+        Coords
+            A deep copy of the coordinates.
+        '''
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+
+        # Copy all attributes except _xp
+        for k, v in self.__dict__.items():
+            if k == '_xp':
+                # Share the xp module (modules can't be deep copied)
+                setattr(result, k, v)
+            else:
+                setattr(result, k, copy.deepcopy(v, memo))
+
+        return result
 
     def copy(self):
         '''Make a copy.
@@ -58,15 +116,15 @@ class Coords(object):
         res *= f
         return res
 
-    def __rmul__(self, f):
-        '''Multiply each coordinate with `f` separately and return the result.
-        '''
-        return self * f
-
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
         raise NotImplementedError()
+
+    def __rmul__(self, f):
+        '''Multiply each coordinate with `f` separately and return the result.
+        '''
+        return self * f
 
     def __truediv__(self, f):
         '''Divide each coordinate by `f` separately and return the result.
@@ -143,6 +201,7 @@ class Coords(object):
     def _add_coordinate_type(cls, coordinate_type, coordinate_class):
         cls._coordinate_types[coordinate_type] = coordinate_class
 
+
 class UnstructuredCoords(Coords):
     '''An unstructured list of points.
 
@@ -150,9 +209,15 @@ class UnstructuredCoords(Coords):
     ----------
     coords : list or tuple
         A tuple of a list of positions for each dimension.
+    xp : module, optional
+        The array namespace (e.g., numpy, cupy, jax.numpy). If not provided,
+        it will be inferred from the input arrays.
     '''
-    def __init__(self, coords):
-        self.coords = [np.array(c) for c in coords]
+    def __init__(self, coords, xp=None):
+        if xp is None:
+            xp = infer_xp(*coords)
+        self._xp = xp
+        self.coords = [self._xp.asarray(c, copy=True) for c in coords]
 
     @classmethod
     def from_dict(cls, tree):
@@ -193,11 +258,31 @@ class UnstructuredCoords(Coords):
 
         return tree
 
+    def __getstate__(self):
+        '''Get state for pickling.
+        '''
+        return {
+            'coords': self.coords,
+            'xp_name': self._xp.__name__
+        }
+
+    def __setstate__(self, state):
+        '''Restore state from pickle.
+        '''
+        self.coords = state['coords']
+        # Restore xp from module name
+        if state['xp_name'] == 'numpy':
+            self._xp = np
+        else:
+            # For other backends, import dynamically
+            import importlib
+            self._xp = importlib.import_module(state['xp_name'])
+
     @property
     def size(self):
         '''The number of points.
         '''
-        return self.coords[0].size
+        return len(self.coords[0])
 
     def __len__(self):
         '''The number of dimensions.
@@ -264,14 +349,18 @@ class UnstructuredCoords(Coords):
         if type(self) is not type(other):
             return False
 
-        return np.array_equal(self.coords, other.coords)
+        if self.size != other.size:
+            return False
+
+        return all(self._xp.all(s == o) for s, o in zip(self.coords, other.coords))
 
     def reverse(self):
         '''Reverse the ordering of points in-place.
         '''
         for i in range(len(self.coords)):
-            self.coords[i] = self.coords[i][::-1]
+            self.coords[i] = self._xp.flip(self.coords[i], (-1,))
         return self
+
 
 class SeparatedCoords(Coords):
     '''A list of points that are separable along each dimension.
@@ -282,15 +371,21 @@ class SeparatedCoords(Coords):
     ----------
     separated_coords : list or tuple
         A tuple of a list of coordinates along each dimension.
+    xp : module, optional
+        The array namespace (e.g., numpy, cupy, jax.numpy). If not provided,
+        it will be inferred from the input arrays.
 
     Attributes
     ----------
     separated_coords
         A tuple of a list of coordinates along each dimension.
     '''
-    def __init__(self, separated_coords):
+    def __init__(self, separated_coords, xp=None):
+        if xp is None:
+            xp = infer_xp(*separated_coords)
+        self._xp = xp
         # Make a copy to avoid modification from outside the class
-        self.separated_coords = [np.array(s, dtype='float') for s in separated_coords]
+        self.separated_coords = [self._xp.asarray(s, copy=True) for s in separated_coords]
 
     @classmethod
     def from_dict(cls, tree):
@@ -331,19 +426,39 @@ class SeparatedCoords(Coords):
 
         return tree
 
+    def __getstate__(self):
+        '''Get state for pickling.
+        '''
+        return {
+            'separated_coords': self.separated_coords,
+            'xp_name': self._xp.__name__
+        }
+
+    def __setstate__(self, state):
+        '''Restore state from pickle.
+        '''
+        self.separated_coords = state['separated_coords']
+        # Restore xp from module name
+        if state['xp_name'] == 'numpy':
+            self._xp = np
+        else:
+            # For other backends, import dynamically
+            import importlib
+            self._xp = importlib.import_module(state['xp_name'])
+
     def __getitem__(self, i):
         '''The `i`-th point for these coordinates.
         '''
         s0 = (1,) * len(self)
         j = len(self) - i - 1
         output = self.separated_coords[i].reshape(s0[:j] + (-1,) + s0[j + 1:])
-        return np.broadcast_to(output, self.shape).ravel()
+        return self._xp.broadcast_to(output, self.shape).ravel()
 
     @property
     def size(self):
         '''The number of points.
         '''
-        return np.prod(self.shape)
+        return self._xp.prod(self._xp.asarray(self.shape))
 
     def __len__(self):
         '''The number of dimensions.
@@ -421,7 +536,10 @@ class SeparatedCoords(Coords):
             return False
 
         for s, o in zip(self.separated_coords, other.separated_coords):
-            if not np.array_equal(s, o):
+            if len(s) != len(o):
+                return False
+
+            if not self._xp.all(s == o):
                 return False
 
         return True
@@ -430,8 +548,9 @@ class SeparatedCoords(Coords):
         '''Reverse the ordering of points in-place.
         '''
         for i in range(len(self)):
-            self.separated_coords[i] = self.separated_coords[i][::-1]
+            self.separated_coords[i] = self._xp.flip(self.separated_coords[i], (-1,))
         return self
+
 
 class RegularCoords(Coords):
     '''A list of points that have a regular spacing in all dimensions.
@@ -440,10 +559,13 @@ class RegularCoords(Coords):
     ----------
     delta : array_like
         The spacing between the points.
-    dims : array_like
+    dims : tuple
         The number of points along each dimension.
     zero : array_like
         The coordinates for the first point.
+    xp : module, optional
+        The array namespace (e.g., numpy, cupy, jax.numpy). If not provided,
+        it will be inferred from the delta and zero arrays.
 
     Attributes
     ----------
@@ -454,26 +576,28 @@ class RegularCoords(Coords):
     zero
         The coordinates for the first point.
     '''
-    def __init__(self, delta, dims, zero):
-        if not isinstance(delta, Iterable):
-            raise ValueError('Delta should be an iterable.')
-
+    def __init__(self, delta, dims, zero, xp=None):
         if not isinstance(dims, Iterable):
             raise ValueError('Dims should be an iterable.')
 
-        if not isinstance(zero, Iterable):
-            raise ValueError('Zero should be an iterable.')
+        # Try to infer xp from delta and zero if not provided
+        if xp is None:
+            try:
+                xp = infer_xp(delta, zero)
+            except ValueError:
+                # infer_xp already raises ValueError for new-style fields
+                raise
 
-        delta = tuple(float(d) for d in delta)
-        dims = tuple(int(n) for n in dims)
-        zero = tuple(float(z) for z in zero)
+        self._xp = xp
 
-        assert len(delta) == len(dims)
-        assert len(dims) == len(zero)
+        # Convert to arrays - accept tuples, lists, or arrays
+        self.delta = xp.asarray(delta) * 1.0
+        self.dims = tuple(int(n) for n in dims)
+        self.zero = xp.asarray(zero) * 1.0
 
-        self.dims = dims
-        self.delta = delta
-        self.zero = zero
+        # Validate dimensions match
+        assert len(self.delta) == len(self.dims), 'delta and dims must have same length'
+        assert len(self.dims) == len(self.zero), 'dims and zero must have same length'
 
     @classmethod
     def from_dict(cls, tree):
@@ -497,7 +621,17 @@ class RegularCoords(Coords):
         if tree['type'] != 'regular':
             raise ValueError('The type of coordinates should be "regular".')
 
-        return cls(tree['delta'], tree['dims'], tree['zero'])
+        # Restore xp from stored name
+        if tree.get('xp_name') == 'numpy':
+            xp = np
+        elif 'xp_name' in tree:
+            import importlib
+            xp = importlib.import_module(tree['xp_name'])
+        else:
+            # Backward compatibility: default to numpy
+            xp = np
+
+        return cls(tree['delta'], tree['dims'], tree['zero'], xp=xp)
 
     def to_dict(self):
         '''Convert the object to a dictionary for serialization.
@@ -507,14 +641,42 @@ class RegularCoords(Coords):
         dictionary
             The created dictionary.
         '''
+        # Convert arrays to lists for JSON serialization, store xp name
         tree = {
             'type': 'regular',
-            'delta': self.delta,
+            'delta': self.delta.tolist(),
             'dims': self.dims,
-            'zero': self.zero
+            'zero': self.zero.tolist(),
+            'xp_name': self._xp.__name__
         }
 
         return tree
+
+    def __getstate__(self):
+        '''Get state for pickling.
+        '''
+        # Convert arrays to lists for pickling
+        return {
+            'delta': self.delta.tolist(),
+            'dims': self.dims,
+            'zero': self.zero.tolist(),
+            'xp_name': self._xp.__name__
+        }
+
+    def __setstate__(self, state):
+        '''Restore state from pickle.
+        '''
+        self.dims = state['dims']
+        # Restore xp from module name
+        if state['xp_name'] == 'numpy':
+            self._xp = np
+        else:
+            # For other backends, import dynamically
+            import importlib
+            self._xp = importlib.import_module(state['xp_name'])
+        # Convert lists back to arrays
+        self.delta = self._xp.asarray(state['delta'])
+        self.zero = self._xp.asarray(state['zero'])
 
     @property
     def separated_coords(self):
@@ -522,7 +684,7 @@ class RegularCoords(Coords):
 
         The actual points are the iterated tensor product of this tuple.
         '''
-        return [np.arange(n) * delta + zero for delta, n, zero in zip(self.delta, self.dims, self.zero)]
+        return [self._xp.arange(n) * delta + zero for delta, n, zero in zip(self.delta, self.dims, self.zero)]
 
     @property
     def regular_coords(self):
@@ -554,7 +716,7 @@ class RegularCoords(Coords):
         j = len(self) - i - 1
         t = s0[:j] + (-1,) + s0[j + 1:]
         output = self.separated_coords[i].reshape(t)
-        return np.broadcast_to(output, self.shape).ravel()
+        return self._xp.broadcast_to(output, self.shape).ravel()
 
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
@@ -564,7 +726,7 @@ class RegularCoords(Coords):
 
         assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
 
-        self.zero = tuple(aa + bb for aa, bb in zip(self.zero, b))
+        self.zero = self.zero + self._xp.asarray(b)
 
         return self
 
@@ -576,7 +738,7 @@ class RegularCoords(Coords):
 
         assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
 
-        self.zero = tuple(aa - bb for aa, bb in zip(self.zero, b))
+        self.zero = self.zero - self._xp.asarray(b)
 
         return self
 
@@ -588,8 +750,9 @@ class RegularCoords(Coords):
 
         assert len(f) == self.ndim, 'f must have same dimensionality as the coordinates.'
 
-        self.delta = tuple(d * ff for d, ff in zip(self.delta, f))
-        self.zero = tuple(z * ff for z, ff in zip(self.zero, f))
+        f_arr = self._xp.asarray(f)
+        self.delta = self.delta * f_arr
+        self.zero = self.zero * f_arr
 
         return self
 
@@ -609,13 +772,16 @@ class RegularCoords(Coords):
         if type(self) is not type(other):
             return False
 
-        return self.delta == other.delta and self.dims == other.dims and self.zero == other.zero
+        # Use xp.all() for array comparison (Array API compatible)
+        delta_equal = self._xp.all(self.delta == other.delta)
+        zero_equal = self._xp.all(self.zero == other.zero)
+        return delta_equal and self.dims == other.dims and zero_equal
 
     def reverse(self):
         '''Reverse the ordering of points in-place.
         '''
-        self.zero = tuple(z + d * (n - 1) for z, d, n in zip(self.zero, self.delta, self.dims))
-        self.delta = tuple(-d for d in self.delta)
+        self.zero = self.zero + self.delta * (self._xp.asarray(self.dims) - 1)
+        self.delta = -self.delta
 
         return self
 

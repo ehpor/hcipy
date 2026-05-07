@@ -197,9 +197,10 @@ class FourierShift:
         # Compute the Fourier transform grid for these axes.
         fft_grid = make_fft_grid(self.input_grid, q=1, fov=1)
 
-        delta = tuple(delta for delta, m in zip(fft_grid.delta, mask) if m)
+        xp = fft_grid.xp
+        delta = fft_grid.delta[mask]
         dims = tuple(dim for dim, m in zip(fft_grid.dims, mask) if m)
-        zero = tuple(z for z, m in zip(fft_grid.zero, mask) if m)
+        zero = fft_grid.zero[mask]
         fft_grid = CartesianGrid(RegularCoords(delta, dims, zero))
 
         # Compute the shift filter on this grid and broadcast to the original field shape.
@@ -404,7 +405,8 @@ class FourierRotation:
 
         self._padding = tuple(n // 2 for n in input_grid.shape)
 
-        zero = tuple(zero - delta * padding for zero, delta, padding in zip(input_grid.zero, input_grid.delta, self._padding[::-1]))
+        xp = input_grid.xp
+        zero = input_grid.zero - input_grid.delta * xp.asarray(self._padding[::-1])
         dims = tuple(n + 2 * padding for n, padding in zip(input_grid.dims, self._padding[::-1]))
         self._padded_grid = CartesianGrid(RegularCoords(input_grid.delta, dims, zero))
 

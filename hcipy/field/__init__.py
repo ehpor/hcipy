@@ -1,6 +1,9 @@
 __all__ = [
     'Grid',
     'Field',
+    'OldStyleField',
+    'NewStyleField',
+    'make_field_namespace',
     'CartesianGrid',
     'PolarGrid',
     'UnstructuredCoords',

@@ -1,7 +1,7 @@
 import pytest
 import hcipy
 import numpy as np
-from hcipy._math.random import RandomGenerator
+from hcipy._math.random import make_random_generator
 import math
 
 
@@ -61,7 +61,7 @@ def test_fft_acceleration(func, method, dtype_in, dtype_out):
 @pytest.mark.parametrize('mean, std', ((0.0, 1.0), (3.0, 2.0)))
 def test_random_generator_distribution(xp, mean, std):
     # Get samples from the Standard Normal distribution.
-    rng = RandomGenerator(xp, seed=42)
+    rng = make_random_generator(xp, seed=42)
     samples = rng.normal(mean, std, size=(10000,))
 
     # Basic statistical tests for normal distribution
@@ -72,7 +72,7 @@ def test_random_generator_distribution(xp, mean, std):
 @pytest.mark.parametrize('lam', (1.0, 3.0))
 def test_random_generator_poisson(xp, lam):
     # Get samples from the Poisson distribution.
-    rng = RandomGenerator(xp, seed=42)
+    rng = make_random_generator(xp, seed=42)
     samples = rng.poisson(lam=lam, size=(10000,))
 
     # Basic statistical tests for poisson distribution
@@ -83,7 +83,7 @@ def test_random_generator_poisson(xp, lam):
 @pytest.mark.parametrize('scale, shape', ((2.0, 2.0), (1.0, 3.0), (1.0, 0.5)))
 def test_random_generator_gamma(xp, scale, shape):
     # Get samples from the Gamma distribution.
-    rng = RandomGenerator(xp, seed=42)
+    rng = make_random_generator(xp, seed=42)
     samples = rng.gamma(scale=scale, shape_param=shape, size=(10000,))
 
     # Basic statistical tests (mean should be shape * scale)
@@ -93,9 +93,9 @@ def test_random_generator_gamma(xp, scale, shape):
 
 @pytest.mark.parametrize('distribution', ['normal', 'gamma', 'poisson'])
 def test_random_generator_reproducible(xp, distribution):
-    # Create two RandomGenerator objects with same seed
-    rng1 = RandomGenerator(xp, seed=123)
-    rng2 = RandomGenerator(xp, seed=123)
+    # Create two make_random_generator objects with same seed
+    rng1 = make_random_generator(xp, seed=123)
+    rng2 = make_random_generator(xp, seed=123)
 
     # Generate samples
     samples1 = getattr(rng1, distribution)(size=(100,))
@@ -108,7 +108,7 @@ def test_random_generator_reproducible(xp, distribution):
 @pytest.mark.parametrize('distribution', ['normal', 'gamma', 'poisson'])
 def test_random_generator_copy(xp, distribution):
     # Create initial rngs
-    rng1 = RandomGenerator(xp, seed=42)
+    rng1 = make_random_generator(xp, seed=42)
     rng2 = rng1.copy()
 
     # Generate some samples
@@ -121,7 +121,7 @@ def test_random_generator_copy(xp, distribution):
 
 @pytest.mark.parametrize('distribution', ['normal', 'gamma', 'poisson'])
 def test_random_generator_different_sizes(xp, distribution):
-    rng = RandomGenerator(xp, seed=42)
+    rng = make_random_generator(xp, seed=42)
 
     generation_func = getattr(rng, distribution)
 

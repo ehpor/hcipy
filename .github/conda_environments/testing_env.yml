@@ -4,3 +4,4 @@ dependencies:
   - scipy
   - ffmpeg
   - conda-forge::pyfftw
+  - pip

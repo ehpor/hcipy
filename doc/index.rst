@@ -12,7 +12,7 @@ The banner above shows a number of simulations done with HCIPy. From left to rig
    :caption: Getting Started
 
    installation
-   getting_started/index
+   getting_started
    tutorials/index
    citing
    team

@@ -39,7 +39,7 @@ jobs:
       shell: bash -l {0}
     - name: Install our package
       run: |
-        pip install -e ".[dev]"
+        python -m pip install -e ".[dev]"
       shell: bash -l {0}
     - name: Print package versions
       run: |

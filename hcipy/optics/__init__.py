@@ -24,6 +24,8 @@ __all__ = [
     'SingleModeFiberInjection',
     'SingleModeFiberArray',
     'GaussianBeam',
+    'mfd_to_sigma',
+    'sigma_to_mfd',
     'make_sellmeier_glass',
     'make_cauchy_glass',
     'get_refractive_index',

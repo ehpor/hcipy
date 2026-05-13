@@ -637,6 +637,12 @@ def test_step_index_fiber():
         assert forward_wf.total_power <= img.total_power * (1 + 1e-4)
         assert backward_wf.total_power <= forward_wf.total_power * (1 + 1e-4)
 
+def test_unit_conversion_gaussian_beam():
+    mfd = 2.0
+    sigma = mfd_to_sigma(mfd)
+    mfd_out = sigma_to_mfd(sigma)
+    assert mfd == mfd_out
+
 def test_gaussian_fiber_mode_power():
     for q in [16, 32, 64]:
         for mfd in [0.25, 0.5, 1]:

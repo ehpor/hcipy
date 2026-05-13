@@ -2,6 +2,17 @@ import numpy as np
 from ..field import Field
 from .wavefront import Wavefront
 
+def mfd_to_sigma(mfd):
+    '''Calculate the sigma from the mode field diameter of a Gaussian beam.
+    '''
+    return mfd / (2 * np.sqrt(2.0))
+
+def sigma_to_mfd(sigma):
+    '''Calculate the mode field diameter from the sigma of the Gaussian distribution.
+    '''
+    return 2 * np.sqrt(2) * sigma
+
+
 class GaussianBeam(object):
     '''An analytical description of a light beam with a Gaussian profile.
 

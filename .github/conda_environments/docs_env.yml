@@ -6,3 +6,4 @@ dependencies:
   - conda-forge::pyfftw
   - mkl_fft
   - conda-forge::pandoc
+  - pip

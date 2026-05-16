@@ -1,5 +1,3 @@
-import numpy as np
-
 from .coordinates import UnstructuredCoords
 from .field import Field
 from .grid import Grid
@@ -45,8 +43,8 @@ def _get_rotation_matrix(ndim, angle, axis=None, xp=None):
 
         zero = xp.asarray(0, dtype=axis.dtype)
         K = xp.stack([
-            xp.stack([ zero, -axis[2], axis[1]]),
-            xp.stack([ axis[2], zero, -axis[0]]),
+            xp.stack([zero, -axis[2], axis[1]]),
+            xp.stack([axis[2], zero, -axis[0]]),
             xp.stack([-axis[1], axis[0], zero]),
         ])
 

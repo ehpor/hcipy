@@ -23,7 +23,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3
       with:
         activate-environment: ci-env
-        python-version: 3.11
+        python-version: 3.14
         environment-file: .github/conda_environments/docs_env.yml
         auto-activate-base: false
     - name: Install our package

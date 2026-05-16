@@ -38,6 +38,7 @@ __all__ = [
     'make_hst_aperture',
     'make_jwst_aperture',
     'make_keck_aperture',
+    'make_eac1_aperture',
     'make_eac2_aperture',
     'make_subaru_aperture',
     'make_subaru_lyot_stop',

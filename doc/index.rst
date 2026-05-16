@@ -14,6 +14,7 @@ The banner above shows a number of simulations done with HCIPy. From left to rig
    installation
    getting_started/index
    tutorials/index
+   performance
    citing
    team
    changelog

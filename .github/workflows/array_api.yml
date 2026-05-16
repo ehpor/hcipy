@@ -1,4 +1,4 @@
-name: Testing
+name: Array API
 
 on:
   pull_request:
@@ -10,37 +10,50 @@ on:
 
 jobs:
   pytest:
-    name: Pytest (${{ matrix.os }} Python${{ matrix.python_version }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python_version: ["3.11", "3.12", "3.13", "3.14"]
+    name: Compliance
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Check out repo
-      uses: actions/checkout@v4
+    - name: Check out hcipy repo
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
         filter: tree:0
+
+    - name: Checkout array-api-tests repo
+      uses: actions/checkout@v6
+      with:
+        repository: data-apis/array-api-tests
+        submodules: 'true'
+        path: array-api-tests
+
     - name: Set up conda environment
       uses: conda-incubator/setup-miniconda@v3
       with:
         activate-environment: ci-env
-        python-version: ${{ matrix.python_version }}
-        environment-file: .github/conda_environments/testing_env.yml
+        python-version: "3.14"
+        environment-file: ./.github/conda_environments/testing_env.yml
         auto-activate-base: false
+
     - name: Install optional dependencies if available
       run: |
         while read requirement; do
           conda install --yes $requirement || true
-        done < .github/conda_environments/optional_dependencies.txt
+        done < ./.github/conda_environments/optional_dependencies.txt
       shell: bash -l {0}
+
     - name: Install our package
       run: |
-        python -m pip install -e ".[dev]"
+        pip install -e ".[dev]"
       shell: bash -l {0}
+
+    - name: Install array-api-tests dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install array-api-strict
+        python -m pip install -r array-api-tests/requirements.txt
+      shell: bash -l {0}
+
     - name: Print package versions
       run: |
         python --version
@@ -50,10 +63,15 @@ jobs:
         python -c "import hcipy; print('HCIPy', hcipy.__version__)"
         conda list
       shell: bash -l {0}
-    - name: Run tests
+
+    - name: Run the array_api test suite
+      env:
+        ARRAY_API_TESTS_MODULE: "exec('import hcipy; import array_api_strict; xp = hcipy.make_field_namespace(array_api_strict)')"
+        ARRAY_API_STRICT_API_VERSION: 2024.12
       run: |
-        pytest ./tests -ra --cov=./ --cov-report=xml
+        pytest ./array-api-tests/ -ra -v --cov=./ --cov-report=xml --skips-file ./.github/workflows/array-api-tests-skips.txt
       shell: bash -l {0}
+
     - name: Upload coverage to codecov.io
       if: always()
       uses: codecov/codecov-action@v4

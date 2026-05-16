@@ -2,3 +2,4 @@
 omit =
     */python?.?/*
     */tests/*
+    */array-api-tests/*

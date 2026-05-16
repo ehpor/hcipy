@@ -1,4 +1,3 @@
-import numpy as np
 import copy
 import warnings
 import xxhash

@@ -2,7 +2,6 @@ import numpy as np
 import copy
 import math
 from collections.abc import Iterable
-import array_api_compat
 from .._math.backends import infer_xp
 
 

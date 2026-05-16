@@ -197,7 +197,6 @@ class FourierShift:
         # Compute the Fourier transform grid for these axes.
         fft_grid = make_fft_grid(self.input_grid, q=1, fov=1)
 
-        xp = fft_grid.xp
         delta = fft_grid.delta[mask]
         dims = tuple(dim for dim, m in zip(fft_grid.dims, mask) if m)
         zero = fft_grid.zero[mask]

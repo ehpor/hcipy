@@ -6,7 +6,6 @@ from ..field import make_pupil_grid, Field, CartesianGrid, UnstructuredCoords
 from ..field import evaluate_supersampled
 
 import numpy as np
-import math
 
 class ModulatedPyramidWavefrontSensorOptics(WavefrontSensorOptics):
     '''The optical elements for a modulated pyramid wavefront sensor.

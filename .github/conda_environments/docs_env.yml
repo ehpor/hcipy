@@ -1,4 +1,6 @@
 name: ci-env
+channels:
+  - defaults
 dependencies:
   - numpy
   - scipy

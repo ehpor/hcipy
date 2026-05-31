@@ -20,7 +20,7 @@ jobs:
         fetch-depth: 0
         filter: tree:0
     - name: Set up conda environment
-      uses: conda-incubator/setup-miniconda@v3
+      uses: conda-incubator/setup-miniconda@v4
       with:
         activate-environment: ci-env
         python-version: 3.14

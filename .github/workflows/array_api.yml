@@ -28,7 +28,7 @@ jobs:
         path: array-api-tests
 
     - name: Set up conda environment
-      uses: conda-incubator/setup-miniconda@v3
+      uses: conda-incubator/setup-miniconda@v4
       with:
         activate-environment: ci-env
         python-version: "3.14"

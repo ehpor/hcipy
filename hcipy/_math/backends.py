@@ -2,7 +2,6 @@ import numpy as np
 import array_api_compat
 from ..config import Configuration
 
-
 def infer_xp(*arrays):
     """Infer xp from input arrays.
 
@@ -34,7 +33,6 @@ def infer_xp(*arrays):
     if Configuration().core.use_new_style_fields:
         raise ValueError("xp must be specified when arrays don't provide it")
     return np
-
 
 def to_numpy(arr):
     """Convert any array to numpy.
@@ -103,3 +101,26 @@ def is_scalar(element):
 
     shape = getattr(element, 'shape', ())
     return all(n == 1 for n in shape)
+
+def all_close(a, b, *, rtol=1e-5, atol=1e-8):
+    '''Whether the two arrays are elementwise equal within tolerance.
+
+    This is defined as `|a - b| <= atol + rtol * |b|`.
+
+    At least `a` or `b` needs to be an Array.
+
+    Parameters
+    ----------
+    a : Array or scalar
+        The first array or scalar.
+    b : Array or scalar
+        The second array or scalar.
+    rtol : float, optional
+        _description_, by default 1e-5
+    atol : float, optional
+        _description_, by default 1e-8
+    '''
+    xp = array_api_compat.array_namespace(a, b)
+
+    close = abs(a - b) <= atol + rtol * abs(b)
+    return xp.all(close)

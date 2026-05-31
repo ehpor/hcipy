@@ -30,7 +30,7 @@ jobs:
         activate-environment: ci-env
         python-version: ${{ matrix.python_version }}
         environment-file: .github/conda_environments/testing_env.yml
-        auto-activate-base: false
+        auto-activate: false
     - name: Install optional dependencies if available
       run: |
         while read requirement; do

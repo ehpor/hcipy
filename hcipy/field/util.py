@@ -131,10 +131,10 @@ def make_pupil_grid(dims, diameter=1, xp=None):
     Grid
         A :class:`CartesianGrid` with :class:`RegularCoords`.
     '''
-    # Ensure 2D grid for pupil grids
     if xp is None:
         xp = infer_xp(diameter)
 
+    # Ensure 2D grid for pupil grids
     diameter = xp.asarray(diameter)
     if diameter.ndim == 0:
         diameter = xp.broadcast_to(diameter, (2,))

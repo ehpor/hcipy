@@ -642,7 +642,7 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
             d = np.concatenate(([x[1] - x[0]], d, [x[-1] - x[-2]]))
             deltas.append(d)
 
-        dithers = make_uniform_grid(oversampling, 1)
+        dithers = make_uniform_grid(oversampling, 1, xp=grid.xp)
 
         separated_coords = grid.separated_coords
 
@@ -692,8 +692,12 @@ def make_uniform_vector_field(field, jones_vector):
     Field
         The expanded vector field
     '''
-    if field.is_scalar_field:
-        return Field([ei * field for ei in jones_vector], field.grid)
+    if not field.is_scalar_field:
+        raise ValueError('The input field must be scalar.')
+
+    xp = field.__array_namespace__()
+    data = xp.stack(tuple(ei * field for ei in jones_vector))
+    return Field(data, field.grid)
 
 def make_uniform_vector_field_generator(field_generator, jones_vector):
     '''Make an uniform vector field generator from a scalar field generator and a jones vector.
@@ -711,7 +715,7 @@ def make_uniform_vector_field_generator(field_generator, jones_vector):
         This function can be evaluated on a grid to get a Field.
     '''
     def func(grid):
-        scalar_field = field_generator(grid)
-        return Field([ei * scalar_field for ei in jones_vector], grid)
+        field = field_generator(grid)
+        return make_uniform_vector_field(field, jones_vector)
 
     return func

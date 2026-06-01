@@ -112,7 +112,7 @@ def _cartesian_to_polar(self):
     r = xp.hypot(x, y)
     theta = xp.arctan2(y, x)
 
-    return PolarGrid(UnstructuredCoords([r, theta]))
+    return PolarGrid(UnstructuredCoords([r, theta], xp=xp))
 
 def _polar_to_cartesian(self):
     from .coordinates import UnstructuredCoords
@@ -125,7 +125,7 @@ def _polar_to_cartesian(self):
     x = r * xp.cos(theta)
     y = r * xp.sin(theta)
 
-    return CartesianGrid(UnstructuredCoords([x, y]))
+    return CartesianGrid(UnstructuredCoords([x, y], xp=xp))
 
 Grid._add_coordinate_system('polar', PolarGrid)
 

@@ -382,6 +382,17 @@ def test_eac2_aperture(with_segment_gaps):
         with_segment_gaps=with_segment_gaps
     )
 
+@pytest.mark.parametrize('with_segment_gaps', [True, False])
+def test_eac1_aperture(with_segment_gaps):
+    name = 'eac1/pupil'
+    name += '_without_segment_gaps' if not with_segment_gaps else ''
+
+    check_aperture(
+        make_eac1_aperture, 7.225765, name,
+        check_normalization=True, check_segmentation=True,
+        with_segment_gaps=with_segment_gaps
+    )
+
 @pytest.mark.parametrize('with_spiders', (True, False))
 def test_subaru_aperture(with_spiders):
     name = 'subaru/pupil'

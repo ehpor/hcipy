@@ -326,8 +326,8 @@ def test_grid_weights(xp):
     y = xp.asarray([10, 20])
     grid = CartesianGrid(SeparatedCoords([x, y], xp=xp))
 
-    w_x = xp.concat(([x[1] - x[0]], (x[2:] - x[:-2]) / 2, [x[-1] - x[-2]]))
-    w_y = xp.concat(([y[1] - y[0]], (y[2:] - y[:-2]) / 2, [y[-1] - y[-2]]))
+    w_x = xp.concat((xp.asarray([x[1] - x[0]]), (x[2:] - x[:-2]) / 2, xp.asarray([x[-1] - x[-2]])))
+    w_y = xp.concat((xp.asarray([y[1] - y[0]]), (y[2:] - y[:-2]) / 2, xp.asarray([y[-1] - y[-2]])))
 
     expected_weights = xp.outer(w_y, w_x).ravel()
     assert all_close(grid.weights, expected_weights)

@@ -25,7 +25,7 @@ jobs:
         activate-environment: ci-env
         python-version: 3.14
         environment-file: .github/conda_environments/docs_env.yml
-        auto-activate-base: false
+        auto-activate: false
     - name: Install our package
       run: |
         pip install -e ".[doc]"

@@ -1,6 +1,7 @@
 import numpy as np
 import array_api_compat
 from ..config import Configuration
+import sys
 
 def infer_xp(*arrays):
     """Infer xp from input arrays.
@@ -120,7 +121,73 @@ def all_close(a, b, *, rtol=1e-5, atol=1e-8):
     atol : float, optional
         _description_, by default 1e-8
     '''
-    xp = array_api_compat.array_namespace(a, b)
+    xp = array_namespace(a, b)
 
     close = abs(a - b) <= atol + rtol * abs(b)
     return xp.all(close)
+
+namespace_caches = {}
+NUMPY_NAMESPACE = 'numpy'
+
+def array_namespace(*xs, api_version=None):
+    '''Return the namespace of a set of Arrays.
+
+    Parameters
+    ----------
+    *xs : tuple of Arrays
+        The array objects of which to find the namespace.
+    api_version : str, optional
+        The Array API spec version. If this is None (default),
+        the choice is left to the Array object.
+
+    Returns
+    -------
+    module
+        The Array namespace.
+    '''
+    from ..field import NewStyleField, make_field_namespace
+
+    try:
+        cache = namespace_caches[api_version]
+    except KeyError:
+        namespace_caches[api_version] = {}
+        cache = namespace_caches[api_version]
+
+    for x in xs:
+        if isinstance(x, NewStyleField):
+            return make_field_namespace(array_namespace(x.data, api_version=api_version))
+
+        try:
+            ns = cache[type(x)]
+
+            if ns == NUMPY_NAMESPACE:
+                # Could be either a Numpy array or
+                # a JAX zero gradient array.
+                if 'jax' in sys.modules:
+                    import jax
+
+                    if x.dtype == jax.float0:
+                        import jax.numpy as jnp
+                        return jnp
+                else:
+                    return np
+
+            return ns
+        except KeyError:
+            continue
+
+    for x in xs:
+        try:
+            ns = array_api_compat.array_namespace(x, api_version=api_version)
+
+            # Numpy is a special case, see above.
+            if ns == np:
+                cache[type(x)] = NUMPY_NAMESPACE
+            else:
+                cache[type(x)] = ns
+
+            return array_namespace(x, api_version=api_version)
+        except KeyError:
+            cache[type(x)] = None
+
+    return array_api_compat.array_namespace(*xs, api_version=api_version)

@@ -1,6 +1,7 @@
 import numpy as np
 from ..config import Configuration
 from .._math import fft as hcipy_fft
+from .._math.backends import array_namespace
 
 class FieldBase:
     '''The value of some physical quantity for each point in some coordinate system.
@@ -356,7 +357,7 @@ class NewStyleField(FieldBase):
         return self.data.__index__()
 
     def __getitem__(self, key, /):
-        xp = self.data.__array_namespace__()
+        xp = array_namespace(self.data)
 
         if isinstance(key, tuple):
             key = tuple(k.data if isinstance(k, NewStyleField) else k for k in key)
@@ -504,7 +505,8 @@ class NewStyleField(FieldBase):
         FieldNamespace
             An object representing the array API namespace.
         '''
-        return make_field_namespace(self.data.__array_namespace__(api_version=api_version))
+        xp = array_namespace(self.data, api_version=api_version)
+        return make_field_namespace(xp)
 
     def __getstate__(self):
         '''Return pickle state.

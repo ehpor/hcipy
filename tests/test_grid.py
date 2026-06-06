@@ -213,7 +213,7 @@ def test_grid_subset(xp):
     field_xp = subset_grid.x.__array_namespace__()
     assert field_xp.all(subset_grid.x > 3)
 
-    indices = field_xp.where(grid.x > 3)
+    indices = field_xp.nonzero(grid.x > 3)[0]
     subset_grid2 = grid.subset(indices)
     assert subset_grid == subset_grid2
 

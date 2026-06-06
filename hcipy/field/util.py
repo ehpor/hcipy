@@ -557,13 +557,15 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
     else:
         new_shape = (-1,)
 
+    xp = field.__array_namespace__()
+
     available_statistics = {
-        'mean': np.mean,
-        'max': np.max,
-        'min': np.min,
-        'sum': np.sum,
-        'median': np.median,
-        'nanmedian': np.nanmedian
+        'mean': xp.mean,
+        'max': xp.max,
+        'min': xp.min,
+        'sum': xp.sum,
+        'median': xp.median,
+        'nanmedian': xp.nanmedian
     }
 
     if statistic not in available_statistics:

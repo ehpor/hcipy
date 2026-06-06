@@ -3,6 +3,7 @@ import numpy as np
 from .field import Field
 from .grid import Grid
 from .coordinates import UnstructuredCoords
+from .._math.backends import array_namespace
 
 class PolarGrid(Grid):
     '''A grid representing a two-dimensional Polar coordinate system.
@@ -105,12 +106,11 @@ class PolarGrid(Grid):
 def _cartesian_to_polar(self):
     from .coordinates import UnstructuredCoords
 
-    x = self.x
-    y = self.y
+    x, y = self.coords
 
-    xp = x.__array_namespace__()
+    xp = array_namespace(x, y)
     r = xp.hypot(x, y)
-    theta = xp.arctan2(y, x)
+    theta = xp.atan2(y, x)
 
     return PolarGrid(UnstructuredCoords([r, theta], xp=xp))
 
@@ -118,10 +118,9 @@ def _polar_to_cartesian(self):
     from .coordinates import UnstructuredCoords
     from .cartesian_grid import CartesianGrid
 
-    r = self.r
-    theta = self.theta
+    r, theta = self.coords
 
-    xp = r.__array_namespace__()
+    xp = array_namespace(r, theta)
     x = r * xp.cos(theta)
     y = r * xp.sin(theta)
 

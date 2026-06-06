@@ -59,7 +59,7 @@ def make_fft_grid(input_grid, q=1, fov=1, shift=0):
     dims = tuple(int(d_in * f_i * q_i) for d_in, f_i, q_i in zip(input_grid.dims, fov, q))
     zero = tuple(d_i * (-dim / 2 + (dim % 2) * 0.5) + s_i for d_i, dim, s_i in zip(delta, dims, shift))
 
-    return CartesianGrid(RegularCoords(delta, dims, zero))
+    return CartesianGrid(RegularCoords(delta, dims, zero, xp=input_grid.xp))
 
 def get_fft_parameters(fft_grid, input_grid):
     '''Try to reconstruct the FFT parameters of a grid.

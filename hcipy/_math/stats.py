@@ -42,28 +42,30 @@ def _median_via_partition(x, *, xp, axis, keepdims):
 
     if axis is None:
         axes = None
-        partition_axis = -1
     elif isinstance(axis, int):
         axes = (axis % ndim,)
-        partition_axis = axis % ndim
     else:
         axes = tuple(a % ndim for a in axis)
 
     if axes is not None and len(axes) == 0:
         return x
 
+    # Single axis: partition along that axis. Multi-axis/None: flatten to last axis.
+    if axes is None or len(axes) > 1:
+        partition_axis = -1
+    else:
+        partition_axis = axes[0]
+
     # Flatten reduced axes into a single axis.
     if axes is None:
         x = xp.reshape(x, (-1,))
-        partition_axis = -1
     elif len(axes) > 1:
         other_axes = tuple(i for i in range(ndim) if i not in axes)
         perm = other_axes + tuple(sorted(axes))
         x = xp.permute_dims(x, perm)
 
-        keep_shape = tuple(x.shape[i] for i in range(len(other_axes)))
+        keep_shape = x.shape[:len(other_axes)]
         x = xp.reshape(x, keep_shape + (-1,))
-        partition_axis = -1
 
     n = x.shape[partition_axis]
     mid = n // 2

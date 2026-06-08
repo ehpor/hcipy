@@ -8,6 +8,7 @@ from .._math.backends import infer_xp
 from .field import Field
 from .cartesian_grid import CartesianGrid
 from .grid import Grid
+from .._math.stats import median, nanmedian
 
 def _normalize_to_tuple(src, size, dtype=None):
     '''Normalize an input to a tuple.
@@ -564,8 +565,8 @@ def subsample_field(field, subsampling, new_grid=None, statistic='mean'):
         'max': xp.max,
         'min': xp.min,
         'sum': xp.sum,
-        'median': xp.median,
-        'nanmedian': xp.nanmedian
+        'median': median,
+        'nanmedian': nanmedian
     }
 
     if statistic not in available_statistics:

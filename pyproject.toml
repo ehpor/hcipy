@@ -34,7 +34,6 @@ dependencies = [
     "packaging",
     "tqdm",
     "array_api_compat",
-    "array_api_extra",
 ]
 
 [project.optional-dependencies]

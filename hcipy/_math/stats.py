@@ -1,5 +1,4 @@
-from array_api_compat import is_cupy_namespace, is_jax_namespace, is_numpy_namespace
-import array_api_extra as xpx
+from array_api_compat import is_cupy_namespace, is_jax_namespace, is_numpy_namespace, is_torch_namespace
 from .backends import array_namespace
 
 def median(x, /, *, axis=None, keepdims=False):
@@ -29,16 +28,50 @@ def median(x, /, *, axis=None, keepdims=False):
     if is_numpy_namespace(xp) or is_cupy_namespace(xp) or is_jax_namespace(xp):
         return xp.median(x, axis=axis, keepdims=keepdims)
 
-    # Fallback for Pytorch and unknown backends.
-    return _median_via_partition(x, xp=xp, axis=axis, keepdims=keepdims)
+    # Torch needs a specific implementation.
+    if is_torch_namespace(xp):
+        return _median_torch(x, axis=axis, keepdims=keepdims, xp=xp)
 
-def _median_via_partition(x, *, xp, axis, keepdims):
-    """Median using only Array API functions.
+    raise NotImplementedError("Unsupported backend.")
+
+def nanmedian(x, /, *, axis=None, keepdims=False):
+    """Compute the median of an array along the given axis.
+
+    Parameters
+    ----------
+    x : Array
+        Input array (any supported library).
+    axis : int | tuple[int, ...] | None
+        Axis or axes to reduce over.  ``None`` flattens first.
+    keepdims : bool
+        If True, reduced axes are kept with size 1.
+
+    Returns
+    -------
+    Array
+        An array with the same type as `x`.
     """
+    from ..field import NewStyleField
+    if isinstance(x, NewStyleField):
+        return NewStyleField(nanmedian(x.data, axis=axis, keepdims=keepdims), x.grid)
+
+    xp = array_namespace(x)
+
+    # NumPy, CuPy and JAX have a correct multi-axis median.
+    if is_numpy_namespace(xp) or is_cupy_namespace(xp) or is_jax_namespace(xp):
+        return xp.nanmedian(x, axis=axis, keepdims=keepdims)
+
+    # Torch needs a specific implementation.
+    if is_torch_namespace(xp):
+        return _nanmedian_torch(x, axis=axis, keepdims=keepdims, xp=xp)
+
+    raise NotImplementedError("Unsupported backend.")
+
+def _reshape_last_axis(x, *, xp, axis):
     ndim = x.ndim
 
     if ndim == 0:
-        return x
+        return x, None, None
 
     if axis is None:
         axes = None
@@ -48,7 +81,7 @@ def _median_via_partition(x, *, xp, axis, keepdims):
         axes = tuple(a % ndim for a in axis)
 
     if axes is not None and len(axes) == 0:
-        return x
+        return x, None, None
 
     # Single axis: partition along that axis. Multi-axis/None: flatten to last axis.
     if axes is None or len(axes) > 1:
@@ -67,34 +100,39 @@ def _median_via_partition(x, *, xp, axis, keepdims):
         keep_shape = x.shape[:len(other_axes)]
         x = xp.reshape(x, keep_shape + (-1,))
 
-    n = x.shape[partition_axis]
-    mid = n // 2
+    return x, axes, partition_axis
 
-    if n % 2 == 1:
-        # Odd N: single partition at the middle.
-        partitioned = xpx.partition(x, mid, axis=partition_axis, xp=xp)
-        # Index along the partition axis
-        idx = [slice(None)] * partitioned.ndim
-        idx[partition_axis] = mid
-        result = partitioned[tuple(idx)]
-    else:
-        # Even N: partition at mid-1 and mid. array_api_extra.partition only
-        # accepts a single kth, so we call it twice.
-        partitioned_lo = xpx.partition(x, mid - 1, axis=partition_axis, xp=xp)
-        idx = [slice(None)] * partitioned_lo.ndim
-        idx[partition_axis] = mid - 1
-        lo = partitioned_lo[tuple(idx)]
-
-        partitioned_hi = xpx.partition(x, mid, axis=partition_axis, xp=xp)
-        idx[partition_axis] = mid
-        hi = partitioned_hi[tuple(idx)]
-
-        result = (lo + hi) / 2
-
+def _reshape_keepdims(x, axes, keepdims, ndim, xp):
     if keepdims:
         if axes is not None:
-            result = xp.expand_dims(result, axis=axes)
+            x = xp.expand_dims(x, axis=axes)
         else:
-            result = xp.reshape(result, (1,) * ndim)
+            x = xp.reshape(x, (1,) * ndim)
 
-    return result
+    return x
+
+def _median_torch(x, axis, keepdims, xp):
+    x_reshaped, axes, partition_axis = _reshape_last_axis(x, xp=xp, axis=axis)
+
+    if partition_axis is None:
+        return x_reshaped
+
+    if xp.isdtype(x_reshaped.dtype, "integral"):
+        x_reshaped = xp.astype(x_reshaped, xp.float64)
+
+    res = xp.quantile(x_reshaped, 0.5, dim=partition_axis)
+
+    return _reshape_keepdims(res, axes, keepdims, x.ndim, xp)
+
+def _nanmedian_torch(x, axis, keepdims, xp):
+    x_reshaped, axes, partition_axis = _reshape_last_axis(x, xp=xp, axis=axis)
+
+    if partition_axis is None:
+        return x_reshaped
+
+    if xp.isdtype(x_reshaped.dtype, "integral"):
+        x_reshaped = xp.astype(x_reshaped, xp.float64)
+
+    res = xp.nanquantile(x_reshaped, 0.5, dim=partition_axis)
+
+    return _reshape_keepdims(res, axes, keepdims, x.ndim, xp)

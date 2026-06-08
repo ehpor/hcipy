@@ -2,7 +2,7 @@ import pytest
 import hcipy
 import numpy as np
 from hcipy._math.random import make_random_generator
-from hcipy._math.stats import median
+from hcipy._math.stats import median, nanmedian
 import math
 
 
@@ -138,7 +138,7 @@ def test_random_generator_different_sizes(xp, distribution):
     arr_3d = generation_func(size=(2, 3, 4))
     assert arr_3d.shape == (2, 3, 4)
 
-@pytest.mark.parametrize('shape, axis, keepdims', [
+_MEDIAN_PARAMS = [
     ((7,), None, False),
     ((6,), None, False),
     ((7,), None, True),
@@ -149,18 +149,36 @@ def test_random_generator_different_sizes(xp, distribution):
     ((2, 3, 4), None, False),
     ((2, 3, 4), 1, True),
     ((4, 6), (0, 1), True),
-])
-def test_median(xp, shape, axis, keepdims):
+]
+
+def _check_median(xp, shape, axis, keepdims, *, inject_nans=False):
     rng = np.random.default_rng(seed=0)
     x_np = rng.standard_normal(shape)
+
+    if inject_nans and x_np.size > 0:
+        nan_indices = rng.choice(x_np.size, size=max(1, x_np.size // 5), replace=False)
+        x_np.flat[nan_indices] = np.nan
+
     x = xp.asarray(x_np)
 
-    result = median(x, axis=axis, keepdims=keepdims)
-    expected = np.median(x_np, axis=axis, keepdims=keepdims)
+    if inject_nans:
+        result = nanmedian(x, axis=axis, keepdims=keepdims)
+        expected = np.nanmedian(x_np, axis=axis, keepdims=keepdims)
+    else:
+        result = median(x, axis=axis, keepdims=keepdims)
+        expected = np.median(x_np, axis=axis, keepdims=keepdims)
 
     result_np = np.asarray(result)
     assert result_np.shape == expected.shape
-    assert np.allclose(result_np, expected)
+    assert np.allclose(result_np, expected, equal_nan=inject_nans)
+
+@pytest.mark.parametrize('shape, axis, keepdims', _MEDIAN_PARAMS)
+def test_median(xp, shape, axis, keepdims):
+    _check_median(xp, shape, axis, keepdims)
+
+@pytest.mark.parametrize('shape, axis, keepdims', _MEDIAN_PARAMS)
+def test_nanmedian(xp, shape, axis, keepdims):
+    _check_median(xp, shape, axis, keepdims, inject_nans=True)
 
 def test_median_0d(xp):
     x_np = np.array(5.0)
@@ -192,3 +210,17 @@ def test_median_axis_empty_tuple(xp):
     x = xp.asarray(x_np)
     result = median(x, axis=())
     assert np.allclose(np.asarray(result), x_np)
+
+def test_nanmedian_all_nan_slice(xp):
+    """A row/column that is all-NaN should return NaN, not error."""
+    x_np = np.array([[1.0, np.nan, 3.0],
+                     [np.nan, np.nan, np.nan],
+                     [4.0, 5.0, 6.0]], dtype=np.float64)
+    x = xp.asarray(x_np)
+
+    result = nanmedian(x, axis=0)
+    expected = np.nanmedian(x_np, axis=0)
+
+    result_np = np.asarray(result)
+    assert result_np.shape == expected.shape
+    assert np.allclose(result_np, expected, equal_nan=True)

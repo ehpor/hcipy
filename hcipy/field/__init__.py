@@ -32,6 +32,8 @@ __all__ = [
     'make_chebyshev_grid',
     'make_supersampled_grid',
     'make_subsampled_grid',
+    'pad_grid',
+    'crop_grid',
     'subsample_field',
     'evaluate_supersampled',
     'make_uniform_vector_field',

@@ -189,31 +189,6 @@ class StepIndexFiber(AgnosticOpticalElement):
 
         return Wavefront(output_electric_field, wavefront.wavelength)
 
-@deprecated('This class operated counter to HCIPy best practices and will be removed in HCIPy 0.7 or later. Please use a combination of the SingleModeFiberInjection and Detector classes instead.')
-class SingleModeFiber(Detector):
-    def __init__(self, input_grid, mode_field_diameter, mode=None):
-        self.input_grid = input_grid
-        self.mode_field_diameter = mode_field_diameter
-
-        if mode is None:
-            mode = make_gaussian_fiber_mode(mode_field_diameter)
-
-        try:
-            self.mode = mode(self.input_grid, mode_field_diameter)
-        except TypeError:
-            self.mode = mode(self.input_grid)
-
-        self.mode /= np.sqrt(np.sum(np.abs(self.mode)**2 * self.input_grid.weights))
-        self.intensity = 0
-
-    def integrate(self, wavefront, dt, weight=1):
-        self.intensity += weight * dt * np.abs(np.dot(wavefront.electric_field.conj() * wavefront.electric_field.grid.weights, self.mode))**2
-
-    def read_out(self):
-        intensity = self.intensity
-        self.intensity = 0
-        return intensity
-
 class SingleModeFiberInjection(OpticalElement):
     '''Injection into a single mode fiber.
 

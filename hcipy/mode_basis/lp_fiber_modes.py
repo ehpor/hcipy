@@ -175,9 +175,3 @@ def make_lp_modes(grid, V_number, core_radius, return_betas=False):
         return ModeBasis(modes, grid), np.array(betas)
     else:
         return ModeBasis(modes, grid)
-
-def make_LP_modes(*args, **kwargs):  # noqa: N802
-    import warnings
-    warnings.warn('Use the lower-case version "make_lp_modes" instead.', DeprecationWarning, stacklevel=2)
-
-    return make_lp_modes(*args, **kwargs)

@@ -1,10 +1,8 @@
 import numpy as np
-from .detector import Detector
 from .optical_element import OpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from .wavefront import Wavefront
 from ..mode_basis import ModeBasis, make_lp_modes
 from ..field import Field, CartesianGrid, RegularCoords
-from ..dev import deprecated
 
 def make_gaussian_fiber_mode(mode_field_diameter):
     '''The Gaussian approximation of a fiber mode.

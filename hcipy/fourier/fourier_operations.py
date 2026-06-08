@@ -1,9 +1,9 @@
 import numpy as np
 
 from .fast_fourier_transform import FastFourierTransform, make_fft_grid, _numexpr_grid_shift
-from ..field import Field, field_dot, field_conjugate_transpose, CartesianGrid, RegularCoords
+from .fourier_transform import make_fourier_transform
+from ..field import Field, field_dot, field_conjugate_transpose, CartesianGrid, RegularCoords, make_uniform_grid
 from .._math import fft as _fft_module
-
 
 class FourierFilter(object):
     '''A filter in the Fourier domain.
@@ -149,6 +149,108 @@ class FourierFilter(object):
             res = f[c].reshape(s)
 
         return Field(res, self.input_grid)
+
+def _make_fourier_kernel_filter(input_grid, kernel, q=1, conjugate=False):
+    '''Internal helper that returns a :class:`FourierFilter` for convolution or correlation.
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The grid that is expected for the input field.
+    kernel : Field or callable
+        The spatial kernel. If a callable, it is evaluated on a grid with the
+        same delta as ``input_grid`` and ``dims = tuple(d * q for d in input_grid.dims)``.
+        If a :class:`Field`, its grid's ``delta`` must match ``input_grid.delta``;
+        its coordinate system is used directly to compute the transfer function.
+    q : scalar
+        The amount of zeropadding to perform in the real domain.
+    conjugate : boolean
+        If True, the resulting transfer function is conjugated, producing a
+        correlation. If False (the default), the operation is a convolution.
+
+    Returns
+    -------
+    FourierFilter
+        A :class:`FourierFilter` that applies the convolution or correlation.
+    '''
+    fft = FastFourierTransform(input_grid, q)
+
+    if callable(kernel):
+        # Build a grid for the callable that has the same delta as input_grid
+        # and dims scaled by q.
+        kernel_dims = tuple(d * q for d in input_grid.dims)
+        kernel_extent = tuple(d * delta for d, delta in zip(kernel_dims, input_grid.delta))
+        kernel_grid = make_uniform_grid(kernel_dims, kernel_extent, has_center=False)
+
+        kernel_field = kernel(kernel_grid)
+    else:
+        if not np.allclose(kernel.grid.delta, input_grid.delta):
+            raise ValueError('The kernel grid delta must match the input grid delta.')
+        kernel_field = kernel
+
+    kernel_fft = make_fourier_transform(kernel_field.grid, fft.output_grid)
+    transfer_function = kernel_fft.forward(kernel_field)
+
+    if conjugate:
+        transfer_function = np.conj(transfer_function)
+
+    return FourierFilter(input_grid, transfer_function, q)
+
+def make_fourier_convolution(input_grid, kernel, q=1):
+    '''Create a :class:`FourierFilter` that performs convolution with a spatial kernel.
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The grid that is expected for the input field.
+    kernel : Field or Field generator
+        The spatial convolution kernel. If a callable, it is evaluated on the
+        internal  spatial grid and must return a :class:`Field`. If a
+        :class:`Field`, its grid's ``delta`` must equal ``input_grid.delta``.
+    q : scalar
+        The amount of zeropadding to perform in the real domain. A value of 1
+        means no zeropadding.
+
+    Returns
+    -------
+    FourierFilter
+        An operator that performs the convolution.
+
+    Raises
+    ------
+    ValueError
+        When a Field is given as the kernel, and its pixel size is not the same
+        as the pixel size of the input grid.
+    '''
+    return _make_fourier_kernel_filter(input_grid, kernel, q, conjugate=False)
+
+def make_fourier_correlation(input_grid, kernel, q=1):
+    '''Create a :class:`FourierFilter` that performs correlation with a spatial kernel.
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The grid that is expected for the input field.
+    kernel : Field or callable
+        The spatial correlation kernel. If a callable, it is evaluated on the
+        internal padded spatial grid and must return a :class:`Field`. If a
+        :class:`Field`, its grid's ``delta`` must equal ``input_grid.delta``.
+    q : scalar
+        The amount of zeropadding to perform in the real domain. A value of 1
+        means no zeropadding.
+
+    Returns
+    -------
+    FourierFilter
+        An operator that performs the correlation.
+
+    Raises
+    ------
+    ValueError
+        When a Field is given as the kernel, and its pixel size is not the same
+        as the pixel size of the input grid.
+    '''
+    return _make_fourier_kernel_filter(input_grid, kernel, q, conjugate=True)
 
 class FourierShift:
     '''An image shifting operator implemented in the Fourier domain.

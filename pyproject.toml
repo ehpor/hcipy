@@ -35,7 +35,6 @@ dependencies = [
     "importlib_resources>=1.4 ; python_version<'3.9'",
     "tqdm",
     "array_api_compat",
-    "array_api_extra",
 ]
 
 [project.optional-dependencies]

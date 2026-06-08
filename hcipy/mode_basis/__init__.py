@@ -12,7 +12,6 @@ __all__ = [
     'make_fourier_basis',
     'make_complex_fourier_basis',
     'make_lp_modes',
-    'make_LP_modes',
     'make_hexike_basis',
     'hexike',
     'hexike_ansi',

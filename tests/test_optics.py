@@ -912,3 +912,112 @@ def test_surface_profile_fill_value():
     spherical_sag_min = spherical_surface_sag(radius_of_curvature, fill_value='min')(grid_large)
     assert not np.any(np.isnan(spherical_sag_min))
     assert np.allclose(np.nanmin(spherical_sag_nan), np.min(spherical_sag_min))
+
+def test_damped_oscillator_vibration():
+    pupil_grid = make_pupil_grid(32)
+    mode = pupil_grid.x
+
+    # Test white noise driven oscillator with driving PSD of 1e-12 m^2/Hz
+    driving_psd = 1e-12  # m^2/Hz
+    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd)
+
+    # Store initial displacement
+    disp0 = vib.displacement
+
+    # Test evolve_until
+    vib.evolve_until(0.5)
+    assert vib.t == 0.5
+
+    # Test that evolution produces different values
+    assert vib.displacement != disp0
+
+    # Test forward/backward roundtrip
+    wf = Wavefront(pupil_grid.ones(), wavelength=1e-6)
+    wf_fwd = vib.forward(wf)
+    wf_bwd = vib.backward(wf_fwd)
+    assert np.allclose(wf.electric_field, wf_bwd.electric_field)
+
+    # Test that backward evolution raises ValueError
+    with pytest.raises(ValueError, match="Backwards evolution not allowed"):
+        vib.evolve_until(0.3)
+
+    # Test that invalid driving_psd raises ValueError
+    with pytest.raises(ValueError, match="driving_psd must be"):
+        DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=-1e-12)
+
+    # Test that invalid damping ratio raises ValueError
+    with pytest.raises(ValueError, match="damping ratio"):
+        DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0, driving_psd=driving_psd)
+
+def test_damped_oscillator_vibration_stationary_distribution():
+    pupil_grid = make_pupil_grid(32)
+    mode = pupil_grid.x
+
+    # Test that stationary distribution matches theoretical RMS
+    driving_psd = 1e-12  # m^2/Hz
+    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd)
+
+    # Evolve for 5000 timesteps to reach stationary distribution
+    positions = []
+    for i in range(5000):
+        vib.evolve_until(i * 0.01)
+        positions.append(vib.displacement)
+
+    # Check that measured RMS matches theoretical within 15%
+    rms_measured = np.std(positions[100:])  # Skip initial transient
+    rms_target = vib.rms_displacement
+    ratio = rms_measured / rms_target
+
+    assert 0.85 < ratio < 1.15, f"RMS ratio {ratio:.3f} is outside acceptable range [0.85, 1.15]"
+
+def test_dynamic_surface_aberration_mode_count_mismatch():
+    from hcipy.util import StateSpaceDynamics, ar_to_state_space
+
+    ar_coeffs = np.array([0.5, -0.3])
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance=0.01, dt=0.01)
+    dynamics = StateSpaceDynamics(A, B, C)
+
+    grid = make_pupil_grid(16)
+    mode = grid.ones()
+    modes = ModeBasis([mode, mode])
+
+    with pytest.raises(ValueError):
+        DynamicSurfaceAberration(modes, dynamics, refractive_index=1.5)
+
+def test_dynamic_surface_aberration_forward_backward():
+    from hcipy.util import StateSpaceDynamics, ar_to_state_space
+
+    ar_coeffs = np.array([0.5, -0.3])
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance=0.01, dt=0.01)
+    dynamics = StateSpaceDynamics(A, B, C, seed=42)
+
+    grid = make_pupil_grid(16)
+    mode = grid.ones()
+    modes = ModeBasis([mode])
+
+    vib = DynamicSurfaceAberration(modes, dynamics, refractive_index=1.5)
+    vib.evolve_until(0.5)
+
+    wf = Wavefront(mode)
+
+    assert np.allclose(wf.electric_field, vib.backward(vib.forward(wf)).electric_field)
+    assert np.allclose(wf.electric_field, vib.forward(vib.backward(wf)).electric_field)
+
+def test_dynamic_surface_aberration_refractive_index():
+    from hcipy.util import StateSpaceDynamics, ar_to_state_space
+
+    ar_coeffs = np.array([0.5, -0.3])
+    A, B, C = ar_to_state_space(ar_coeffs, noise_variance=0.01, dt=0.01)
+    dynamics = StateSpaceDynamics(A, B, C, seed=42)
+
+    grid = make_pupil_grid(16)
+    mode = grid.ones()
+    modes = ModeBasis([mode])
+
+    # Test with refractive_index as float
+    vib_float = DynamicSurfaceAberration(modes, dynamics, refractive_index=1.5)
+    vib_float.evolve_until(0.1)
+
+    # Test with refractive_index as callable (chromatic)
+    vib_callable = DynamicSurfaceAberration(modes, dynamics, refractive_index=lambda wl: 1.5 + 0.1 / wl)
+    vib_callable.evolve_until(0.1)

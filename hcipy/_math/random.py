@@ -1,4 +1,4 @@
-from array_api_compat import is_numpy_namespace, is_torch_namespace, is_jax_namespace, is_cupy_namespace
+from array_api_compat import is_numpy_namespace, is_torch_namespace, is_jax_namespace, is_cupy_namespace, is_array_api_strict_namespace
 import copy
 import math
 
@@ -26,6 +26,8 @@ def make_random_generator(xp, seed=None):
         return RandomGeneratorTorch(seed)
     elif is_jax_namespace(xp):
         return RandomGeneratorJax(seed)
+    elif is_array_api_strict_namespace(xp):
+        return RandomGeneratorArrayApiStrict(seed)
     else:
         raise ValueError(f"Unsupported namespace: {xp}")
 
@@ -395,3 +397,28 @@ class RandomGeneratorJax(RandomGenerator):
         self._rng, subkey = self._jax_random.split(self._rng)
         return self._jax_random.choice(subkey, a, shape=size, replace=replace, p=p)
 
+
+class RandomGeneratorArrayApiStrict(RandomGeneratorNumpy):
+    def normal(self, mean=0.0, std=1.0, *, size=None):
+        res = super().normal(mean=mean, std=std, size=size)
+        return self._xp.asarray(res)
+
+    def poisson(self, lam=1.0, *, size=None):
+        res = super().poisson(lam=lam, size=size)
+        return self._xp.asarray(res)
+
+    def gamma(self, scale=1.0, shape_param=1.0, *, size=None):
+        res = super().gamma(scale=scale, shape_param=shape_param, size=size)
+        return self._xp.asarray(res)
+
+    def uniform(self, low=0.0, high=1.0, *, size=None):
+        res = super().uniform(low=low, high=high, size=size)
+        return self._xp.asarray(res)
+
+    def exponential(self, scale=1.0, *, size=None):
+        res = super().exponential(scale=scale, size=size)
+        return self._xp.asarray(res)
+
+    def choice(self, a, *, size=None, replace=True, p=None):
+        res = super().choice(a, size=size, replace=replace, p=p)
+        return self._xp.asarray(res)

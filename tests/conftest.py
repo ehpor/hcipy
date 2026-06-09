@@ -39,10 +39,16 @@ def get_backend(backend_name):
             return jnp
         except ImportError:
             pytest.skip(f'{backend_name} not available')
+    elif backend_name == 'array_api_strict':
+        try:
+            import array_api_strict
+            return array_api_strict
+        except ImportError:
+            pytest.skip(f'{backend_name} not available')
     else:
         pytest.skip(f'{backend_name} not available')
 
 
-@pytest.fixture(params=['numpy', 'cupy', 'jax', 'torch'])
+@pytest.fixture(params=['numpy', 'cupy', 'jax', 'torch', 'array_api_strict'])
 def xp(request):
     return get_backend(request.param)

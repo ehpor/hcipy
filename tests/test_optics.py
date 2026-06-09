@@ -912,3 +912,110 @@ def test_surface_profile_fill_value():
     spherical_sag_min = spherical_surface_sag(radius_of_curvature, fill_value='min')(grid_large)
     assert not np.any(np.isnan(spherical_sag_min))
     assert np.allclose(np.nanmin(spherical_sag_nan), np.min(spherical_sag_min))
+
+@pytest.mark.parametrize('w0,z,wavelength', [
+    (1e-3, 0.5, 500e-9),
+    (2e-3, 1.0, 1e-6),
+    (0.5e-3, 0.0, 633e-9),
+    (1e-3, -0.5, 500e-9),
+])
+def test_gaussian_beam_initialization_and_properties(w0, z, wavelength):
+    beam = GaussianBeam(w0, z, wavelength)
+
+    assert beam.w0 == w0
+    assert beam.z == z
+    assert beam.wavelength == wavelength
+    assert beam.beam_waist == w0
+
+    zR = np.pi * w0**2 / wavelength
+    assert np.isclose(beam.zR, zR)
+    assert np.isclose(beam.rayleigh_distance, zR)
+
+    assert np.isclose(beam.q, z + 1j * zR)
+    assert np.isclose(beam.complex_beam_parameter, z + 1j * zR)
+
+    theta = wavelength / (np.pi * w0)
+    assert np.isclose(beam.theta, theta)
+    assert np.isclose(beam.beam_divergence, theta)
+
+    if abs(z) < 1e-16:
+        assert np.isinf(beam.R)
+        assert np.isinf(beam.radius_of_curvature)
+    else:
+        R = z * (1 + (zR / z)**2)
+        assert np.isclose(beam.R, R)
+        assert np.isclose(beam.radius_of_curvature, R)
+
+    psi = np.arctan(z / zR)
+    assert np.isclose(beam.psi, psi)
+    assert np.isclose(beam.gouy_phase, psi)
+
+    w = w0 * np.sqrt(1 + (z / zR)**2)
+    assert np.isclose(beam.w, w)
+    assert np.isclose(beam.beam_radius, w)
+
+    fwhm = w * np.sqrt(2 * np.log(2))
+    assert np.isclose(beam.FWHM, fwhm)
+    assert np.isclose(beam.full_width_half_maximum, fwhm)
+
+    k = 2 * np.pi / wavelength
+    assert np.isclose(beam.k, k)
+    assert np.isclose(beam.wavenumber, k)
+
+def test_gaussian_beam_setters():
+    beam = GaussianBeam(1e-3, 0.5, 500e-9)
+    wavelength = beam.wavelength
+
+    zR_old = beam.zR
+    beam.beam_waist = 2e-3
+    assert beam.w0 == 2e-3
+    assert beam.zR != zR_old
+    assert np.isclose(beam.zR, np.pi * (2e-3)**2 / wavelength)
+
+    beam.w0 = 1e-3
+    new_zR = 2 * beam.zR
+    beam.zR = new_zR
+    assert np.isclose(beam.w0, np.sqrt(new_zR * wavelength / np.pi))
+
+    beam.w0 = 1e-3
+    new_q = 1.0 + 2.0j * beam.zR
+    beam.q = new_q
+    assert np.isclose(beam.z, 1.0)
+    assert np.isclose(beam.zR, np.imag(new_q))
+
+    beam.w0 = 1e-3
+    beam.z = 0.5
+    new_theta = 2 * beam.theta
+    beam.theta = new_theta
+    assert np.isclose(beam.w0, wavelength / (new_theta * np.pi))
+
+    beam.w0 = 1e-3
+    beam.z = 0.5
+    new_k = 2 * beam.k
+    beam.k = new_k
+    assert np.isclose(beam.wavelength, 2 * np.pi / new_k)
+
+def test_gaussian_beam_evaluate():
+    w0 = 1e-3
+    z = 0.5
+    wavelength = 500e-9
+    beam = GaussianBeam(w0, z, wavelength)
+
+    for grid in [
+        make_pupil_grid(64, 4e-3),
+        CartesianGrid(UnstructuredCoords(([0], [0]))),
+    ]:
+        wf = beam.evaluate(grid)
+        assert isinstance(wf, Wavefront)
+        assert np.isclose(wf.wavelength, wavelength)
+        assert wf.electric_field.grid is grid
+
+    grid = CartesianGrid(UnstructuredCoords(([0], [0])))
+    wf = beam(grid)
+    w, R, psi, k = beam.w, beam.R, beam.psi, beam.k
+    expected = (w0 / w) * np.exp(-1j * (k * z + k * 0 / (2 * R) - psi))
+    assert np.isclose(wf.electric_field[0], expected)
+
+    grid2 = make_pupil_grid(64, 4e-3)
+    assert np.allclose(beam.evaluate(grid2).electric_field, beam(grid2).electric_field)
+

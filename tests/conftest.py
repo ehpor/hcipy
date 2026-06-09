@@ -29,7 +29,7 @@ def get_backend(backend_name):
             pytest.skip(f'{backend_name} not available')
     elif backend_name == 'torch':
         try:
-            import torch
+            import array_api_compat.torch as torch
             return torch
         except ImportError:
             pytest.skip(f'{backend_name} not available')

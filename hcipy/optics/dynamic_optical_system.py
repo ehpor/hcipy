@@ -32,10 +32,10 @@ class DynamicOpticalSystem(object):
                 t_next, _, callback = self.callbacks[0]
             else:
                 # There are no callbacks, so evolve till the end.
-                t_next = t
+                t_next = float('inf')
                 callback = None
 
-            if t_next < t:
+            if t_next <= t:
                 integration_time = t_next - self.t
                 heapq.heappop(self.callbacks)
             else:

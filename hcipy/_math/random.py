@@ -399,26 +399,42 @@ class RandomGeneratorJax(RandomGenerator):
 
 
 class RandomGeneratorArrayApiStrict(RandomGeneratorNumpy):
+    def __init__(self, seed=None):
+        super().__init__(seed)
+
+        import array_api_strict
+        self._strict_xp = array_api_strict
+
+    def copy(self):
+        res = super().copy()
+        res._strict_xp = self._strict_xp
+
+        return res
+
     def normal(self, mean=0.0, std=1.0, *, size=None):
         res = super().normal(mean=mean, std=std, size=size)
-        return self._xp.asarray(res)
+        return self._strict_xp.asarray(res)
 
     def poisson(self, lam=1.0, *, size=None):
         res = super().poisson(lam=lam, size=size)
-        return self._xp.asarray(res)
+        return self._strict_xp.asarray(res)
 
     def gamma(self, scale=1.0, shape_param=1.0, *, size=None):
         res = super().gamma(scale=scale, shape_param=shape_param, size=size)
-        return self._xp.asarray(res)
+        return self._strict_xp.asarray(res)
 
     def uniform(self, low=0.0, high=1.0, *, size=None):
         res = super().uniform(low=low, high=high, size=size)
-        return self._xp.asarray(res)
+        return self._strict_xp.asarray(res)
 
     def exponential(self, scale=1.0, *, size=None):
         res = super().exponential(scale=scale, size=size)
-        return self._xp.asarray(res)
+        return self._strict_xp.asarray(res)
 
     def choice(self, a, *, size=None, replace=True, p=None):
+        a = a if isinstance(a, int) else self._xp.from_dlpack(a)
+        p = p if p is None else self._xp.from_dlpack(p)
+
         res = super().choice(a, size=size, replace=replace, p=p)
-        return self._xp.asarray(res)
+
+        return self._strict_xp.asarray(res)

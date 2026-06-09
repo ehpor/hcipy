@@ -84,13 +84,15 @@ def make_high_pass_power_law_error(pupil_grid, ptv, diameter, cutoff_frequency, 
     ff = FourierFilter(pupil_grid, filter_function, q=2)
 
     if aperture is None:
-        aperture = make_circular_aperture(diameter)(pupil_grid)
-    aperture_mask = (aperture > 0).astype(float)
+        aperture = make_super_gaussian_aperture(diameter, filter_shape_parameter)(pupil_grid)
+    aperture_mask = aperture.astype(float)
 
-    phase_screen = make_power_law_error(pupil_grid, ptv, diameter, exponent=exponent, aperture=None)
-    phase_screen = ff.forward(phase_screen).real
+    phase_screen = make_power_law_error(pupil_grid, ptv, 2 * pupil_grid.x.ptp(), exponent=exponent, aperture=None)
+    phase_screen *= ptv / np.std(phase_screen[aperture_mask>0])
 
-    return phase_screen * aperture_mask
+    phase_screen = ff.forward(phase_screen * aperture_mask).real
+
+    return phase_screen
 
 class SurfaceAberration(SurfaceApodizer):
     '''A surface aberration with a specific power law.

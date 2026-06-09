@@ -233,7 +233,7 @@ class ModeBasis(object):
             x, istop, itn, normr, normar, norma, conda, normx = scipy.sparse.linalg.lsmr(self._transformation_matrix, b, damp=dampening_factor)
             return x
         else:
-            x, residuals, rank, s = np.linalg.lstsq(self._transformation_matrix, b)
+            x, residuals, rank, s = np.linalg.lstsq(self._transformation_matrix, b, rcond=None)
             return x
 
     def linear_combination(self, coefficients):

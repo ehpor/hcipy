@@ -894,6 +894,43 @@ def make_super_gaussian_aperture(full_width_half_maximum, shape_parameter=5, cen
 
     return func
 
+def make_super_gaussian_elliptical_aperture(full_width_half_maximum, shape_parameter=5, center=None, angle=0):
+    '''Make a super Guassian aperture.
+
+    Parameters
+    ----------
+    full_width_half_maximum : array-like
+        The Full Width Half Maximum of the super Gaussian.
+    shape_parameter : scalar
+        The shape parameter determines the exponential Gaussian fall off. p=1 is identical to a normal Gaussian and p=0.5 results in a Laplacian distribution.
+
+    Returns
+    -------
+    Field generator
+        The super Gaussian aperture.
+    '''
+    if center is None:
+        shift = np.zeros(2)
+    else:
+        shift = center * np.ones(2)
+
+    full_width_half_maximum = full_width_half_maximum * np.ones(2)
+
+    def func(grid):
+        sigma = 0.5 * full_width_half_maximum / (2 * np.log(2))**(1 / (2 * shape_parameter))
+
+        x = grid.shifted(-shift).x
+        y = grid.shifted(-shift).y
+
+        xnew = x * np.cos(angle) - y * np.sin(angle)
+        ynew = y * np.cos(angle) + x * np.sin(angle)
+
+        r = np.hypot(xnew / sigma[0], ynew / sigma[1])
+        return Field(np.exp(-1 / 2 * abs(r)**(2 * shape_parameter)), grid)
+
+    return func
+
+
 @deprecated_name_changed(make_circular_aperture)
 def circular_aperture():
     pass

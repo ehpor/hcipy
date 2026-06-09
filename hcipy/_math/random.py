@@ -177,6 +177,68 @@ class RandomGenerator:
         """
         raise NotImplementedError()
 
+    def uniform(self, low=0.0, high=1.0, *, size=None):
+        """Generate random samples from a uniform distribution.
+
+        Parameters
+        ----------
+        low : float, optional
+            Lower bound of the distribution, by default 0.0.
+        high : float, optional
+            Upper bound of the distribution, by default 1.0.
+        size : int or tuple of ints, optional
+            Output shape. If ``None``, a single scalar value is returned, by default None.
+
+        Returns
+        -------
+        array
+            An array of specified shape filled with random samples from the
+            uniform distribution.
+        """
+        raise NotImplementedError()
+
+    def exponential(self, scale=1.0, *, size=None):
+        """Generate random samples from an exponential distribution.
+
+        Parameters
+        ----------
+        scale : float, optional
+            The scale parameter (inverse of rate), by default 1.0.
+        size : int or tuple of ints, optional
+            Output shape. If ``None``, a single scalar value is returned, by default None.
+
+        Returns
+        -------
+        array
+            An array of specified shape filled with random samples from the
+            exponential distribution.
+        """
+        raise NotImplementedError()
+
+    def choice(self, a, *, size=None, replace=True, p=None):
+        """Generate random samples from a given array.
+
+        Parameters
+        ----------
+        a : array-like or int
+            If an array, a random sample is generated from its elements.
+            If an int, the random sample is generated from ``range(a)``.
+        size : int or tuple of ints, optional
+            Output shape. If ``None``, a single scalar value is returned, by default None.
+        replace : bool, optional
+            Whether to sample with replacement, by default True.
+        p : array-like, optional
+            The probabilities of each element in ``a``. If not given, the
+            sample assumes a uniform distribution over all entries in ``a``.
+
+        Returns
+        -------
+        array
+            An array of specified shape filled with random samples from
+            the given array.
+        """
+        raise NotImplementedError()
+
 
 class RandomGeneratorNumpy(RandomGenerator):
     def __init__(self, seed=None):
@@ -202,6 +264,18 @@ class RandomGeneratorNumpy(RandomGenerator):
     def gamma(self, scale=1.0, shape_param=1.0, *, size=None):
         size = _normalize_size(size)
         return self._rng.gamma(shape_param, scale, size)
+
+    def uniform(self, low=0.0, high=1.0, *, size=None):
+        size = _normalize_size(size)
+        return self._rng.uniform(low, high, size)
+
+    def exponential(self, scale=1.0, *, size=None):
+        size = _normalize_size(size)
+        return self._rng.exponential(scale, size)
+
+    def choice(self, a, *, size=None, replace=True, p=None):
+        size = _normalize_size(size)
+        return self._rng.choice(a, size, replace=replace, p=p)
 
 
 class RandomGeneratorCupy(RandomGeneratorNumpy):
@@ -241,6 +315,39 @@ class RandomGeneratorTorch(RandomGenerator):
         size = _normalize_size(size)
         return _torch_gamma(scale, shape_param, size=size, generator=self._rng)
 
+    def uniform(self, low=0.0, high=1.0, *, size=None):
+        size = _normalize_size(size)
+        return self._xp.rand(*size, generator=self._rng) * (high - low) + low
+
+    def exponential(self, scale=1.0, *, size=None):
+        size = _normalize_size(size)
+        return -scale * self._xp.log(self._xp.rand(*size, generator=self._rng))
+
+    def choice(self, a, *, size=None, replace=True, p=None):
+        import math as _math
+
+        size = _normalize_size(size)
+        n = _math.prod(size)
+
+        if isinstance(a, int):
+            population = None
+            n_pop = a
+        else:
+            population = self._xp.asarray(a)
+            n_pop = len(population)
+
+        if p is None:
+            indices = self._xp.randint(0, n_pop, size, generator=self._rng)
+        else:
+            p_tensor = self._xp.asarray(p, dtype=self._xp.float64)
+            p_tensor = p_tensor / p_tensor.sum()
+            indices = self._xp.multinomial(p_tensor, n, replacement=replace, generator=self._rng)
+            indices = indices.reshape(size)
+
+        if population is None:
+            return indices
+        return population[indices]
+
 
 class RandomGeneratorJax(RandomGenerator):
     def __init__(self, seed=None):
@@ -272,3 +379,19 @@ class RandomGeneratorJax(RandomGenerator):
         size = _normalize_size(size)
         self._rng, subkey = self._jax_random.split(self._rng)
         return self._jax_random.gamma(subkey, shape_param, shape=size) * scale
+
+    def uniform(self, low=0.0, high=1.0, *, size=None):
+        size = _normalize_size(size)
+        self._rng, subkey = self._jax_random.split(self._rng)
+        return self._jax_random.uniform(subkey, shape=size, minval=low, maxval=high)
+
+    def exponential(self, scale=1.0, *, size=None):
+        size = _normalize_size(size)
+        self._rng, subkey = self._jax_random.split(self._rng)
+        return self._jax_random.exponential(subkey, shape=size) * scale
+
+    def choice(self, a, *, size=None, replace=True, p=None):
+        size = _normalize_size(size)
+        self._rng, subkey = self._jax_random.split(self._rng)
+        return self._jax_random.choice(subkey, a, shape=size, replace=replace, p=p)
+

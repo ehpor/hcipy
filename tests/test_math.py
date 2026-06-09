@@ -91,48 +91,117 @@ def test_random_generator_gamma(xp, scale, shape):
     assert np.isclose(float(xp.std(samples)), math.sqrt(shape) * scale, atol=0.1)
 
 
-@pytest.mark.parametrize('distribution', ['normal', 'gamma', 'poisson'])
-def test_random_generator_reproducible(xp, distribution):
+@pytest.mark.parametrize('low, high', ((0.0, 1.0), (-2.0, 5.0)))
+def test_random_generator_uniform(xp, low, high):
+    # Get samples from the Uniform distribution.
+    rng = make_random_generator(xp, seed=42)
+    samples = rng.uniform(low, high, size=(10000,))
+
+    # Basic statistical tests for uniform distribution
+    mean = (low + high) / 2
+    std = (high - low) / math.sqrt(12)
+    assert np.isclose(float(xp.mean(samples)), mean, atol=0.05)
+    assert np.isclose(float(xp.std(samples)), std, atol=0.05)
+
+
+@pytest.mark.parametrize('scale', (1.0, 3.0))
+def test_random_generator_exponential(xp, scale):
+    # Get samples from the Exponential distribution.
+    rng = make_random_generator(xp, seed=42)
+    samples = rng.exponential(scale=scale, size=(10000,))
+
+    # Basic statistical tests for exponential distribution
+    assert np.isclose(float(xp.mean(samples)), scale, atol=0.1)
+    assert np.isclose(float(xp.std(samples)), scale, atol=0.1)
+
+
+@pytest.mark.parametrize('replace', (True, False))
+def test_random_generator_choice(xp, replace):
+    rng = make_random_generator(xp, seed=42)
+
+    n = 100 if replace else 3
+
+    # Sample from integer range
+    samples = rng.choice(10, size=(n,), replace=replace)
+    assert samples.shape == (n,)
+    assert all(0 <= s < 10 for s in samples)
+
+    # Sample from array
+    a = xp.asarray([5, 10, 15, 20])
+    samples = rng.choice(a, size=(n,), replace=replace)
+    assert samples.shape == (n,)
+    assert all(s in [5, 10, 15, 20] for s in np.asarray(samples))
+
+    # Sample with weights (always with replacement)
+    p = xp.asarray([0.1, 0.2, 0.3, 0.4])
+    samples = rng.choice(a, size=(100,), replace=True, p=p)
+    assert samples.shape == (100,)
+    assert all(s in [5, 10, 15, 20] for s in np.asarray(samples))
+
+
+@pytest.mark.parametrize('distribution, args', [
+    ('normal', (dict(),)),
+    ('gamma', (dict(),)),
+    ('poisson', (dict(),)),
+    ('uniform', (dict(),)),
+    ('exponential', (dict(),)),
+    ('choice', ({'a': 10, 'replace': True},)),
+])
+def test_random_generator_reproducible(xp, distribution, args):
     # Create two make_random_generator objects with same seed
     rng1 = make_random_generator(xp, seed=123)
     rng2 = make_random_generator(xp, seed=123)
 
     # Generate samples
-    samples1 = getattr(rng1, distribution)(size=(100,))
-    samples2 = getattr(rng2, distribution)(size=(100,))
+    samples1 = getattr(rng1, distribution)(size=(100,), **args[0])
+    samples2 = getattr(rng2, distribution)(size=(100,), **args[0])
 
     # Check that samples are identical
     assert np.allclose(samples1, samples2)
 
 
-@pytest.mark.parametrize('distribution', ['normal', 'gamma', 'poisson'])
-def test_random_generator_copy(xp, distribution):
+@pytest.mark.parametrize('distribution, args', [
+    ('normal', (dict(),)),
+    ('gamma', (dict(),)),
+    ('poisson', (dict(),)),
+    ('uniform', (dict(),)),
+    ('exponential', (dict(),)),
+    ('choice', ({'a': 10, 'replace': True},)),
+])
+def test_random_generator_copy(xp, distribution, args):
     # Create initial rngs
     rng1 = make_random_generator(xp, seed=42)
     rng2 = rng1.copy()
 
     # Generate some samples
-    samples1 = getattr(rng1, distribution)(size=(10,))
-    samples2 = getattr(rng2, distribution)(size=(10,))
+    samples1 = getattr(rng1, distribution)(size=(10,), **args[0])
+    samples2 = getattr(rng2, distribution)(size=(10,), **args[0])
 
     # Should be identical
     assert np.allclose(samples1, samples2)
 
 
-@pytest.mark.parametrize('distribution', ['normal', 'gamma', 'poisson'])
-def test_random_generator_different_sizes(xp, distribution):
+@pytest.mark.parametrize('distribution, args', [
+    ('normal', (dict(),)),
+    ('gamma', (dict(),)),
+    ('poisson', (dict(),)),
+    ('uniform', (dict(),)),
+    ('exponential', (dict(),)),
+    ('choice', ({'a': 10, 'replace': True},)),
+])
+def test_random_generator_different_sizes(xp, distribution, args):
     rng = make_random_generator(xp, seed=42)
 
     generation_func = getattr(rng, distribution)
 
     # Test 1D array
-    arr_1d = generation_func(size=5)
+    arr_1d = generation_func(size=5, **args[0])
     assert arr_1d.shape == (5,)
 
     # Test 2D array
-    arr_2d = generation_func(size=(3, 4))
+    arr_2d = generation_func(size=(3, 4), **args[0])
     assert arr_2d.shape == (3, 4)
 
     # Test 3D array
-    arr_3d = generation_func(size=(2, 3, 4))
+    arr_3d = generation_func(size=(2, 3, 4), **args[0])
     assert arr_3d.shape == (2, 3, 4)

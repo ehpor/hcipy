@@ -1019,3 +1019,102 @@ def test_gaussian_beam_evaluate():
     grid2 = make_pupil_grid(64, 4e-3)
     assert np.allclose(beam.evaluate(grid2).electric_field, beam(grid2).electric_field)
 
+class _TrackingDynamicOpticalSystem(DynamicOpticalSystem):
+    def __init__(self):
+        super().__init__()
+        self.integrate_calls = []
+
+    def integrate(self, dt):
+        self.integrate_calls.append(dt)
+
+def test_dynamic_optical_system_init():
+    system = DynamicOpticalSystem()
+    assert system.callbacks == []
+    assert system.t == 0
+    assert system.callback_counter == 0
+
+def test_dynamic_optical_system_add_callback():
+    system = DynamicOpticalSystem()
+    system.add_callback(1.0, lambda: None)
+    assert len(system.callbacks) == 1
+    assert system.callback_counter == 1
+
+    t, counter, callback = system.callbacks[0]
+    assert t == 1.0
+    assert counter == 0
+
+def test_dynamic_optical_system_evolve_until_no_callbacks():
+    system = _TrackingDynamicOpticalSystem()
+    system.evolve_until(5.0)
+    assert system.t == 5.0
+    assert system.integrate_calls == [5.0]
+
+def test_dynamic_optical_system_evolve_until_same_time():
+    system = _TrackingDynamicOpticalSystem()
+    system.evolve_until(0.0)
+    assert system.t == 0.0
+    assert system.integrate_calls == []
+
+def test_dynamic_optical_system_evolve_until_with_callbacks():
+    events = []
+    system = _TrackingDynamicOpticalSystem()
+    system.add_callback(2.0, lambda: events.append('a'))
+    system.add_callback(4.0, lambda: events.append('b'))
+
+    system.evolve_until(5.0)
+    assert system.t == 5.0
+    assert events == ['a', 'b']
+    assert system.integrate_calls == [2.0, 2.0, 1.0]
+
+def test_dynamic_optical_system_evolve_until_callback_at_end():
+    events = []
+    system = _TrackingDynamicOpticalSystem()
+    system.add_callback(3.0, lambda: events.append('a'))
+
+    system.evolve_until(3.0)
+    assert system.t == 3.0
+    assert events == []
+    assert system.integrate_calls == [3.0]
+    assert len(system.callbacks) == 1
+
+def test_dynamic_optical_system_evolve_until_no_callback_before_end():
+    events = []
+    system = _TrackingDynamicOpticalSystem()
+    system.add_callback(4.0, lambda: events.append('a'))
+
+    system.evolve_until(3.0)
+    assert system.t == 3.0
+    assert events == []
+    assert system.integrate_calls == [3.0]
+    assert len(system.callbacks) == 1
+
+def test_dynamic_optical_system_evolve_until_backwards():
+    system = DynamicOpticalSystem()
+    system.t = 5.0
+
+    with pytest.raises(ValueError, match='Backwards'):
+        system.evolve_until(3.0)
+
+def test_dynamic_optical_system_evolve_until_multiple_callbacks_same_time():
+    events = []
+    system = _TrackingDynamicOpticalSystem()
+    system.add_callback(2.0, lambda: events.append('a'))
+    system.add_callback(2.0, lambda: events.append('b'))
+
+    system.evolve_until(5.0)
+    assert system.t == 5.0
+    assert events == ['a', 'b']
+    assert system.integrate_calls == [2.0, 3.0]
+
+def test_dynamic_optical_system_callback_adds_callback_during_evolution():
+    events = []
+    system = _TrackingDynamicOpticalSystem()
+
+    def first():
+        events.append('first')
+        system.add_callback(4.0, lambda: events.append('second'))
+
+    system.add_callback(2.0, first)
+    system.evolve_until(5.0)
+    assert events == ['first', 'second']
+    assert system.t == 5.0

@@ -74,6 +74,7 @@ def test_random_generator_poisson(xp, lam):
     # Get samples from the Poisson distribution.
     rng = make_random_generator(xp, seed=42)
     samples = rng.poisson(lam=lam, size=(10000,))
+    samples = xp.astype(samples, xp.float32)
 
     # Basic statistical tests for poisson distribution
     assert np.isclose(float(xp.mean(samples)), lam, atol=0.1)

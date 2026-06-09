@@ -12,12 +12,14 @@ This section explains the content of the repository:
 * **doc**. This folder contains the full documentation.
 * **tests**. This folder contains the unit tests, separated by submodule.
 * **examples**. This folder contains old examples. These examples should be rewritten into tutorials for the documentation. Do not add new examples here.
-* **pyproject.toml**. This file is necessary for pip installation.
-* **setup.py**. This file was used for pip installation, but is now deprecated. It is being kept for backwards compatibility.
+* **pyproject.toml**. The main project configuration file. Contains package metadata, dependencies, build system configuration, and tool settings (ruff).
+* **setup.py**. Minimal shim left for backwards compatibility with older pip versions. Delegates to setuptools_scm via pyproject.toml.
 * **README.md**. Main repository readme file.
 * **LICENSE**. A copy of the MIT license, which should be redistributed with any copy of HCIPy.
-* **.azure-pipelines.yml**. Configuration file for the continuous integration service.
-* **.flake8**. Configuration file for the Python linting.
+* **.github/workflows/**. Contains GitHub Actions workflows for continuous integration, linting, documentation building, and array API compliance testing.
+* **.github/conda_environments/**. Conda environment files used by CI workflows.
+* **.github/dependabot.yml**. Configuration for automated dependency updates via Dependabot.
+* **.flake8**. Configuration file for flake8 linting.
 * **.coveragerc**. Configuration file for test coverage.
 * **.gitignore**. List of files to ignore for the version control system.
 
@@ -30,11 +32,11 @@ Development for HCIPy takes place completely on `Github <https://github.com/ehpo
 
 We prefer git commits that are appropriately sized. That is, use a single commit for one logical change to the code base. Do not commit a whole feature consisting of many-hundreds of new lines of code in a single commit. Useful commits should show the line of development separated in logical parts.
 
-Git is also used to generate a version string, available as ``hcipy.__version__``. We use the `setuptools_scm <https://pypi.org/project/setuptools-scm/>`__. This means that for an editable installation of HCIPy, the version needs to be updated after you pull the repository.
+Git is also used to generate a version string, available as ``hcipy.__version__``. We use `setuptools_scm <https://pypi.org/project/setuptools-scm/>`__, which derives the version from git tags. For an editable installation, the version is updated automatically on each import; after pulling new tags you can re-install with:
 
 .. code-block:: shell
 
-    python setup.py egg_info
+    pip install -e .
 
 .. _coding-style:
 
@@ -54,7 +56,7 @@ We adhere mostly to `PEP8 <https://www.python.org/dev/peps/pep-0008/>`__, the of
 Continuous integration and test suite
 -------------------------------------
 
-HCIPy currently supports Python 3.7+ on Linux, MacOS and Windows. To make sure that it keeps working as expected on all these configurations, we have set up automatic testing on each of these. We currently use `Azure <https://dev.azure.com/ehpor/hcipy/_build?definitionId=1>`__ to run our integrated testing suite. The configuration file for this service is **.azure-pipelines.yml**, which shows Azure how to install HCIPy and its dependencies, and on which operating systems and with which Python versions to test HCIPy. The testing itself is done via the `pytest <https://docs.pytest.org/en/latest/>`__ library.
+HCIPy currently supports Python 3.11+ on Linux, MacOS and Windows. To make sure that it keeps working as expected on all these configurations, we have set up automatic testing on each of these. We use `GitHub Actions <https://github.com/ehpor/hcipy/actions>`__ to run our integrated testing suite. The configuration files for this service are in **.github/workflows/**, which define how to install HCIPy and its dependencies, and on which operating systems and with which Python versions to test HCIPy. The testing itself is done via the `pytest <https://docs.pytest.org/en/latest/>`__ library.
 
 The test suite tests all major features of HCIPy. In the name of efficiency, HCIPy does not contain much so-called unit tests, but rather tests high-level behaviour, which implicitly tests low-level functions as well. For example, for the atmospheric model, we test whether then variance of the outcoming wavefront conforms to analytic formula, and whether the variance projection on a certain Zernike mode conforms to analytic formula, rather than testing the smallest possible unit of the atmospheric model. Tests are located in **tests/test_[submodule_name].py**, separated by submodule. All tests can be run with:
 
@@ -68,7 +70,7 @@ To reduce the time taken for the suite of tests, we have separated them into com
 
     pytest ./tests --runslow
 
-Test coverage is reported for all branches and pull requests on `Coveralls <https://coveralls.io/github/ehpor/hcipy>`__, based on the tests performed on Linux with Python 3.7 by Travis-CI.
+Test coverage is reported for all branches and pull requests on `codecov <https://codecov.io/gh/ehpor/hcipy>`__.
 
 Documentation
 -------------

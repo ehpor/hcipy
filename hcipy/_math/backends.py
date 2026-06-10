@@ -169,8 +169,7 @@ def array_namespace(*xs, api_version=None):
                     if x.dtype == jax.float0:
                         import jax.numpy as jnp
                         return jnp
-                else:
-                    return np
+                return np
 
             return ns
         except KeyError:

@@ -81,7 +81,7 @@ def write_fits(data, filename, shape=None, overwrite=True):
     if hdu is None:
         hdu = fits.PrimaryHDU(data)
 
-    hdu.writeto(filename, overwrite=True)
+    hdu.writeto(filename, overwrite=overwrite)
 
 def _guess_file_format(filename):
     '''Guess the file format from the filename.

@@ -349,7 +349,7 @@ class UnstructuredCoords(Coords):
         '''Reverse the ordering of points in-place.
         '''
         for i in range(len(self.coords)):
-            self.coords[i] = self._xp.flip(self.coords[i], (-1,))
+            self.coords[i] = self._xp.flip(self.coords[i], axis=(-1,))
         return self
 
 
@@ -444,8 +444,8 @@ class SeparatedCoords(Coords):
         '''
         s0 = (1,) * len(self)
         j = len(self) - i - 1
-        output = self.separated_coords[i].reshape(s0[:j] + (-1,) + s0[j + 1:])
-        return self._xp.broadcast_to(output, self.shape).ravel()
+        output = self._xp.reshape(self.separated_coords[i], s0[:j] + (-1,) + s0[j + 1:])
+        return self._xp.reshape(self._xp.broadcast_to(output, self.shape), (-1,))
 
     @property
     def size(self):
@@ -520,7 +520,7 @@ class SeparatedCoords(Coords):
             return False
 
         for s, o in zip(self.separated_coords, other.separated_coords):
-            if len(s) != len(o):
+            if s.shape[0] != o.shape[0]:
                 return False
 
             if not self._xp.all(s == o):
@@ -532,7 +532,7 @@ class SeparatedCoords(Coords):
         '''Reverse the ordering of points in-place.
         '''
         for i in range(len(self)):
-            self.separated_coords[i] = self._xp.flip(self.separated_coords[i], (-1,))
+            self.separated_coords[i] = self._xp.flip(self.separated_coords[i], axis=(-1,))
         return self
 
 
@@ -629,9 +629,9 @@ class RegularCoords(Coords):
         # Convert arrays to lists for JSON serialization, store xp name
         tree = {
             'type': 'regular',
-            'delta': self.delta.tolist(),
+            'delta': [float(v) for v in self.delta],
             'dims': self.dims,
-            'zero': self.zero.tolist(),
+            'zero': [float(v) for v in self.zero],
             'xp_name': self._xp.__name__
         }
 
@@ -642,9 +642,9 @@ class RegularCoords(Coords):
         '''
         # Convert arrays to lists for pickling
         return {
-            'delta': self.delta.tolist(),
+            'delta': [float(v) for v in self.delta],
             'dims': self.dims,
-            'zero': self.zero.tolist(),
+            'zero': [float(v) for v in self.zero],
             'xp_name': self._xp.__name__
         }
 
@@ -700,8 +700,8 @@ class RegularCoords(Coords):
         s0 = (1,) * len(self)
         j = len(self) - i - 1
         t = s0[:j] + (-1,) + s0[j + 1:]
-        output = self.separated_coords[i].reshape(t)
-        return self._xp.broadcast_to(output, self.shape).ravel()
+        output = self._xp.reshape(self.separated_coords[i], t)
+        return self._xp.reshape(self._xp.broadcast_to(output, self.shape), (-1,))
 
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.

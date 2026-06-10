@@ -1,7 +1,7 @@
 from .coordinates import UnstructuredCoords
 from .field import Field
 from .grid import Grid
-from .._math.backends import is_scalar, infer_xp
+from .._math.backends import is_scalar, infer_xp, default_dtype
 
 from functools import reduce
 import operator
@@ -19,7 +19,8 @@ def _get_rotation_matrix(ndim, angle, axis=None, xp=None):
         raise NotImplementedError()
 
     # Convert to array if scalar.
-    angle = xp.asarray(angle)
+    dtype = default_dtype(xp, 'real floating')
+    angle = xp.asarray(angle, dtype=dtype)
 
     if ndim == 2:
         cos_a = xp.cos(angle)
@@ -34,7 +35,7 @@ def _get_rotation_matrix(ndim, angle, axis=None, xp=None):
         if axis is None:
             raise ValueError('An axis must be supplied when rotating a three-dimensional grid.')
 
-        axis = xp.asarray(axis)
+        axis = xp.asarray(axis, dtype=dtype)
 
         if axis.shape != (3,):
             raise ValueError('The axis must be a 3-vector.')
@@ -93,7 +94,8 @@ class CartesianGrid(Grid):
             Itself to allow for chaining these transformations.
         '''
         if is_scalar(scale):
-            self.weights *= self.xp.abs(self.xp.asarray(scale))**self.ndim
+            dtype = default_dtype(self.xp, 'real floating')
+            self.weights *= self.xp.abs(self.xp.asarray(scale, dtype=dtype))**self.ndim
         else:
             self.weights *= self.xp.prod(self.xp.abs(scale))
 

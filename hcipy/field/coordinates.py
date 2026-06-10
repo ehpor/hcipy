@@ -2,7 +2,7 @@ import numpy as np
 import copy
 import math
 from collections.abc import Iterable
-from .._math.backends import infer_xp
+from .._math.backends import infer_xp, default_dtype
 
 
 class Coords(object):
@@ -216,7 +216,9 @@ class UnstructuredCoords(Coords):
         if xp is None:
             xp = infer_xp(*coords)
         self._xp = xp
-        self.coords = [self._xp.asarray(c, copy=True) for c in coords]
+
+        dtype = default_dtype(xp, 'real floating')
+        self.coords = [self._xp.asarray(c, copy=True, dtype=dtype) for c in coords]
 
     @classmethod
     def from_dict(cls, tree):
@@ -296,10 +298,7 @@ class UnstructuredCoords(Coords):
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
         '''
-        if not isinstance(b, Iterable):
-            b = (b,) * self.ndim
-
-        assert len(b) == self.ndim, 'b must have the same dimensionality as the coords.'
+        b = self._xp.broadcast_to(self._xp.asarray(b, dtype=self.coords[0].dtype), (self.ndim,))
 
         for i in range(len(self.coords)):
             self.coords[i] += b[i]
@@ -309,10 +308,7 @@ class UnstructuredCoords(Coords):
     def __isub__(self, b):
         '''Subtract `b` from the coordinates separately in-place
         '''
-        if not isinstance(b, Iterable):
-            b = (b,) * self.ndim
-
-        assert len(b) == self.ndim, 'b must have the same dimensionality as the coords.'
+        b = self._xp.broadcast_to(self._xp.asarray(b, dtype=self.coords[0].dtype), (self.ndim,))
 
         for i in range(len(self.coords)):
             self.coords[i] -= b[i]
@@ -322,11 +318,7 @@ class UnstructuredCoords(Coords):
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
-        if not isinstance(f, Iterable):
-            f = (f,) * self.ndim
-
-        assert len(f) == self.ndim, 'f must have the same dimensionality as the coords.'
-
+        f = self._xp.broadcast_to(self._xp.asarray(f, dtype=self.coords[0].dtype), (self.ndim,))
         for i in range(len(self.coords)):
             self.coords[i] *= f[i]
 
@@ -383,8 +375,10 @@ class SeparatedCoords(Coords):
         if xp is None:
             xp = infer_xp(*separated_coords)
         self._xp = xp
+
         # Make a copy to avoid modification from outside the class
-        self.separated_coords = [self._xp.asarray(s, copy=True) for s in separated_coords]
+        dtype = default_dtype(xp, 'real floating')
+        self.separated_coords = [self._xp.asarray(s, copy=True, dtype=dtype) for s in separated_coords]
 
     @classmethod
     def from_dict(cls, tree):
@@ -479,10 +473,7 @@ class SeparatedCoords(Coords):
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
         '''
-        if not isinstance(b, Iterable):
-            b = (b,) * self.ndim
-
-        assert len(b) == self.ndim, 'b must have same dimensionality as the coordinates.'
+        b = self._xp.broadcast_to(self._xp.asarray(b, dtype=self.separated_coords[0].dtype), (self.ndim,))
 
         for i in range(self.ndim):
             self.separated_coords[i] += b[i]
@@ -492,10 +483,7 @@ class SeparatedCoords(Coords):
     def __isub__(self, b):
         '''Subtract `b` from the coordinates separately in-place.
         '''
-        if not isinstance(b, Iterable):
-            b = (b,) * self.ndim
-
-        assert len(b) == self.ndim, 'b must have same dimensionality as the coordinates.'
+        b = self._xp.broadcast_to(self._xp.asarray(b, dtype=self.separated_coords[0].dtype), (self.ndim,))
 
         for i in range(self.ndim):
             self.separated_coords[i] -= b[i]
@@ -505,10 +493,7 @@ class SeparatedCoords(Coords):
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
-        if not isinstance(f, Iterable):
-            f = (f,) * self.ndim
-
-        assert len(f) == self.ndim, 'f must have same dimensionality as the coordinates.'
+        f = self._xp.broadcast_to(self._xp.asarray(f, dtype=self.separated_coords[0].dtype), (self.ndim,))
 
         for i in range(self.ndim):
             self.separated_coords[i] *= f[i]
@@ -590,13 +575,14 @@ class RegularCoords(Coords):
         self._xp = xp
 
         # Convert to arrays - accept tuples, lists, or arrays
-        self.delta = xp.asarray(delta) * 1.0
+        dtype = default_dtype(xp, 'real floating')
+        self.delta = xp.asarray(delta, dtype=dtype)
         self.dims = tuple(int(n) for n in dims)
-        self.zero = xp.asarray(zero) * 1.0
+        self.zero = xp.asarray(zero, dtype=dtype)
 
         # Validate dimensions match
-        assert len(self.delta) == len(self.dims), 'delta and dims must have same length'
-        assert len(self.dims) == len(self.zero), 'dims and zero must have same length'
+        assert self.delta.shape[0] == len(self.dims), 'delta and dims must have same length'
+        assert len(self.dims) == self.zero.shape[0], 'dims and zero must have same length'
 
     @classmethod
     def from_dict(cls, tree):
@@ -683,7 +669,7 @@ class RegularCoords(Coords):
 
         The actual points are the iterated tensor product of this tuple.
         '''
-        return [self._xp.arange(n) * delta + zero for delta, n, zero in zip(self.delta, self.dims, self.zero)]
+        return [self._xp.arange(n, dtype=self.delta.dtype) * delta + zero for delta, n, zero in zip(self.delta, self.dims, self.zero)]
 
     @property
     def regular_coords(self):
@@ -720,38 +706,23 @@ class RegularCoords(Coords):
     def __iadd__(self, b):
         '''Add `b` to the coordinates separately in-place.
         '''
-        if not isinstance(b, Iterable):
-            b = (b,) * self.ndim
-
-        assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
-
-        self.zero = self.zero + self._xp.asarray(b)
+        self.zero = self.zero + self._xp.asarray(b, dtype=self.zero.dtype)
 
         return self
 
     def __isub__(self, b):
         '''Subtract `b` from the coordinates separately in-place.
         '''
-        if not isinstance(b, Iterable):
-            b = (b,) * self.ndim
-
-        assert len(b) == len(self), 'b must have same dimensionality as the coordinates.'
-
-        self.zero = self.zero - self._xp.asarray(b)
+        self.zero = self.zero - self._xp.asarray(b, dtype=self.zero.dtype)
 
         return self
 
     def __imul__(self, f):
         '''Multiply each coordinate with `f` separately in-place.
         '''
-        if not isinstance(f, Iterable):
-            f = (f,) * self.ndim
-
-        assert len(f) == self.ndim, 'f must have same dimensionality as the coordinates.'
-
-        f_arr = self._xp.asarray(f)
-        self.delta = self.delta * f_arr
-        self.zero = self.zero * f_arr
+        f = self._xp.asarray(f, dtype=self.zero.dtype)
+        self.delta = self.delta * f
+        self.zero = self.zero * f
 
         return self
 
@@ -779,7 +750,7 @@ class RegularCoords(Coords):
     def reverse(self):
         '''Reverse the ordering of points in-place.
         '''
-        self.zero = self.zero + self.delta * (self._xp.asarray(self.dims) - 1)
+        self.zero = self.zero + self.delta * (self._xp.asarray(self.dims, dtype=self.delta.dtype) - 1)
         self.delta = -self.delta
 
         return self

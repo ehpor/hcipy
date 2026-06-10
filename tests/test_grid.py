@@ -3,8 +3,12 @@ from hcipy.field.coordinates import Coords
 import pytest
 from hcipy._math.backends import all_close
 import math
+if Configuration().core.use_new_style_fields:
+    import array_api_strict as xp
+else:
+    import numpy as np
 
-def test_unstructured_coords(xp):
+def test_unstructured_coords():
     coords = UnstructuredCoords([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], xp=xp)
     assert coords.size == 3
     assert len(coords) == 2
@@ -32,7 +36,7 @@ def test_unstructured_coords(xp):
     coords2 = Coords.from_dict(d)
     assert coords == coords2
 
-def test_separated_coords(xp):
+def test_separated_coords():
     coords = SeparatedCoords([[1.0, 2.0, 3.0], [4.0, 5.0]], xp=xp)
     assert coords.size == 6
     assert len(coords) == 2
@@ -64,7 +68,7 @@ def test_separated_coords(xp):
     coords2 = Coords.from_dict(d)
     assert coords == coords2
 
-def test_regular_coords(xp):
+def test_regular_coords():
     coords = RegularCoords(delta=(0.5, 1), dims=(3, 2), zero=(0, 0), xp=xp)
     assert coords.size == 6
     assert len(coords) == 2
@@ -98,7 +102,7 @@ def test_regular_coords(xp):
     coords2 = Coords.from_dict(d)
     assert coords == coords2
 
-def test_coords_arithmetic(xp):
+def test_coords_arithmetic():
     # Unstructured
     c1 = UnstructuredCoords([[1.0, 2.0], [3.0, 4.0]], xp=xp)
     c2 = c1 + 1
@@ -150,7 +154,7 @@ def test_coords_arithmetic(xp):
     assert all_close(c2.delta, xp.asarray([0.5, 1]))
     assert all_close(c2.zero, xp.asarray([2.5, 3]))
 
-def test_grid_creation(xp):
+def test_grid_creation():
     # Unstructured
     ug = Grid(UnstructuredCoords([[1, 2], [3, 4]], xp=xp))
     assert ug.is_unstructured
@@ -181,7 +185,7 @@ def test_grid_creation(xp):
     assert tuple(rg.delta) == (1, 1)
     assert tuple(rg.zero) == (0, 0)
 
-def test_grid_exceptions(xp):
+def test_grid_exceptions():
     ug = Grid(UnstructuredCoords([[1, 2], [3, 4]], xp=xp))
     with pytest.raises(ValueError):
         ug.dims
@@ -204,7 +208,7 @@ def test_grid_exceptions(xp):
     with pytest.raises(ValueError):
         sg.regular_coords
 
-def test_grid_subset(xp):
+def test_grid_subset():
     grid = CartesianGrid(RegularCoords((1, 1), (10, 10), (0, 0), xp=xp))
     subset_grid = grid.subset(grid.x > 3)
 
@@ -217,7 +221,7 @@ def test_grid_subset(xp):
     subset_grid2 = grid.subset(indices)
     assert subset_grid == subset_grid2
 
-def test_cartesian_grid_transformations(xp):
+def test_cartesian_grid_transformations():
     grid = CartesianGrid(RegularCoords((1.0,), (8,), (0.0,), xp=xp))
 
     # Scaling
@@ -246,7 +250,7 @@ def test_cartesian_grid_transformations(xp):
     assert all_close(rgrid.y, grid3d.x)
     assert all_close(rgrid.z, grid3d.z)
 
-def test_polar_grid_transformations(xp):
+def test_polar_grid_transformations():
     grid = PolarGrid(UnstructuredCoords([[1.0, 2.0], [xp.pi / 4, xp.pi / 2]], xp=xp))
 
     # Scaling
@@ -269,7 +273,7 @@ def test_polar_grid_transformations(xp):
     assert all_close(sgrid.x[0], 1 + math.sqrt(2) / 2)
     assert all_close(sgrid.y[0], math.sqrt(2) / 2)
 
-def test_coordinate_transformation(xp):
+def test_coordinate_transformation():
     # 2D
     grid_cart = CartesianGrid(RegularCoords((1, 1), (3, 3), (0, 0), xp=xp))
     grid_pol = grid_cart.as_('polar')
@@ -278,7 +282,7 @@ def test_coordinate_transformation(xp):
     assert grid_cart2.is_('cartesian')
     assert all_close(grid_cart.points, grid_cart2.points, atol=1e-4)
 
-def test_grid_reversal(xp):
+def test_grid_reversal():
     grid = CartesianGrid(RegularCoords((1, 1), (10, 12), (0, 0), xp=xp))
     rev_grid = grid.reversed()
     assert not grid == rev_grid
@@ -286,13 +290,13 @@ def test_grid_reversal(xp):
     rev_grid.reverse()
     assert grid == rev_grid
 
-def test_grid_closest_to(xp):
+def test_grid_closest_to():
     grid = CartesianGrid(RegularCoords((1, 1), (10, 10), (0, 0), xp=xp))
     p = [2.1, 3.8]
     idx = grid.closest_to(p)
     assert idx == 42  # Corresponds to point (2, 4).
 
-def test_grid_field_creation(xp):
+def test_grid_field_creation():
     grid = CartesianGrid(RegularCoords((1,), (10,), (0,), xp=xp))
     f_zeros = grid.zeros()
     f_ones = grid.ones()
@@ -316,7 +320,7 @@ def test_grid_field_creation(xp):
     assert f_zeros_t.tensor_shape == (2, 3)
     assert f_zeros_t.shape == (2, 3, 10)
 
-def test_grid_weights(xp):
+def test_grid_weights():
     # Regular grid
     grid = CartesianGrid(RegularCoords((0.1, 0.2), (10, 20), (0, 0), xp=xp))
     assert all_close(grid.weights, 0.1 * 0.2)
@@ -337,7 +341,7 @@ def test_grid_weights(xp):
         grid = CartesianGrid(UnstructuredCoords([[0, 1], [0, 1]], xp=xp))
         assert all_close(grid.weights, xp.asarray(1))
 
-def test_grid_serialization(xp):
+def test_grid_serialization():
     grid = CartesianGrid(RegularCoords((1, 1), (10, 10), (0, 0), xp=xp))
     d = grid.to_dict()
     grid2 = Grid.from_dict(d)
@@ -358,7 +362,7 @@ def test_grid_serialization(xp):
     grid2 = Grid.from_dict(d)
     assert grid == grid2
 
-def test_make_uniform_grid(xp):
+def test_make_uniform_grid():
     # 1D
     grid = make_uniform_grid(dims=10, extent=1, xp=xp)
     assert grid.shape == (10,)
@@ -375,47 +379,47 @@ def test_make_uniform_grid(xp):
     grid = make_uniform_grid(dims=11, extent=1, center=0.5, has_center=True, xp=xp)
     assert all_close((grid.points[0] + grid.points[-1]) / 2, 0.5)
 
-def test_make_pupil_grid(xp):
+def test_make_pupil_grid():
     grid = make_pupil_grid(dims=10, diameter=1, xp=xp)
     assert grid.shape == (10, 10)
     assert all_close(grid.delta, 0.1)
 
-def test_make_focal_grid_from_pupil_grid(xp):
+def test_make_focal_grid_from_pupil_grid():
     pupil_grid = make_pupil_grid(dims=10, diameter=1, xp=xp)
     focal_grid = make_focal_grid_from_pupil_grid(pupil_grid, q=2, num_airy=5)
 
     assert focal_grid.shape == (20, 20)
 
-def test_make_focal_grid(xp):
+def test_make_focal_grid():
     focal_grid = make_focal_grid(q=2, num_airy=5, spatial_resolution=1, xp=xp)
 
     assert focal_grid.dims == (20, 20)
 
-def test_make_hexagonal_grid(xp):
+def test_make_hexagonal_grid():
     grid = make_hexagonal_grid(circum_diameter=1, n_rings=3, xp=xp)
 
     assert grid.size == 37
 
-def test_make_chebyshev_grid(xp):
+def test_make_chebyshev_grid():
     grid = make_chebyshev_grid(dims=[10, 20], xp=xp)
 
     assert grid.dims == (10, 20)
 
-def test_make_supersampled_grid(xp):
+def test_make_supersampled_grid():
     grid = make_uniform_grid(dims=10, extent=1, xp=xp)
     ss_grid = make_supersampled_grid(grid, oversampling=2)
 
     assert ss_grid.dims == (20,)
     assert all_close(ss_grid.delta, 0.05)
 
-def test_make_subsampled_grid(xp):
+def test_make_subsampled_grid():
     grid = make_uniform_grid(dims=10, extent=1, xp=xp)
     ss_grid = make_subsampled_grid(grid, undersampling=2)
 
     assert ss_grid.dims == (5,)
     assert all_close(ss_grid.delta, 0.2)
 
-def test_subsample_field(xp):
+def test_subsample_field():
     grid = make_uniform_grid(dims=10, extent=1, xp=xp)
     field = grid.ones()
 
@@ -424,7 +428,7 @@ def test_subsample_field(xp):
     assert subsampled_field.grid.dims == (5,)
     assert all_close(subsampled_field, 1)
 
-def test_evaluate_supersampled(xp):
+def test_evaluate_supersampled():
     grid = make_uniform_grid(dims=10, extent=1, xp=xp)
 
     def field_generator(grid):
@@ -434,7 +438,7 @@ def test_evaluate_supersampled(xp):
     assert field.grid.dims == (10,)
     assert all_close(field, 1)
 
-def test_make_uniform_vector_field(xp):
+def test_make_uniform_vector_field():
     grid = make_uniform_grid(dims=10, extent=1, xp=xp)
 
     scalar_field = Field(xp.ones(grid.size), grid)
@@ -443,7 +447,7 @@ def test_make_uniform_vector_field(xp):
     assert vector_field.tensor_order == 1
     assert vector_field.tensor_shape == (2,)
 
-def test_make_uniform_vector_field_generator(xp):
+def test_make_uniform_vector_field_generator():
     def field_generator(grid):
         return grid.ones()
 

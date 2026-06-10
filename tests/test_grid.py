@@ -330,10 +330,10 @@ def test_grid_weights():
     y = xp.asarray([10.0, 20.0])
     grid = CartesianGrid(SeparatedCoords([x, y], xp=xp))
 
-    w_x = xp.concat((xp.asarray([x[1] - x[0]]), (x[2:] - x[:-2]) / 2, xp.asarray([x[-1] - x[-2]])))
-    w_y = xp.concat((xp.asarray([y[1] - y[0]]), (y[2:] - y[:-2]) / 2, xp.asarray([y[-1] - y[-2]])))
+    w_x = xp.concat((xp.reshape(xp.asarray(x[1] - x[0]), (1,)), (x[2:] - x[:-2]) / 2, xp.reshape(xp.asarray(x[-1] - x[-2]), (1,))))
+    w_y = xp.concat((xp.reshape(xp.asarray(y[1] - y[0]), (1,)), (y[2:] - y[:-2]) / 2, xp.reshape(xp.asarray(y[-1] - y[-2]), (1,))))
 
-    expected_weights = xp.outer(w_y, w_x).ravel()
+    expected_weights = xp.reshape(w_y[:, None] * w_x[None, :], (-1,))
     assert all_close(grid.weights, expected_weights)
 
     # Unstructured grid
@@ -377,7 +377,7 @@ def test_make_uniform_grid():
 
     # 2D with center
     grid = make_uniform_grid(dims=11, extent=1, center=0.5, has_center=True, xp=xp)
-    assert all_close((grid.points[0] + grid.points[-1]) / 2, 0.5)
+    assert all_close((grid.points[0, :] + grid.points[-1, :]) / 2, 0.5)
 
 def test_make_pupil_grid():
     grid = make_pupil_grid(dims=10, diameter=1, xp=xp)

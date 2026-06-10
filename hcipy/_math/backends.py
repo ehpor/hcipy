@@ -191,3 +191,23 @@ def array_namespace(*xs, api_version=None):
             cache[type(x)] = None
 
     return array_api_compat.array_namespace(*xs, api_version=api_version)
+
+def default_dtype(xp, kind, device=None):
+    '''Find the default dtype of a certain kind.
+
+    Parameters
+    ----------
+    xp : module
+        The Array API backend.
+    kind : {"real floating", "complex floating", "integral", "indexing"}
+        The kind of dtype.
+    device : Device or None
+        The device on the Array API backend. If not given, the default device
+        of the backend will be used.
+
+    Returns
+    -------
+    dtype
+        The default dtype.
+    '''
+    return xp.__array_namespace_info__().default_dtypes(device=device)[kind]

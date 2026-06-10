@@ -28,8 +28,14 @@ class DynamicOpticalSystem(object):
 
         end = False
         while not end:
-            t_next, _, callback = self.callbacks[0]
-            if t_next < t:
+            if self.callbacks:
+                t_next, _, callback = self.callbacks[0]
+            else:
+                # There are no callbacks, so evolve till the end.
+                t_next = float('inf')
+                callback = None
+
+            if t_next <= t:
                 integration_time = t_next - self.t
                 heapq.heappop(self.callbacks)
             else:

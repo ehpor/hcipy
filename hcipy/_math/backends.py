@@ -181,7 +181,7 @@ def array_namespace(*xs, api_version=None):
             ns = array_api_compat.array_namespace(x, api_version=api_version)
 
             # Numpy is a special case, see above.
-            if ns == np:
+            if x.__class__.__module__.startswith('numpy'):
                 cache[type(x)] = NUMPY_NAMESPACE
             else:
                 cache[type(x)] = ns

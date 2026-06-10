@@ -3,6 +3,7 @@ import hcipy
 import numpy as np
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
+from hcipy._math.backends import to_numpy, array_namespace
 import math
 
 
@@ -224,3 +225,11 @@ def test_nanmedian_all_nan_slice(xp):
     result_np = np.asarray(result)
     assert result_np.shape == expected.shape
     assert np.allclose(result_np, expected, equal_nan=True)
+
+def test_to_numpy(xp):
+    arr = xp.zeros(10)
+    assert isinstance(to_numpy(arr), np.ndarray)
+
+def test_array_namespace(xp):
+    arr = xp.zeros(10)
+    _ = array_namespace(arr)

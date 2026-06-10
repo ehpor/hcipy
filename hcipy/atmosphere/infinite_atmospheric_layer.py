@@ -110,7 +110,9 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
     def _make_stencils(self):
         # Vertical
-        zero = (self.input_grid.zero[0], self.input_grid.zero[1] - self.input_grid.delta[1])
+        xp = self.input_grid.xp
+        zero = self.input_grid.zero - self.input_grid.delta * xp.asarray([0, 1])
+
         self.new_grid_bottom = CartesianGrid(RegularCoords(self.input_grid.delta, (self.input_grid.dims[0], 1), zero))
 
         self.stencil_bottom = self.input_grid.zeros(dtype='bool').shaped
@@ -123,7 +125,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
         self.num_stencils_vertical = np.sum(self.stencil_bottom)
 
         # Horizontal
-        zero = (self.input_grid.zero[0] - self.input_grid.delta[0], self.input_grid.zero[1])
+        zero = self.input_grid.zero - self.input_grid.delta * xp.asarray([1, 0])
         self.new_grid_left = CartesianGrid(RegularCoords(self.input_grid.delta, (1, self.input_grid.dims[1]), zero))
 
         self.stencil_left = self.input_grid.zeros(dtype='bool').shaped
@@ -351,7 +353,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
                 warnings.filterwarnings('ignore', message='The behaviour of affine_transform')
                 warnings.filterwarnings('ignore', message='The behavior of affine_transform')
 
-                screen = affine_transform(ps, np.array([1, 1]), (sub_delta / self.input_grid.delta)[::-1], mode='nearest', order=5)
+                screen = affine_transform(ps, np.array([1, 1]), np.asarray(sub_delta / self.input_grid.delta)[::-1], mode='nearest', order=5)
                 self._shifted_achromatic_screen = Field(screen.ravel(), self._achromatic_screen.grid)
         else:
             self._shifted_achromatic_screen = self._achromatic_screen

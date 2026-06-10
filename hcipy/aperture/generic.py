@@ -894,30 +894,6 @@ def make_super_gaussian_aperture(full_width_half_maximum, shape_parameter=5, cen
 
     return func
 
-@deprecated_name_changed(make_circular_aperture)
-def circular_aperture():
-    pass
-
-@deprecated_name_changed(make_elliptical_aperture)
-def elliptical_aperture():
-    pass
-
-@deprecated_name_changed(make_rectangular_aperture)
-def rectangular_aperture():
-    pass
-
-@deprecated_name_changed(make_hexagonal_aperture)
-def hexagonal_aperture():
-    pass
-
-@deprecated_name_changed(make_regular_polygon_aperture)
-def regular_polygon_aperture():
-    pass
-
-@deprecated_name_changed(make_irregular_polygon_aperture)
-def irregular_polygon_aperture():
-    pass
-
 @deprecated_name_changed(make_inverted_aperture)
 def make_obstruction():
     pass

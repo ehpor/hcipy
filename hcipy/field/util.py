@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 from .coordinates import RegularCoords, SeparatedCoords, UnstructuredCoords
-from .._math.backends import infer_xp
+from .._math.backends import infer_xp, default_dtype
 from .field import Field
 from .cartesian_grid import CartesianGrid
 from .grid import Grid
@@ -55,7 +55,15 @@ def _find_common_size(*args):
     int
         The common size.
     '''
-    return max(len(arg) if isinstance(arg, Iterable) else 1 for arg in args)
+    sizes = []
+    for arg in args:
+        if hasattr(arg, 'shape'):
+            sizes.append(arg.shape[0] if arg.ndim > 0 else 1)
+        elif isinstance(arg, Iterable):
+            sizes.append(len(arg))
+        else:
+            sizes.append(1)
+    return max(sizes)
 
 def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
     '''Create a uniformly-spaced :class:`Grid` of a certain shape and size.
@@ -196,7 +204,7 @@ def make_focal_grid_from_pupil_grid(pupil_grid, q=1, num_airy=None, focal_length
         warnings.warn('Focal grid is larger than the maximum allowed angle (fov=%.03f). You may see wrapping when doing propagations.' % max(fov), stacklevel=2)
 
     uv = make_fft_grid(pupil_grid, q, fov)
-    focal_grid = uv.scaled(f_lambda / (2 * np.pi))
+    focal_grid = uv.scaled(f_lambda / (2 * math.pi))
 
     return focal_grid
 
@@ -624,7 +632,7 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
         for i in range(grid.ndim):
             x = grid.coords.separated_coords[i]
             d = (x[2:] - x[:-2]) / 2.
-            d = np.concatenate(([x[1] - x[0]], d, [x[-1] - x[-2]]))
+            d = grid.xp.asarray(np.concatenate(([x[1] - x[0]], d, [x[-1] - x[-2]])))
             deltas.append(d)
 
         dithers = make_uniform_grid(oversampling, 1, xp=grid.xp)
@@ -636,8 +644,9 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
         else:
             field = None
 
-        for dither in dithers.points:
-            dithered_separated_coords = [c + d * delta for c, d, delta in zip(separated_coords, dither, deltas)]
+        for idx in range(dithers.points.shape[0]):
+            dither = dithers.points[idx, :]
+            dithered_separated_coords = [c + float(dither[i]) * delta for i, (c, delta) in enumerate(zip(separated_coords, deltas))]
             dithered_grid = grid.__class__(SeparatedCoords(dithered_separated_coords))
 
             if statistic in ['mean', 'sum']:

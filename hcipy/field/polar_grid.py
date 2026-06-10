@@ -36,7 +36,7 @@ class PolarGrid(Grid):
             Itself to allow for chaining these transformations.
         '''
         xp = self.coords.xp
-        self.coords *= xp.asarray([scale, 1])
+        self.coords *= xp.asarray([scale, 1.0])
         self.weights *= np.abs(scale)**(self.ndim)
         return self
 

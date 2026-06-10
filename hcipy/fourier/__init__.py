@@ -7,6 +7,8 @@ __all__ = [
     'is_fft_grid',
     'FastFourierTransform',
     'FourierFilter',
+    'make_fourier_convolution',
+    'make_fourier_correlation',
     'FourierShift',
     'FourierShear',
     'FourierRotation',

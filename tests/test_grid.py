@@ -286,7 +286,7 @@ def test_grid_reversal():
     grid = CartesianGrid(RegularCoords((1, 1), (10, 12), (0, 0), xp=xp))
     rev_grid = grid.reversed()
     assert not grid == rev_grid
-    assert all_close(grid.points, xp.flip(rev_grid.points, (0,)))
+    assert all_close(grid.points, xp.flip(rev_grid.points, axis=(0,)))
     rev_grid.reverse()
     assert grid == rev_grid
 

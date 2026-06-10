@@ -90,8 +90,9 @@ def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
 
     # Convert to xp arrays (preserves differentiability if inputs are xp arrays)
     # Ensure at least 1D arrays for proper broadcasting
-    extent = xp.asarray(extent)
-    center = xp.asarray(center)
+    dtype = default_dtype(xp, 'real floating')
+    extent = xp.asarray(extent, dtype=dtype)
+    center = xp.asarray(center, dtype=dtype)
 
     # If scalars provided, broadcast to match num_dims
     if extent.ndim == 0:
@@ -99,7 +100,7 @@ def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
     if center.ndim == 0:
         center = xp.broadcast_to(center, (num_dims,))
 
-    dims_arr = xp.asarray(dims)
+    dims_arr = xp.asarray(dims, dtype=dtype)
 
     # Array math for differentiability
     delta = extent / dims_arr
@@ -280,38 +281,16 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
             else:
                 spatial_resolution = f_number * reference_wavelength
 
-    q = xp.asarray(q)
-    num_airy = xp.asarray(num_airy)
-    spatial_resolution = xp.asarray(spatial_resolution)
+    # Normalize all inputs to length-2 arrays.
+    dtype = default_dtype(xp, 'real floating')
+    q = xp.broadcast_to(xp.asarray(q, dtype=dtype), (2,))
+    num_airy = xp.broadcast_to(xp.asarray(num_airy, dtype=dtype), (2,))
+    spatial_resolution = xp.broadcast_to(xp.asarray(spatial_resolution, dtype=dtype), (2,))
 
     delta = spatial_resolution / q
+    dims = tuple(int(2 * n * q_i) for n, q_i in zip(num_airy, q))
 
-    # Determine the dimensionality
-    num_dims = max(q.ndim, num_airy.ndim)
-    if num_dims == 0:
-        # Both scalars - assume 2D for focal grids
-        num_dims = 2
-        dims = (int(2 * float(num_airy) * float(q)),) * num_dims
-        delta = xp.broadcast_to(delta, (num_dims,))
-    else:
-        # At least one is an array
-        if q.ndim == 0:
-            # q is scalar, broadcast to match num_airy
-            q_vals = [float(q)] * len(num_airy)
-            num_airy_vals = num_airy.tolist()
-        elif num_airy.ndim == 0:
-            # num_airy is scalar, broadcast to match q
-            q_vals = q.tolist()
-            num_airy_vals = [float(num_airy)] * len(q)
-        else:
-            # Both are arrays
-            q_vals = q.tolist()
-            num_airy_vals = num_airy.tolist()
-        dims = tuple(int(2 * n * q_i) for n, q_i in zip(num_airy_vals, q_vals))
-        if delta.ndim == 0:
-            delta = xp.broadcast_to(delta, (len(dims),))
-
-    dims_arr = xp.asarray(dims)
+    dims_arr = xp.asarray(dims, dtype=dtype)
     zero = delta * (-dims_arr / 2 + (dims_arr % 2) * 0.5)
 
     return CartesianGrid(RegularCoords(delta, dims, zero))
@@ -343,12 +322,14 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
     if xp is None:
         xp = infer_xp(circum_diameter, center)
 
-    if center is None:
-        center = xp.asarray([0.0, 0.0])
-    else:
-        center = xp.asarray(center)
+    dtype = default_dtype(xp, 'real floating')
 
-    circum_diameter = xp.asarray(circum_diameter)
+    if center is None:
+        center = xp.zeros(2, dtype=dtype)
+    else:
+        center = xp.asarray(center, dtype=dtype)
+
+    circum_diameter = xp.asarray(circum_diameter, dtype=dtype)
     apothem = circum_diameter * math.sqrt(3) / 4
 
     q = [0]
@@ -374,8 +355,8 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
         q += [n] * n
         r += list(range(-n, 0))
 
-    q_arr = xp.asarray(q)
-    r_arr = xp.asarray(r)
+    q_arr = xp.asarray(q, dtype=dtype)
+    r_arr = xp.asarray(r, dtype=dtype)
     x = (-q_arr + r_arr) * circum_diameter / 2 + center[0]
     y = (q_arr + r_arr) * apothem * 2 + center[1]
 
@@ -419,15 +400,16 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None, xp=None):
         xp = infer_xp(minimum, maximum)
 
     # Convert to xp arrays (preserves differentiability)
-    minimum = xp.asarray(minimum)
-    maximum = xp.asarray(maximum)
+    dtype = default_dtype(xp, 'real floating')
+    minimum = xp.asarray(minimum, dtype=dtype)
+    maximum = xp.asarray(maximum, dtype=dtype)
 
     middles = (minimum + maximum) / 2
     intervals = (maximum - minimum) / 2
 
     sep_coords = []
     for i, dim in enumerate(dims):
-        c = xp.cos(xp.pi * (2 * xp.arange(dim) + 1) / (2.0 * dim))
+        c = xp.cos(xp.pi * (2 * xp.arange(dim, dtype=dtype) + 1) / (2.0 * dim))
         # Handle both scalar and array middles/intervals
         middle = middles if middles.ndim == 0 else middles[i]
         interval = intervals if intervals.ndim == 0 else intervals[i]
@@ -460,7 +442,7 @@ def make_supersampled_grid(grid, oversampling):
 
     if grid.is_regular:
         xp = grid.xp
-        oversampling_arr = xp.asarray(oversampling)
+        oversampling_arr = xp.asarray(oversampling, dtype=grid.delta.dtype)
         delta_new = grid.delta / oversampling_arr
         zero_new = grid.zero - grid.delta / 2 + delta_new / 2
         dims_new = tuple(d * o for d, o in zip(grid.dims, oversampling))
@@ -495,7 +477,7 @@ def make_subsampled_grid(grid, undersampling):
 
     if grid.is_regular:
         xp = grid.xp
-        undersampling_arr = xp.asarray(undersampling)
+        undersampling_arr = xp.asarray(undersampling, dtype=grid.delta.dtype)
         delta_new = grid.delta * undersampling_arr
         zero_new = grid.zero - grid.delta / 2 + delta_new / 2
         dims_new = tuple(d // u for d, u in zip(grid.dims, undersampling))

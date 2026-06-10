@@ -1,7 +1,7 @@
-import numpy as np
 import copy
 import math
 from collections.abc import Iterable
+import importlib
 from .._math.backends import infer_xp, default_dtype
 
 
@@ -271,13 +271,9 @@ class UnstructuredCoords(Coords):
         '''Restore state from pickle.
         '''
         self.coords = state['coords']
-        # Restore xp from module name
-        if state['xp_name'] == 'numpy':
-            self._xp = np
-        else:
-            # For other backends, import dynamically
-            import importlib
-            self._xp = importlib.import_module(state['xp_name'])
+
+        # Restore xp from module name with backwards compatibility.
+        self._xp = importlib.import_module(state.get('xp_name', 'numpy'))
 
     @property
     def size(self):
@@ -431,13 +427,9 @@ class SeparatedCoords(Coords):
         '''Restore state from pickle.
         '''
         self.separated_coords = state['separated_coords']
-        # Restore xp from module name
-        if state['xp_name'] == 'numpy':
-            self._xp = np
-        else:
-            # For other backends, import dynamically
-            import importlib
-            self._xp = importlib.import_module(state['xp_name'])
+
+        # Restore xp from module name with backwards compatibility.
+        self._xp = importlib.import_module(state.get('xp_name', 'numpy'))
 
     def __getitem__(self, i):
         '''The `i`-th point for these coordinates.
@@ -566,11 +558,7 @@ class RegularCoords(Coords):
 
         # Try to infer xp from delta and zero if not provided
         if xp is None:
-            try:
-                xp = infer_xp(delta, zero)
-            except ValueError:
-                # infer_xp already raises ValueError for new-style fields
-                raise
+            xp = infer_xp(delta, zero)
 
         self._xp = xp
 
@@ -606,15 +594,8 @@ class RegularCoords(Coords):
         if tree['type'] != 'regular':
             raise ValueError('The type of coordinates should be "regular".')
 
-        # Restore xp from stored name
-        if tree.get('xp_name') == 'numpy':
-            xp = np
-        elif 'xp_name' in tree:
-            import importlib
-            xp = importlib.import_module(tree['xp_name'])
-        else:
-            # Backward compatibility: default to numpy
-            xp = np
+        # Restore xp from stored name with backwards compatibility.
+        xp = importlib.import_module(tree.get('xp_name', 'numpy'))
 
         return cls(tree['delta'], tree['dims'], tree['zero'], xp=xp)
 
@@ -652,13 +633,10 @@ class RegularCoords(Coords):
         '''Restore state from pickle.
         '''
         self.dims = state['dims']
-        # Restore xp from module name
-        if state['xp_name'] == 'numpy':
-            self._xp = np
-        else:
-            # For other backends, import dynamically
-            import importlib
-            self._xp = importlib.import_module(state['xp_name'])
+
+        # Restore xp from stored name with backwards compatibility.
+        self._xp = importlib.import_module(state.get('xp_name', 'numpy'))
+
         # Convert lists back to arrays
         self.delta = self._xp.asarray(state['delta'])
         self.zero = self._xp.asarray(state['zero'])

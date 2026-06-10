@@ -283,7 +283,7 @@ class UnstructuredCoords(Coords):
     def size(self):
         '''The number of points.
         '''
-        return len(self.coords[0])
+        return self.coords[0].shape[0]
 
     def __len__(self):
         '''The number of dimensions.
@@ -470,7 +470,7 @@ class SeparatedCoords(Coords):
     def dims(self):
         '''The number of points along each dimension.
         '''
-        return tuple(len(c) for c in self.separated_coords)
+        return tuple(c.shape[0] for c in self.separated_coords)
 
     @property
     def shape(self):

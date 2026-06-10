@@ -12,25 +12,25 @@ def test_unstructured_coords():
     coords = UnstructuredCoords([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], xp=xp)
     assert coords.size == 3
     assert len(coords) == 2
-    assert xp.all(coords[0] == xp.asarray([1, 2, 3]))
-    assert xp.all(coords[1] == xp.asarray([4, 5, 6]))
+    assert xp.all(coords[0] == xp.asarray([1.0, 2.0, 3.0]))
+    assert xp.all(coords[1] == xp.asarray([4.0, 5.0, 6.0]))
 
     coords_copy = coords.copy()
     assert coords == coords_copy
 
     coords_copy += 1
     assert coords != coords_copy
-    assert all_close(coords_copy[0], xp.asarray([2, 3, 4]))
-    assert all_close(coords_copy[1], xp.asarray([5, 6, 7]))
+    assert all_close(coords_copy[0], xp.asarray([2.0, 3.0, 4.0]))
+    assert all_close(coords_copy[1], xp.asarray([5.0, 6.0, 7.0]))
 
     coords_copy = coords.copy()
     coords_copy *= 2
-    assert all_close(coords_copy[0], xp.asarray([2, 4, 6]))
-    assert all_close(coords_copy[1], xp.asarray([8, 10, 12]))
+    assert all_close(coords_copy[0], xp.asarray([2.0, 4.0, 6.0]))
+    assert all_close(coords_copy[1], xp.asarray([8.0, 10.0, 12.0]))
 
     coords.reverse()
-    assert xp.all(coords[0] == xp.asarray([3, 2, 1]))
-    assert xp.all(coords[1] == xp.asarray([6, 5, 4]))
+    assert xp.all(coords[0] == xp.asarray([3.0, 2.0, 1.0]))
+    assert xp.all(coords[1] == xp.asarray([6.0, 5.0, 4.0]))
 
     d = coords.to_dict()
     coords2 = Coords.from_dict(d)
@@ -42,27 +42,27 @@ def test_separated_coords():
     assert len(coords) == 2
     assert coords.dims == (3, 2)
     assert coords.shape == (2, 3)
-    assert xp.all(coords.separated_coords[0] == xp.asarray([1, 2, 3]))
-    assert xp.all(coords.separated_coords[1] == xp.asarray([4, 5]))
-    assert all_close(coords[0], xp.asarray([1, 2, 3, 1, 2, 3]))
-    assert all_close(coords[1], xp.asarray([4, 4, 4, 5, 5, 5]))
+    assert xp.all(coords.separated_coords[0] == xp.asarray([1.0, 2.0, 3.0]))
+    assert xp.all(coords.separated_coords[1] == xp.asarray([4.0, 5.0]))
+    assert all_close(coords[0], xp.asarray([1.0, 2.0, 3.0, 1.0, 2.0, 3.0]))
+    assert all_close(coords[1], xp.asarray([4.0, 4.0, 4.0, 5.0, 5.0, 5.0]))
 
     coords_copy = coords.copy()
     assert coords == coords_copy
 
     coords_copy += (1, 2)
     assert coords != coords_copy
-    assert all_close(coords_copy.separated_coords[0], xp.asarray([2, 3, 4]))
-    assert all_close(coords_copy.separated_coords[1], xp.asarray([6, 7]))
+    assert all_close(coords_copy.separated_coords[0], xp.asarray([2.0, 3.0, 4.0]))
+    assert all_close(coords_copy.separated_coords[1], xp.asarray([6.0, 7.0]))
 
     coords_copy = coords.copy()
     coords_copy *= 2
-    assert all_close(coords_copy.separated_coords[0], xp.asarray([2, 4, 6]))
-    assert all_close(coords_copy.separated_coords[1], xp.asarray([8, 10]))
+    assert all_close(coords_copy.separated_coords[0], xp.asarray([2.0, 4.0, 6.0]))
+    assert all_close(coords_copy.separated_coords[1], xp.asarray([8.0, 10.0]))
 
     coords.reverse()
-    assert xp.all(coords.separated_coords[0] == xp.asarray([3, 2, 1]))
-    assert xp.all(coords.separated_coords[1] == xp.asarray([5, 4]))
+    assert xp.all(coords.separated_coords[0] == xp.asarray([3.0, 2.0, 1.0]))
+    assert xp.all(coords.separated_coords[1] == xp.asarray([5.0, 4.0]))
 
     d = coords.to_dict()
     coords2 = Coords.from_dict(d)
@@ -78,25 +78,25 @@ def test_regular_coords():
     assert tuple(coords.zero) == (0, 0)
 
     assert all_close(coords.separated_coords[0], xp.asarray([0, 0.5, 1]))
-    assert all_close(coords.separated_coords[1], xp.asarray([0, 1]))
+    assert all_close(coords.separated_coords[1], xp.asarray([0.0, 1.0]))
 
     assert all_close(coords[0], xp.asarray([0, 0.5, 1, 0, 0.5, 1]))
-    assert all_close(coords[1], xp.asarray([0, 0, 0, 1, 1, 1]))
+    assert all_close(coords[1], xp.asarray([0.0, 0.0, 0.0, 1.0, 1.0, 1.0]))
 
     coords_copy = coords.copy()
     assert coords == coords_copy
     coords_copy += (1, 2)
     assert coords != coords_copy
-    assert all_close(coords_copy.zero, xp.asarray([1, 2]))
+    assert all_close(coords_copy.zero, xp.asarray([1.0, 2.0]))
 
     coords_copy = coords.copy()
     coords_copy *= 2
-    assert all_close(coords_copy.delta, xp.asarray([1, 2]))
-    assert all_close(coords_copy.zero, xp.asarray([0, 0]))
+    assert all_close(coords_copy.delta, xp.asarray([1.0, 2.0]))
+    assert all_close(coords_copy.zero, xp.asarray([0.0, 0.0]))
 
     coords.reverse()
     assert all_close(coords.delta, xp.asarray([-0.5, -1]))
-    assert all_close(coords.zero, xp.asarray([1, 1]))
+    assert all_close(coords.zero, xp.asarray([1.0, 1.0]))
 
     d = coords.to_dict()
     coords2 = Coords.from_dict(d)
@@ -106,16 +106,16 @@ def test_coords_arithmetic():
     # Unstructured
     c1 = UnstructuredCoords([[1.0, 2.0], [3.0, 4.0]], xp=xp)
     c2 = c1 + 1
-    assert all_close(c2[0], xp.asarray([2, 3]))
-    assert all_close(c2[1], xp.asarray([4, 5]))
+    assert all_close(c2[0], xp.asarray([2.0, 3.0]))
+    assert all_close(c2[1], xp.asarray([4.0, 5.0]))
 
     c2 = c1 - 1
-    assert all_close(c2[0], xp.asarray([0, 1]))
-    assert all_close(c2[1], xp.asarray([2, 3]))
+    assert all_close(c2[0], xp.asarray([0.0, 1.0]))
+    assert all_close(c2[1], xp.asarray([2.0, 3.0]))
 
     c2 = c1 * 2
-    assert all_close(c2[0], xp.asarray([2, 4]))
-    assert all_close(c2[1], xp.asarray([6, 8]))
+    assert all_close(c2[0], xp.asarray([2.0, 4.0]))
+    assert all_close(c2[1], xp.asarray([6.0, 8.0]))
     c2 = c1 / 2
     assert all_close(c2[0], xp.asarray([0.5, 1]))
     assert all_close(c2[1], xp.asarray([1.5, 2]))
@@ -123,16 +123,16 @@ def test_coords_arithmetic():
     # Separated
     c1 = SeparatedCoords([[1.0, 2.0], [3.0, 4.0]], xp=xp)
     c2 = c1 + (1, 2)
-    assert all_close(c2.separated_coords[0], xp.asarray([2, 3]))
-    assert all_close(c2.separated_coords[1], xp.asarray([5, 6]))
+    assert all_close(c2.separated_coords[0], xp.asarray([2.0, 3.0]))
+    assert all_close(c2.separated_coords[1], xp.asarray([5.0, 6.0]))
 
     c2 = c1 - (1, 2)
-    assert all_close(c2.separated_coords[0], xp.asarray([0, 1]))
-    assert all_close(c2.separated_coords[1], xp.asarray([1, 2]))
+    assert all_close(c2.separated_coords[0], xp.asarray([0.0, 1.0]))
+    assert all_close(c2.separated_coords[1], xp.asarray([1.0, 2.0]))
 
     c2 = c1 * 2
-    assert all_close(c2.separated_coords[0], xp.asarray([2, 4]))
-    assert all_close(c2.separated_coords[1], xp.asarray([6, 8]))
+    assert all_close(c2.separated_coords[0], xp.asarray([2.0, 4.0]))
+    assert all_close(c2.separated_coords[1], xp.asarray([6.0, 8.0]))
 
     c2 = c1 / 2
     assert all_close(c2.separated_coords[0], xp.asarray([0.5, 1]))
@@ -141,14 +141,14 @@ def test_coords_arithmetic():
     # Regular
     c1 = RegularCoords((1, 2), (3, 4), (5, 6), xp=xp)
     c2 = c1 + (1, 2)
-    assert all_close(c2.zero, xp.asarray([6, 8]))
+    assert all_close(c2.zero, xp.asarray([6.0, 8.0]))
 
     c2 = c1 - (1, 2)
-    assert all_close(c2.zero, xp.asarray([4, 4]))
+    assert all_close(c2.zero, xp.asarray([4.0, 4.0]))
 
     c2 = c1 * 2
-    assert all_close(c2.delta, xp.asarray([2, 4]))
-    assert all_close(c2.zero, xp.asarray([10, 12]))
+    assert all_close(c2.delta, xp.asarray([2.0, 4.0]))
+    assert all_close(c2.zero, xp.asarray([10.0, 12.0]))
 
     c2 = c1 / 2
     assert all_close(c2.delta, xp.asarray([0.5, 1]))
@@ -241,7 +241,7 @@ def test_cartesian_grid_transformations():
     # Rotation 2D
     grid2d = CartesianGrid(RegularCoords((1, 1), (3, 3), zero=(-1, -1), xp=xp))
     rgrid = grid2d.rotated(xp.pi / 2)
-    assert all_close(rgrid.points, xp.asarray([[1, 1, 1, 0, 0, 0, -1, -1, -1], [-1, 0, 1, -1, 0, 1, -1, 0, 1]]).T, atol=1e-4)
+    assert all_close(rgrid.points, xp.asarray([[1.0, 1.0, 1.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0], [-1.0, 0.0, 1.0, -1.0, 0.0, 1.0, -1.0, 0.0, 1.0]]).T, atol=1e-4)
 
     # Rotation 3D (around the z-axis in this test)
     grid3d = CartesianGrid(RegularCoords((1, 1, 1), (2, 2, 2), (0, 0, 0), xp=xp))
@@ -326,8 +326,8 @@ def test_grid_weights():
     assert all_close(grid.weights, 0.1 * 0.2)
 
     # Separated grid
-    x = xp.asarray([-1, 0, 1, 3])
-    y = xp.asarray([10, 20])
+    x = xp.asarray([-1.0, 0.0, 1.0, 3.0])
+    y = xp.asarray([10.0, 20.0])
     grid = CartesianGrid(SeparatedCoords([x, y], xp=xp))
 
     w_x = xp.concat((xp.asarray([x[1] - x[0]]), (x[2:] - x[:-2]) / 2, xp.asarray([x[-1] - x[-2]])))
@@ -339,7 +339,7 @@ def test_grid_weights():
     # Unstructured grid
     with pytest.warns(UserWarning):
         grid = CartesianGrid(UnstructuredCoords([[0, 1], [0, 1]], xp=xp))
-        assert all_close(grid.weights, xp.asarray(1))
+        assert all_close(grid.weights, xp.asarray(1.0))
 
 def test_grid_serialization():
     grid = CartesianGrid(RegularCoords((1, 1), (10, 10), (0, 0), xp=xp))

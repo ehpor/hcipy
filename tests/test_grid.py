@@ -259,11 +259,17 @@ def test_polar_grid_transformations():
     sgrid.scale(0.5)
     assert all_close(sgrid.r, grid.r)
 
-    # Rotation
+    # Rotation in polar coordinates
     rgrid = grid.rotated(xp.pi / 4)
     assert all_close(rgrid.theta, grid.theta + xp.pi / 4)
     rgrid.rotate(-xp.pi / 4)
     assert all_close(rgrid.theta, grid.theta)
+
+    # Rotation in Cartesian coordinates
+    cgrid = grid.as_('cartesian')
+    rcgrid = cgrid.rotated(xp.pi / 4)
+    rcgrid.rotate(-xp.pi / 4)
+    assert all_close(rcgrid.x, cgrid.x)
 
     # Shifting
     sgrid = grid.shifted([1, 0])

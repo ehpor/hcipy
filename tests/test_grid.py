@@ -6,7 +6,7 @@ import math
 if Configuration().core.use_new_style_fields:
     import array_api_strict as xp
 else:
-    import numpy as np
+    import numpy as xp
 
 def test_unstructured_coords():
     coords = UnstructuredCoords([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], xp=xp)

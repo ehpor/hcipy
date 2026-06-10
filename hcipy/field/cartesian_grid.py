@@ -138,12 +138,7 @@ class CartesianGrid(Grid):
         Grid
             Itself to allow for chaining these transformations.
         '''
-        xp = self.coords.xp
-        R = _get_rotation_matrix(self.ndim, angle, axis, xp=xp)
-
-        coords = R @ xp.asarray(self.coords)
-        coords_list = [coords[i, :] for i in range(coords.shape[0])]
-        self.coords = UnstructuredCoords(coords_list)
+        self.coords = self.rotated(angle, axis=axis).coords
         return self
 
     def rotated(self, angle, axis=None):
@@ -166,8 +161,8 @@ class CartesianGrid(Grid):
         R = _get_rotation_matrix(self.ndim, angle, axis, xp=xp)
 
         coords = R @ xp.stack(list(self.coords))
-        coords_list = [coords[i, :] for i in range(coords.shape[0])]
-        return CartesianGrid(UnstructuredCoords(coords_list))
+        coords = [coords[i, :] for i in range(coords.shape[0])]
+        return CartesianGrid(UnstructuredCoords(coords))
 
     @staticmethod
     def _get_automatic_weights(coords):

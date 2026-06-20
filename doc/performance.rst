@@ -63,7 +63,76 @@ Operations on this field will automatically use the GPU:
 
 In this example, the ``field`` object wraps a CuPy array, so all mathematical operations are executed on the GPU. The ``__array_namespace__()`` method returns the backend module (in this case, CuPy), which you can use for backend-agnostic operations that work with both CPU and GPU arrays.
 
-Note that backend selection is explicit - HCIPy does not automatically switch to GPU backends even when available. You must intentionally create fields using a backend that uses GPU acceleration. This design gives you full control over where computations occur and allows you to mix CPU and GPU operations in the same script by creating different fields with different backends.
+Optimized BLAS Libraries
+------------------------
+
+When you run a simulation, Python is constantly performing mathematical operations behind the scenes — multiplying matrices, computing Fourier transforms, solving linear systems. These operations are handled by a low-level math library called BLAS (Basic Linear Algebra Subprograms) together with LAPACK. Every scientific Python environment includes one, but not all are equally fast.
+
+There are several BLAS implementations, each optimized for different hardware:
+
+- **Intel MKL** — The fastest choice for Intel and AMD processors on Windows and Linux.
+- **Apple Accelerate** — Apple's own library, highly optimized for Apple Silicon Macs.
+- **OpenBLAS** — A solid open-source alternative that works well everywhere.
+
+The good news is that you don't need to understand how BLAS works. You just need to pick the right one for your computer. The examples below will set everything up for you.
+
+Setting Up Your Conda Environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can configure your conda environment to use a specific BLAS implementation by using an ``environment.yml`` file. The examples below use the ``conda-forge`` channel.
+
+For **Intel/AMD CPUs (x86-64)**, use the Intel Math Kernel Library (MKL) along with the ``mkl_fft`` package, which HCIPy will automatically use for faster FFTs:
+
+.. code-block:: yaml
+
+    name: hcipy-mkl
+    channels:
+      - conda-forge
+    dependencies:
+      - python=3.14
+      - blas=*=mkl
+      - mkl_fft
+      - hcipy
+
+For **Apple Silicon (ARM64)**, use Apple's Accelerate framework:
+
+.. code-block:: yaml
+
+    name: hcipy-accelerate
+    channels:
+      - conda-forge
+    dependencies:
+      - python=3.14
+      - blas=*=accelerate
+      - hcipy
+
+To create and activate the environment, run:
+
+.. code-block:: bash
+
+    conda env create -f environment.yml
+    conda activate hcipy-mkl
+
+You can rename the environment by changing the ``name`` field and adjust the Python version by changing the ``python`` entry. Use these files as a starting point and add any additional packages your project needs.
+
+Verification
+^^^^^^^^^^^^
+
+After creating the environment, verify which BLAS library NumPy is using:
+
+.. code-block:: bash
+
+    conda list blas
+
+Look for the variant name in the third column — ``accelerate``, ``mkl``, or ``openblas`` — to confirm the expected library is linked.
+
+You can also confirm that ``mkl_fft`` is installed:
+
+.. code-block:: bash
+
+    conda list mkl_fft
+
+HCIPy will automatically use ``mkl_fft`` for faster FFTs if it is available.
 
 Fourier Transform Performance
 -----------------------------

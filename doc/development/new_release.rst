@@ -16,7 +16,7 @@ This page is intended for the maintainer of HCIPy, and contains step-by-step ins
 
         pytest ./tests --runslow
 
-    Also make sure that the latest CI for the master branch on `Azure Pipelines <https://dev.azure.com/ehpor/hcipy/_build?definitionId=1>`__ is passing. Build the documentation and check if it is building without errors or problematic warnings.
+    Also make sure that the latest CI for the master branch is passing. Build the documentation and check if it is building without errors or problematic warnings.
 
     .. code-block:: shell
 
@@ -27,9 +27,7 @@ This page is intended for the maintainer of HCIPy, and contains step-by-step ins
 
 2. Write release notes mimicking other release notes. Add those release notes to the :doc:`changelog <../changelog>` in the documentation and commit these changes.
 
-3.  Add tag information on Github. You can do this by releasing a new version. Add the written release notes, mimicking previous release notes. After you've released the new version, a new tag will have been added on the Github repository.
-
-4.  Fetch the tags on your local git repository. Update the version information, and check that the version was changed:
+3.  Fetch the tags on your local git repository and update the version information:
 
     .. code-block:: shell
 
@@ -37,7 +35,7 @@ This page is intended for the maintainer of HCIPy, and contains step-by-step ins
         python setup.py egg_info
         python setup.py --version
 
-5.  Re-build the documentation:
+4.  Re-build the documentation:
 
     .. code-block:: shell
 
@@ -54,27 +52,23 @@ This page is intended for the maintainer of HCIPy, and contains step-by-step ins
 
     where ``0.5.1`` has been changed to the correct version number.
 
-6.  Build the source distribution and wheels:
+5.  Publish a new release on GitHub. Navigate to the repository's Releases page, click "Draft a new release", select the appropriate tag (or create a new one, e.g. ``v0.5.1``), add the release notes, and click "Publish release".
 
-    .. code-block:: shell
+    Upon publishing the release, a GitHub Actions workflow will automatically:
 
-        python3 -m build
+    - Build the source distribution and wheels.
+    - Publish the distribution to PyPI using `Trusted Publishing <https://docs.pypi.org/trusted-publishers/>`__.
+    - Attach the built distribution files to the GitHub Release.
 
-    Then submit to PyPI:
+    No manual upload to PyPI is required.
 
-    .. code-block:: shell
-
-        python -m twine upload dist/*
-
-    Enter username and password, and everything will be uploaded. Then add the source distribution and wheel to the Github release as assets.
-
-7.  Update all links on the website (*www/index.html*, *www/news.html* and *docs/stable/index.html*) and add release to list of releases. Upload website to AWS S3:
+6.  Update all links on the website (*www/index.html*, *www/news.html* and *docs/stable/index.html*) and add release to list of releases. Upload website to AWS S3:
 
     .. code-block:: shell
 
         aws s3 sync --acl public-read --delete --cache-control max-age=604800,public www s3://hcipy.org
         aws s3 sync --acl public-read --cache-control max-age=604800,public docs s3://docs.hcipy.org
 
-8.  Purge the `CloudFlare <https://cloudflare.com>`__ cache for `hcipy.org <https://hcipy.org>`__. This step is not necessary. Without it the website will update in at maximum seven days, due to caching of the old website by CloudFlare.
+7.  Purge the `CloudFlare <https://cloudflare.com>`__ cache for `hcipy.org <https://hcipy.org>`__. This step is not necessary. Without it the website will update in at maximum seven days, due to caching of the old website by CloudFlare.
 
-9.  Update this document with any issues, problems or peculiarities that you encountered for later reference.
+8.  Update this document with any issues, problems or peculiarities that you encountered for later reference.

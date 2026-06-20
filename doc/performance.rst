@@ -4,7 +4,7 @@ Performance
 Overview
 --------
 
-Optics simulations can be computationally intensive, especially for high-resolution optical systems with many propagations. Understanding and optimizing performance is crucial for efficiently running simulations of complex high contrast imaging instruments.
+Optics simulations can be computationally intensive, especially for high-resolution optical systems with many propagations. Understanding performance is crucial for running simulations of complex high contrast imaging instruments efficiently.
 
 This guide covers three major areas that determine the performance of your simulations when using HCIPy.
 
@@ -15,16 +15,14 @@ This guide covers three major areas that determine the performance of your simul
 Field Implementation
 --------------------
 
-Originally, HCIPy used :class:`~hcipy.field.OldStyleField`, which subclasses :class:`numpy.ndarray` directly. While this approach provided seamless integration with NumPy operations, it came with several significant limitations. The direct subclassing of numpy.ndarray created architectural constraints that made it difficult to extend functionality and led to known subclassing issues. Most importantly, OldStyleField was limited to NumPy operations only, preventing users from leveraging alternative backends such as GPUs or other array computing libraries.
+Originally, HCIPy used :class:`~hcipy.field.OldStyleField`, which subclasses :class:`numpy.ndarray` directly. While this approach provided seamless integration with NumPy operations, it came with significant limitations. Subclassing numpy.ndarray directly made extension difficult and introduced known subclassing issues. Most importantly, OldStyleField was limited to NumPy operations only, preventing users from leveraging alternative backends such as GPUs or other array computing libraries.
 
-To address these limitations, HCIPy introduced :class:`~hcipy.field.NewStyleField`, which implements the `Python Array API standard <https://data-apis.org/array-api/latest/>`_. The Python Array API is a standardized interface for array computing that enables interoperability between different array libraries. It defines a common set of operations and behaviors that array libraries can implement, allowing code written to the standard to work with any compliant backend without modification.
+To address these limitations, HCIPy introduced :class:`~hcipy.field.NewStyleField`, which implements the `Python Array API standard <https://data-apis.org/array-api/latest/>`_. The Array API is a standardized interface for array computing that enables interoperability between different array libraries. It defines a common set of operations and behaviors that array libraries can implement, allowing code written to the standard to work with any compliant backend without modification. NewStyleField wraps array data from any Array API-compliant backend rather than subclassing numpy.ndarray. This means that when you create a Field with a CuPy array, all operations on that Field will use CuPy's GPU-accelerated implementations. When you create a Field with a JAX array, you get JAX's capabilities for automatic differentiation and compilation. The Field itself remains agnostic to which backend is being used, delegating all array operations to the underlying Array API implementation.
 
-The Array API provides several key benefits for HCIPy. First, it enables true backend agnosticism - the same HCIPy code can run on NumPy for CPU computation, CuPy for NVIDIA GPU acceleration, JAX for automatic differentiation and accelerator support, or any other Array API-compliant library. Second, it provides a cleaner, more maintainable architecture that avoids the subclassing issues inherent in OldStyleField. Third, it positions HCIPy for future compatibility as more scientific Python libraries adopt the Array API standard.
-
-NewStyleField works by wrapping array data from any Array API-compliant backend rather than subclassing numpy.ndarray. This means that when you create a Field with a CuPy array, all operations on that Field will use CuPy's GPU-accelerated implementations. When you create a Field with a JAX array, you get JAX's capabilities for automatic differentiation and compilation. The Field itself remains agnostic to which backend is being used, delegating all array operations to the underlying Array API implementation.
+The Array API provides several key benefits for HCIPy. First, it enables true backend agnosticism - the same HCIPy code can run on NumPy for CPU computation, CuPy for NVIDIA GPU acceleration, JAX for automatic differentiation and accelerator support, or any other Array API-compliant library. Second, it provides a cleaner, more maintainable architecture that avoids the subclassing issues of OldStyleField. Third, it positions HCIPy for future compatibility as more scientific Python libraries adopt the Array API standard.
 
 .. note::
-   **NewStyleField is currently experimental.** While it provides better performance and flexibility through Array API compliance, many :class:`~hcipy.optics.OpticalElement` subclasses do not yet support it. Support for NewStyleField is actively being added to the codebase, but until complete compatibility is achieved, you may encounter limitations when using NewStyleField with certain optical elements.
+   **NewStyleField is currently experimental.** While it provides better performance and flexibility through Array API compliance, not many :class:`~hcipy.optics.OpticalElement` subclasses support it as of time of writing. Support for NewStyleField is actively being added to the codebase, but until complete compatibility is achieved, you may encounter limitations when using NewStyleField with certain optical elements.
 
 Using GPU Acceleration
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -40,6 +38,8 @@ First, configure HCIPy to use NewStyleField by creating or editing your configur
 
 .. important::
    The choice between OldStyleField and NewStyleField is made at the time HCIPy is imported and **cannot be changed afterwards**. You must set this configuration before importing HCIPy in your Python script.
+
+Note that backend selection is explicit - HCIPy does not automatically switch to GPU backends even when available. You must intentionally create fields using a backend that uses GPU acceleration. This design gives you full control over where computations occur and allows you to mix CPU and GPU operations in the same script by creating different fields with different backends.
 
 Now you can create fields using CuPy arrays for GPU acceleration:
 
@@ -143,11 +143,11 @@ HCIPy implements *multiple* Fourier transform methods to efficiently handle diff
 +--------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
 | Transform                                        | Grid Requirements                                 | Main Feature                                                |
 +==================================================+===================================================+=============================================================+
-| :class:`~hcipy.fourier.FastFourierTransform`     | Regularly-spaced Cartesian, FFT-compatible sizes  | Fastest for standard grid-to-grid transforms                |
+| :class:`~hcipy.fourier.FastFourierTransform`     | Regularly-spaced Cartesian, FFT-compatible sizes  | Fastest for full-sized transforms                |
 +--------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
 | :class:`~hcipy.fourier.MatrixFourierTransform`   | Separated Cartesian, arbitrary spacing            | Flexible transforms between any separated grids             |
 +--------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
-| :class:`~hcipy.fourier.ZoomFastFourierTransform` | Regularly-spaced Cartesian grids                  | Asymptotically faster than an MFT, but only for huge grids. |
+| :class:`~hcipy.fourier.ZoomFastFourierTransform` | Regularly-spaced Cartesian grids                  | Asymptotically faster than an MFT for very large grids     |
 +--------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
 | :class:`~hcipy.fourier.NaiveFourierTransform`    | Any input and output grids                        | Most general but extremely slow; verification only          |
 +--------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
@@ -160,7 +160,7 @@ HCIPy uses the :py:func:`~hcipy.fourier.make_fourier_transform` function to auto
 
 By default, :py:func:`~hcipy.fourier.make_fourier_transform` estimates the execution time of each available method based on theoretical complexity estimates. You can also use the ``planner='measure'`` option to perform actual timing measurements for more accurate selection, though this takes longer.
 
-The estimated optimal switching point between Fourier transform methods varies significantly by hardware. A method that is fastest on one machine may be slower on another due to differences in CPU architecture, memory bandwidth, and cache sizes. Currently, the execution time is modeled using measured execution times on a Macbook M2 Pro. To optimize Fourier transform performance for your specific hardware, use the performance tuning tool:
+The optimal switching point varies significantly by hardware. A method that is fastest on one machine may be slower on another due to differences in CPU architecture, memory bandwidth, and cache sizes. The performance model is currently calibrated on a MacBook M2 Pro. To optimize Fourier transform performance for your specific hardware, use the performance tuning tool:
 
 .. code-block:: bash
 
@@ -188,4 +188,4 @@ The tuning process typically produces output like this:
 
 These coefficients describe the performance characteristics of each method on your hardware. To use the newly tuned parameters, add them to your HCIPy configuration file. The configuration file is typically located at ``~/.hcipy/config.yaml`` or in your project's configuration directory. Add the tuning results under the ``fourier`` section.
 
-Once configured, HCIPy will automatically use your tuned performance models to select the optimal Fourier transform method for each propagation.
+Once configured, HCIPy uses your tuned models instead of its built-in ones to select the optimal method for each propagation.

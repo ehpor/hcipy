@@ -33,10 +33,18 @@
 extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.linkcode',
     'sphinx_automodapi.automodapi',
     'numpydoc',
     'nbsphinx']
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'numpy': ('https://numpy.org/doc/stable', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy', None),
+    'matplotlib': ('https://matplotlib.org/stable', None),
+}
 
 numpydoc_show_class_members = False
 

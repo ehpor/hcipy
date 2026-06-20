@@ -1,25 +1,50 @@
 import os
 import platform
 import multiprocessing
+import threadpoolctl
 
 def get_num_available_cores():
-    '''Get the number of cores available on the system.
+    '''Get the number of cores available to the current process.
 
-    The attempt at retrieving the number of cores that our process
-    is assigned may not be available on all operating systems. On
-    unsupported operating systems, the total number of cores is
-    returned instead.
+    Checks, in order of priority:
+    1. Actual BLAS thread count via threadpoolctl (if available and loaded)
+    2. BLAS/threading environment variables (OMP_NUM_THREADS, etc.)
+    3. HPC scheduler allocations (SLURM, SGE)
+    4. Process CPU affinity (Linux via sched_getaffinity, Windows via Win32 API)
+    5. Total logical CPU count as a last resort
 
     Returns
     -------
     int
         The number of available cores.
 
-    Raises
-    ------
-    RuntimeError
-        If we are unable to
     '''
+    # 1. Ground truth — what BLAS is actually using right now
+    pools = threadpoolctl.threadpool_info()
+    if pools:
+        return min(p["num_threads"] for p in pools)
+
+    # 2. Explicit BLAS/threading env var overrides
+    env_vars = [
+        "OMP_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+    ]
+
+    for env_var in env_vars:
+        val = os.environ.get(env_var)
+        if val is not None:
+            return int(val)
+
+    # 3. HPC scheduler allocations
+    for env_var in ("SLURM_CPUS_PER_TASK", "NSLOTS"):
+        val = os.environ.get(env_var)
+        if val is not None:
+            return int(val)
+
+    # 4. Process affinity — respects taskset, cgroups, containers, etc.
     if hasattr(os, 'sched_getaffinity'):
         return len(os.sched_getaffinity(0))
     elif platform.system() == 'Windows':
@@ -40,9 +65,7 @@ def get_num_available_cores():
         mask = DWORD_PTR()
 
         if GetProcessAffinityMask(GetCurrentProcess(), ctypes.byref(mask), ctypes.byref(DWORD_PTR())):
-            # Call successful. Return result.
             return bin(mask.value).count('1')
 
-    # Operating system is unsupported or the call to retrieve the
-    # core count has failed. Fall back to all cores.
+    # 5. Last resort
     return multiprocessing.cpu_count()

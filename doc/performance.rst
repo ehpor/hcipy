@@ -6,10 +6,11 @@ Overview
 
 Optics simulations can be computationally intensive, especially for high-resolution optical systems with many propagations. Understanding and optimizing performance is crucial for efficiently running simulations of complex high contrast imaging instruments.
 
-This guide covers two major areas that determine the performance of your simulations when using HCIPy.
+This guide covers three major areas that determine the performance of your simulations when using HCIPy.
 
 1. **Field implementation** - The implementation of the main computation object in HCIPy.
-2. **Fourier Transforms** - The main building block of optical propagations.
+2. **BLAS Libraries** - The underlying linear algebra libraries used by NumPy and SciPy.
+3. **Fourier Transforms** - The main building block of optical propagations.
 
 Field Implementation
 --------------------

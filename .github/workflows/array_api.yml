@@ -15,13 +15,13 @@ jobs:
 
     steps:
     - name: Check out hcipy repo
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
         filter: tree:0
 
     - name: Checkout array-api-tests repo
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         repository: data-apis/array-api-tests
         submodules: 'true'

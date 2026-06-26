@@ -1,10 +1,12 @@
 from ..config import Configuration
 from .cpu import get_num_available_cores
+from .backends import array_namespace
 
 import numpy as np
 import scipy
 import warnings
 import array_api_compat
+import numexpr as ne
 
 _CPU_COUNT = get_num_available_cores()
 
@@ -169,3 +171,37 @@ irfftn = _make_nd_fft('irfftn')
 # Shift functions.
 fftshift = np.fft.fftshift
 ifftshift = np.fft.ifftshift
+
+def phase_tilt(shift, grid):
+    '''Fast evaluation of np.exp(1j * np.dot(shift, grid.coords)) using NumExpr.
+
+    Parameters
+    ----------
+    shift : Array
+        The coordinates of the shift.
+    grid : Grid
+        The grid on which to calculate the shift.
+
+    Returns
+    -------
+    array_like
+        The calculated complex shift array.
+    '''
+    # Fast path for Numpy backend.
+    if _is_numpy_array(shift):
+        variables = {}
+        command = []
+        coords = grid.coords
+
+        for i in range(grid.ndim):
+            variables[f'a{i}'] = shift[i]
+            variables[f'b{i}'] = coords[i]
+
+            command.append(f'a{i} * b{i}')
+
+        command = 'exp(1j * (' + '+'.join(command) + '))'
+        return ne.evaluate(command, local_dict=variables)
+
+    xp = array_namespace(shift)
+    z = sum(s * c for s, c in zip(shift, grid.coords))
+    return xp.exp(1j * z)

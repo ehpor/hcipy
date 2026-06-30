@@ -1082,3 +1082,177 @@ def test_dynamic_optical_system_callback_adds_callback_during_evolution():
     system.add_callback(2.0, first)
     system.evolve_until(5.0)
     assert events == ['first', 'second']
+
+def test_apodizer_roundtrip():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    apod = Apodizer(np.exp(1j * Field(grid.ones(), grid)))
+
+    wf2 = apod.backward(apod.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_apodizer_callable():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    apod = Apodizer(lambda wl: np.exp(1j * (wl / 1e-6)))
+
+    wf2 = apod.backward(apod.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_phase_apodizer_roundtrip():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    phase = zernike(2, 0)(grid)
+    apod = PhaseApodizer(phase)
+
+    wf2 = apod.backward(apod.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_surface_apodizer_scalar_n():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    sag = Field(0.1 * grid.ones(), grid)
+    sa = SurfaceApodizer(sag, 1.5)
+
+    wf2 = sa.backward(sa.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_surface_apodizer_callable_n():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    sag = Field(0.1 * grid.ones(), grid)
+    sa = SurfaceApodizer(sag, lambda wl: 1.5 + (wl - 1e-6) * 1e4)
+
+    wf2 = sa.backward(sa.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_complex_surface_apodizer_roundtrip():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    csa = ComplexSurfaceApodizer(np.exp(1j * Field(grid.ones(), grid)), Field(0.1 * grid.ones(), grid), 1.5)
+
+    wf2 = csa.backward(csa.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_complex_surface_apodizer_callable():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    csa = ComplexSurfaceApodizer(lambda wl: np.exp(1j * (wl / 1e-6)), Field(0.1 * grid.ones(), grid), lambda wl: 1.5 + (wl - 1e-6) * 1e4)
+
+    wf2 = csa.backward(csa.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_multiplexed_complex_surface_apodizer_roundtrip():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    amp = np.exp(1j * Field(0.5 * np.ones(grid.size), grid))
+    surf = Field(0.1 * grid.ones(), grid)
+    mcsa = MultiplexedComplexSurfaceApodizer([amp], [surf], 1.5)
+
+    wf2 = mcsa.backward(mcsa.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_multiplexed_complex_surface_apodizer_multi():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    amps = [np.exp(1j * Field(0.5 * np.ones(grid.size), grid)), np.exp(1j * Field(0.3 * np.ones(grid.size), grid))]
+    surfs = [Field(0.1 * grid.ones(), grid), Field(0.2 * grid.ones(), grid)]
+    mcsa = MultiplexedComplexSurfaceApodizer(amps, surfs, 1.5)
+
+    wf_out = mcsa.forward(wf)
+    wf_back = mcsa.backward(wf_out)
+
+    assert np.all(np.isfinite(wf_back.electric_field))
+
+def test_multiplexed_complex_surface_apodizer_callable():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    amps = [lambda wl: np.exp(1j * 0.5 * (wl / 1e-6)), lambda wl: np.exp(1j * 0.3 * (wl / 1e-6))]
+    surfs = [Field(0.1 * grid.ones(), grid), Field(0.2 * grid.ones(), grid)]
+    mcsa = MultiplexedComplexSurfaceApodizer(amps, surfs, lambda wl: 1.5 + (wl - 1e-6) * 1e4)
+
+    wf_out = mcsa.forward(wf)
+    wf_back = mcsa.backward(wf_out)
+
+    assert np.all(np.isfinite(wf_back.electric_field))
+
+def test_multiplexed_complex_surface_apodizer_deprecated_params():
+    grid = make_pupil_grid(64)
+    amps = [Field(0.5 * np.ones(grid.size), grid)]
+    surfs = [Field(0.1 * grid.ones(), grid)]
+
+    with pytest.warns(DeprecationWarning):
+        mcsa = MultiplexedComplexSurfaceApodizer(None, None, 1.5, amplitude=amps, surface=surfs)
+
+    assert len(mcsa.amplitudes) == 1
+
+def test_tilt_element_roundtrip():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    tilt = TiltElement(0.05)
+
+    wf2 = tilt.backward(tilt.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_tilt_element_callable_n():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    tilt = TiltElement(0.05, refractive_index=lambda wl: 1.5 + (wl - 1e-6) * 1e4)
+
+    wf2 = tilt.backward(tilt.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_thin_prism_forward_backward():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    tp = ThinPrism(np.deg2rad(3), 1.5)
+
+    wf2 = tp.backward(tp.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_prism_roundtrip():
+    grid = make_pupil_grid(64)
+    wf = Wavefront(grid.ones(), 1e-6)
+    p = Prism(0, np.deg2rad(3), 1.5)
+
+    wf2 = p.backward(p.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_prism_prism_sag():
+    grid = make_pupil_grid(64)
+    p = Prism(0, np.deg2rad(3), 1.5)
+
+    sag = p.prism_sag(grid, 1e-6)
+
+    assert isinstance(sag, Field)
+    assert sag.grid is grid
+
+def test_phase_grating_roundtrip():
+    grid = make_pupil_grid(128, 1)
+    wf = Wavefront(grid.ones(), 1e-6)
+    g = PhaseGrating(1 / 20, np.pi / 2)
+
+    wf2 = g.backward(g.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_thin_lens_backward():
+    grid = make_pupil_grid(256, 1)
+    wf = Wavefront(grid.ones(), 1e-6)
+    lens = ThinLens(300e-1, 1.5, 1e-6)
+
+    wf2 = lens.backward(lens.forward(wf))
+
+    assert np.allclose(wf.electric_field, wf2.electric_field)

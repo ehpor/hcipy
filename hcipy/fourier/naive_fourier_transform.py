@@ -39,8 +39,7 @@ class NaiveFourierTransform(FourierTransform):
         If the output grid has a different dimension than the input grid.
     '''
     def __init__(self, input_grid, output_grid, precompute_matrices=None):
-        if input_grid.ndim != output_grid.ndim:
-            raise ValueError('The input_grid must have the same dimensions as the output_grid.')
+        self.check_if_supported(input_grid, output_grid)
 
         self.input_grid = input_grid
         self.output_grid = output_grid
@@ -141,7 +140,8 @@ class NaiveFourierTransform(FourierTransform):
             If the grids are not supported. The message will indicate why
             the grids are not supported.
         '''
-        pass
+        if input_grid.ndim != output_grid.ndim:
+            raise ValueError('The input_grid must have the same dimensions as the output_grid.')
 
     @classmethod
     def compute_complexity(cls, input_grid, output_grid):

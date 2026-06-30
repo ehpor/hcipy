@@ -21,6 +21,8 @@ class SegmentedDeformableMirror(DeformableMirror):
         self.actuators = np.zeros(len(segments) * 3)
         self.input_grid = segments.grid
 
+        super().__init__(self._compute_influence_functions(segments))
+
     @property
     def segments(self):
         '''The segments of this deformable mirror in a ModeBasis.
@@ -31,6 +33,17 @@ class SegmentedDeformableMirror(DeformableMirror):
     def segments(self, segments):
         self._segments = segments
 
+        self.influence_functions = self._compute_influence_functions(segments)
+
+    @staticmethod
+    def _compute_influence_functions(segments):
+        '''Compute the influence functions from mirror segments.
+
+        Parameters
+        ----------
+        segments : ModeBasis
+            The mode basis describing the mirror segments.
+        '''
         tip = []
         tilt = []
 
@@ -59,7 +72,7 @@ class SegmentedDeformableMirror(DeformableMirror):
         tip = ModeBasis(tip)
         tilt = ModeBasis(tilt)
 
-        self.influence_functions = segments + tip + tilt
+        return segments + tip + tilt
 
     def get_segment_actuators(self, segment_id):
         '''Get the actuators for an individual segment of the DM.

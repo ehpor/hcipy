@@ -30,12 +30,12 @@ def generate_convolution_matrix(grid, kernel):
             num_x = kernel.shape[1]
             num_y = kernel.shape[0]
             kernel = kernel.ravel()
-        elif kernel.ndim == 1:
-            raise NotImplementedError("Can not create a convolution kernel from a 1D array.")
+        else:
+            raise NotImplementedError(f"Can not create a convolution kernel from a {kernel.ndim}D array.")
 
     index_y, index_x = np.indices((num_y, num_x))
     offsets = ((index_x - num_x // 2) + (index_y - num_y // 2) * grid.shape[0]).ravel()
-    convolution_matrix = sparse.diags(kernel, offsets, shape=(grid.size, grid.size))
+    convolution_matrix = sparse.diags(kernel, offsets, shape=(grid.size, grid.size), dtype=None)
     return convolution_matrix
 
 def make_laplacian_matrix(grid):

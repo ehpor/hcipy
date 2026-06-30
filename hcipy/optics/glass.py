@@ -1,9 +1,6 @@
 import numpy as np
 
-try:
-    from importlib.resources import files
-except ImportError:
-    from importlib_resources import files
+from importlib.resources import files
 
 def make_sellmeier_glass(A, K, L):
     r'''The Sellmeier equation for the dispersion of the refractive index of materials.

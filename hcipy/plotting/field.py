@@ -1,4 +1,3 @@
-from copy import copy
 import numpy as np
 from matplotlib.transforms import Transform
 

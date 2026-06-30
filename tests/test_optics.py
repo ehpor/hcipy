@@ -1256,3 +1256,14 @@ def test_thin_lens_backward():
     wf2 = lens.backward(lens.forward(wf))
 
     assert np.allclose(wf.electric_field, wf2.electric_field)
+
+def test_surface_aberration_at_distance():
+    grid = make_pupil_grid(64, 1)
+    wf = Wavefront(grid.ones(), 1e-6)
+    aberration = SurfaceAberration(grid, 1e-7, 1, exponent=-3)
+    sad = SurfaceAberrationAtDistance(grid, aberration, 100e-3)
+
+    wf_out = sad.forward(wf)
+    wf_back = sad.backward(wf_out)
+
+    assert np.allclose(wf.electric_field, wf_back.electric_field)

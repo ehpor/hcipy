@@ -150,6 +150,6 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
         return self._L0
 
     @outer_scale.setter
-    def L0(self, L0):  # noqa: N802
+    def outer_scale(self, L0):  # noqa: N802
         self._L0 = L0
         self._noise = None

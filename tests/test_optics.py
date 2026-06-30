@@ -7,19 +7,8 @@ import warnings
 
 def test_agnostic_apodizer():
     aperture_achromatic = make_circular_aperture(1)
-    aperture_chromatic = lambda input_grid, wavelength: make_circular_aperture(wavelength)(input_grid)
-
-    apod_achromatic = Apodizer(aperture_achromatic)
-    apod_chromatic = Apodizer(aperture_chromatic)
-
-    phase_chromatic = lambda input_grid, wavelength: zernike(2, 0)(input_grid) * wavelength
-    apod_phase_chromatic = PhaseApodizer(phase_chromatic)
-
     phase_achromatic = zernike(2, 0)
-    apod_phase_achromatic = PhaseApodizer(phase_achromatic)
-
     filter_curve = lambda wavelength: np.sqrt(wavelength)
-    apod_filter = Apodizer(filter_curve)
 
     for wl in [0.2, 0.4, 0.7]:
         for num_pix in [32, 64, 128]:
@@ -27,18 +16,15 @@ def test_agnostic_apodizer():
                 pupil_grid = make_pupil_grid(num_pix, diameter)
                 wf = Wavefront(pupil_grid.ones(), wl)
 
+                apod_achromatic = Apodizer(aperture_achromatic(pupil_grid))
                 pup = apod_achromatic(wf).electric_field
                 assert np.allclose(pup, aperture_achromatic(pupil_grid))
 
-                pup = apod_chromatic(wf).electric_field
-                assert np.allclose(pup, aperture_chromatic(pupil_grid, wl))
-
+                apod_phase_achromatic = PhaseApodizer(phase_achromatic(pupil_grid))
                 pup = apod_phase_achromatic(wf).electric_field
                 assert np.allclose(pup, np.exp(1j * phase_achromatic(pupil_grid)))
 
-                pup = apod_phase_chromatic(wf).electric_field
-                assert np.allclose(pup, np.exp(1j * phase_chromatic(pupil_grid, wl)))
-
+                apod_filter = Apodizer(filter_curve)
                 pup = apod_filter(wf).electric_field
                 assert np.allclose(pup, filter_curve(wl))
 
@@ -579,7 +565,7 @@ def test_pickle_optical_element():
     focal_grid = make_focal_grid(4, 16)
 
     elem1 = FraunhoferPropagator(pupil_grid, focal_grid)
-    elem2 = SurfaceApodizer(pupil_grid.ones(), lambda wvl: 1.5 + wvl)
+    elem2 = SurfaceApodizer(pupil_grid.ones(), 1.5)
     elems = [elem1, elem2]
 
     for elem in elems:
@@ -715,7 +701,7 @@ def test_thin_lens():
     grid = make_pupil_grid(256, 2 * pupil_diameter)
 
     focal_length = 300e-1
-    lens = ThinLens(focal_length, lambda x: 1.5, 1e-6)
+    lens = ThinLens(focal_length, 1.5, 1e-6)
 
     aperture = evaluate_supersampled(make_circular_aperture(pupil_diameter), grid, 8)
     assert abs((lens.focal_length - focal_length) / focal_length) < 1e-10
@@ -784,12 +770,11 @@ def test_prism():
     prism.prism_angle = 2 * np.deg2rad(3. + 53.0 / 60.0)
     assert np.allclose(prism.minimal_deviation_angle(750e-9), 0.06958405951915544)
 
-    Dtel = 1
-    Dgrid = 1.1 * Dtel
-    sr = np.mean(test_wavelengths) / Dtel
-
-    grid = make_pupil_grid(128, Dgrid)
-    aperture = make_circular_aperture(Dtel)(grid)
+    pupil_diameter = 1
+    grid_diameter = 1.1 * pupil_diameter
+    sr = np.mean(test_wavelengths) / pupil_diameter
+    grid = make_pupil_grid(128, grid_diameter)
+    aperture = make_circular_aperture(pupil_diameter)(grid)
 
     focal_grid = make_focal_grid(q=3, num_airy=15, spatial_resolution=sr)
     prop = FraunhoferPropagator(grid, focal_grid)

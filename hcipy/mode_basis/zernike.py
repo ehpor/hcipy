@@ -86,7 +86,7 @@ def zernike_to_noll(n, m):
         nn, mm = noll_to_zernike(j)
         if nn == n and mm == m:
             return j
-    raise ValueError('Could not find noll index for (%d,%d)' % n, m)
+    raise ValueError(f'Could not find noll index for n={n}, m={m}.')
 
 def zernike_radial(n, m, r, cache=None):
     '''The radial component of a Zernike polynomial.

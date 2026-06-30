@@ -40,7 +40,7 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
         If a BitGenerator or Generator are passed, these will be wrapped and used
         instead. Default: None.
     '''
-    def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0, oversampling=2, seed=None):
+    def __init__(self, input_grid, Cn_squared, L0=np.inf, velocity=0, height=0, oversampling=2, seed=None):
         self._noise = None
         self._achromatic_screen = None
 

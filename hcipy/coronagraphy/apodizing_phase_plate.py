@@ -21,7 +21,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 
     Parameters
     ----------
-    wavefont : Wavefront
+    wavefront : Wavefront
         The input aperture as a wavefront; a phase can be provided as a
         starting point for the APP generation.
     propagator : Propagator
@@ -88,9 +88,11 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
     return app
 
 def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterations=1):
-    '''Optimize a one-sided APP using a globally optimal algorithm. This algorithm does not
-    apply any symmetries for two-sided dark zones or circularly-symmetric pupils. This
-    function requires that you have installed the Gurobi optimizer.
+    '''Optimize a one-sided APP using a globally optimal algorithm.
+
+    This algorithm does not apply any symmetries for two-sided dark zones or
+    circularly-symmetric pupils. This function requires that you have installed
+    the Gurobi optimizer.
 
     Parameters
     ----------

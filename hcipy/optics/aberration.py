@@ -35,7 +35,8 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
         The surface error calculated on `pupil_grid`.
     '''
     def psd(grid):
-        res = Field(grid.as_('polar').r**exponent, grid)
+        with np.errstate(divide='ignore'):
+            res = Field(grid.as_('polar').r**exponent, grid)
         res[grid.as_('polar').r == 0] = 0
         return res
 

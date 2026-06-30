@@ -687,7 +687,7 @@ class NewStyleField(FieldBase):
     def __array__(self, dtype=None, copy=None):
         raise NotImplementedError("This Field cannot be used directly with Numpy. Use the Array API namespace instead.")
 
-_aritmetic_and_bitwise_operators = [
+_arithmetic_and_bitwise_operators = [
     # Arithmetic
     ('add', '+'),
     ('sub', '-'),
@@ -715,7 +715,7 @@ _comparison_operators = [
     ('ne', '!=')
 ]
 
-for name, symbol in _aritmetic_and_bitwise_operators:
+for name, symbol in _arithmetic_and_bitwise_operators:
     setattr(NewStyleField, f'__{name}__', _make_binary_operator(NewStyleField, symbol))
     setattr(NewStyleField, f'__i{name}__', _make_inplace_binary_operator(NewStyleField, symbol))
     setattr(NewStyleField, f'__r{name}__', _make_reflected_binary_operator(NewStyleField, symbol))

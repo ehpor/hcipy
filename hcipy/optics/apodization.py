@@ -1,7 +1,9 @@
 import numpy as np
-from .optical_element import OpticalElement, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
+from .optical_element import OpticalElement
+from .wavefront import Wavefront
+import warnings
 
-class Apodizer(AgnosticOpticalElement):
+class Apodizer(OpticalElement):
     '''A thin apodizer.
 
     This apodizer can apodize both in phase and amplitude.
@@ -12,71 +14,54 @@ class Apodizer(AgnosticOpticalElement):
         The apodization that we want to apply to any input wavefront.
     '''
     def __init__(self, apodization):
-        self._apodization = apodization
+        self.apodization = apodization
 
-        AgnosticOpticalElement.__init__(self, True, True)
+    def _get_apodization(self, wavelength):
+        if callable(self.apodization):
+            return self.apodization(wavelength)
+        else:
+            return self.apodization
 
-    def make_instance(self, instance_data, input_grid, output_grid, wavelength):
-        instance_data.apodization = self.evaluate_parameter(self.apodization, input_grid, output_grid, wavelength)
+    def forward(self, wavefront):
+        a = self._get_apodization(wavefront.wavelength)
+        new_field = wavefront.electric_field * a
 
-    @property
-    def apodization(self):
-        return self._apodization
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
-    @apodization.setter
-    def apodization(self, apodization):
-        self._apodization = apodization
+    def backward(self, wavefront):
+        a = self._get_apodization(wavefront.wavelength)
+        new_field = wavefront.electric_field * np.conj(a)
 
-        self.clear_cache()
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
-    def get_input_grid(self, output_grid, wavelength):
-        return output_grid
-
-    def get_output_grid(self, input_grid, wavelength):
-        return input_grid
-
-    @make_agnostic_forward
-    def forward(self, instance_data, wavefront):
-        wf = wavefront.copy()
-        wf.electric_field *= instance_data.apodization
-
-        return wf
-
-    @make_agnostic_backward
-    def backward(self, instance_data, wavefront):
-        wf = wavefront.copy()
-        wf.electric_field *= instance_data.apodization.conj()
-
-        return wf
-
-class PhaseApodizer(Apodizer):
+class PhaseApodizer(OpticalElement):
     '''A phase-only thin apodizer.
 
     Parameters
     ----------
-    phase : Field or scalar or function
+    phase : Field or scalar
         The phase apodization.
     '''
     def __init__(self, phase):
         self._phase = phase
 
-        Apodizer.__init__(self, self.apodization)
-
-    @property
-    def apodization(self):
-        return self.construct_function(lambda p: np.exp(1j * p), self.phase)
-
     @property
     def phase(self):
         return self._phase
 
-    @phase.setter
-    def phase(self, phase):
-        self._phase = phase
+    def forward(self, wavefront):
+        a = np.exp(1j * self.phase)
+        new_field = wavefront.electric_field * a
 
-        self.clear_cache()
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
-class SurfaceApodizer(Apodizer):
+    def backward(self, wavefront):
+        a_conj = np.exp(-1j * self.phase)
+        new_field = wavefront.electric_field * a_conj
+
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
+
+class SurfaceApodizer(OpticalElement):
     '''A transmissive sagged surface optic.
 
     The surface is simulated as a thin plate. Propagation effects due to the
@@ -85,109 +70,141 @@ class SurfaceApodizer(Apodizer):
 
     Parameters
     ----------
-    surface_sag : Field or scalar or function
+    surface_sag : Field
         The sag in the surface.
-    refractive_index : scalar or function
+    refractive_index : scalar or function of wavelength
         The refractive index of the material of the plate.
     '''
     def __init__(self, surface_sag, refractive_index):
-        self._surface_sag = surface_sag
-        self._refractive_index = refractive_index
+        self.surface_sag = surface_sag
+        self.refractive_index = refractive_index
 
-        Apodizer.__init__(self, self.apodization)
+    def _get_refractive_index(self, wavelength):
+        if callable(self.refractive_index):
+            return self.refractive_index(wavelength)
+        else:
+            return self.refractive_index
 
-    @property
-    def opd(self):
-        return self.construct_function(lambda n, surf: (n - 1) * surf, self.refractive_index, self.surface_sag)
+    def forward(self, wavefront):
+        n = self._get_refractive_index(wavefront.wavelength)
+        a = np.exp(1j * (n - 1) * self.surface_sag * wavefront.wavenumber)
 
-    optical_path_difference = opd
+        new_field = wavefront.electric_field * a
 
-    @property
-    def phase(self):
-        return self.construct_function(lambda opd, wavelength: opd * 2 * np.pi / wavelength, self.opd)
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
-    @property
-    def apodization(self):
-        return self.construct_function(lambda p: np.exp(1j * p), self.phase)
+    def backward(self, wavefront):
+        n = self._get_refractive_index(wavefront.wavelength)
+        a_conj = np.exp(-1j * (n - 1) * self.surface_sag * wavefront.wavenumber)
 
-    @property
-    def refractive_index(self):
-        return self._refractive_index
+        new_field = wavefront.electric_field * a_conj
 
-    @refractive_index.setter
-    def refractive_index(self, refractive_index):
-        self._refractive_index = refractive_index
-
-        self.clear_cache()
-
-    @property
-    def surface_sag(self):
-        return self._surface_sag
-
-    @surface_sag.setter
-    def surface_sag(self, surface_sag):
-        self._surface_sag = surface_sag
-
-        self.clear_cache()
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
 class ComplexSurfaceApodizer(OpticalElement):
+    '''A surface apodizer with amplitude coating.
+
+    Parameters
+    ----------
+    amplitude : Field or scalar or function of wavelength
+        The amplitude apodization.
+    surface : Field or scalar
+        The sag in the surface.
+    refractive_index : scalar or function of wavelength
+        The refractive index of the material of the plate.
+    '''
     def __init__(self, amplitude, surface, refractive_index):
         self.amplitude = amplitude
         self.surface = surface
         self.refractive_index = refractive_index
 
-    def phase_for(self, wavelength):
-        '''Get the phase screen in radians at a certain wavelength.
+    def _get_refractive_index(self, wavelength):
+        if callable(self.refractive_index):
+            return self.refractive_index(wavelength)
+        else:
+            return self.refractive_index
 
-        Parameters
-        ----------
-        wavelength : scalar
-            The wavelength at which to calculate the phase screen.
-        '''
-        wavenumber = 2 * np.pi / wavelength
-
-        opd = (self.refractive_index - 1) * self.surface
-
-        return opd * wavenumber
+    def _get_amplitude(self, wavelength):
+        if callable(self.amplitude):
+            return self.amplitude(wavelength)
+        else:
+            return self.amplitude
 
     def forward(self, wavefront):
-        opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
+        amp = self._get_amplitude(wavefront.wavelength)
+        n = self._get_refractive_index(wavefront.wavelength)
 
-        wf = wavefront.copy()
-        wf.electric_field *= self.amplitude * np.exp(1j * opd * wf.wavenumber)
+        a = amp * np.exp(1j * (n - 1) * self.surface * wavefront.wavenumber)
+        new_field = wavefront.electric_field * a
 
-        return wf
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
     def backward(self, wavefront):
-        opd = (self.refractive_index(wavefront.wavelength) - 1) * self.surface
+        amp_conj = np.conj(self._get_amplitude(wavefront.wavelength))
+        n = self._get_refractive_index(wavefront.wavelength)
 
-        wf = wavefront.copy()
-        wf.electric_field *= self.amplitude * np.exp(-1j * opd * wf.wavenumber)
+        a_conj = amp_conj * np.exp(-1j * (n - 1) * self.surface * wavefront.wavenumber)
+        new_field = wavefront.electric_field * a_conj
 
-        return wf
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
 class MultiplexedComplexSurfaceApodizer(OpticalElement):
-    def __init__(self, amplitude, surface, refractive_index):
-        self.amplitude = amplitude
-        self.surface = surface
+    '''A non-physical apodizer that consists of multiple :class:`ComplexSurfaceApodizer`
+    apodizers on top of each other.
+
+    Parameters
+    ----------
+    amplitudes : list of {Field or scalars or functions of wavelength}
+        The amplitude apodizations of each of the masks.
+    surfaces : list of Fields
+        The surface sags of each of the masks.
+    refractive_index : scalar or function of wavelength
+        The refractive index of the material of the plate.
+    '''
+    def __init__(self, amplitudes, surfaces, refractive_index, amplitude=None, surface=None):
+        if amplitude is not None:
+            warnings.warn("The `amplitude` parameter has been deprecated and will be removed in a future version. Use `amplitudes` instead.", DeprecationWarning, stacklevel=2)
+            amplitudes = amplitude
+
+        if surface is not None:
+            warnings.warn("The `surface` parameter has been deprecated and will be removed in a future version. Use `surfaces` instead.", DeprecationWarning, stacklevel=2)
+            surfaces = surface
+
+        self.amplitudes = amplitudes
+        self.surfaces = surfaces
         self.refractive_index = refractive_index
 
-    def forward(self, wavefront):
-        apodizer_mask = 0
-        for amplitude, surface in zip(self.amplitude, self.surface):
-            opd = (self.refractive_index(wavefront.wavelength) - 1) * surface
-            apodizer_mask += amplitude * np.exp(1j * opd * wavefront.wavenumber)
+    def _get_refractive_index(self, wavelength):
+        if callable(self.refractive_index):
+            return self.refractive_index(wavelength)
+        else:
+            return self.refractive_index
 
-        wf = wavefront.copy()
-        wf.electric_field *= apodizer_mask
-        return wf
+    @staticmethod
+    def _get_amplitude(amplitude, wavelength):
+        if callable(amplitude):
+            return amplitude(wavelength)
+        else:
+            return amplitude
+
+    def forward(self, wavefront):
+        n = self._get_refractive_index(wavefront.wavelength)
+
+        apodizer_mask = 0
+        for amplitude, surface in zip(self.amplitudes, self.surfaces):
+            amp = self._get_amplitude(amplitude, wavefront.wavelength)
+            apodizer_mask += amp * np.exp(1j * (n - 1) * surface * wavefront.wavenumber)
+
+        new_field = wavefront.electric_field * apodizer_mask
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
     def backward(self, wavefront):
-        apodizer_mask = 0
-        for amplitude, surface in zip(self.amplitude, self.surface):
-            opd = (self.refractive_index(wavefront.wavelength) - 1) * surface
-            apodizer_mask += amplitude * np.exp(1j * opd * wavefront.wavenumber)
+        n = self._get_refractive_index(wavefront.wavelength)
 
-        wf = wavefront.copy()
-        wf.electric_field /= apodizer_mask
-        return wf
+        apodizer_mask_conj = 0
+        for amplitude, surface in zip(self.amplitudes, self.surfaces):
+            amp_conj = np.conj(self._get_amplitude(amplitude, wavefront.wavelength))
+            apodizer_mask_conj += amp_conj * np.exp(-1j * (n - 1) * surface * wavefront.wavenumber)
+
+        new_field = wavefront.electric_field * apodizer_mask_conj
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)

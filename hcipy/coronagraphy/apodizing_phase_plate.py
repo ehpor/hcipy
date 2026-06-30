@@ -144,7 +144,7 @@ def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterat
         model.addQConstr(r2 <= 1)
 
     for i, ee in enumerate(M):
-        e = gp.quicksum((x[i] * ee[i] for i in range(n)))
+        e = gp.quicksum((x[j] * ee[j] for j in range(n)))
         model.addConstr(e <= contrast_requirement[i])
         model.addConstr(e >= -contrast_requirement[i])
 

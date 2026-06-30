@@ -155,7 +155,7 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         return self.layer.L0
 
     @outer_scale.setter
-    def L0(self, L0):  # noqa: N802
+    def outer_scale(self, L0):
         self.layer.L0 = L0
 
     def reset(self):

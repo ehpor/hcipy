@@ -1,10 +1,12 @@
-from .apodization import SurfaceApodizer, PhaseApodizer
+from ..dev import deprecated
+from .optical_element import OpticalElement
+from .wavefront import Wavefront
 import numpy as np
 from ..field import Field
 from scipy.special import jv
 
 def grating_equation(wavelength, order, period, angle_of_incidence):
-    ''' Calculates the angle of the diffracted beam.
+    '''Calculate the angle of the diffracted beam.
 
     Parameters
     ----------
@@ -25,7 +27,7 @@ def grating_equation(wavelength, order, period, angle_of_incidence):
     return np.arcsin(order * wavelength / period + np.sin(angle_of_incidence))
 
 def diffraction_efficiency_sinusoidal_grating(wavelength, groove_depth, order, period, angle_of_incidence):
-    ''' Calculates the diffraction efficiency from a sinusoidal phase grating.
+    '''Calculate the diffraction efficiency from a sinusoidal phase grating.
 
     Parameters
     ----------
@@ -47,10 +49,11 @@ def diffraction_efficiency_sinusoidal_grating(wavelength, groove_depth, order, p
     '''
     diffracted_angle = grating_equation(wavelength, order, period, angle_of_incidence)
     phase_difference = np.pi * groove_depth / wavelength * (np.cos(angle_of_incidence) + np.cos(diffracted_angle))
+
     return jv(order, phase_difference)**2
 
 def snells_law(incidence_angle, relative_refractive_index):
-    ''' Applies Snell's law.
+    '''Apply Snell's law.
 
     Parameters
     ----------
@@ -72,8 +75,28 @@ def snells_law(incidence_angle, relative_refractive_index):
         else:
             raise ValueError("Total internal reflection is occuring.")
 
-class TiltElement(SurfaceApodizer):
-    ''' An element that applies a tilt.
+def _tilt_sag(orientation, angle):
+    '''Calculate the sag profile for a tilt element.
+
+    Parameters
+    ----------
+    orientation : scalar
+        The orientation of the tilt in radians.
+    angle : scalar
+        The tilt angle in radians.
+
+    Returns
+    -------
+    Field generator
+        A function that takes a grid and returns the surface sag as a Field.
+    '''
+    def res(grid):
+        return Field(grid.rotated(orientation).y * np.tan(angle), grid)
+
+    return res
+
+class TiltElement(OpticalElement):
+    '''An element that applies a tilt.
 
     Parameters
     ----------
@@ -81,46 +104,32 @@ class TiltElement(SurfaceApodizer):
         The tilt angle in radians.
     orientation : scalar
         The orientation of the tilt in radians. The default orientation is aligned along the y-axis.
-    refractive_index : scalar or function
+    refractive_index : scalar or function of wavelength
         The refractive index of the material. The default is 2.0 which makes it achromatic and exact.
     '''
     def __init__(self, angle, orientation=0, refractive_index=2.0):
-        self._angle = angle
-        self._orientation = orientation
-        super().__init__(self.tilt_sag, refractive_index)
+        self.angle = angle
+        self.orientation = orientation
+        self.refractive_index = refractive_index
 
-    @property
-    def angle(self):
-        return self._angle
+    def _get_refractive_index(self, wavelength):
+        if callable(self.refractive_index):
+            return self.refractive_index(wavelength)
+        return self.refractive_index
 
-    @angle.setter
-    def angle(self, new_angle):
-        self._angle = new_angle
-        self.surface_sag = self.tilt_sag
+    def forward(self, wavefront):
+        n = self._get_refractive_index(wavefront.wavelength)
+        sag = _tilt_sag(self.orientation, self.angle)(wavefront.electric_field.grid)
 
-    @property
-    def orientation(self):
-        return self._orientation
+        new_field = wavefront.electric_field * np.exp(1j * (n - 1) * sag * wavefront.wavenumber)
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
-    @orientation.setter
-    def orientation(self, new_orientation):
-        self._orientation = new_orientation
-        self.surface_sag = self.tilt_sag
+    def backward(self, wavefront):
+        n = self._get_refractive_index(wavefront.wavelength)
+        sag = _tilt_sag(self.orientation, self.angle)(wavefront.electric_field.grid)
 
-    def tilt_sag(self, grid):
-        ''' Calculate the sag profile for the tilt element.
-
-        Parameters
-        ----------
-        grid : Grid
-            The grid on which the surface sag is calculated.
-
-        Returns
-        -------
-        Field
-            The surface sag.
-        '''
-        return Field(grid.rotated(self._orientation).y * np.tan(self._angle), grid)
+        new_field = wavefront.electric_field * np.exp(-1j * (n - 1) * sag * wavefront.wavenumber)
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
 class ThinPrism(TiltElement):
     '''A thin prism that operates in the paraxial regime.
@@ -129,16 +138,16 @@ class ThinPrism(TiltElement):
     ----------
     angle : scalar
         The wedge angle of the prism in radians.
-    orientation : scalar
-        The orientation of the prism in radians. The default orientation is aligned along the x-axis.
     refractive_index : scalar or function of wavelength
         The refractive index of the prism.
+    orientation : scalar
+        The orientation of the prism in radians. The default orientation is aligned along the x-axis.
     '''
     def __init__(self, angle, refractive_index, orientation=0):
         super().__init__(angle, orientation, refractive_index)
 
     def minimal_deviation_angle(self, wavelength):
-        ''' Find the angle of minimal deviation for a paraxial prism.
+        '''Find the angle of minimal deviation for a paraxial prism.
 
         Parameters
         ----------
@@ -150,11 +159,11 @@ class ThinPrism(TiltElement):
         scalar
             The angle of minimal deviation in radians.
         '''
-        n = self._refractive_index(wavelength)
-        return (n - 1) * self._prism_angle
+        n = self._get_refractive_index(wavelength)
+        return (n - 1) * self.angle
 
     def trace(self, wavelength):
-        ''' Trace a paraxial ray through the prism.
+        '''Trace a paraxial ray through the prism.
 
         Parameters
         ----------
@@ -166,14 +175,15 @@ class ThinPrism(TiltElement):
         scalar
             The angle of deviation for the traced ray in radians.
         '''
-        return (self._refractive_index(wavelength) - 1) * self.angle
+        n = self._get_refractive_index(wavelength)
+        return (n - 1) * self.angle
 
-class Prism(SurfaceApodizer):
+class Prism(OpticalElement):
     '''A prism that deviates the beam.
 
     Parameters
     ----------
-    angle_of_incidence : sacalar
+    angle_of_incidence : scalar
         The angle of incidence of the wavefront in radians.
     prism_angle : scalar
         The angle of the prism in radians.
@@ -183,33 +193,32 @@ class Prism(SurfaceApodizer):
         The orientation of the prism in radians. The default orientation is aligned along the y-axis.
     '''
     def __init__(self, angle_of_incidence, prism_angle, refractive_index, orientation=0):
-        self._prism_angle = prism_angle
-        self._angle_of_incidence = angle_of_incidence
-        self._refractive_index = refractive_index
-        self._orientation = orientation
+        self.angle_of_incidence = angle_of_incidence
+        self.prism_angle = prism_angle
+        self.orientation = orientation
+        self.refractive_index = refractive_index
 
-        super().__init__(self.prism_sag, self._refractive_index)
+    def _get_refractive_index(self, wavelength):
+        if callable(self.refractive_index):
+            return self.refractive_index(wavelength)
+        return self.refractive_index
 
-    @property
-    def orientation(self):
-        return self._orientation
+    def forward(self, wavefront):
+        n = self._get_refractive_index(wavefront.wavelength)
+        sag = self.prism_sag(wavefront.electric_field.grid, wavefront.wavelength)
 
-    @orientation.setter
-    def orientation(self, new_orientation):
-        self._orientation = new_orientation
-        self.surface_sag = self.prism_sag
+        new_field = wavefront.electric_field * np.exp(1j * (n - 1) * sag * wavefront.wavenumber)
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
-    @property
-    def prism_angle(self):
-        return self._prism_angle
+    def backward(self, wavefront):
+        n = self._get_refractive_index(wavefront.wavelength)
+        sag = self.prism_sag(wavefront.electric_field.grid, wavefront.wavelength)
 
-    @prism_angle.setter
-    def prism_angle(self, new_prism_angle):
-        self._prism_angle = new_prism_angle
-        self.surface_sag = self.prism_sag
+        new_field = wavefront.electric_field * np.exp(-1j * (n - 1) * sag * wavefront.wavenumber)
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
 
     def minimal_deviation_angle(self, wavelength):
-        ''' Find the angle of minimal deviation for a prism.
+        '''Find the angle of minimal deviation for a prism.
 
         Parameters
         ----------
@@ -221,11 +230,11 @@ class Prism(SurfaceApodizer):
         scalar
             The angle of minimal deviation in radians.
         '''
-        n = self._refractive_index(wavelength)
-        return 2 * np.arcsin(n * np.sin(self._prism_angle / 2)) - self._prism_angle
+        n = self._get_refractive_index(wavelength)
+        return 2 * np.arcsin(n * np.sin(self.prism_angle / 2)) - self.prism_angle
 
     def trace(self, wavelength):
-        ''' Trace a ray through the prism.
+        '''Trace a ray through the prism.
 
         Parameters
         ----------
@@ -237,18 +246,11 @@ class Prism(SurfaceApodizer):
         scalar
             The angle of deviation for the traced ray in radians.
         '''
-        n = self._refractive_index(wavelength)
-        transmitted_angle_surface_1 = snells_law(self._angle_of_incidence, 1 / n)
-
-        incident_angle_surface_2 = self._prism_angle - transmitted_angle_surface_1
-        transmitted_angle = snells_law(incident_angle_surface_2, n)
-
-        angle_of_deviation = self._angle_of_incidence + transmitted_angle - self._prism_angle
-
-        return angle_of_deviation
+        n = self._get_refractive_index(wavelength)
+        return self._deviation(n)
 
     def prism_sag(self, grid, wavelength):
-        ''' Calculate the sag profile for the prism.
+        '''Calculate the sag profile for the prism.
 
         Parameters
         ----------
@@ -262,10 +264,21 @@ class Prism(SurfaceApodizer):
         Field
             The surface sag.
         '''
-        theta = self.trace(wavelength)
-        return Field(grid.rotated(self._orientation).y * np.tan(theta) / (self._refractive_index(wavelength) - 1), grid)
+        n = self._get_refractive_index(wavelength)
+        theta = self._deviation(n)
+        sag = _tilt_sag(self.orientation, theta)(grid)
+        return Field(sag / (n - 1), grid)
 
-class PhaseGrating(PhaseApodizer):
+    def _deviation(self, n):
+        '''Calculate the deviation angle for a given refractive index.
+        '''
+        transmitted_angle_surface_1 = snells_law(self.angle_of_incidence, 1 / n)
+        incident_angle_surface_2 = self.prism_angle - transmitted_angle_surface_1
+        transmitted_angle = snells_law(incident_angle_surface_2, n)
+
+        return self.angle_of_incidence + transmitted_angle - self.prism_angle
+
+class PhaseGrating(OpticalElement):
     '''A grating that applies an achromatic phase pattern.
 
     Parameters
@@ -280,9 +293,9 @@ class PhaseGrating(PhaseApodizer):
         The orientation of the grating in radians. The default orientation is aligned along the y-axis.
     '''
     def __init__(self, grating_period, grating_amplitude, grating_profile=None, orientation=0):
-        self._grating_period = grating_period
-        self._orientation = orientation
-        self._grating_amplitude = grating_amplitude
+        self.grating_period = grating_period
+        self.grating_amplitude = grating_amplitude
+        self.orientation = orientation
 
         if grating_profile is None:
             def sinusoidal_grating_profile(grid):
@@ -290,36 +303,39 @@ class PhaseGrating(PhaseApodizer):
 
             grating_profile = sinusoidal_grating_profile
 
-        self._grating_profile = grating_profile
-
-        super().__init__(self.grating_pattern)
+        self.grating_profile = grating_profile
 
     def grating_pattern(self, grid):
-        return self._grating_amplitude * Field(self._grating_profile(grid.rotated(self._orientation).scaled(1 / self._grating_period)), grid)
+        return self.grating_amplitude * Field(self.grating_profile(grid.rotated(self.orientation).scaled(1 / self.grating_period)), grid)
 
     @property
-    def orientation(self):
-        return self._orientation
-
-    @orientation.setter
-    def orientation(self, new_orientation):
-        self._orientation = new_orientation
-        self.phase = self.grating_pattern
-
-    @property
+    @deprecated('Use grating_period instead.')
     def period(self):
-        return self._grating_period
+        return self.grating_period
 
     @period.setter
-    def period(self, new_period):
-        self._grating_period = new_period
-        self.phase = self.grating_pattern
+    @deprecated('Use grating_period instead.')
+    def period(self, period):
+        self.grating_period = period
 
     @property
+    @deprecated('Use grating_amplitude instead.')
     def amplitude(self):
-        return self._amplitude
+        return self.grating_amplitude
 
     @amplitude.setter
-    def amplitude(self, new_amplitude):
-        self._amplitude = new_amplitude
-        self.phase = self.grating_pattern
+    @deprecated('Use grating_amplitude instead.')
+    def amplitude(self, val):
+        self.grating_amplitude = val
+
+    def forward(self, wavefront):
+        phase = self.grating_pattern(wavefront.electric_field.grid)
+        new_field = wavefront.electric_field * np.exp(1j * phase)
+
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)
+
+    def backward(self, wavefront):
+        phase = self.grating_pattern(wavefront.electric_field.grid)
+        new_field = wavefront.electric_field * np.exp(-1j * phase)
+
+        return Wavefront(new_field, wavefront.wavelength, wavefront.input_stokes_vector)

@@ -3,10 +3,7 @@ import numpy as np
 
 def test_micro_lens_array_default():
     input_grid = make_pupil_grid(64, 1)
-    lenslet_grid = CartesianGrid(SeparatedCoords((
-        np.arange(-0.5, 0.5, 0.1),
-        np.arange(-0.5, 0.5, 0.1)
-    )))
+    lenslet_grid = make_pupil_grid(11, 1)
     focal_length = 1.0
 
     mla = MicroLensArray(input_grid, lenslet_grid, focal_length)
@@ -55,10 +52,7 @@ def test_micro_lens_array_with_shape():
 
 def test_micro_lens_array_multiple_lenslets():
     input_grid = make_pupil_grid(64, 1)
-    lenslet_grid = CartesianGrid(SeparatedCoords((
-        np.array([-0.3, 0.0, 0.3]),
-        np.array([-0.3, 0.0, 0.3])
-    )))
+    lenslet_grid = make_pupil_grid(3, 0.6)
     focal_length = 1.0
     lenslet_shape = make_circular_aperture(0.15)
 

@@ -3,14 +3,19 @@ from .apodization import SurfaceApodizer
 from .optical_element import OpticalElement
 from .surface_profiles import spherical_surface_sag, even_aspheric_surface_sag
 from ..field import Field
+from ..dev import deprecated
 
-def closest_points(point_grid, evaluated_grid):
+def _closest_points(point_grid, evaluated_grid):
     from scipy import spatial
 
     tree = spatial.KDTree(point_grid.points)
     d, i = tree.query(evaluated_grid.points)
 
     return Field(i, evaluated_grid), Field(d, evaluated_grid)
+
+@deprecated("This is a private a helper function that was accidentally made public.")
+def closest_points(point_grid, evaluated_grid):
+    return _closest_points(point_grid, evaluated_grid)
 
 class MicroLensArray(OpticalElement):
     '''A parabolic micro-lens array.
@@ -33,7 +38,7 @@ class MicroLensArray(OpticalElement):
         self.mla_grid = lenslet_grid
 
         if lenslet_shape is None:
-            indices, distances = closest_points(lenslet_grid, input_grid)
+            indices, distances = _closest_points(lenslet_grid, input_grid)
 
             self.mla_index = indices
             self.mla_opd = (-1 / (2 * focal_length)) * distances**2
@@ -56,7 +61,6 @@ class MicroLensArray(OpticalElement):
     def backward(self, wavefront):
         return self.mla_surface.backward(wavefront)
 
-
 class SphericalMicroLensArray(OpticalElement):
     '''An even asphere micro-lens array.
 
@@ -78,7 +82,6 @@ class SphericalMicroLensArray(OpticalElement):
         The aspheric coefficients of the micro-lenses.
     '''
     def __init__(self, input_grid, lenslet_grid, radius_of_curvature, lenslet_shape, refractive_index=1.5):
-
         self.input_grid = input_grid
         self.mla_grid = lenslet_grid
         self.n = refractive_index

@@ -132,13 +132,15 @@ class SurfaceAberrationAtDistance(OpticalElement):
 
     Parameters
     ----------
+    input_grid : Grid
+        The grid on which the surface aberration operates.
     surface_aberration : OpticalElement
         The optical element describing the surface aberration.
     distance : scalar
         The distance from the current plane.
     '''
-    def __init__(self, surface_aberration, distance):
-        self.fresnel = FresnelPropagator(surface_aberration.input_grid, distance)
+    def __init__(self, input_grid, surface_aberration, distance):
+        self.fresnel = FresnelPropagator(input_grid, distance)
         self.surface_aberration = surface_aberration
 
     def forward(self, wavefront):

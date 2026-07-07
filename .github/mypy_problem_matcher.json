@@ -1,0 +1,16 @@
+{
+    "problemMatcher": [
+        {
+            "owner": "mypy-error",
+            "severity": "error",
+            "pattern": [
+                {
+                    "regexp": "^([^:]+):(\\d+): error: (.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "message": 3
+                }
+            ]
+        }
+    ]
+}

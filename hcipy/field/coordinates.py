@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import math
 from collections.abc import Iterable
@@ -8,7 +10,7 @@ from .._math.backends import infer_xp, default_dtype
 class Coords(object):
     '''Base class for coordinates.
     '''
-    _coordinate_types = {}
+    _coordinate_types: dict[str, type[Coords]] = {}
 
     @property
     def xp(self):

@@ -44,6 +44,7 @@ dev = [
     "dill",
     "flake8",
     "array_api_strict",
+    "mypy",
 ]
 doc = [
     "numpydoc",
@@ -85,3 +86,7 @@ line-length = 150
 
 [tool.ruff.format]
 quote-style = "preserve"
+
+[tool.mypy]
+python_version = "3.14"
+ignore_missing_imports = true

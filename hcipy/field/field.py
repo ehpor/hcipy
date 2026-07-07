@@ -2,6 +2,7 @@ import numpy as np
 from ..config import Configuration
 from .._math import fft as hcipy_fft
 from .._math.backends import array_namespace
+from typing import Any
 
 class FieldBase:
     '''The value of some physical quantity for each point in some coordinate system.
@@ -963,9 +964,9 @@ def _make_namespace(slots):
     return Namespace()
 
 # Global cache for FieldNamespace instances.
-_field_namespace_cache = {}
-_last_backend = None
-_last_field_namespace = None
+_field_namespace_cache: dict[str, Any] = {}
+_last_backend: str | None = None
+_last_field_namespace: Any | None  = None
 
 def make_field_namespace(backend):
     """
@@ -1228,10 +1229,7 @@ def make_field_namespace(backend):
 
     return namespace
 
-if Configuration().core.use_new_style_fields:
-    Field = NewStyleField
-else:
-    Field = OldStyleField
+Field = NewStyleField if Configuration()["core"]["use_new_style_fields"] else OldStyleField
 
 def is_field(obj):
     '''Check if the object is an HCIPy Field.

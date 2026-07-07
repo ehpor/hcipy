@@ -2,7 +2,6 @@ __all__ = [
     'FrameWriter',
     'GifWriter',
     'FFMpegWriter',
-    'set_color_scheme',
     'colors',
     'errorfill',
     'imshow_field',
@@ -15,7 +14,6 @@ __all__ = [
 ]
 
 from .animation import *
-from .color_scheme import *
 from . import colors
 from .error_bars import *
 from .field import *

@@ -2,11 +2,12 @@ import numpy as np
 import copy
 import math
 from collections.abc import Iterable
+from __future__ import annotations
 
 class Coords(object):
     '''Base class for coordinates.
     '''
-    _coordinate_types = {}
+    _coordinate_types : dict[str, type[Coords]] = {}
 
     def copy(self):
         '''Make a copy.

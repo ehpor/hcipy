@@ -7,7 +7,7 @@ from __future__ import annotations
 class Coords(object):
     '''Base class for coordinates.
     '''
-    _coordinate_types : dict[str, type[Coords]] = {}
+    _coordinate_types: dict[str, type[Coords]] = {}
 
     def copy(self):
         '''Make a copy.

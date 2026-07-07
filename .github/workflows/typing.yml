@@ -20,5 +20,6 @@ jobs:
         shell: bash
       - name: Type check with mypy
         run: |
+          echo "::add-matcher::.github/mypy_problem_matcher.json"
           mypy hcipy
         shell: bash

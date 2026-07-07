@@ -44,6 +44,7 @@ dev = [
     "mpmath",
     "dill",
     "flake8",
+    "mypy",
 ]
 doc = [
     "numpydoc",
@@ -86,3 +87,7 @@ line-length = 150
 
 [tool.ruff.format]
 quote-style = "preserve"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true

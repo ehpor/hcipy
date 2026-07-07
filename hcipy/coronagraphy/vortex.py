@@ -66,7 +66,8 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
         AgnosticOpticalElement.__init__(self)
 
     def make_instance(self, instance_data, input_grid, output_grid, wavelength):
-        pupil_diameter = tuple(n * delta for n, delta in zip(input_grid.dims, input_grid.delta))
+        xp = input_grid.xp
+        pupil_diameter = xp.asarray(input_grid.dims) * input_grid.delta
 
         levels = int(math.ceil(math.log(self.q / 2) / math.log(self.scaling_factor))) + 1
         qs = [2 * self.scaling_factor**i for i in range(levels)]

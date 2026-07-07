@@ -129,7 +129,8 @@ class SpectralNoiseFactoryFFT(SpectralNoiseFactory):
         self.fourier = FastFourierTransform(self.output_grid, q=oversample)
         self.input_grid = self.fourier.output_grid
 
-        self.period = tuple(delta * n for delta, n in zip(self.output_grid.delta, self.output_grid.shape))
+        xp = output_grid.xp
+        self.period = output_grid.delta * xp.asarray(output_grid.shape)
 
         # * (2 * np.pi)**self.input_grid.ndim is due to conversion from PSD from "per Hertz" to "per radian", which yields a factor of 2pi per dimension
         self.C = np.sqrt(self.psd(self.input_grid) / self.input_grid.weights * (2 * np.pi)**self.input_grid.ndim)

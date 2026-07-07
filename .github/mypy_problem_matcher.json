@@ -9,11 +9,6 @@
                     "file": 1,
                     "line": 2,
                     "message": 3
-                },
-                {
-                    "regexp": "^[^:]+:\\d+: note: (.*)$",
-                    "message": 1,
-                    "loop": true
                 }
             ]
         }

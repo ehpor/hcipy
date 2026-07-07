@@ -43,7 +43,7 @@ class AtmosphericLayer(OpticalElement):
     height : scalar
         The height of the atmospheric layer above the ground.
     '''
-    def __init__(self, input_grid, Cn_squared=None, L0=np.inf, velocity=0, height=0):
+    def __init__(self, input_grid, Cn_squared, L0=np.inf, velocity=0, height=0):
         self.input_grid = input_grid
         self.Cn_squared = Cn_squared
         self.L0 = L0

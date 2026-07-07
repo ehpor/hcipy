@@ -31,8 +31,7 @@ dependencies = [
     "xxhash",
     "numexpr",
     "asdf",
-    "importlib_metadata",
-    "importlib_resources>=1.4 ; python_version<'3.9'",
+    "packaging",
     "tqdm",
     "array_api_compat",
 ]
@@ -57,7 +56,6 @@ doc = [
     "nbformat",
     "nbconvert",
     "sphinx-automodapi",
-    "tqdm",
     "ipywidgets",
 ]
 

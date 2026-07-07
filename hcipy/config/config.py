@@ -2,10 +2,7 @@ import os
 import yaml
 from pathlib import Path
 
-try:
-    from importlib.resources import files
-except ImportError:
-    from importlib_resources import files
+from importlib.resources import files
 
 class _ConfigurationItem:
     def __init__(self, mapping=None):

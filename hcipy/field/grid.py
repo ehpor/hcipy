@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 import copy
 import warnings
 import xxhash
 from typing import Callable
-from __future__ import annotations
 
 class Grid(object):
     '''A set of points on some coordinate system.

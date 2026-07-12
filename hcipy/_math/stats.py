@@ -1,7 +1,9 @@
 from array_api_compat import is_cupy_namespace, is_jax_namespace, is_numpy_namespace, is_torch_namespace
+from .typing import Array, ArrayNamespace
 from .backends import array_namespace
+from typing import Any, cast
 
-def median(x, /, *, axis=None, keepdims=False):
+def median(x: Array, /, *, axis: int | tuple[int, ...] | None = None, keepdims: bool = False) -> Array:
     """Compute the median of an array along the given axis.
 
     Parameters
@@ -25,16 +27,24 @@ def median(x, /, *, axis=None, keepdims=False):
     xp = array_namespace(x)
 
     # NumPy, CuPy and JAX have a correct multi-axis median.
-    if is_numpy_namespace(xp) or is_cupy_namespace(xp) or is_jax_namespace(xp):
-        return xp.median(x, axis=axis, keepdims=keepdims)
+    if is_numpy_namespace(xp):
+        import numpy as np
+        res = np.median(cast(np.ndarray, x), axis=axis, keepdims=keepdims)
+        return cast(Array, res)
+    elif is_cupy_namespace(xp):
+        import cupy as cp
+        res = cp.median(cast(cp.ndarray, x), axis=axis, keepdims=keepdims)
+        return cast(Array, res)
+    elif is_jax_namespace(xp):
+        import jax.numpy as jnp
+        res = jnp.median(cast(jnp.ndarray, x), axis=axis, keepdims=keepdims)
+        return cast(Array, res)
+    elif is_torch_namespace(xp):
+        return _median_torch(x, axis=axis, keepdims=keepdims)
+    else:
+        raise NotImplementedError("Unsupported backend.")
 
-    # Torch needs a specific implementation.
-    if is_torch_namespace(xp):
-        return _median_torch(x, axis=axis, keepdims=keepdims, xp=xp)
-
-    raise NotImplementedError("Unsupported backend.")
-
-def nanmedian(x, /, *, axis=None, keepdims=False):
+def nanmedian(x: Array, /, *, axis: int | tuple[int, ...] | None = None, keepdims: bool = False) -> Array:
     """Compute the median of an array along the given axis.
 
     Parameters
@@ -58,23 +68,31 @@ def nanmedian(x, /, *, axis=None, keepdims=False):
     xp = array_namespace(x)
 
     # NumPy, CuPy and JAX have a correct multi-axis median.
-    if is_numpy_namespace(xp) or is_cupy_namespace(xp) or is_jax_namespace(xp):
-        return xp.nanmedian(x, axis=axis, keepdims=keepdims)
+    if is_numpy_namespace(xp):
+        import numpy as np
+        res = np.nanmedian(cast(np.ndarray, x), axis=axis, keepdims=keepdims)
+        return cast(Array, res)
+    elif is_cupy_namespace(xp):
+        import cupy as cp
+        res = cp.nanmedian(cast(cp.ndarray, x), axis=axis, keepdims=keepdims)
+        return cast(Array, res)
+    elif is_jax_namespace(xp):
+        import jax.numpy as jnp
+        res = jnp.nanmedian(cast(jnp.ndarray, x), axis=axis, keepdims=keepdims)
+        return cast(Array, res)
+    elif is_torch_namespace(xp):
+        return _nanmedian_torch(x, axis=axis, keepdims=keepdims)
+    else:
+        raise NotImplementedError("Unsupported backend.")
 
-    # Torch needs a specific implementation.
-    if is_torch_namespace(xp):
-        return _nanmedian_torch(x, axis=axis, keepdims=keepdims, xp=xp)
-
-    raise NotImplementedError("Unsupported backend.")
-
-def _reshape_last_axis(x, *, xp, axis):
+def _reshape_last_axis(x: Array, *, xp: ArrayNamespace[Any], axis: int | tuple[int, ...] | None) -> tuple[Array, Any, Any]:
     ndim = x.ndim
 
     if ndim == 0:
         return x, None, None
 
     if axis is None:
-        axes = None
+        axes: tuple[int, ...] | None = None
     elif isinstance(axis, int):
         axes = (axis % ndim,)
     else:
@@ -102,7 +120,7 @@ def _reshape_last_axis(x, *, xp, axis):
 
     return x, axes, partition_axis
 
-def _reshape_keepdims(x, axes, keepdims, ndim, xp):
+def _reshape_keepdims(x: Array, axes: tuple[int, ...] | None, keepdims: bool, ndim: int, xp: ArrayNamespace[Any]) -> Array:
     if keepdims:
         if axes is not None:
             x = xp.expand_dims(x, axis=axes)
@@ -111,28 +129,30 @@ def _reshape_keepdims(x, axes, keepdims, ndim, xp):
 
     return x
 
-def _median_torch(x, axis, keepdims, xp):
-    x_reshaped, axes, partition_axis = _reshape_last_axis(x, xp=xp, axis=axis)
+def _median_torch(x: Array, axis: int | tuple[int, ...] | None, keepdims: bool) -> Array:
+    import torch
+    x_reshaped, axes, partition_axis = _reshape_last_axis(x, xp=torch, axis=axis)
 
     if partition_axis is None:
         return x_reshaped
 
-    if xp.isdtype(x_reshaped.dtype, "integral"):
-        x_reshaped = xp.astype(x_reshaped, xp.float64)
+    if torch.isdtype(x_reshaped.dtype, "integral"):
+        x_reshaped = torch.astype(x_reshaped, torch.float64)
 
-    res = xp.quantile(x_reshaped, 0.5, dim=partition_axis)
+    res = torch.quantile(x_reshaped, 0.5, dim=partition_axis)
 
-    return _reshape_keepdims(res, axes, keepdims, x.ndim, xp)
+    return _reshape_keepdims(res, axes, keepdims, x.ndim, torch)
 
-def _nanmedian_torch(x, axis, keepdims, xp):
-    x_reshaped, axes, partition_axis = _reshape_last_axis(x, xp=xp, axis=axis)
+def _nanmedian_torch(x: Array, axis: int | tuple[int, ...] | None, keepdims: bool) -> Array:
+    import torch
+    x_reshaped, axes, partition_axis = _reshape_last_axis(x, xp=torch, axis=axis)
 
     if partition_axis is None:
         return x_reshaped
 
-    if xp.isdtype(x_reshaped.dtype, "integral"):
-        x_reshaped = xp.astype(x_reshaped, xp.float64)
+    if torch.isdtype(x_reshaped.dtype, "integral"):
+        x_reshaped = torch.astype(x_reshaped, torch.float64)
 
-    res = xp.nanquantile(x_reshaped, 0.5, dim=partition_axis)
+    res = torch.nanquantile(x_reshaped, 0.5, dim=partition_axis)
 
-    return _reshape_keepdims(res, axes, keepdims, x.ndim, xp)
+    return _reshape_keepdims(res, axes, keepdims, x.ndim, torch)

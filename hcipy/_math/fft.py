@@ -1,10 +1,18 @@
 from ..config import Configuration
+from .typing import Array
 from .cpu import get_num_available_cores
 
 import numpy as np
 import scipy
 import warnings
 import array_api_compat
+from typing import Any, Protocol, cast
+
+class _FFT1dFunc(Protocol):
+    def __call__(self, x: Array, /, *, n: int | None = None, axis: int = -1, norm: str = 'backward', overwrite_x: bool = False, method: str | None = None, threads: int | None = None) -> Array: ...
+
+class _FFTNdFunc(Protocol):
+    def __call__(self, x: Array, /, *, s: tuple[int, ...] | None = None, axes: tuple[int, ...] | None = None, norm: str = 'backward', overwrite_x: bool = False, method: str | None = None, threads: int | None = None) -> Array: ...
 
 _CPU_COUNT = get_num_available_cores()
 
@@ -22,11 +30,11 @@ try:
 except ImportError:
     pyfftw = None
 
-def _is_numpy_array(x):
+def _is_numpy_array(x: Any) -> bool:
     """Check if the input is a NumPy array."""
     return x.__class__.__module__.startswith("numpy")
 
-def _make_1d_fft(func_name):
+def _make_1d_fft(func_name: str) -> _FFT1dFunc:
     """Create a 1D FFT function with minimal runtime overhead.
     """
     mkl_func = None
@@ -44,13 +52,15 @@ def _make_1d_fft(func_name):
 
     real_out = func_name.startswith('ir') or func_name.startswith('h')
 
-    def fft_1d(x, /, *, n=None, axis=-1, norm='backward', overwrite_x=False, method=None, threads=None):
+    def fft_1d(x: Array, /, *, n: int | None = None, axis: int = -1, norm: str = 'backward', overwrite_x: bool = False, method: str | None = None, threads: int | None = None) -> Array:
         # If the array is not a Numpy array, defer to the native implementation.
         if not _is_numpy_array(x):
             xp = array_api_compat.array_namespace(x)
             return getattr(xp.fft, func_name)(x, n=n, axis=axis, norm=norm)
 
-        methods = Configuration().fourier.fft.method if method is None else [method]
+        x = cast(np.ndarray, x)  # type: ignore[assignment]
+
+        methods = Configuration().fourier.fft.method if method is None else [method]  # type: ignore[attr-defined]
         threads_attempts = ([1] if x.size < 256**2 else [_CPU_COUNT, 1]) if threads is None else [threads]
 
         dtype_in = x.dtype
@@ -89,7 +99,7 @@ def _make_1d_fft(func_name):
 
     return fft_1d
 
-def _make_nd_fft(func_name):
+def _make_nd_fft(func_name: str) -> _FFTNdFunc:
     """Create an N-D FFT function with minimal runtime overhead.
     """
     mkl_func = None
@@ -107,13 +117,13 @@ def _make_nd_fft(func_name):
 
     real_out = func_name.startswith('ir') or func_name.startswith('h')
 
-    def fft_nd(x, /, *, s=None, axes=None, norm='backward', overwrite_x=False, method=None, threads=None):
+    def fft_nd(x: Array, /, *, s: tuple[int, ...] | None = None, axes: tuple[int, ...] | None = None, norm: str = 'backward', overwrite_x: bool = False, method: str | None = None, threads: int | None = None) -> Array:
         # If the array is not a Numpy array, defer to the native implementation.
         if not _is_numpy_array(x):
             xp = array_api_compat.array_namespace(x)
             return getattr(xp.fft, func_name)(x, s=s, axes=axes, norm=norm)
 
-        methods = Configuration().fourier.fft.method if method is None else [method]
+        methods = Configuration().fourier.fft.method if method is None else [method]  # type: ignore[attr-defined]
         threads_attempts = ([1] if x.size < 256**2 else [_CPU_COUNT, 1]) if threads is None else [threads]
 
         dtype_in = x.dtype
@@ -153,18 +163,18 @@ def _make_nd_fft(func_name):
     return fft_nd
 
 # Create all 1D FFT functions.
-fft = _make_1d_fft('fft')
-ifft = _make_1d_fft('ifft')
-rfft = _make_1d_fft('rfft')
-irfft = _make_1d_fft('irfft')
-hfft = _make_1d_fft('hfft')
-ihfft = _make_1d_fft('ihfft')
+fft: _FFT1dFunc = _make_1d_fft('fft')
+ifft: _FFT1dFunc = _make_1d_fft('ifft')
+rfft: _FFT1dFunc = _make_1d_fft('rfft')
+irfft: _FFT1dFunc = _make_1d_fft('irfft')
+hfft: _FFT1dFunc = _make_1d_fft('hfft')
+ihfft: _FFT1dFunc = _make_1d_fft('ihfft')
 
 # Create all N-D FFT functions.
-fftn = _make_nd_fft('fftn')
-ifftn = _make_nd_fft('ifftn')
-rfftn = _make_nd_fft('rfftn')
-irfftn = _make_nd_fft('irfftn')
+fftn: _FFTNdFunc = _make_nd_fft('fftn')
+ifftn: _FFTNdFunc = _make_nd_fft('ifftn')
+rfftn: _FFTNdFunc = _make_nd_fft('rfftn')
+irfftn: _FFTNdFunc = _make_nd_fft('irfftn')
 
 # Shift functions.
 fftshift = np.fft.fftshift

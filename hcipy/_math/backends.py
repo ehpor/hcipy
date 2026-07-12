@@ -1,9 +1,14 @@
 import numpy as np
 import array_api_compat
 from ..config import Configuration
+from .typing import Array, ArrayNamespace, Device
 import sys
+from typing import Any, cast, Literal
+from typing_extensions import TypeVar
 
-def infer_xp(*arrays):
+ArrayT = TypeVar("ArrayT", default=np.ndarray)
+
+def infer_xp(*arrays: ArrayT | None) -> ArrayNamespace[ArrayT]:
     """Infer xp from input arrays.
 
     Parameters
@@ -31,11 +36,11 @@ def infer_xp(*arrays):
             pass
 
     # If we get here, xp could not be inferred
-    if Configuration().core.use_new_style_fields:
+    if Configuration().core.use_new_style_fields:  # type: ignore[attr-defined]
         raise ValueError("xp must be specified when arrays don't provide it")
-    return np
+    return cast(ArrayNamespace[Any], np)
 
-def to_numpy(arr):
+def to_numpy(arr: Array) -> np.ndarray:
     """Convert any array to numpy.
 
     This function uses backend-specific methods for efficient conversion. It
@@ -58,23 +63,27 @@ def to_numpy(arr):
     """
     # Fast path: already numpy
     if array_api_compat.is_numpy_array(arr):
-        return np.asarray(arr)
+        return np.asarray(cast(np.ndarray, arr))
 
     # CuPy: use .get() method
     if array_api_compat.is_cupy_array(arr):
-        return arr.get()
+        import cupy as cp
+        return cast(cp.ndarray, arr).get()
 
     # JAX: np.asarray works but transfers from device
     if array_api_compat.is_jax_array(arr):
-        return np.asarray(arr)
+        import jax.numpy as jnp
+        return np.asarray(cast(jnp.ndarray, arr))
 
     # PyTorch: use .numpy() method (requires detach and cpu)
     if array_api_compat.is_torch_array(arr):
-        return arr.detach().cpu().numpy()
+        import torch
+        return cast(torch.ndarray, arr).detach().cpu().numpy()
 
     # Dask: compute first
     if array_api_compat.is_dask_array(arr):
-        return arr.compute()
+        import dask
+        return cast(dask.array.Array, arr).compute()
 
     # Fallback: try np.asarray
     try:
@@ -82,7 +91,7 @@ def to_numpy(arr):
     except Exception as e:
         raise ValueError(f"Cannot convert {type(arr).__name__} to numpy: {e}")
 
-def is_scalar(element):
+def is_scalar(element: Any) -> bool:
     '''Check whether an element is a scalar.
 
     Parameters
@@ -103,7 +112,7 @@ def is_scalar(element):
     shape = getattr(element, 'shape', ())
     return all(n == 1 for n in shape)
 
-def all_close(a, b, *, rtol=1e-5, atol=1e-8):
+def all_close(a: Array, b: Array, *, rtol: float = 1e-5, atol: float = 1e-8) -> bool:
     '''Whether the two arrays are elementwise equal within tolerance.
 
     This is defined as `|a - b| <= atol + rtol * |b|`.
@@ -126,10 +135,10 @@ def all_close(a, b, *, rtol=1e-5, atol=1e-8):
     close = abs(a - b) <= atol + rtol * abs(b)
     return xp.all(close)
 
-namespace_caches = {}
+namespace_caches: dict[str | None, Any] = {}
 NUMPY_NAMESPACE = 'numpy'
 
-def array_namespace(*xs, api_version=None):
+def array_namespace(*xs: Array, api_version: str | None = None) -> ArrayNamespace[Any]:
     '''Return the namespace of a set of Arrays.
 
     Parameters
@@ -168,8 +177,8 @@ def array_namespace(*xs, api_version=None):
 
                     if x.dtype == jax.float0:
                         import jax.numpy as jnp
-                        return jnp
-                return np
+                        return cast(ArrayNamespace[Any], jnp)
+                return cast(ArrayNamespace[Any], np)
 
             return ns
         except KeyError:
@@ -191,7 +200,7 @@ def array_namespace(*xs, api_version=None):
 
     return array_api_compat.array_namespace(*xs, api_version=api_version)
 
-def default_dtype(xp, kind, device=None):
+def default_dtype(xp: ArrayNamespace[Any], kind: Literal["real floating", "complex floating", "integral", "indexing"], device: Device | None = None) -> Any:
     '''Find the default dtype of a certain kind.
 
     Parameters

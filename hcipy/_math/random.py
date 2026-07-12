@@ -1,9 +1,17 @@
+from __future__ import annotations
+
 from array_api_compat import is_numpy_namespace, is_torch_namespace, is_jax_namespace, is_cupy_namespace
+from .typing import Array, ArrayNamespace, ArrayT
 import copy
 import math
+from typing import Any, cast, TYPE_CHECKING
 
 
-def make_random_generator(xp, seed=None):
+if TYPE_CHECKING:
+    import torch
+
+
+def make_random_generator(xp: ArrayNamespace[ArrayT], seed: int | None = None) -> RandomGenerator:
     '''Create a RandomGenerator instance for the given array API namespace.
 
     Parameters
@@ -30,7 +38,7 @@ def make_random_generator(xp, seed=None):
         raise ValueError(f"Unsupported namespace: {xp}")
 
 
-def _torch_gamma(scale=1.0, shape=1.0, size=None, generator=None):
+def _torch_gamma(scale: float = 1.0, shape: float = 1.0, size: tuple[int, ...] | None = None, generator: torch.Generator | None = None) -> Array:
     '''Sample from Gamma(shape, scale) distribution using pytorch.
 
     Pytorch does not support a generator argument for gamma, so we need to implement it.
@@ -94,7 +102,7 @@ def _torch_gamma(scale=1.0, shape=1.0, size=None, generator=None):
     return (samples * scale).reshape(size)
 
 
-def _normalize_size(size):
+def _normalize_size(size: int | tuple[int, ...] | None) -> tuple[int, ...]:
     if size is None:
         return (1,)
     elif not isinstance(size, tuple):
@@ -103,10 +111,7 @@ def _normalize_size(size):
 
 
 class RandomGenerator:
-    def __init__(self, xp):
-        self._xp = xp
-
-    def copy(self):
+    def copy(self) -> RandomGenerator:
         '''Return a new RandomGenerator object that is an independent copy of the current state.
 
         Returns
@@ -114,12 +119,9 @@ class RandomGenerator:
         RandomGenerator
             A new RandomGenerator object with the same internal state as the current object.
         '''
-        new_rng = self.__new__(type(self))
-        new_rng._xp = self._xp
+        raise NotImplementedError()
 
-        return new_rng
-
-    def normal(self, mean=0.0, std=1.0, *, size=None):
+    def normal(self, mean: float = 0.0, std: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         """Generate random samples from a normal (Gaussian) distribution.
 
         Parameters
@@ -139,7 +141,7 @@ class RandomGenerator:
         """
         raise NotImplementedError()
 
-    def poisson(self, lam=1.0, *, size=None):
+    def poisson(self, lam: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         """Generate random samples from a Poisson distribution.
 
         Parameters
@@ -157,7 +159,7 @@ class RandomGenerator:
         """
         raise NotImplementedError()
 
-    def gamma(self, scale=1.0, shape_param=1.0, *, size=None):
+    def gamma(self, scale: float = 1.0, shape_param: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         """Generate random samples from a Gamma distribution.
 
         Parameters
@@ -179,96 +181,94 @@ class RandomGenerator:
 
 
 class RandomGeneratorNumpy(RandomGenerator):
-    def __init__(self, seed=None):
+    def __init__(self, seed: int | None = None) -> None:
         import numpy
-        super().__init__(numpy)
 
-        self._rng = self._xp.random.default_rng(seed)
+        self._rng = numpy.random.default_rng(seed)
 
-    def copy(self):
-        res = super().copy()
+    def copy(self) -> RandomGenerator:
+        res = RandomGeneratorNumpy()
         res._rng = copy.deepcopy(self._rng)
 
         return res
 
-    def normal(self, mean=0.0, std=1.0, *, size=None):
+    def normal(self, mean: float = 0.0, std: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         size = _normalize_size(size)
-        return self._rng.normal(mean, std, size)
+        return cast(Array, self._rng.normal(mean, std, size))
 
-    def poisson(self, lam=1.0, *, size=None):
+    def poisson(self, lam: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         size = _normalize_size(size)
-        return self._rng.poisson(lam, size)
+        return cast(Array, self._rng.poisson(lam, size))
 
-    def gamma(self, scale=1.0, shape_param=1.0, *, size=None):
+    def gamma(self, scale: float = 1.0, shape_param: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         size = _normalize_size(size)
-        return self._rng.gamma(shape_param, scale, size)
+        return cast(Array, self._rng.gamma(shape_param, scale, size))
 
 
 class RandomGeneratorCupy(RandomGeneratorNumpy):
-    def __init__(self, seed=None):
+    def __init__(self, seed: int | None = None) -> None:
         import cupy
-        super().__init__(cupy)
-
-        self._rng = self._xp.random.default_rng(seed)
+        self._rng = cupy.random.default_rng(seed)
 
 
 class RandomGeneratorTorch(RandomGenerator):
-    def __init__(self, seed=None):
+    def __init__(self, seed: int | None = None) -> None:
         import torch
-        super().__init__(torch)
+        self._xp = torch
 
         self._rng = self._xp.Generator()
         if seed is not None:
             self._rng.manual_seed(seed)
 
-    def copy(self):
-        res = super().copy()
+    def copy(self) -> RandomGenerator:
+        res = RandomGeneratorTorch()
         res._rng = self._xp.Generator()
         res._rng.set_state(self._rng.get_state())
 
         return res
 
-    def normal(self, mean=0.0, std=1.0, *, size=None):
+    def normal(self, mean: float = 0.0, std: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         size = _normalize_size(size)
         return self._xp.randn(*size, generator=self._rng) * std + mean
 
-    def poisson(self, lam=1.0, *, size=None):
+    def poisson(self, lam: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         size = _normalize_size(size)
         lam_tensor = self._xp.ones(size=size) * lam
         return self._xp.poisson(lam_tensor, generator=self._rng)
 
-    def gamma(self, scale=1.0, shape_param=1.0, *, size=None):
+    def gamma(self, scale: float = 1.0, shape_param: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         size = _normalize_size(size)
         return _torch_gamma(scale, shape_param, size=size, generator=self._rng)
 
 
 class RandomGeneratorJax(RandomGenerator):
-    def __init__(self, seed=None):
+    def __init__(self, seed: int | None = None) -> None:
         from jax import random
         import jax.numpy
-        super().__init__(jax.numpy)
+
+        self._xp = jax.numpy
         self._jax_random = random
 
         self._rng = random.PRNGKey(seed or 0)
 
-    def copy(self):
-        res = super().copy()
+    def copy(self) -> RandomGenerator:
+        res = RandomGeneratorJax()
         res._jax_random = self._jax_random
         res._rng = self._rng
 
         return res
 
-    def normal(self, mean=0.0, std=1.0, *, size=None):
+    def normal(self, mean: float = 0.0, std: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         size = _normalize_size(size)
         self._rng, subkey = self._jax_random.split(self._rng)
-        return self._jax_random.normal(subkey, size) * std + mean
+        return cast(Array, self._jax_random.normal(subkey, size) * std + mean)
 
-    def poisson(self, lam=1.0, *, size=None):
+    def poisson(self, lam: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         size = _normalize_size(size)
         self._rng, subkey = self._jax_random.split(self._rng)
-        return self._jax_random.poisson(subkey, lam, shape=size)
+        return cast(Array, self._jax_random.poisson(subkey, lam, shape=size))
 
-    def gamma(self, scale=1.0, shape_param=1.0, *, size=None):
+    def gamma(self, scale: float = 1.0, shape_param: float = 1.0, *, size: int | tuple[int, ...] | None = None) -> Array:
         size = _normalize_size(size)
         self._rng, subkey = self._jax_random.split(self._rng)
-        return self._jax_random.gamma(subkey, shape_param, shape=size) * scale
+        return cast(Array, self._jax_random.gamma(subkey, shape_param, shape=size) * scale)

@@ -2,7 +2,7 @@ import os
 import platform
 import multiprocessing
 
-def get_num_available_cores():
+def get_num_available_cores() -> int:
     '''Get the number of cores available on the system.
 
     The attempt at retrieving the number of cores that our process
@@ -26,7 +26,7 @@ def get_num_available_cores():
         import ctypes
         import ctypes.wintypes
 
-        kernel32 = ctypes.WinDLL('kernel32')
+        kernel32 = ctypes.WinDLL('kernel32')  # type: ignore[attr-defined]
 
         DWORD_PTR = ctypes.wintypes.WPARAM
         PDWORD_PTR = ctypes.POINTER(DWORD_PTR)

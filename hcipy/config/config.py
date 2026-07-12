@@ -1,24 +1,27 @@
+from __future__ import annotations
+
 import os
 import yaml
 from pathlib import Path
+from typing import Any
 
 from importlib.resources import files
 
 class _ConfigurationItem:
-    def __init__(self, mapping=None):
+    def __init__(self, mapping: dict[str, Any] | None = None) -> None:
         if mapping:
             self.update(mapping, allow_creation=True)
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         self.update({name: value})
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str) -> Any:
         return self.__dict__[name]
 
-    def __setitem__(self, name, value):
+    def __setitem__(self, name: str, value: Any) -> None:
         setattr(self, name, value)
 
-    def update(self, mapping, allow_creation=False):
+    def update(self, mapping: dict[str, Any], allow_creation: bool = False) -> None:
         '''Update the configuration with the configuration `mapping`, as a dictionary.
 
         Parameters
@@ -54,25 +57,25 @@ class _ConfigurationItem:
 
                 self.__dict__[key] = val
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self.__dict__)
 
 class Configuration(_ConfigurationItem):
     '''A configuration object that describes the current configuration status of the package.
     '''
-    _instance = None
+    _instance: Configuration | None = None
 
-    def __new__(cls):
+    def __new__(cls) -> Configuration:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.reset()
 
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(mapping=None)
 
-    def reset(self, enable_user_overrides=True):
+    def reset(self, enable_user_overrides: bool = True) -> None:
         '''Reset the configuration to the default configuration.
 
         This default configuration consists of the default parameters in `hcipy/data/default_config.yaml`, which

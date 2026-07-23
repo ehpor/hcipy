@@ -4,6 +4,7 @@ import pytest
 from packaging import version
 import scipy.signal
 import os
+from hcipy._math.random import make_random_generator
 
 def make_all_fourier_transforms(input_grid, q, fov, shift):
     fft1 = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift, emulate_fftshifts=True)
@@ -306,6 +307,84 @@ def test_fourier_filter():
 
                     assert np.allclose(f_out_fft, f_out_ff)
                     assert np.allclose(f_in_fft, f_in_ff)
+
+def _reference_convolution_or_correlation(f_in, kernel, q, conjugate):
+    fft = FastFourierTransform(f_in.grid, q)
+
+    kernel_fft = make_fourier_transform(kernel.grid, fft.output_grid)
+    transfer_function = kernel_fft.forward(kernel)
+
+    if conjugate:
+        transfer_function = np.conj(transfer_function)
+
+    ft = fft.forward(f_in)
+    ft *= transfer_function
+    res = fft.backward(ft)
+
+    return res
+
+def _gaussian(grid, sigma=0.15):
+    r = grid.as_('polar').r
+    data = np.exp(-r**2 / (2 * sigma**2))
+
+    return Field(data, grid)
+
+@pytest.mark.parametrize('n', [16, 17, [16, 17]])
+@pytest.mark.parametrize('q', [1, 2, 3])
+def test_fourier_convolution(n, q):
+    input_grid = make_pupil_grid(n, 1)
+
+    kernel_grid = make_pupil_grid(tuple(d * q for d in input_grid.dims), q)
+    assert input_grid.delta[0] == kernel_grid.delta[0]
+
+    kernel = _gaussian(kernel_grid)
+    op_direct = make_fourier_convolution(input_grid, kernel, q)
+    op_callable = make_fourier_convolution(input_grid, _gaussian, q)
+
+    rng = make_random_generator(np, seed=0)
+    f_in = Field(rng.normal(size=input_grid.size) + 1j * rng.normal(size=input_grid.size), input_grid)
+
+    ref = _reference_convolution_or_correlation(f_in, kernel, q, conjugate=False)
+
+    assert np.allclose(ref, op_direct.forward(f_in))
+    assert np.allclose(ref, op_callable.forward(f_in))
+
+@pytest.mark.parametrize('n', [16, 17, [16, 17]])
+@pytest.mark.parametrize('q', [1, 2, 3])
+def test_fourier_correlation(n, q):
+    input_grid = make_pupil_grid(n, 1)
+
+    kernel_grid = make_pupil_grid(tuple(d * q for d in input_grid.dims), q)
+    assert input_grid.delta[0] == kernel_grid.delta[0]
+
+    kernel = _gaussian(kernel_grid)
+    op_direct = make_fourier_correlation(input_grid, kernel, q)
+    op_callable = make_fourier_correlation(input_grid, _gaussian, q)
+
+    rng = make_random_generator(np, seed=0)
+    f_in = Field(rng.normal(size=input_grid.size) + 1j * rng.normal(size=input_grid.size), input_grid)
+
+    ref = _reference_convolution_or_correlation(f_in, kernel, q, conjugate=True)
+
+    assert np.allclose(ref, op_direct.forward(f_in))
+    assert np.allclose(ref, op_callable.forward(f_in))
+
+def test_fourier_convolution_correlation_errors():
+    input_grid = make_pupil_grid(8)
+
+    # A Field kernel with mismatched delta should raise.
+    bad_grid = input_grid.scaled(1.1)
+    bad_kernel = bad_grid.ones(dtype='complex')
+
+    with pytest.raises(ValueError):
+        make_fourier_convolution(input_grid, bad_kernel, q=1)
+
+    # A Field kernel that does not fit in the padded grid should raise.
+    huge_grid = make_pupil_grid(16)
+    huge_kernel = huge_grid.ones()
+
+    with pytest.raises(ValueError):
+        make_fourier_convolution(input_grid, huge_kernel, q=1)
 
 def check_czt_vs_scipy(x, m, w, a, dtype):
     # Check that the CZT gives the same answer as the scipy implementation.

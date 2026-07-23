@@ -25,12 +25,7 @@ class SVD(object):
         and `matrix` is not sparse, all modes will be computed. If this is None and
         `matrix` is sparse, all but one mode will be computed.
     '''
-    def __init__(self, matrix=None, num_modes=None, M=None):
-        if matrix is None:
-            import warnings
-            warnings.warn('Deprecated: use "matrix" instead of "M".', DeprecationWarning, stacklevel=2)
-            matrix = M
-
+    def __init__(self, matrix=None, num_modes=None):
         if matrix is None:
             raise ValueError('You need to supply a matrix.')
 
@@ -108,9 +103,3 @@ class SVD(object):
         '''The matrix for which the SVD was calculated.
         '''
         return self._matrix
-
-    @property
-    def M(self):  # noqa: N802
-        import warnings
-        warnings.warn('Deprecated: use "matrix" instead of "M".', DeprecationWarning, stacklevel=2)
-        return self.matrix

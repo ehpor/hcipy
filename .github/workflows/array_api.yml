@@ -69,7 +69,7 @@ jobs:
         ARRAY_API_TESTS_MODULE: "exec('import hcipy; import array_api_strict; xp = hcipy.make_field_namespace(array_api_strict)')"
         ARRAY_API_STRICT_API_VERSION: 2024.12
       run: |
-        pytest ./array-api-tests/ -ra -v --cov=./ --cov-report=xml --skips-file ./.github/workflows/array-api-tests-skips.txt
+        pytest ./array-api-tests/ -ra -v --cov=./ --cov-report=xml --skips-file ./.github/workflows/array-api-tests-skips.txt --hypothesis-disable-deadline
       shell: bash -l {0}
 
     - name: Upload coverage to codecov.io

@@ -1,7 +1,7 @@
 The team
 ========
 
-HCIPy was originally developed by a small team of astronomers at Leiden University, but has since received external constributions from scientists and software developers around the world.
+HCIPy was originally developed by a small team of astronomers at Leiden University, but has since received external contributions from scientists and software developers around the world.
 
 Direct contributors to code
 ---------------------------

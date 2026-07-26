@@ -81,13 +81,19 @@ def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
         Does the grid has to have the center as one of its points. If this is
         False, this does not mean that the grid will not have the center.
     xp : module, optional
-        The array namespace to use. If not provided, will be inferred from extent/center if they are arrays,
-        otherwise defaults to numpy.
+        The array namespace to use. If you're using old-style Fields, this must be
+        Numpy. If you're using new-style Fields and don't provide this, it will
+        be attempted to be inferred from extent/center.
 
     Returns
     -------
     Grid
         A :class:`Grid` with :class:`RegularCoords`.
+
+    Raises
+    ------
+    ValueError
+        If xp cannot be inferred and using new-style Fields.
     '''
     num_dims = _find_common_size(dims, extent, center)
     dims = _normalize_to_tuple(dims, num_dims, int)
@@ -132,13 +138,19 @@ def make_pupil_grid(dims, diameter=1, xp=None):
     diameter : scalar or array_like
         The diameter of the grid in each dimension.
     xp : module, optional
-        The array namespace to use. If not provided, will be inferred from diameter if it's an array,
-        otherwise defaults to numpy.
+        The array namespace to use. If you're using old-style Fields, this must be
+        Numpy. If you're using new-style Fields and don't provide this, it will
+        be attempted to be inferred from diameter.
 
     Returns
     -------
     Grid
         A :class:`CartesianGrid` with :class:`RegularCoords`.
+
+    Raises
+    ------
+    ValueError
+        If xp cannot be inferred and using new-style Fields.
     '''
     if xp is None:
         xp = infer_xp(diameter)
@@ -242,8 +254,9 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
     reference_wavelength : scalar
         The reference wavelength used for calculating the spatial resolution at the focal plane.
     xp : module, optional
-        The array namespace to use. If not provided, will be inferred from input arrays if they are xp arrays,
-        otherwise defaults to numpy.
+        The array namespace to use. If you're using old-style Fields, this must be
+        Numpy. If you're using new-style Fields and don't provide this, it will
+        be attempted to be inferred from input arrays.
 
     Returns
     -------
@@ -254,6 +267,8 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
     ------
     ValueError
         If both no spatial resolution and no complete set of (focal length, reference wavelength and pupil diameter) was supplied.
+    ValueError
+        If xp cannot be inferred and using new-style Fields.
     '''
     if isinstance(q, Grid):
         raise ValueError('The function signature was changed as of HCIPy 0.3.0. Please use the new signature (prefered), or use make_focal_grid_from_pupil_grid() if you want to retain old behaviour.')
@@ -316,14 +331,20 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
     center : array_like
         The center of the grid in cartesian coordinates.
     xp : module, optional
-        The array namespace to use. If not provided, will be inferred from inputs if they are arrays,
-        otherwise defaults to numpy.
+        The array namespace to use. If you're using old-style Fields, this must be
+        Numpy. If you're using new-style Fields and don't provide this, it will
+        be attempted to be inferred from inputs.
 
     Returns
     -------
     Grid
         A :class:`CartesianGrid` with `UnstructuredCoords`, indicating the
         center of the hexagons.
+
+    Raises
+    ------
+    ValueError
+        If xp cannot be inferred and using new-style Fields.
     '''
     # Determine xp from inputs if not provided
     if xp is None:
@@ -388,13 +409,19 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None, xp=None):
         The maximum value in each dimension.
         The default is 1.
     xp : module, optional
-        The array namespace to use. If not provided, will be inferred from inputs if they are arrays,
-        otherwise defaults to numpy.
+        The array namespace to use. If you're using old-style Fields, this must be
+        Numpy. If you're using new-style Fields and don't provide this, it will
+        be attempted to be inferred from inputs.
 
     Returns
     -------
     Grid
         A :class:`CartesianGrid` with `SeparatedCoords`.
+
+    Raises
+    ------
+    ValueError
+        If xp cannot be inferred and using new-style Fields.
     '''
     if minimum is None:
         minimum = -1

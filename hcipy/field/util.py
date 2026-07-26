@@ -74,9 +74,9 @@ def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
         The number of points in each dimension. If this is a scalar, it will
         be multiplexed over all dimensions.
     extent : scalar or array_like
-        The total extent of the grid in each dimension. Can be an xp array for differentiability.
+        The total extent of the grid in each dimension.
     center : scalar or array_like
-        The center point. The grid will by symmetric around this point. Can be an xp array for differentiability.
+        The center point. The grid will by symmetric around this point.
     has_center : boolean
         Does the grid has to have the center as one of its points. If this is
         False, this does not mean that the grid will not have the center.
@@ -96,7 +96,7 @@ def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
     if xp is None:
         xp = infer_xp(extent, center)
 
-    # Convert to xp arrays (preserves differentiability if inputs are xp arrays)
+    # Convert to xp arrays.
     # Ensure at least 1D arrays for proper broadcasting
     dtype = default_dtype(xp, 'real floating')
     extent = xp.asarray(extent, dtype=dtype)
@@ -110,7 +110,6 @@ def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
 
     dims_arr = xp.asarray(dims, dtype=dtype)
 
-    # Array math for differentiability
     delta = extent / dims_arr
     zero = -extent / 2 + center + delta / 2
 
@@ -131,7 +130,7 @@ def make_pupil_grid(dims, diameter=1, xp=None):
         The number of pixels per dimension. If this is an integer, this number
         of pixels is used for all dimensions.
     diameter : scalar or array_like
-        The diameter of the grid in each dimension. Can be an xp array for differentiability.
+        The diameter of the grid in each dimension.
     xp : module, optional
         The array namespace to use. If not provided, will be inferred from diameter if it's an array,
         otherwise defaults to numpy.
@@ -229,17 +228,17 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
     Parameters
     ----------
     q : scalar or array_like
-        The number of pixels per resolution element (= lambda f / D). Can be an xp array for differentiability.
+        The number of pixels per resolution element (= lambda f / D).
     num_airy : scalar or array_like
-        The spatial extent of the grid in radius in resolution elements (= lambda f / D). Can be an xp array for differentiability.
+        The spatial extent of the grid in radius in resolution elements (= lambda f / D).
     spatial_resolution : scalar or array_like
-        The physical size of a resolution element (= lambda f / D). Can be an xp array for differentiability.
+        The physical size of a resolution element (= lambda f / D).
     pupil_diameter : scalar or array_like
-        The diameter of the pupil. Can be an xp array for differentiability.
+        The diameter of the pupil.
     focal_length : scalar or array_like
-        The focal length used for calculating the spatial resolution at the focal plane. Can be an xp array for differentiability.
+        The focal length used for calculating the spatial resolution at the focal plane.
     f_number : scalar or array_like
-        The F number, also known as focal ratio, at the focal plane. Can be an xp array for differentiability.
+        The F number, also known as focal ratio, at the focal plane.
     reference_wavelength : scalar
         The reference wavelength used for calculating the spatial resolution at the focal plane.
     xp : module, optional
@@ -263,7 +262,7 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
     if xp is None:
         xp = infer_xp(q, num_airy, spatial_resolution, pupil_diameter, focal_length, f_number)
 
-    # Convert all optical parameters to xp arrays (preserves differentiability)
+    # Convert all optical parameters to xp arrays.
     if focal_length is not None:
         focal_length = xp.asarray(focal_length)
     if spatial_resolution is not None:
@@ -309,13 +308,13 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
     Parameters
     ----------
     circum_diameter : scalar or array_like
-        The circum diameter of the hexagons in the grid. Can be an xp array for differentiability.
+        The circum diameter of the hexagons in the grid.
     n_rings : integer
         The number of rings in the grid.
     pointy_top : boolean
         If the hexagons contained in the grid.
     center : array_like
-        The center of the grid in cartesian coordinates. Can be an xp array for differentiability.
+        The center of the grid in cartesian coordinates.
     xp : module, optional
         The array namespace to use. If not provided, will be inferred from inputs if they are arrays,
         otherwise defaults to numpy.
@@ -383,10 +382,10 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None, xp=None):
     dims : tuple of ints
         The number of points in each dimension.
     minimum : scalar or array_like
-        The minimum value in each dimension. Can be an xp array for differentiability.
+        The minimum value in each dimension.
         The default is -1.
     maximum : scalar or array_like
-        The maximum value in each dimension. Can be an xp array for differentiability.
+        The maximum value in each dimension.
         The default is 1.
     xp : module, optional
         The array namespace to use. If not provided, will be inferred from inputs if they are arrays,
@@ -407,7 +406,7 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None, xp=None):
     if xp is None:
         xp = infer_xp(minimum, maximum)
 
-    # Convert to xp arrays (preserves differentiability)
+    # Convert to xp arrays.
     dtype = default_dtype(xp, 'real floating')
     minimum = xp.asarray(minimum, dtype=dtype)
     maximum = xp.asarray(maximum, dtype=dtype)

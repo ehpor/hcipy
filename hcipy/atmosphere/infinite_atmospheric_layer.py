@@ -229,23 +229,30 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
             A = self.A_vertical
             B = self.B_vertical
 
-        stencil_data = screen[stencil]
-        random_data = self.rng.normal(0, 1, size=B.shape[1])
-        new_slice = A.dot(stencil_data) + B.dot(random_data) * np.sqrt(self._Cn_squared)
+        # Autoregressive computation of the new slice.
+        stencil_data = screen_1d[stencil_idx]
+        random_data = self.rng.normal(0, math.sqrt(self._Cn_squared), size=B.shape[1])
+        new_slice = A.dot(stencil_data) + B.dot(random_data)
 
-        screen = screen.shaped
-
-        if horizontal:
-            screen = np.hstack((new_slice[:, np.newaxis], screen[:, :-1]))
+        # Stitch the new slice onto the achromatic phase
+        screen_2d = self._achromatic_screen.shaped
+        out = np.empty_like(screen_2d)
+        if where == 'top':
+            out[:-1, :] = screen_2d[1:, :]
+            out[-1, :] = new_slice[::-1]
+        elif where == 'bottom':
+            out[0, :] = new_slice
+            out[1:, :] = screen_2d[:-1, :]
+        elif where == 'left':
+            out[:, 0] = new_slice
+            out[:, 1:] = screen_2d[:, :-1]
+        elif where == 'right':
+            out[:, :-1] = screen_2d[:, 1:]
+            out[:, -1] = new_slice[::-1]
         else:
-            screen = np.vstack((new_slice[np.newaxis, :], screen[:-1, :]))
+            raise ValueError('Invalid value for `where`')
 
-        screen = Field(screen, self.input_grid)
-
-        if flipped:
-            self._achromatic_screen = screen[::-1, ::-1].ravel()
-        else:
-            self._achromatic_screen = screen.ravel()
+        self._achromatic_screen = out.ravel()
 
     def phase_for(self, wavelength):
         '''Compute the phase at a certain wavelength.

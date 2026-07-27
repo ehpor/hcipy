@@ -10,6 +10,7 @@ from scipy.ndimage import affine_transform
 
 import warnings
 import copy
+import math
 
 class InfiniteAtmosphericLayer(AtmosphericLayer):
     '''An atmospheric layer that can be infinitely extended in any direction.
@@ -123,6 +124,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
         self.stencil_bottom = self.stencil_bottom.ravel()
         self.num_stencils_vertical = np.sum(self.stencil_bottom)
+        self.stencil_bottom_idx = np.where(self.stencil_bottom)[0]
 
         # Horizontal
         zero = self.input_grid.zero - self.input_grid.delta * xp.asarray([1, 0])
@@ -136,6 +138,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
         self.stencil_left = self.stencil_left.ravel()
         self.num_stencils_horizontal = np.sum(self.stencil_left)
+        self.stencil_left_idx = np.where(self.stencil_left)[0]
 
     def _make_covariance_matrices(self):
         phase_covariance = phase_covariance_von_karman(fried_parameter_from_Cn_squared(1, 1), self.L0)
@@ -211,21 +214,23 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
         # This avoids reusing the same randomness every call to reset().
         self.rng = layer.rng
 
-    def _extrude(self, where=None):
-        flipped = (where == 'top') or (where == 'right')
-        horizontal = (where == 'left') or (where == 'right')
+    def _extrude(self, where):
+        horizontal = where in ('left', 'right')
+        with_flip = where in ('top', 'right')
 
-        if where == 'top' or where == 'right':
-            screen = self._achromatic_screen[::-1]
+        # the A/B matrices are unidirectional (bottom/left); a 1D view
+        # reversal puts the stencil on the opposite edge for top/right
+        if with_flip:
+            screen_1d = self._achromatic_screen[::-1]
         else:
-            screen = self._achromatic_screen
+            screen_1d = self._achromatic_screen
 
         if horizontal:
-            stencil = self.stencil_left
+            stencil_idx = self.stencil_left_idx
             A = self.A_horizontal
             B = self.B_horizontal
         else:
-            stencil = self.stencil_bottom
+            stencil_idx = self.stencil_bottom_idx
             A = self.A_vertical
             B = self.B_vertical
 

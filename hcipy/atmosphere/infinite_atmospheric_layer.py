@@ -3,12 +3,11 @@ from __future__ import division
 from .atmospheric_model import AtmosphericLayer, phase_covariance_von_karman, fried_parameter_from_Cn_squared
 from ..field import Field, RegularCoords, UnstructuredCoords, CartesianGrid
 from .finite_atmospheric_layer import FiniteAtmosphericLayer
+from .._math.subpixel_shift import subpixel_shift
 
 import numpy as np
 from scipy import linalg
-from scipy.ndimage import affine_transform
 
-import warnings
 import copy
 import math
 
@@ -358,15 +357,9 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
             # Use fifth-order Bezier interpolation to interpolate the achromatic phase screen to the correct position.
             # This is to avoid sudden shifts by discrete pixels.
             ps = self._achromatic_screen.shaped
-
-            with warnings.catch_warnings():
-                # Suppress warnings about the changed behaviour in affine_transform for 1D arrays.
-                # We know about this and are expecting the behaviour as is.
-                warnings.filterwarnings('ignore', message='The behaviour of affine_transform')
-                warnings.filterwarnings('ignore', message='The behavior of affine_transform')
-
-                screen = affine_transform(ps, np.array([1, 1]), np.asarray(sub_delta / self.input_grid.delta)[::-1], mode='nearest', order=5)
-                self._shifted_achromatic_screen = Field(screen.ravel(), self._achromatic_screen.grid)
+            shift_px = sub_delta / self.input_grid.delta    # [x_px, y_px]
+            screen = subpixel_shift(ps, shift_px[1], shift_px[0])
+            self._shifted_achromatic_screen = Field(screen.ravel(), self._achromatic_screen.grid)
         else:
             self._shifted_achromatic_screen = self._achromatic_screen
 

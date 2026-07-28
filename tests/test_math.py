@@ -368,12 +368,12 @@ def test_separable_convolve(xp, H, W, radius):
     kx = _random_kernel(rng, radius)
     ky = _random_kernel(rng, radius)
 
-    ref = _naive_separable_convolve(img, kx, ky)
+    ref = _naive_separable_convolve(np.asarray(img), np.asarray(kx), np.asarray(ky))
 
     result = separable_convolve(img, kx, ky)
     result_np = np.asarray(result)
 
-    tol = 1e-5 if result.dtype == np.float32 else 1e-12
+    tol = 1e-5 if result_np.dtype == np.float32 else 1e-12
     assert np.allclose(result_np, ref, atol=tol), f"max diff: {np.abs(result_np - ref).max()}"
 
 
@@ -398,7 +398,7 @@ def test_subpixel_shift(xp, row_shift, col_shift):
     expected = separable_convolve(img, xp.asarray(wx), xp.asarray(wy))
     expected_np = np.asarray(expected)
 
-    tol = 1e-5 if result.dtype == np.float32 else 1e-12
+    tol = 1e-5 if result_np.dtype == np.float32 else 1e-12
     assert np.allclose(result_np, expected_np, atol=tol), \
         f"shift=({row_shift},{col_shift}) max diff: {np.abs(result_np - expected_np).max()}"
 

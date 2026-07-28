@@ -189,10 +189,8 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
                     focal = Wavefront(focal.electric_field, input_stokes_vector=(1, 0, 0, 0))
 
                 focal.electric_field = field_dot(jones_matrix, focal.electric_field)
-                if i == 0:
-                    lyot = prop.backward(focal)
-                else:
-                    lyot.electric_field += prop.backward(focal).electric_field
+
+                lyot.electric_field += prop.backward(focal).electric_field
 
         lyot.wavelength = wavelength
         wavefront.wavelength = wavelength

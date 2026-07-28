@@ -1,4 +1,3 @@
-from copy import copy
 import numpy as np
 from matplotlib.transforms import Transform
 
@@ -343,8 +342,7 @@ def imsave_field(filename, field, grid=None, vmin=None, vmax=None, norm=None, ma
         # For Matplotlib <3.5.
         cmap = mpl.cm.get_cmap(cmap)
 
-    cmap = copy(cmap)
-    cmap.set_bad(mask_color)
+    cmap = cmap.with_extremes(bad=mask_color)
 
     plt.imsave(filename, f.shaped, cmap=cmap, vmin=vmin, vmax=vmax)
 

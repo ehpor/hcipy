@@ -2,10 +2,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import numexpr as ne
 
-try:
-    from importlib.resources import files
-except ImportError:
-    from importlib_resources import files
+from importlib.resources import files
 
 from .optical_element import OpticalElement
 from ..field import make_uniform_grid, evaluate_supersampled

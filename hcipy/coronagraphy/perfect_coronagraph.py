@@ -36,6 +36,8 @@ class PerfectCoronagraph(OpticalElement):
         radius [Guyon2006]_. If it is None, all modes are completely suppressed.
     '''
     def __init__(self, aperture, order=2, coeffs=None):
+        assert order % 2 == 0, "The coronagraph order has to be even."
+
         self.pupil_grid = aperture.grid
         modes = []
 

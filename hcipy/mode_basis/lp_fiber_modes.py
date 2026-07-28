@@ -146,13 +146,13 @@ def make_lp_modes(grid, V_number, core_radius, return_betas=False):
         if solutions is not None:
             for ui, wi in zip(solutions[0], solutions[1]):
 
-                radial_prodile = lp_radial(m, ui, wi, R)
+                radial_profile = lp_radial(m, ui, wi, R)
                 beta = np.sqrt((V_number**2 + wi**2 - ui**2) / (2 * core_radius**2))
 
                 ms = [m, -m] if m > 0 else [m]
                 for mi in ms:
                     azimutal_profile = lp_azimuthal(mi, Theta)
-                    mode_profile = radial_prodile * azimutal_profile
+                    mode_profile = radial_profile * azimutal_profile
 
                     # Normalize the mode numerically as there is no analytical normalization
                     norm = np.sqrt(np.sum(mode_profile * mode_profile.conj() * grid.weights))

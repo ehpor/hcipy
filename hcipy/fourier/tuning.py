@@ -52,13 +52,15 @@ def compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs, t_max=0.01)
 
         field = input_grid.ones()
 
-        if fourier_class.is_supported(input_grid, output_grid):
-            complexity = fourier_class.compute_complexity(input_grid, output_grid).num_operations
-            if fourier_class == FastFourierTransform:
-                ft = FastFourierTransform(input_grid, q, fov)
-            else:
-                ft = fourier_class(input_grid, output_grid)
-            execution_time = _time_it(lambda: ft.forward(field), t_max=t_max)
+        if not fourier_class.is_supported(input_grid, output_grid):
+            continue
+
+        complexity = fourier_class.compute_complexity(input_grid, output_grid).num_operations
+        if fourier_class == FastFourierTransform:
+            ft = FastFourierTransform(input_grid, q, fov)
+        else:
+            ft = fourier_class(input_grid, output_grid)
+        execution_time = _time_it(lambda: ft.forward(field), t_max=t_max)
 
         # Convert complexity to GFLOP.
         complexities.append(complexity / 1e9)
@@ -216,7 +218,7 @@ def _cli():
     tuned_parameters = tune_fourier_transforms(None, args.plot_out, args.show_plot)
 
     if args.coeffs_out:
-        with open('output.yaml', 'w') as f:
+        with open(args.coeffs_out, 'w') as f:
             yaml.dump(tuned_parameters, f)
 
     print('Fit results:')

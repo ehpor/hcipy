@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 import copy
 import warnings
 import xxhash
+from typing import Callable
 
 class Grid(object):
     '''A set of points on some coordinate system.
@@ -20,9 +23,9 @@ class Grid(object):
         The coordinate values for each dimension.
     '''
 
-    _coordinate_system = 'none'
-    _coordinate_system_transformations = {}
-    _coordinate_systems = {}
+    _coordinate_system: str = 'none'
+    _coordinate_system_transformations: dict[str, dict[str, Callable[[Grid], Grid]]] = {}
+    _coordinate_systems: dict[str, type[Grid]] = {}
 
     def __init__(self, coords, weights=None):
         self.coords = coords

@@ -4,6 +4,7 @@ import numpy as np
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.backends import to_numpy, array_namespace
+from hcipy._math.subpixel_shift import separable_convolve, subpixel_shift, _quintic_weights
 import math
 
 
@@ -303,3 +304,110 @@ def test_to_numpy(xp):
 def test_array_namespace(xp):
     arr = xp.zeros(10)
     _ = array_namespace(arr)
+
+def _naive_separable_convolve(img, kernel_row, kernel_col):
+    """Per-pixel nearest-boundary reference implementation."""
+    rx = kernel_row.shape[0] // 2
+    ry = kernel_col.shape[0] // 2
+    H, W = img.shape
+
+    tmp = np.empty_like(img)
+    for y in range(H):
+        for x in range(W):
+            acc = 0.0
+
+            for k in range(-rx, rx + 1):
+                xx = x + k
+                if xx < 0:
+                    xx = 0
+                elif xx >= W:
+                    xx = W - 1
+
+                acc += img[y, xx] * kernel_row[k + rx]
+
+            tmp[y, x] = acc
+
+    out = np.empty_like(tmp)
+    for y in range(H):
+        for x in range(W):
+            acc = 0.0
+
+            for k in range(-ry, ry + 1):
+                yy = y + k
+                if yy < 0:
+                    yy = 0
+                elif yy >= H:
+                    yy = H - 1
+
+                acc += tmp[yy, x] * kernel_col[k + ry]
+
+            out[y, x] = acc
+
+    return out
+
+
+def _random_kernel(rng, radius):
+    n = 2 * radius + 1
+    k = rng.normal(size=n)
+
+    xp = array_namespace(k)
+    return k / xp.sum(k)
+
+
+@pytest.mark.parametrize('H,W,radius', [
+    (32, 32, 3),
+    (64, 64, 3),
+    (128, 32, 5),
+    (31, 31, 2),
+    (33, 33, 2),
+])
+def test_separable_convolve(xp, H, W, radius):
+    rng = make_random_generator(xp)
+
+    img = rng.normal(size=(H, W))
+    kx = _random_kernel(rng, radius)
+    ky = _random_kernel(rng, radius)
+
+    ref = _naive_separable_convolve(img, kx, ky)
+
+    result = separable_convolve(img, kx, ky)
+    result_np = np.asarray(result)
+
+    tol = 1e-5 if result.dtype == np.float32 else 1e-12
+    assert np.allclose(result_np, ref, atol=tol), f"max diff: {np.abs(result_np - ref).max()}"
+
+
+@pytest.mark.parametrize('row_shift,col_shift', [
+    (0.3, 0.7),
+    (-0.4, 0.1),
+    (0.0, -0.3),
+    (-0.5, -0.5),
+    (0.5, 0.5),
+])
+def test_subpixel_shift(xp, row_shift, col_shift):
+    rng = make_random_generator(xp)
+
+    img = rng.normal(size=(64, 64))
+
+    result = subpixel_shift(img, row_shift, col_shift)
+    result_np = np.asarray(result)
+
+    wy = _quintic_weights(row_shift)
+    wx = _quintic_weights(col_shift)
+
+    expected = separable_convolve(img, xp.asarray(wx), xp.asarray(wy))
+    expected_np = np.asarray(expected)
+
+    tol = 1e-5 if result.dtype == np.float32 else 1e-12
+    assert np.allclose(result_np, expected_np, atol=tol), \
+        f"shift=({row_shift},{col_shift}) max diff: {np.abs(result_np - expected_np).max()}"
+
+
+def test_zero_kernel(xp):
+    rng = np.random.default_rng(0)
+    img = rng.normal(size=(32, 32))
+    k = xp.asarray([0.0, 0.0, 1.0, 0.0, 0.0])
+
+    result = separable_convolve(img, k, k)
+
+    assert np.allclose(np.asarray(result), np.asarray(img))

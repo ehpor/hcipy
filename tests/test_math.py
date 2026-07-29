@@ -424,15 +424,15 @@ def test_row_col_pass_compiled():
     out_py = np.zeros_like(img)
     out_jit = np.ones_like(img)
 
-    _row_pass.py_func(img, kernel, r, out_py, 64)
-    _row_pass(img, kernel, r, out_jit, 64)
+    _row_pass.py_func(img, kernel, r, out_py)
+    _row_pass(img, kernel, r, out_jit)
 
     assert np.allclose(out_py, out_jit)
 
     out_py = np.zeros_like(img)
     out_jit = np.ones_like(img)
 
-    _col_pass.py_func(img, kernel, r, out_py, 64)
-    _col_pass(img, kernel, r, out_jit, 64)
+    _col_pass.py_func(img, kernel, r, out_py)
+    _col_pass(img, kernel, r, out_jit)
 
     assert np.allclose(out_py, out_jit)

@@ -35,7 +35,7 @@ def _quintic_weights(shift):
 
 
 @njit(parallel=True, fastmath=True, cache=True)
-def _row_pass(img, kernel, radius, out, tile):
+def _row_pass(img, kernel, radius, out):
     """Numba-parallel horizontal (row) pass of a separable convolution.
 
     For each output pixel ``(y, x)``:
@@ -58,37 +58,25 @@ def _row_pass(img, kernel, radius, out, tile):
         Half-width of the kernel (``len(kernel) // 2``).
     out : ndarray of shape (H, W)
         Output buffer, overwritten in place.
-    tile : int
-        Side length of the square cache tile.
     """
     H, W = img.shape
-    n_tiles_y = (H + tile - 1) // tile
+    Wm1 = W - 1
 
-    for ty in prange(n_tiles_y):
-        y0 = ty * tile
-        y1 = min(y0 + tile, H)
+    for y in prange(H):
+        row = img[y]
+        for x in range(W):
+            acc = 0.0
 
-        for x0 in range(0, W, tile):
-            x1 = min(x0 + tile, W)
+            for k in range(-radius, radius + 1):
+                xx = max(0, min(Wm1, x + k))
 
-            for y in range(y0, y1):
-                for x in range(x0, x1):
-                    acc = 0.0
+                acc += row[xx] * kernel[k + radius]
 
-                    for k in range(-radius, radius + 1):
-                        xx = x + k
-                        if xx < 0:
-                            xx = 0
-                        elif xx >= W:
-                            xx = W - 1
-
-                        acc += img[y, xx] * kernel[k + radius]
-
-                    out[y, x] = acc
+            out[y, x] = acc
 
 
 @njit(parallel=True, fastmath=True, cache=True)
-def _col_pass(img, kernel, radius, out, tile):
+def _col_pass(img, kernel, radius, out):
     """Numba-parallel vertical (column) pass of a separable convolution.
 
     For each output pixel ``(y, x)``:
@@ -111,37 +99,24 @@ def _col_pass(img, kernel, radius, out, tile):
         Half-width of the kernel (``len(kernel) // 2``).
     out : ndarray of shape (H, W)
         Output buffer, overwritten in place.
-    tile : int
-        Side length of the square cache tile.
     """
     H, W = img.shape
-    n_tiles_y = (H + tile - 1) // tile
+    Hm1 = H - 1
 
-    for ty in prange(n_tiles_y):
-        y0 = ty * tile
-        y1 = min(y0 + tile, H)
+    for y in prange(H):
+        for x in range(W):
+            acc = 0.0
 
-        for x0 in range(0, W, tile):
-            x1 = min(x0 + tile, W)
+            for k in range(-radius, radius + 1):
+                yy = max(0, min(Hm1, y + k))
 
-            for y in range(y0, y1):
-                for x in range(x0, x1):
-                    acc = 0.0
+                acc += img[yy, x] * kernel[k + radius]
 
-                    for k in range(-radius, radius + 1):
-                        yy = y + k
-                        if yy < 0:
-                            yy = 0
-                        elif yy >= H:
-                            yy = H - 1
-
-                        acc += img[yy, x] * kernel[k + radius]
-
-                    out[y, x] = acc
+            out[y, x] = acc
 
 
-def separable_convolve_numpy(img, kernel_row, kernel_col, tile=64):
-    """Numba-accelerated cache-tiled separable 2-D convolution.
+def separable_convolve_numpy(img, kernel_row, kernel_col):
+    """Numba-accelerated separable 2-D convolution.
 
     Only accepts :class:`numpy.ndarray` inputs.  For other array backends
     (CuPy, JAX, PyTorch, …) use :func:`separable_convolve_fallback`.
@@ -154,8 +129,6 @@ def separable_convolve_numpy(img, kernel_row, kernel_col, tile=64):
         1-D kernel applied along columns (axis 1).  Must have odd length.
     kernel_col : array-like of shape (K,)
         1-D kernel applied along rows (axis 0).  Must have odd length.
-    tile : int, optional
-        Side length of the square cache tile (default 64).
 
     Returns
     -------
@@ -183,8 +156,8 @@ def separable_convolve_numpy(img, kernel_row, kernel_col, tile=64):
     tmp = np.empty_like(img)
     out = np.empty_like(img)
 
-    _row_pass(img, kernel_row, radius_x, tmp, tile)
-    _col_pass(tmp, kernel_col, radius_y, out, tile)
+    _row_pass(img, kernel_row, radius_x, tmp)
+    _col_pass(tmp, kernel_col, radius_y, out)
 
     return out
 
@@ -289,7 +262,7 @@ def separable_convolve_fallback(img, kernel_row, kernel_col):
     return out
 
 
-def separable_convolve(img, kernel_row, kernel_col, tile=64):
+def separable_convolve(img, kernel_row, kernel_col):
     """Separable 2-D convolution with automatic backend dispatch.
 
     Dispatches to :func:`separable_convolve_numpy` for ``numpy.ndarray``
@@ -304,8 +277,6 @@ def separable_convolve(img, kernel_row, kernel_col, tile=64):
         1-D kernel applied along columns (axis 1).  Must have odd length.
     kernel_col : array-like of shape (K,)
         1-D kernel applied along rows (axis 0).  Must have odd length.
-    tile : int, optional
-        Tile size for the numba backend (ignored by the fallback). Default 64.
 
     Returns
     -------
@@ -313,12 +284,12 @@ def separable_convolve(img, kernel_row, kernel_col, tile=64):
         Convolved image, produced by the same backend as *img*.
     """
     if is_numpy_array(img):
-        return separable_convolve_numpy(img, kernel_row, kernel_col, tile)
+        return separable_convolve_numpy(img, kernel_row, kernel_col)
     else:
         return separable_convolve_fallback(img, kernel_row, kernel_col)
 
 
-def subpixel_shift(img, row_shift, col_shift, tile=64):
+def subpixel_shift(img, row_shift, col_shift):
     """Sub-pixel shift via separable 5th-order B-spline convolution.
 
     The image is shifted by the specified fractional amounts using quintic
@@ -338,8 +309,6 @@ def subpixel_shift(img, row_shift, col_shift, tile=64):
         Fractional shift along axis 0 (rows).  Must be in ``[-0.5, 0.5]``.
     col_shift : float
         Fractional shift along axis 1 (columns).  Must be in ``[-0.5, 0.5]``.
-    tile : int, optional
-        Tile size for the numba backend.  Default 64.
 
     Returns
     -------
@@ -349,4 +318,4 @@ def subpixel_shift(img, row_shift, col_shift, tile=64):
     wy = _quintic_weights(row_shift)
     wx = _quintic_weights(col_shift)
 
-    return separable_convolve(img, wx, wy, tile)
+    return separable_convolve(img, wx, wy)

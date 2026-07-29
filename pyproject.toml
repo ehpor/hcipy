@@ -44,6 +44,7 @@ dev = [
     "dill",
     "flake8",
     "mypy",
+    "array_api_strict",
 ]
 doc = [
     "numpydoc",

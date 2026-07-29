@@ -381,6 +381,7 @@ def test_separable_convolve(xp, H, W, radius):
     assert np.allclose(result_np, ref, atol=tol), f"max diff: {np.abs(result_np - ref).max()}"
 
 
+@pytest.mark.parametrize('order', [1, 2, 3, 4, 5])
 @pytest.mark.parametrize('row_shift,col_shift', [
     (0.3, 0.3),
     (-0.4, 0.1),
@@ -388,18 +389,18 @@ def test_separable_convolve(xp, H, W, radius):
     (-0.5, -0.5),
     (0.5, 0.5),
 ])
-def test_subpixel_shift(xp, row_shift, col_shift):
+def test_subpixel_shift(xp, order, row_shift, col_shift):
     rng = make_random_generator(xp)
 
     img = rng.normal(size=(64, 64))
 
-    result = np.asarray(subpixel_shift(img, row_shift, col_shift))
+    result = np.asarray(subpixel_shift(img, row_shift, col_shift, order=order))
 
     expected = affine_transform(
         np.asarray(img),
         np.eye(2),
         offset=np.array([row_shift, col_shift]),
-        order=5,
+        order=order,
         prefilter=False,
         mode='nearest',
     )

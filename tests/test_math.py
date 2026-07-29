@@ -4,7 +4,7 @@ import numpy as np
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.backends import to_numpy, array_namespace
-from hcipy._math.subpixel_shift import separable_convolve, subpixel_shift, _quintic_weights
+from hcipy._math.subpixel_shift import separable_convolve, subpixel_shift, _quintic_weights, _row_pass, _col_pass
 import math
 
 
@@ -411,3 +411,27 @@ def test_zero_kernel(xp):
     result = separable_convolve(img, k, k)
 
     assert np.allclose(np.asarray(result), np.asarray(img))
+
+
+def test_row_col_pass_compiled():
+    rng = np.random.default_rng(0)
+    img = rng.standard_normal((64, 64))
+    kernel = rng.standard_normal(5)
+    kernel /= kernel.sum()
+    r = len(kernel) // 2
+
+    out_py = np.zeros_like(img)
+    out_jit = np.ones_like(img)
+
+    _row_pass.py_func(img, kernel, r, out_py, 64)
+    _row_pass(img, kernel, r, out_jit, 64)
+
+    assert np.allclose(out_py, out_jit)
+
+    out_py = np.zeros_like(img)
+    out_jit = np.ones_like(img)
+
+    _col_pass.py_func(img, kernel, r, out_py, 64)
+    _col_pass(img, kernel, r, out_jit, 64)
+
+    assert np.allclose(out_py, out_jit)

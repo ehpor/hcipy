@@ -2,6 +2,7 @@ import numpy as np
 import array_api_compat
 from ..config import Configuration
 import sys
+from typing import Any
 
 def infer_xp(*arrays):
     """Infer xp from input arrays.
@@ -126,7 +127,7 @@ def all_close(a, b, *, rtol=1e-5, atol=1e-8):
     close = abs(a - b) <= atol + rtol * abs(b)
     return xp.all(close)
 
-namespace_caches = {}
+namespace_caches: dict[str | None, dict[Any, Any]] = {}
 NUMPY_NAMESPACE = 'numpy'
 
 def array_namespace(*xs, api_version=None):

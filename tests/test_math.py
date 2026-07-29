@@ -401,7 +401,7 @@ def test_subpixel_shift(xp, row_shift, col_shift):
         mode='nearest',
     )
 
-    tol = 1e-5 if img.dtype == np.float32 else 1e-12
+    tol = 1e-5 if result.dtype == np.float32 else 1e-12
     assert np.allclose(result, expected, atol=tol)
 
 def test_zero_kernel(xp):

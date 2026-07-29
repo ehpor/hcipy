@@ -60,11 +60,15 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
         can be unintuitive. The default value of 2 is usually sufficient in
         most instances.
     use_interpolation : boolean
-        whether to use sub-pixel interpolation of the phase screen. Fifth-order Bezier
-        interpolation is used. Without interpolation, for short integration times
-        or fast loop speeds, the phase screen may stay on the same pixel for
-        multiple frames. With interpolation, these discrete pixel transitions
-        are smoothed out. The default is True.
+        whether to use sub-pixel interpolation of the phase screen. Without
+        interpolation, for short integration times or fast loop speeds, the
+        phase screen may stay on the same pixel for multiple frames. With
+        interpolation, these discrete pixel transitions are smoothed out.
+        The default is True.
+    interpolation_order : int
+        B-spline polynomial degree for sub-pixel interpolation (1 = linear,
+        2 = quadratic, ..., 5 = quintic). Only used when ``use_interpolation``
+        is True. Default 5.
     seed : None, int, array of ints, SeedSequence, BitGenerator, Generator
         A seed to initialize the spectral noise. If None, then fresh, unpredictable
         entry will be pulled from the OS. If an int or array of ints, then it will
@@ -77,7 +81,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
     ValueError
         When the input grid is not cartesian, regularly spaced and two-dimensional.
     '''
-    def __init__(self, input_grid, Cn_squared, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=True, seed=None):
+    def __init__(self, input_grid, Cn_squared, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=True, interpolation_order=5, seed=None):
         self._initialized = False
 
         AtmosphericLayer.__init__(self, input_grid, Cn_squared, L0, velocity, height)
@@ -92,6 +96,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
         self.stencil_length = stencil_length
         self.use_interpolation = use_interpolation
+        self.interpolation_order = interpolation_order
         self.rng = np.random.default_rng(seed)
 
         self._make_stencils()
@@ -358,7 +363,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
             # This is to avoid sudden shifts by discrete pixels.
             ps = self._achromatic_screen.shaped
             shift_px = sub_delta / self.input_grid.delta    # [x_px, y_px]
-            screen = subpixel_shift(ps, shift_px[1], shift_px[0])
+            screen = subpixel_shift(ps, shift_px[1], shift_px[0], order=self.interpolation_order)
             self._shifted_achromatic_screen = Field(screen.ravel(), self._achromatic_screen.grid)
         else:
             self._shifted_achromatic_screen = self._achromatic_screen

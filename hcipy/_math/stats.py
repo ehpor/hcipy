@@ -1,5 +1,6 @@
-from array_api_compat import is_cupy_namespace, is_jax_namespace, is_numpy_namespace, is_torch_namespace
+from array_api_compat import is_cupy_namespace, is_jax_namespace, is_numpy_namespace, is_torch_namespace, is_array_api_strict_namespace
 from .backends import array_namespace
+import numpy as np
 
 def median(x, /, *, axis=None, keepdims=False):
     """Compute the median of an array along the given axis.
@@ -31,6 +32,10 @@ def median(x, /, *, axis=None, keepdims=False):
     # Torch needs a specific implementation.
     if is_torch_namespace(xp):
         return _median_torch(x, axis=axis, keepdims=keepdims, xp=xp)
+
+    if is_array_api_strict_namespace(xp):
+        res = np.median(np.asarray(x), axis=axis, keepdims=keepdims)
+        return xp.asarray(res)
 
     raise NotImplementedError("Unsupported backend.")
 
@@ -64,6 +69,10 @@ def nanmedian(x, /, *, axis=None, keepdims=False):
     # Torch needs a specific implementation.
     if is_torch_namespace(xp):
         return _nanmedian_torch(x, axis=axis, keepdims=keepdims, xp=xp)
+
+    if is_array_api_strict_namespace(xp):
+        res = np.nanmedian(np.asarray(x), axis=axis, keepdims=keepdims)
+        return xp.asarray(res)
 
     raise NotImplementedError("Unsupported backend.")
 

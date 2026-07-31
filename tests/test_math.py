@@ -405,7 +405,7 @@ def test_subpixel_shift(xp, row_shift, col_shift):
     assert np.allclose(result, expected, atol=tol)
 
 def test_zero_kernel(xp):
-    rng = np.random.default_rng(0)
+    rng = make_random_generator(xp, seed=0)
     img = rng.normal(size=(32, 32))
     k = xp.asarray([0.0, 0.0, 1.0, 0.0, 0.0])
 

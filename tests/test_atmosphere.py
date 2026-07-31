@@ -62,7 +62,7 @@ def test_atmosphere_total_variance(wavelength, pupil_diameter, fried_parameter, 
     aperture = make_circular_aperture(pupil_diameter)(pupil_grid)
 
     Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
-    layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, velocity, use_interpolation=False)
+    layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, velocity, use_interpolation=True)
 
     num_iterations = 2000
     total_variance = []

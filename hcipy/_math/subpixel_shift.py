@@ -219,11 +219,22 @@ def separable_convolve_fallback(img, kernel_row, kernel_col):
     -------
     out : array of shape (H, W)
         Convolved image, produced by the same backend as *img*.
+
+    Raises
+    ------
+    ValueError
+        When either of the kernels does not have an odd length
     """
     H, W = img.shape[0], img.shape[1]
 
-    rx = len(kernel_row) // 2
-    ry = len(kernel_col) // 2
+    rx = kernel_row.shape[0] // 2
+    ry = kernel_col.shape[0] // 2
+
+    if kernel_row.shape[0] % 2 == 0:
+        raise ValueError("kernel_row must have odd length")
+
+    if kernel_col.shape[0] % 2 == 0:
+        raise ValueError("kernel_col must have odd length")
 
     # ---- Horizontal pass ----
     tmp = img * float(kernel_row[rx])
@@ -314,7 +325,15 @@ def subpixel_shift(img, row_shift, col_shift):
     -------
     out : array of shape (H, W)
         Sub-pixel shifted image, produced by the same backend as *img*.
+
+    Raises
+    ------
+    ValueError
+        When *row_shift* or *col_shift* are not in ``[-0.5, 0.5]``.
     """
+    if not (-0.5 <= row_shift <= 0.5) or not (-0.5 <= col_shift <= 0.5):
+        raise ValueError("row_shift and col_shift must be in [-0.5, 0.5]")
+
     wy = _quintic_weights(row_shift)
     wx = _quintic_weights(col_shift)
 

@@ -1289,7 +1289,7 @@ def test_damped_oscillator_vibration():
 
     # Test white noise driven oscillator with driving PSD of 1e-12 m^2/Hz
     driving_psd = 1e-12  # m^2/Hz
-    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd)
+    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd, seed=0)
 
     # Store initial displacement
     disp0 = vib.displacement
@@ -1325,7 +1325,7 @@ def test_damped_oscillator_vibration_stationary_distribution():
 
     # Test that stationary distribution matches theoretical RMS
     driving_psd = 1e-12  # m^2/Hz
-    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd)
+    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd, seed=0)
 
     # Evolve for 5000 timesteps to reach stationary distribution
     positions = []

@@ -105,7 +105,7 @@ def _dft_matrix_regular_fallback(x0, u0, dx, du, Nx, Nu, xp, dtype):
     Returns
     -------
     Array
-        The DFT matrix of shape ``(Nx, Nu)``.
+        The DFT matrix of shape ``(Nx, Nu)`` and dtype ``dtype``.
     """
     float_dtype = xp.float32 if dtype == xp.complex64 else xp.float64
 
@@ -192,7 +192,10 @@ def _dft_matrix_separated_numpy(x, u, out=None):
     Array
         The DFT matrix of shape ``(Nx, Nu)``.
     """
-    return numexpr.evaluate('exp(1j * x * u)', {'x': x[:, np.newaxis], 'u': u[np.newaxis, :]}, out=out)
+    complex_dtype = np.complex64 if x.dtype == np.float32 else np.complex128
+
+    res = numexpr.evaluate('exp(1j * x * u)', {'x': x[:, np.newaxis], 'u': u[np.newaxis, :]}, out=out)
+    return res.astype(complex_dtype, copy=False)
 
 def _dft_matrix_separated_fallback(x, u):
     """Compute a DFT matrix for arbitrary grids, using any Array API namespace.

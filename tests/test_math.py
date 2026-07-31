@@ -553,10 +553,12 @@ def test_dft_matrix_regular(xp, Nx, Nu, dtype, conjugate, transpose):
 @pytest.mark.parametrize('transpose', [False, True])
 def test_dft_matrix_separated(xp, Nx, Nu, dtype, conjugate, transpose):
     x0, u0, dx, du = -0.3, 1.7, 0.2, -0.05
-    dtype = getattr(xp, dtype)
 
-    x = xp.asarray(np.arange(Nx, dtype=np.float64) * dx + x0, dtype=dtype)
-    u = xp.asarray(np.arange(Nu, dtype=np.float64) * du + u0, dtype=dtype)
+    dtype = getattr(xp, dtype)
+    float_dtype = xp.float32 if dtype == xp.complex64 else xp.float64
+
+    x = xp.arange(Nx, dtype=float_dtype) * dx + x0
+    u = xp.arange(Nu, dtype=float_dtype) * du + u0
 
     ref = _dft_matrix_naive(x0, u0, dx, du, Nx, Nu)
     if conjugate:

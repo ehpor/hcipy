@@ -248,7 +248,8 @@ class DynamicSurfaceAberration(OpticalElement):
 
     @property
     def surface(self):
-        """The surface """
+        """The surface height in meters.
+        """
         return self.modes.linear_combination(self.coefficients)
 
     def _get_phase_multiplier(self, wavelength):

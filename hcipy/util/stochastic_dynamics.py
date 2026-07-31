@@ -47,7 +47,7 @@ class StateSpaceDynamics:
         Observation matrix C.
     """
     def __init__(self, transition_matrix, noise_matrix, observation_matrix=None, initial_state=None, seed=None):
-        eigenvalues = np.linalg.eigvals(self.transition_matrix)
+        eigenvalues = np.linalg.eigvals(transition_matrix)
 
         if np.any(np.real(eigenvalues) > 0):
             raise ValueError(f"The system is unstable.")

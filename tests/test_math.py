@@ -332,11 +332,12 @@ def test_dft_matrix_regular(xp, Nx, Nu, dtype, conjugate, transpose):
 
     atol = 1e-12 if dtype == xp.complex128 else 1e-6
 
+    assert result.dtype == dtype
     assert result_np.shape == ref.shape
     assert np.allclose(result_np, ref, atol=atol)
 
 @pytest.mark.parametrize('Nx, Nu', [(3, 4), (16, 8), (64, 64)])
-@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('dtype', ['complex64', 'complex128'])
 @pytest.mark.parametrize('conjugate', [False, True])
 @pytest.mark.parametrize('transpose', [False, True])
 def test_dft_matrix_separated(xp, Nx, Nu, dtype, conjugate, transpose):
@@ -357,6 +358,7 @@ def test_dft_matrix_separated(xp, Nx, Nu, dtype, conjugate, transpose):
 
     atol = 1e-12 if dtype == xp.complex128 else 1e-6
 
+    assert result.dtype == dtype
     assert result_np.shape == ref.shape
     assert np.allclose(result_np, ref, atol=atol)
 

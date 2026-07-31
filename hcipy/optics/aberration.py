@@ -193,9 +193,9 @@ class DynamicSurfaceAberration(OpticalElement):
         surface height in meters.
     dynamics : StateSpaceDynamics
         The state space dynamics object that provides time-varying coefficients.
-    refractive_index : float or callable, optional
+    refractive_index : float or callable
         Refractive index of the medium. Can be a constant (float) or a callable
-        that takes wavelength and returns refractive index. Default is 1.0.
+        that takes wavelength and returns refractive index.
 
     Attributes
     ----------
@@ -206,7 +206,7 @@ class DynamicSurfaceAberration(OpticalElement):
     refractive_index : float or callable
         The refractive index.
     """
-    def __init__(self, modes, dynamics, refractive_index=1.0):
+    def __init__(self, modes, dynamics, refractive_index):
         if len(modes) != dynamics.num_outputs:
             raise ValueError(f"Number of modes ({len(modes)}) must match number of dynamics outputs ({dynamics.num_outputs})")
 

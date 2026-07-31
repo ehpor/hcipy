@@ -113,8 +113,8 @@ class DampedHarmonicVibration(OpticalElement):
     damping_ratio : scalar
         The damping ratio (dimensionless). Must be positive.
     driving_psd : scalar
-        The power spectral density of the driving white noise in m^2/Hz. This
-        represents the strength of the external disturbance. Must be non-negative.
+        The power spectral density of the driving acceleration noise in m^2 s^-4 per rad/s.
+        This represents the strength of the external disturbance. Must be non-negative.
     refractive_index : float or callable, optional
         Refractive index of the medium. Can be a constant (float) or a callable
         that takes wavelength and returns refractive index. Default is 1.0.

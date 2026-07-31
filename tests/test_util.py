@@ -141,7 +141,11 @@ def test_emccd_noise():
 
     assert abs(np.std(np.mean(noise, axis=0) / emgain - photo_electron_flux) - sigma) / sigma < 1e-2
 
-def test_state_space_dynamics_stationary_distribution():
+@pytest.mark.parametrize('time', [
+    pytest.param(0, id='short term'),
+    pytest.param(10, id='long term'),
+])
+def test_state_space_dynamics_stationary_distribution(time):
     ar_coeffs = np.array([0.5, -0.3])
     noise_variance = 0.01
     dt = 0.01
@@ -150,6 +154,7 @@ def test_state_space_dynamics_stationary_distribution():
     samples = []
     for i in range(1000):
         dynamics = StateSpaceDynamics(A, B, C, seed=i)
+        dynamics.evolve_until(time)
         samples.append(dynamics.state)
 
     samples = np.array(samples)
@@ -183,27 +188,6 @@ def test_state_space_dynamics_backwards_evolution():
 
     with pytest.raises(ValueError):
         dynamics.evolve_until(0.5)
-
-def test_state_space_dynamics_long_term_stationarity():
-    ar_coeffs = np.array([0.5, -0.3])
-    noise_variance = 0.01
-    dt = 0.01
-    A, B, C = ar_to_state_space(ar_coeffs, noise_variance, dt)
-
-    samples = []
-    for i in range(1000):
-        dynamics = StateSpaceDynamics(A, B, C, seed=i)
-        dynamics.evolve_until(10.0)
-        samples.append(dynamics.state)
-
-    samples = np.array(samples)
-    empirical_cov = np.cov(samples.T)
-
-    dynamics = StateSpaceDynamics(A, B, C)
-    theoretical_cov = dynamics.stationary_covariance
-
-    relative_error = np.linalg.norm(empirical_cov - theoretical_cov) / np.linalg.norm(theoretical_cov)
-    assert relative_error < 0.1
 
 def test_ar_to_state_space():
     ar_coeffs = np.array([0.5, -0.3])

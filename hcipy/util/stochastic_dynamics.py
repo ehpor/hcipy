@@ -291,20 +291,29 @@ def make_random_state_space(n_states, bandwidth=1.0, seed=None):
     """
     rng = np.random.default_rng(seed)
 
-    eigenvalues = []
-    while len(eigenvalues) < n_states:
+    blocks = []
+    num_assigned = 0
+
+    while num_assigned < n_states:
         eig_real = -rng.uniform(0.1, 1.0) * bandwidth
         eig_imag = rng.uniform(-bandwidth, bandwidth)
 
-        eigenvalues.append(complex(eig_real, eig_imag))
+        if n_states - num_assigned >= 2:
+            # Real 2x2 block representing the conjugate pair eig_real +- 1j * eig_imag.
+            blocks.append(np.array([[eig_real, eig_imag], [-eig_imag, eig_real]]))
+            num_assigned += 2
+        else:
+            blocks.append(np.array([[eig_real]]))
+            num_assigned += 1
 
-        if len(eigenvalues) < n_states and eig_imag != 0:
-            eigenvalues.append(complex(eig_real, -eig_imag))
+    block_matrix = np.zeros((n_states, n_states))
+    offset = 0
+    for block in blocks:
+        size = block.shape[0]
+        block_matrix[offset:offset + size, offset:offset + size] = block
+        offset += size
 
-    eigenvalues = np.array(eigenvalues[:n_states])
-
-    q, r = np.linalg.qr(rng.standard_normal((n_states, n_states)))
-    transition_matrix = q @ np.diag(eigenvalues) @ q.conj().T
-    transition_matrix = np.real(transition_matrix)
+    q, _ = np.linalg.qr(rng.standard_normal((n_states, n_states)))
+    transition_matrix = q @ block_matrix @ q.T
 
     return transition_matrix

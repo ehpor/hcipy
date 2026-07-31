@@ -109,7 +109,7 @@ class DampedHarmonicVibration(OpticalElement):
         The spatial mode of the vibration. This mode is assumed to be normalized
         to an RMS of one.
     natural_frequency : scalar
-        The natural frequency of the oscillator in Hz.
+        The natural frequency of the oscillator in Hz. Must be positive.
     damping_ratio : scalar
         The damping ratio (dimensionless). Must be positive.
     driving_psd : scalar
@@ -127,6 +127,9 @@ class DampedHarmonicVibration(OpticalElement):
 
         if damping_ratio <= 0:
             raise ValueError(f"The damping ratio must be positive, got {damping_ratio}.")
+
+        if natural_frequency <= 0:
+            raise ValueError(f"The natural frequency must be positive, got {natural_frequency}.")
 
         self._omega_0 = 2 * np.pi * natural_frequency
         self.damping_ratio = damping_ratio

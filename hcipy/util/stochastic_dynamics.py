@@ -47,6 +47,11 @@ class StateSpaceDynamics:
         Observation matrix C.
     """
     def __init__(self, transition_matrix, noise_matrix, observation_matrix=None, initial_state=None, seed=None):
+        eigenvalues = np.linalg.eigvals(self.transition_matrix)
+
+        if np.any(np.real(eigenvalues) > 0):
+            raise ValueError(f"The system is unstable.")
+
         self.transition_matrix = transition_matrix
         self.noise_matrix = noise_matrix
 
@@ -64,11 +69,6 @@ class StateSpaceDynamics:
         try:
             self._P = solve_continuous_lyapunov(self.transition_matrix, -noise_covariance)
         except np.linalg.LinAlgError as e:
-            eigenvalues = np.linalg.eigvals(self.transition_matrix)
-
-            if np.any(np.real(eigenvalues) > 0):
-                raise ValueError(f"The system is unstable.") from e
-
             raise ValueError(f"Cannot solve Lyapunov equation.") from e
 
         if initial_state is None:

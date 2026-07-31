@@ -67,7 +67,7 @@ def _dft_matrix_regular_numpy(x0, u0, dx, du, Nx, Nu, dtype, out=None):
 
     for i in numba.prange(Nx):
         ai = C * A[i]
-        Ti = T[i : i + Nu]
+        Ti = T[i:i + Nu]
 
         for k in range(Nu):
             out[i, k] = ai * B[k] * Ti[k]

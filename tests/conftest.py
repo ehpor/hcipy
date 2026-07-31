@@ -35,6 +35,10 @@ def get_backend(backend_name):
             pytest.skip(f'{backend_name} not available')
     elif backend_name == 'jax':
         try:
+            # Enable 64-bit mode for tests.
+            import jax
+            jax.config.update('jax_enable_x64', True)
+
             import jax.numpy as jnp
             return jnp
         except ImportError:

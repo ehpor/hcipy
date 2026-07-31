@@ -55,11 +55,11 @@ def make_fft_grid(input_grid, q=1, fov=1, shift=0):
     # Correct q for a discrete zero padding of the input grid.
     q = tuple(round(q_i * d_in) / d_in for q_i, d_in in zip(q, input_grid.dims))
 
-    delta = tuple((2 * np.pi / (d_in * s_in)) / q_i for d_in, s_in, q_i in zip(input_grid.delta, input_grid.dims, q))
+    delta = tuple(float((2 * math.pi / (d_in * s_in)) / q_i) for d_in, s_in, q_i in zip(input_grid.delta, input_grid.dims, q))
     dims = tuple(int(d_in * f_i * q_i) for d_in, f_i, q_i in zip(input_grid.dims, fov, q))
-    zero = tuple(d_i * (-dim / 2 + (dim % 2) * 0.5) + s_i for d_i, dim, s_i in zip(delta, dims, shift))
+    zero = tuple(float(d_i * (-dim / 2 + (dim % 2) * 0.5) + s_i) for d_i, dim, s_i in zip(delta, dims, shift))
 
-    return CartesianGrid(RegularCoords(delta, dims, zero))
+    return CartesianGrid(RegularCoords(delta, dims, zero, xp=input_grid.xp))
 
 def get_fft_parameters(fft_grid, input_grid):
     '''Try to reconstruct the FFT parameters of a grid.
@@ -104,7 +104,7 @@ def get_fft_parameters(fft_grid, input_grid):
     if input_grid.ndim != fft_grid.ndim:
         raise ValueError('The fft grid does not have the same number of dimensions as input_grid.')
 
-    q = tuple((2 * np.pi / (d_in * s_in)) / f_delta for d_in, s_in, f_delta in zip(input_grid.delta, input_grid.dims, fft_grid.delta))
+    q = tuple((2 * math.pi / (d_in * s_in)) / f_delta for d_in, s_in, f_delta in zip(input_grid.delta, input_grid.dims, fft_grid.delta))
 
     if any(q_i < 1 for q_i in q):
         raise ValueError(f'fft_grid is not an FFT grid of input_grid: q of {q} would be < 1.')
@@ -276,15 +276,16 @@ class FastFourierTransform(FourierTransform):
 
         # Calculate the shift array when the input grid was shifted compared to the native shift
         # expected by the numpy FFT implementation.
-        center = tuple(zero + delta * (dim // 2) for zero, delta, dim in zip(input_grid.zero, input_grid.delta, input_grid.dims))
-        self.shift_input = _numexpr_grid_shift(tuple(-c for c in center), self.output_grid)
+        xp = input_grid.xp
+        center = input_grid.zero + input_grid.delta * (xp.asarray(input_grid.dims) // 2)
+        self.shift_input = _numexpr_grid_shift(-center, self.output_grid)
 
         # Remove piston shift (remove central shift phase)
         self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0]
 
         # Calculate the multiplication for emulating the FFTshift (if requested).
         if emulate_fftshifts:
-            f_shift = tuple(delta * (dim // 2) for delta, dim in zip(input_grid.delta, self.internal_shape[::-1]))
+            f_shift = input_grid.delta * (xp.asarray(self.internal_shape[::-1]) // 2)
             fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
 
             if self.cutout_output:
@@ -305,7 +306,7 @@ class FastFourierTransform(FourierTransform):
 
         # Calculate the multiplication for emulating the FFTshift (if requested).
         if emulate_fftshifts:
-            f_shift = tuple(delta * (dim // 2) for delta, dim in zip(self.input_grid.delta, self.internal_shape[::-1]))
+            f_shift = self.input_grid.delta * (xp.asarray(self.internal_shape[::-1]) // 2)
             fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
 
             fftshift *= np.exp(-1j * np.dot(f_shift, self.internal_grid.zero))

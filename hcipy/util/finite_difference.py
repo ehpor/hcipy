@@ -54,13 +54,18 @@ def make_laplacian_matrix(grid):
     if grid.is_('cartesian') and grid.is_separated and grid.is_regular:
         num_x = 3
         num_y = 3
-        kernel_grid = make_uniform_grid((num_x, num_y), (num_x * grid.delta[0], num_y * grid.delta[1]), has_center=True)
+
+        xp = grid.xp
+        extent = xp.asarray([num_x, num_y]) * grid.delta
+        kernel_grid = make_uniform_grid((num_x, num_y), extent, has_center=True)
+
         kernel = kernel_grid.zeros().shaped
         kernel[1, 1] = 4
         kernel[1, 0] = -1
         kernel[1, 2] = -1
         kernel[0, 1] = -1
         kernel[2, 1] = -1
+
         kernel = Field(kernel.ravel(), kernel_grid)
 
         return generate_convolution_matrix(grid, kernel)
@@ -85,7 +90,9 @@ def make_derivative_matrix(grid, axis='x'):
     if grid.is_('cartesian') and grid.is_separated and grid.is_regular:
         num_x = 3
         num_y = 3
-        kernel_grid = make_uniform_grid((num_x, num_y), (num_x * grid.delta[0], num_y * grid.delta[1]), has_center=True)
+        xp = grid.xp
+        extent = xp.asarray([num_x, num_y]) * grid.delta
+        kernel_grid = make_uniform_grid((num_x, num_y), extent, has_center=True)
         kernel = kernel_grid.zeros()
         kernel = kernel.shaped
 

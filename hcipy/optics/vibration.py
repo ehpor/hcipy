@@ -132,8 +132,8 @@ class DampedHarmonicVibration(OpticalElement):
             raise ValueError(f"The natural frequency must be positive, got {natural_frequency}.")
 
         self._omega_0 = 2 * np.pi * natural_frequency
-        self.damping_ratio = damping_ratio
-        self.driving_psd = driving_psd
+        self._damping_ratio = damping_ratio
+        self._driving_psd = driving_psd
 
         # Create state space dynamics for damped harmonic oscillator
         # Continuous-time state matrix
@@ -153,6 +153,18 @@ class DampedHarmonicVibration(OpticalElement):
 
         # Create dynamic surface aberration
         self._aberration = DynamicSurfaceAberration(modes, dynamics, refractive_index)
+
+    @property
+    def damping_ratio(self):
+        '''The damping ratio of the oscillator.
+        '''
+        return self._damping_ratio
+
+    @property
+    def driving_psd(self):
+        '''The power spectral density of the driving white noise.
+        '''
+        return self._driving_psd
 
     @property
     def mode(self):

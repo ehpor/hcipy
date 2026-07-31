@@ -1,6 +1,7 @@
 import numpy as np
 from numba import njit, prange
 from array_api_compat import is_numpy_array, is_jax_array
+from .backends import array_namespace
 
 
 def _quintic_weights(shift):
@@ -225,6 +226,8 @@ def separable_convolve_fallback(img, kernel_row, kernel_col):
     ValueError
         When either of the kernels does not have an odd length
     """
+    xp = array_namespace(img, kernel_row, kernel_col)
+
     H, W = img.shape[0], img.shape[1]
 
     rx = kernel_row.shape[0] // 2
@@ -239,7 +242,7 @@ def separable_convolve_fallback(img, kernel_row, kernel_col):
     # ---- Horizontal pass ----
     tmp = img * float(kernel_row[rx])
     for i in range(kernel_row.shape[0]):
-        w = kernel_row[i]
+        w = xp.asarray(kernel_row[i])
         s = i - rx
 
         if s > 0:
@@ -256,7 +259,7 @@ def separable_convolve_fallback(img, kernel_row, kernel_col):
     # ---- Vertical pass ----
     out = tmp * float(kernel_col[ry])
     for i in range(kernel_col.shape[0]):
-        w = kernel_col[i]
+        w = xp.asarray(kernel_col[i])
         s = i - ry
 
         if s > 0:

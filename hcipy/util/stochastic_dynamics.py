@@ -158,7 +158,7 @@ class StateSpaceDynamics:
         self._state = A_disc @ self._state + noise
         self._t = t
 
-def make_continuous_time_companion_matrix(poles):
+def make_continuous_time_companion_matrix(poles, rtol=1e-9):
     """Create a continuous-time companion matrix from poles.
 
     For a system with poles p1, p2, ..., pn, creates the controllable
@@ -169,6 +169,9 @@ def make_continuous_time_companion_matrix(poles):
     poles : array_like
         Poles (eigenvalues) of the system. For stable systems, poles
         should have negative real parts.
+    rtol : float, optional
+        The relative tolerance which which the poles are required to be
+        complex conjugate pairs. Default: 1e-9.
 
     Returns
     -------
@@ -176,10 +179,19 @@ def make_continuous_time_companion_matrix(poles):
         Companion form state matrix (n x n).
     observation_matrix : ndarray
         Observation matrix (1 x n), selects the first state.
+
+    Raises
+    ------
+    ValueError
+        When the poles are not real or do not form complex conjugate pairs.
     """
     n = len(poles)
 
     coeffs = np.poly(poles)
+
+    if np.iscomplexobj(coeffs) and np.any(np.abs(coeffs.imag) > rtol * np.maximum(np.abs(coeffs), 1)):
+        raise ValueError("The poles must be real or form complex conjugate pairs.")
+    coeffs = np.real(coeffs)
 
     transition_matrix = np.zeros((n, n))
     transition_matrix[0, :] = -coeffs[1:n + 1]
@@ -229,6 +241,15 @@ def ar_to_state_space(ar_coefficients, noise_variance, dt):
 
     # Get discrete-time poles (eigenvalues of companion matrix)
     disc_poles = np.linalg.eigvals(A_disc)
+
+    if np.any(np.abs(disc_poles) >= 1):
+        raise ValueError("The discrete-time AR model is unstable: all poles must lie inside the unit circle.")
+
+    if np.any(np.abs(disc_poles) == 0):
+        raise ValueError("The discrete-time AR model has a pole at zero, which has no continuous-time equivalent.")
+
+    if np.any((np.abs(np.imag(disc_poles)) == 0) & (np.real(disc_poles) < 0)):
+        raise ValueError("The discrete-time AR model has a negative real pole, which has no real continuous-time equivalent.")
 
     # Convert discrete-time poles to continuous-time poles
     # For stable discrete-time system: |z| < 1, so ln(z) has negative real part

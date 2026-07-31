@@ -25,25 +25,25 @@ class StateSpaceDynamics:
 
     Parameters
     ----------
-    transition_matrix : array_like
+    transition_matrix : array
         Continuous-time state transition matrix :math:`A` (num_states x num_states).
-    noise_matrix : array_like
+    noise_matrix : array
         Continuous-time noise/input matrix :math:`B` (num_states x num_inputs).
-    observation_matrix : array_like, optional
+    observation_matrix : array, optional
         Observation matrix :math:`C` (num_outputs x num_states). If None, uses identity
         matrix (state directly maps to output).
-    initial_state : array_like, optional
+    initial_state : array, optional
         Initial state vector. If None, samples from the stationary distribution.
     seed : int, optional
         Random seed for reproducibility.
 
     Attributes
     ----------
-    transition_matrix : array_like
+    transition_matrix : array
         Continuous-time state transition matrix A.
-    noise_matrix : array_like
+    noise_matrix : array
         Continuous-time noise/input matrix B.
-    observation_matrix : array_like
+    observation_matrix : array
         Observation matrix C.
     """
     def __init__(self, transition_matrix, noise_matrix, observation_matrix=None, initial_state=None, seed=None):
@@ -191,7 +191,7 @@ def make_continuous_time_companion_matrix(poles):
     return transition_matrix, observation_matrix
 
 def ar_to_state_space(ar_coefficients, noise_variance, dt):
-    """Convert a discrete-time AR(p) model to continuous-time state space.
+    r"""Convert a discrete-time AR(p) model to continuous-time state space.
 
     Converts a discrete-time autoregressive model:
 

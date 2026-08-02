@@ -1,6 +1,7 @@
 import math
 from collections import Counter
-import numpy as np
+
+from .backends import array_namespace
 
 
 def _parse_subscripts(subscripts, noperands):
@@ -22,7 +23,17 @@ def _parse_subscripts(subscripts, noperands):
     return in_subs, out_part
 
 
-def _prep_operand(sub, tensor, keep):
+def _diagonal(tensor, ax0, ax1, xp):
+    diag = getattr(xp, "diagonal", None)
+    if diag is not None:
+        return diag(tensor, 0, ax0, ax1)
+    # array API fallback: move the two axes to the end, then mask with eye
+    axes = [i for i in range(tensor.ndim) if i not in (ax0, ax1)] + [ax0, ax1]
+    tensor = xp.permute_dims(tensor, axes)
+    return xp.sum(tensor * xp.eye(tensor.shape[-1]), axis=-1)
+
+
+def _prep_operand(sub, tensor, keep, xp):
     sub = list(sub)
     while True:
         seen = {}
@@ -36,20 +47,20 @@ def _prep_operand(sub, tensor, keep):
             break
         ax0, ax1 = pair
         c = sub[ax0]
-        tensor = np.diagonal(tensor, axis1=ax0, axis2=ax1)
+        tensor = _diagonal(tensor, ax0, ax1, xp)
         sub = [s for k, s in enumerate(sub) if k not in (ax0, ax1)] + [c]
     sub = "".join(sub)
 
     drop_axes = tuple(i for i, c in enumerate(sub) if c not in keep)
     if drop_axes:
-        tensor = tensor.sum(axis=drop_axes)
+        tensor = xp.sum(tensor, axis=drop_axes)
         sub = "".join(c for c in sub if c in keep)
     return sub, tensor
 
 
-def pairwise_einsum(l_sub, left, r_sub, right, needed):
-    l_sub, left = _prep_operand(l_sub, left, set(r_sub) | needed)
-    r_sub, right = _prep_operand(r_sub, right, set(l_sub) | needed)
+def pairwise_einsum(l_sub, left, r_sub, right, needed, xp):
+    l_sub, left = _prep_operand(l_sub, left, set(r_sub) | needed, xp)
+    r_sub, right = _prep_operand(r_sub, right, set(l_sub) | needed, xp)
 
     dims = dict(zip(l_sub + r_sub, left.shape + right.shape))
 
@@ -58,28 +69,30 @@ def pairwise_einsum(l_sub, left, r_sub, right, needed):
     M = [c for c in l_sub if c not in r_sub]                  # free, left-only
     N = [c for c in r_sub if c not in l_sub]                  # free, right-only
 
-    Lp = np.transpose(left,  [l_sub.index(c) for c in B + M + K])
-    Rp = np.transpose(right, [r_sub.index(c) for c in B + K + N])
+    Lp = xp.permute_dims(left, tuple(l_sub.index(c) for c in B + M + K))
+    Rp = xp.permute_dims(right, tuple(r_sub.index(c) for c in B + K + N))
 
-    Lp = np.reshape(Lp, (math.prod(dims[c] for c in B), math.prod(dims[c] for c in M),
+    Lp = xp.reshape(Lp, (math.prod(dims[c] for c in B), math.prod(dims[c] for c in M),
                          math.prod(dims[c] for c in K)))
-    Rp = np.reshape(Rp, (math.prod(dims[c] for c in B), math.prod(dims[c] for c in K),
+    Rp = xp.reshape(Rp, (math.prod(dims[c] for c in B), math.prod(dims[c] for c in K),
                          math.prod(dims[c] for c in N)))
 
     if not K:
         result = Lp * Rp
     else:
-        result = np.matmul(Lp, Rp)
+        result = xp.matmul(Lp, Rp)
 
     result_sub = B + M + N
-    result = np.reshape(result, tuple(dims[c] for c in result_sub))
+    result = xp.reshape(result, tuple(dims[c] for c in result_sub))
     return "".join(result_sub), result
 
 
 def einsum(subscripts, *operands, optimize=False):
+    xp = array_namespace(*operands)
+
     in_subs, out_sub = _parse_subscripts(subscripts, len(operands))
     subs = list(in_subs)
-    tensors = [np.asarray(t) for t in operands]
+    tensors = [xp.asarray(t) for t in operands]
 
     if optimize:
         import opt_einsum as oe
@@ -103,20 +116,18 @@ def einsum(subscripts, *operands, optimize=False):
         needed = set(out_sub) | set("".join(subs))
 
         if len(popped_tensors) == 1:
-            new_sub, new_tensor = _prep_operand(
-                popped_subs[0], popped_tensors[0], needed
-            )
+            new_sub, new_tensor = _prep_operand(popped_subs[0], popped_tensors[0], needed, xp)
         else:
             new_sub, new_tensor = pairwise_einsum(
                 popped_subs[0], popped_tensors[0],
-                popped_subs[1], popped_tensors[1], needed
+                popped_subs[1], popped_tensors[1], needed, xp
             )
 
         subs.append(new_sub)
         tensors.append(new_tensor)
 
     final_sub, final_tensor = subs[0], tensors[0]
-    final_sub, final_tensor = _prep_operand(final_sub, final_tensor, set(out_sub))
+    final_sub, final_tensor = _prep_operand(final_sub, final_tensor, set(out_sub), xp)
 
-    perm = [final_sub.index(c) for c in out_sub]
-    return np.transpose(final_tensor, perm)
+    perm = tuple(final_sub.index(c) for c in out_sub)
+    return xp.permute_dims(final_tensor, perm)

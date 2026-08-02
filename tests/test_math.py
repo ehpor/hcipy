@@ -358,16 +358,14 @@ def test_array_namespace(xp):
     pytest.param("bij,bjk->bik", [(20, 10, 12), (20, 12, 8)], id="large-batched"),
     pytest.param("ijk->kji", [(4, 5, 6)], id="chain-transpose"),
 ])
-@pytest.mark.parametrize('optimize', [
-    pytest.param(False, id='simple'),
-    pytest.param(True, id='opt_einsum'),
-])
-def test_einsum(subscripts, shapes, optimize):
-    rng = np.random.default_rng(0)
-    arrays = [np.asarray(rng.random(s), dtype=np.float64) for s in shapes]
-    expected = np.einsum(subscripts, *arrays)
+@pytest.mark.parametrize('optimize', [False, True])
+def test_einsum(xp, subscripts, shapes, optimize):
+    rng = make_random_generator(xp)
+    arrays = [xp.astype(rng.normal(size=s), xp.float64) for s in shapes]
+    arrays_numpy = [np.asarray(arr) for arr in arrays]
+    expected = np.einsum(subscripts, *arrays_numpy)
     got = einsum(subscripts, *arrays, optimize=optimize)
-    np.testing.assert_allclose(got, expected, rtol=1e-12)
+    np.testing.assert_allclose(np.asarray(got), expected, rtol=1e-12)
 
 
 @pytest.mark.parametrize('optimize', [

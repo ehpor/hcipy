@@ -2,6 +2,7 @@ import math
 from collections import Counter
 
 from .backends import array_namespace
+from array_api_compat import is_numpy_namespace, is_cupy_namespace, is_jax_namespace, is_torch_namespace
 
 
 def _parse_subscripts(subscripts, noperands):
@@ -87,8 +88,12 @@ def pairwise_einsum(l_sub, left, r_sub, right, needed, xp):
     return "".join(result_sub), result
 
 
-def einsum(subscripts, *operands, optimize=False):
+def einsum(subscripts, *operands, optimize=True):
     xp = array_namespace(*operands)
+
+    # Dispatch to the einsum of the backend, if it has one.
+    if is_numpy_namespace(xp) or is_cupy_namespace(xp) or is_jax_namespace(xp) or is_torch_namespace(xp):
+        return xp.einsum(subscripts, *operands, optimize=optimize)
 
     in_subs, out_sub = _parse_subscripts(subscripts, len(operands))
     subs = list(in_subs)

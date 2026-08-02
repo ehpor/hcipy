@@ -92,8 +92,12 @@ def einsum(subscripts, *operands, optimize=True):
     xp = array_namespace(*operands)
 
     # Dispatch to the einsum of the backend, if it has one.
-    if is_numpy_namespace(xp) or is_cupy_namespace(xp) or is_jax_namespace(xp) or is_torch_namespace(xp):
+    if is_numpy_namespace(xp) or is_cupy_namespace(xp) or is_jax_namespace(xp):
         return xp.einsum(subscripts, *operands, optimize=optimize)
+
+    if is_torch_namespace(xp):
+        # Pytorch doesn't support the optimize keyword.
+        return xp.einsum(subscripts, *operands)
 
     in_subs, out_sub = _parse_subscripts(subscripts, len(operands))
     subs = list(in_subs)

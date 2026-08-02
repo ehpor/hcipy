@@ -17,7 +17,6 @@ __all__ = [
     'field_inverse_truncated',
     'field_inverse_truncated_modal',
     'field_svd',
-    'make_field_operation',
     'field_conjugate_transpose',
     'field_transpose',
     'field_determinant',

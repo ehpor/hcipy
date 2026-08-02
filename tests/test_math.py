@@ -2,6 +2,7 @@ import pytest
 import hcipy
 import numpy as np
 from hcipy._math.backends import to_numpy, array_namespace
+from hcipy._math.einsum import einsum
 from hcipy._math.fourier import dft_matrix_regular, dft_matrix_separated
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
@@ -596,3 +597,42 @@ def test_dft_matrix_separated_out():
     result = dft_matrix_separated(x, u, out=out)
 
     assert result is out
+
+
+_EINSUM_CASES = [
+    ("ij,jk->ik", [(4, 5), (5, 6)]),                   # plain matmul
+    ("bij,bjk->bik", [(3, 4, 5), (3, 5, 6)]),           # batched matmul
+    ("ii->", [(5, 5)]),                                 # trace
+    ("ii->i", [(5, 5)]),                                # diagonal
+    ("ij->ji", [(4, 5)]),                               # transpose
+    ("i,j->ij", [(4,), (5,)]),                          # outer product
+    ("i,i->", [(6,), (6,)]),                            # dot product
+    ("ij,ij->ij", [(4, 5), (4, 5)]),                    # hadamard
+    ("abcd,cdef->abef", [(3, 4, 5, 6), (5, 6, 7, 8)]),  # multi-index contraction
+    ("iij,jkk->ik", [(4, 4, 5), (5, 6, 6)]),            # diagonals + contraction
+]
+
+
+@pytest.mark.parametrize('subscripts, shapes', _EINSUM_CASES)
+def test_einsum(subscripts, shapes):
+    rng = np.random.default_rng(0)
+    arrays = [rng.random(s) for s in shapes]
+    expected = np.einsum(subscripts, *arrays)
+    got = einsum(subscripts, *arrays)
+    np.testing.assert_allclose(got, expected, rtol=1e-10)
+
+
+def test_einsum_opt_einsum_path():
+    # multi-operand chain, driven by an opt_einsum path if available
+    oe = pytest.importorskip('opt_einsum')
+
+    rng = np.random.default_rng(0)
+    eq = "pi,qj,ijkl,rk,sl->pqrs"
+    C = rng.random((4, 4))
+    I = rng.random((4, 4, 4, 4))
+    arrays = [C, C, I, C, C]
+
+    path, _ = oe.contract_path(eq, *arrays)
+    expected = np.einsum(eq, *arrays)
+    got = einsum(eq, *arrays, path=path)
+    np.testing.assert_allclose(got, expected, rtol=1e-8)

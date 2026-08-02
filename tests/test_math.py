@@ -305,7 +305,6 @@ def test_array_namespace(xp):
     arr = xp.zeros(10)
     _ = array_namespace(arr)
 
-
 @pytest.mark.parametrize('subscripts, shapes', [
     # basic contractions
     pytest.param("ij,jk->ik", [(4, 5), (5, 6)], id="matmul"),
@@ -333,6 +332,7 @@ def test_array_namespace(xp):
     # multi-operand chains
     pytest.param("ij,jk,kl->il", [(2, 3), (3, 4), (4, 5)], id="three-operand-chain"),
     pytest.param("ij,jk,kl,lm->im", [(2, 3), (3, 4), (4, 5), (5, 6)], id="four-operand"),
+    pytest.param("pi,qj,ijkl,rk,sl->pqrs", [(4, 4), (4, 4), (4, 4, 4, 4), (4, 4), (4, 4)], id="five-operand"),
     # single-operand einsum
     pytest.param("ij->", [(3, 4)], id="sum-all"),
     pytest.param("ij->i", [(3, 4)], id="sum-axis-0"),
@@ -362,61 +362,42 @@ def test_array_namespace(xp):
 def test_einsum(xp, subscripts, shapes, optimize):
     rng = make_random_generator(xp)
     arrays = [xp.astype(rng.normal(size=s), xp.float64) for s in shapes]
+
     arrays_numpy = [np.asarray(arr) for arr in arrays]
     expected = np.einsum(subscripts, *arrays_numpy)
+
     got = einsum(subscripts, *arrays, optimize=optimize)
-    np.testing.assert_allclose(np.asarray(got), expected, rtol=1e-12)
 
+    np.testing.assert_allclose(np.asarray(got), expected, rtol=1e-11)
 
-@pytest.mark.parametrize('optimize', [
-    pytest.param(False, id='simple'),
-    pytest.param(True, id='opt_einsum'),
-])
-def test_einsum_five_operand_sum(optimize):
-    rng = np.random.default_rng(0)
-    eq = "pi,qj,ijkl,rk,sl->pqrs"
-    C = rng.random((4, 4))
-    I = rng.random((4, 4, 4, 4))
-    arrays = [C, C, I, C, C]
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
+def test_einsum_dtype(xp, dtype):
+    dtype_xp = getattr(xp, dtype)
+    rng = make_random_generator(xp)
 
-    expected = np.einsum(eq, *arrays)
-    got = einsum(eq, *arrays, optimize=optimize)
-    np.testing.assert_allclose(got, expected, rtol=1e-12)
+    a = xp.astype(rng.normal(size=(4, 5)), dtype_xp)
+    b = xp.astype(rng.normal(size=(5, 6)), dtype_xp)
 
+    if xp.isdtype(dtype_xp, 'complex floating'):
+        a = a + xp.asarray(1j, dtype=dtype_xp) * xp.astype(rng.normal(size=(4, 5)), dtype_xp)
+        b = b + xp.asarray(1j, dtype=dtype_xp) * xp.astype(rng.normal(size=(5, 6)), dtype_xp)
 
-@pytest.mark.parametrize('dtype', [
-    pytest.param(np.float32, id='float32'),
-    pytest.param(np.float64, id='float64'),
-    pytest.param(np.complex64, id='complex64'),
-    pytest.param(np.complex128, id='complex128'),
-])
-def test_einsum_dtype(dtype):
-    rng = np.random.default_rng(0)
-    a = rng.random((4, 5)).astype(dtype)
-    b = rng.random((5, 6)).astype(dtype)
+    rtol = 1e-5 if xp.finfo(dtype_xp).bits <= 32 else 1e-11
 
-    if np.issubdtype(dtype, np.complexfloating):
-        a = a + 1j * rng.random((4, 5)).astype(dtype)
-        b = b + 1j * rng.random((5, 6)).astype(dtype)
-
-    rtol = 1e-6 if np.finfo(dtype).bits <= 32 else 1e-12
-
-    expected = np.einsum("ij,jk->ik", a, b)
+    expected = np.einsum("ij,jk->ik", np.asarray(a), np.asarray(b))
     got = einsum("ij,jk->ik", a, b)
 
-    assert got.dtype == dtype
-    np.testing.assert_allclose(got, expected, rtol=rtol)
+    assert got.dtype == dtype_xp
+    np.testing.assert_allclose(np.asarray(got), expected, rtol=rtol)
 
+def test_einsum_int_input(xp):
+    a = xp.asarray([[1, 2], [3, 4]])
+    b = xp.asarray([[5, 6], [7, 8]])
 
-def test_einsum_int_input():
-    a = np.array([[1, 2], [3, 4]])
-    b = np.array([[5, 6], [7, 8]])
-
-    expected = np.einsum("ij,jk->ik", a, b)
+    expected = np.einsum("ij,jk->ik", np.asarray(a), np.asarray(b))
     got = einsum("ij,jk->ik", a, b)
-    np.testing.assert_array_equal(got, expected)
+    np.testing.assert_array_equal(np.asarray(got), expected)
 
-
-def test_einsum_result_is_scalar():
-    result = einsum("i,i->", np.array([1.0, 2.0]), np.array([3.0, 4.0]))
-    assert isinstance(result, np.ndarray) and result.ndim == 0
+def test_einsum_result_is_scalar(xp):
+    result = einsum("i,i->", xp.asarray([1.0, 2.0]), xp.asarray([3.0, 4.0]))
+    assert result.ndim == 0

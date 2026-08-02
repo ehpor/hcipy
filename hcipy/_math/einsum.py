@@ -76,12 +76,15 @@ def pairwise_einsum(l_sub, left, r_sub, right, needed):
     return "".join(result_sub), result
 
 
-def einsum(subscripts, *operands, path=None):
+def einsum(subscripts, *operands, optimize=False):
     in_subs, out_sub = _parse_subscripts(subscripts, len(operands))
     subs = list(in_subs)
     tensors = [np.asarray(t) for t in operands]
 
-    if path is None:
+    if optimize:
+        import opt_einsum as oe
+        path, _ = oe.contract_path(subscripts, *tensors)
+    else:
         path = [(0, 1)] * (len(tensors) - 1)
 
     for step in path:

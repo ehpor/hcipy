@@ -651,6 +651,17 @@ def test_dft_matrix_separated_out():
     pytest.param("i,j,k->ijk", [(3,), (4,), (5,)], id="outer-product-3way"),
     pytest.param("bij,bjk->bik", [(20, 10, 12), (20, 12, 8)], id="large-batched"),
     pytest.param("ijk->kji", [(4, 5, 6)], id="chain-transpose"),
+    # ellipsis
+    pytest.param("...i,...i->...", [(3, 4), (4,)], id="ellipsis-matvec-broadcast"),
+    pytest.param("...ij,...jk->...ik", [(2, 3, 4), (4, 5)], id="ellipsis-matmul-broadcast"),
+    pytest.param("...ij,...ij->...", [(2, 3, 4), (3, 4)], id="ellipsis-common-batch"),
+    pytest.param("i...i->...", [(3, 5, 3)], id="ellipsis-middle"),
+    pytest.param("ij->...ij", [(4, 5)], id="out-only-ellipsis"),
+    pytest.param("...i->...", [(3, 4)], id="ellipsis-reduce-index"),
+    # implicit output with ellipsis
+    pytest.param("...i", [(3, 4)], id="implicit-ellipsis"),
+    pytest.param("...i,...i", [(3, 4), (4,)], id="implicit-ellipsis-broadcast"),
+    pytest.param("i...i", [(3, 5, 3)], id="implicit-ellipsis-middle"),
 ])
 @pytest.mark.parametrize('optimize', [False, True])
 def test_einsum(xp, subscripts, shapes, optimize):

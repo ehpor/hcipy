@@ -31,7 +31,7 @@ def _diagonal(tensor, ax0, ax1, xp):
     # array API fallback: move the two axes to the end, then mask with eye
     axes = [i for i in range(tensor.ndim) if i not in (ax0, ax1)] + [ax0, ax1]
     tensor = xp.permute_dims(tensor, axes)
-    return xp.sum(tensor * xp.eye(tensor.shape[-1]), axis=-1)
+    return xp.sum(tensor * xp.eye(tensor.shape[-1], dtype=tensor.dtype), axis=-1)
 
 
 def _prep_operand(sub, tensor, keep, xp):

@@ -1,4 +1,5 @@
 import math
+import string
 from collections import Counter
 
 from .backends import array_namespace
@@ -21,7 +22,10 @@ def _parse_subscripts(subscripts, noperands):
         counts = Counter(in_part.replace(",", ""))
         out_part = "".join(sorted(c for c in counts if counts[c] == 1))
 
-    return in_subs, out_part
+        if "..." in in_part:
+            out_part = "..." + out_part
+
+    return list(in_subs), out_part
 
 
 def _diagonal(tensor, ax0, ax1, xp):
@@ -88,6 +92,36 @@ def pairwise_einsum(l_sub, left, r_sub, right, needed, xp):
     return "".join(result_sub), result
 
 
+def _expand_ellipsis(subs, tensors, out_sub):
+    if not any("..." in s for s in subs) and "..." not in out_sub:
+        return subs, out_sub
+
+    ranks = []
+    for s, t in zip(subs, tensors):
+        if "..." in s:
+            n = t.ndim - (len(s) - 3)
+            if n < 0:
+                raise ValueError("operand has fewer dimensions than its subscripts")
+            ranks.append(n)
+        else:
+            ranks.append(None)
+
+    rank = max((n for n in ranks if n is not None), default=0)
+    letters = "".join(c for c in string.ascii_uppercase if c not in "".join(subs))[:rank]
+    if len(letters) < rank:
+        raise ValueError("not enough unused index letters for ellipsis")
+
+    for k, (s, n) in enumerate(zip(subs, ranks)):
+        if n is None:
+            continue
+        subs[k] = s.replace("...", letters[-n:] if n else "", 1)
+
+    if "..." in out_sub:
+        out_sub = out_sub.replace("...", letters, 1)
+
+    return subs, out_sub
+
+
 def einsum(subscripts, *operands, optimize=True):
     xp = array_namespace(*operands)
 
@@ -95,13 +129,17 @@ def einsum(subscripts, *operands, optimize=True):
     if is_numpy_namespace(xp) or is_cupy_namespace(xp) or is_jax_namespace(xp):
         return xp.einsum(subscripts, *operands, optimize=optimize)
 
+    in_subs, out_sub = _parse_subscripts(subscripts, len(operands))
+    tensors = [xp.asarray(t) for t in operands]
+
+    in_subs, out_sub = _expand_ellipsis(in_subs, tensors, out_sub)
+    subscripts = ','.join(in_subs) + '->' + out_sub
+
     if is_torch_namespace(xp):
         # Pytorch doesn't support the optimize keyword.
+        # Pytorch also has a different way of handling ellipses, so
+        # calling torch.einsum() after expanding the ellipses.
         return xp.einsum(subscripts, *operands)
-
-    in_subs, out_sub = _parse_subscripts(subscripts, len(operands))
-    subs = list(in_subs)
-    tensors = [xp.asarray(t) for t in operands]
 
     if optimize:
         import opt_einsum as oe
@@ -117,12 +155,12 @@ def einsum(subscripts, *operands, optimize=True):
             raise ValueError(f"path step {tuple(step)} pops more than 2 "
                              "operands; only 1- and 2-operand steps are "
                              "supported")
-        popped_subs = [subs.pop(i) for i in step]
+        popped_subs = [in_subs.pop(i) for i in step]
         popped_tensors = [tensors.pop(i) for i in step]
 
         # "needed" = final output letters + every letter still alive in any
         # tensor we haven't reached yet in the path
-        needed = set(out_sub) | set("".join(subs))
+        needed = set(out_sub) | set("".join(in_subs))
 
         if len(popped_tensors) == 1:
             new_sub, new_tensor = _prep_operand(popped_subs[0], popped_tensors[0], needed, xp)
@@ -132,10 +170,10 @@ def einsum(subscripts, *operands, optimize=True):
                 popped_subs[1], popped_tensors[1], needed, xp
             )
 
-        subs.append(new_sub)
+        in_subs.append(new_sub)
         tensors.append(new_tensor)
 
-    final_sub, final_tensor = subs[0], tensors[0]
+    final_sub, final_tensor = in_subs[0], tensors[0]
     final_sub, final_tensor = _prep_operand(final_sub, final_tensor, set(out_sub), xp)
 
     perm = tuple(final_sub.index(c) for c in out_sub)

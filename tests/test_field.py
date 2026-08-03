@@ -4,195 +4,196 @@ import numpy as np
 import copy
 import pytest
 import pickle
+from hcipy._math.random import make_random_generator
+from hcipy._math.backends import all_close
+
+if Configuration().core.use_new_style_fields:
+    import array_api_strict as xp
+else:
+    import numpy as xp
 
 def test_field_dot():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    a = np.random.randn(3, grid.size)
-    A = np.random.randn(3, 3, grid.size)
+    rng = make_random_generator(xp)
+    a = rng.normal(size=(3, grid.size))
+    A = rng.normal(size=(3, 3, grid.size))
 
     a = Field(a, grid)
     A = Field(A, grid)
 
     b = field_dot(A, a)
-    bb = np.array([A[..., i].dot(a[..., i]) for i in range(grid.size)]).T
+    bb = xp.stack([xp.matmul(A[..., i].data, a[..., i].data) for i in range(grid.size)]).T
+    bb = Field(bb, grid)
 
-    assert np.allclose(b, bb)
+    assert all_close(b, bb)
 
     b = field_dot(a, a)
-    bb = np.array([a[..., i].dot(a[..., i]) for i in range(grid.size)]).T
+    bb = xp.stack([xp.matmul(a[..., i].data, a[..., i].data) for i in range(grid.size)])
+    bb = Field(bb, grid)
 
-    assert np.allclose(b, bb)
+    assert all_close(b, bb)
 
     B = field_dot(A, A)
-    BB = np.empty_like(B)
+    BB = xp.empty_like(B.data)
     for i in range(grid.size):
-        BB[..., i] = A[..., i].dot(A[..., i])
+        BB[..., i] = xp.matmul(A[..., i].data, A[..., i].data)
 
-    assert np.allclose(B, BB)
+    assert all_close(B, BB)
 
     b = field_dot(a, a)
-    bb = np.array([a[..., i].dot(a[..., i]) for i in range(grid.size)])
+    bb = xp.stack([xp.matmul(a[..., i].data, a[..., i].data) for i in range(grid.size)])
 
-    assert np.allclose(b, bb)
+    assert all_close(b, bb)
 
-    n = np.random.randn(3)
+    n = rng.normal(size=3)
 
     b = field_dot(A, n)
-    bb = np.array([A[..., i].dot(n) for i in range(grid.size)]).T
+    bb = xp.stack([xp.matmul(A[..., i].data, n) for i in range(grid.size)]).T
 
-    assert np.allclose(b, bb)
+    assert all_close(b, bb)
 
     b = field_dot(n, A)
-    bb = np.array([n.dot(A[..., i]) for i in range(grid.size)]).T
+    bb = xp.stack([xp.matmul(n, A[..., i].data) for i in range(grid.size)]).T
 
-    assert np.allclose(b, bb)
+    assert all_close(b, bb)
 
-    N = np.random.randn(3, 3)
+    N = rng.normal(size=(3, 3))
 
     B = field_dot(A, N)
-    BB = np.empty_like(B)
+    BB = xp.empty_like(B.data)
     for i in range(grid.size):
-        BB[..., i] = A[..., i].dot(N)
+        BB[..., i] = xp.matmul(A[..., i].data, N)
 
-    assert np.allclose(B, BB)
+    assert all_close(B, BB)
 
 def test_field_trace():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    A = Field(np.random.randn(3, 3, grid.size), grid)
+    rng = make_random_generator(xp)
+    A = Field(rng.normal(size=(3, 3, grid.size)), grid)
 
     B = field_trace(A)
-    BB = np.array([np.trace(A[..., i]) for i in range(grid.size)])
+    BB = xp.stack([xp.linalg.trace(A[..., i].data) for i in range(grid.size)])
 
-    assert np.allclose(B, BB)
+    assert all_close(B, BB)
 
 def test_field_inv():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    A = Field(np.random.randn(3, 3, grid.size), grid)
+    rng = make_random_generator(xp)
+    A = Field(rng.normal(size=(3, 3, grid.size)), grid)
 
     B = field_inv(A)
-    BB = np.empty_like(B)
-    for i in range(grid.size):
-        BB[..., i] = np.linalg.inv(A[..., i])
+    BB = xp.stack([xp.linalg.inv(A[..., i].data) for i in range(grid.size)], axis=-1)
 
-    assert np.allclose(B, BB)
+    assert all_close(B, BB)
 
 def test_field_transpose():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    A = Field(np.random.randn(3, 3, grid.size), grid)
+    rng = make_random_generator(xp)
+    A = Field(rng.normal(size=(3, 3, grid.size)), grid)
 
     B = field_transpose(A)
-    BB = np.empty_like(B)
-    for i in range(grid.size):
-        BB[..., i] = A[..., i].T
+    BB = xp.stack([xp.permute_dims(A[..., i].data, (1, 0)) for i in range(grid.size)], axis=-1)
 
-    assert np.allclose(B, BB)
+    assert all_close(B, BB)
 
 def test_field_conjugate_transpose():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    A = Field(np.random.randn(3, 3, grid.size), grid)
+    rng = make_random_generator(xp)
+    A = Field(rng.normal(size=(3, 3, grid.size)), grid)
 
     B = field_conjugate_transpose(A)
-    BB = np.empty_like(B)
-    for i in range(grid.size):
-        BB[..., i] = A[..., i].T.conj()
+    BB = xp.stack([xp.permute_dims(xp.conj(A[..., i].data), (1, 0)) for i in range(grid.size)], axis=-1)
 
-    assert np.allclose(B, BB)
+    assert all_close(B, BB)
 
 def test_field_adjoint():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    A = Field(np.random.randn(3, 3, grid.size), grid)
+    rng = make_random_generator(xp)
+    A = Field(rng.normal(size=(3, 3, grid.size)), grid)
 
     B = field_adjoint(A)
-    BB = np.empty_like(B)
-    for i in range(grid.size):
-        BB[..., i] = np.linalg.inv(A[..., i]) * np.linalg.det(A[..., i])
+    BB = xp.stack([xp.linalg.inv(A[..., i].data) * xp.linalg.det(A[..., i].data) for i in range(grid.size)], axis=-1)
 
-    assert np.allclose(B, BB)
+    assert all_close(B, BB)
 
 def test_field_inverse_tikhonov():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    A = Field(np.random.randn(3, 3, grid.size), grid)
+    rng = make_random_generator(xp)
+    A = Field(rng.normal(size=(3, 3, grid.size)), grid)
 
     for reg in [1e-1, 1e-3, 1e-6]:
         B = field_inverse_tikhonov(A, reg)
-        BB = np.empty_like(B)
+        BB = xp.stack([xp.asarray(inverse_tikhonov(A[..., i].data, reg)) for i in range(grid.size)], axis=-1)
 
-        for i in range(grid.size):
-            BB[..., i] = inverse_tikhonov(A[..., i], reg)
-
-        assert np.allclose(B, BB)
+        assert all_close(B, BB)
 
 def test_field_inverse_truncated():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    A = Field(np.random.randn(3, 3, grid.size), grid)
+    rng = make_random_generator(xp)
+    A = Field(rng.normal(size=(3, 3, grid.size)), grid)
 
     for reg in [1e-1, 1e-3, 1e-6]:
         B = field_inverse_truncated(A, reg)
-        BB = np.empty_like(B)
+        BB = xp.stack([xp.asarray(inverse_truncated(A[..., i].data, reg)) for i in range(grid.size)], axis=-1)
 
-        for i in range(grid.size):
-            BB[..., i] = inverse_truncated(A[..., i], reg)
-
-        assert np.allclose(B, BB)
+        assert all_close(B, BB)
 
 def test_field_inverse_truncated_modal():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    A = Field(np.random.randn(3, 3, grid.size), grid)
+    rng = make_random_generator(xp)
+    A = Field(rng.normal(size=(3, 3, grid.size)), grid)
 
     for num_modes in [1, 2]:
         B = field_inverse_truncated_modal(A, num_modes)
-        BB = np.empty_like(B)
+        BB = xp.stack([xp.asarray(inverse_truncated_modal(xp.asarray(A[..., i].data), num_modes)) for i in range(grid.size)], axis=-1)
 
-        for i in range(grid.size):
-            BB[..., i] = inverse_truncated_modal(np.asarray(A[..., i]), num_modes)
-
-        assert np.allclose(B, BB)
+        assert all_close(B, BB)
 
 def test_field_cross():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    A = Field(np.random.randn(3, grid.size), grid)
-    B = Field(np.random.randn(3, grid.size), grid)
+    rng = make_random_generator(xp)
+    A = Field(rng.normal(size=(3, grid.size)), grid)
+    B = Field(rng.normal(size=(3, grid.size)), grid)
 
     C = field_cross(A, B)
-    CC = np.empty_like(C)
-    for i in range(grid.size):
-        CC[..., i] = np.cross(A[:, i], B[:, i])
+    CC = xp.stack([xp.linalg.cross(A[..., i].data, B[..., i].data) for i in range(grid.size)], axis=-1)
 
-    assert np.allclose(C, CC)
+    assert all_close(C, CC)
 
 def test_field_svd():
-    grid = make_pupil_grid(2)
+    grid = make_pupil_grid(2, xp=xp)
 
-    A = Field(np.random.randn(5, 10, grid.size), grid)
+    rng = make_random_generator(xp)
+    A = Field(rng.normal(size=(5, 10, grid.size)), grid)
 
     U, S, Vh = field_svd(A)
     u, s, vh = field_svd(A, False)
 
     for i in range(grid.size):
-        svd = np.linalg.svd(A[..., i])
+        svd = xp.linalg.svd(A[..., i].data)
 
-        assert np.allclose(U[..., i], svd[0])
-        assert np.allclose(S[..., i], svd[1])
-        assert np.allclose(Vh[..., i], svd[2])
+        assert all_close(U[..., i], svd[0])
+        assert all_close(S[..., i], svd[1])
+        assert all_close(Vh[..., i], svd[2])
 
-        svd2 = np.linalg.svd(A[..., i], full_matrices=False)
+        svd2 = xp.linalg.svd(A[..., i].data, full_matrices=False)
 
-        assert np.allclose(u[..., i], svd2[0])
-        assert np.allclose(s[..., i], svd2[1])
-        assert np.allclose(vh[..., i], svd2[2])
+        assert all_close(u[..., i], svd2[0])
+        assert all_close(s[..., i], svd2[1])
+        assert all_close(vh[..., i], svd2[2])
 
 def test_grid_hashing_and_comparison():
-    grid1 = make_pupil_grid(128)
+    grid1 = make_pupil_grid(128, xp=xp)
 
     grid2 = CartesianGrid(SeparatedCoords(copy.deepcopy(grid1.separated_coords)))
     assert hash(grid1) != hash(grid2)
@@ -206,7 +207,7 @@ def test_grid_hashing_and_comparison():
     assert grid2 != grid3
     assert grid3 != grid2
 
-    grid4 = make_pupil_grid(128)
+    grid4 = make_pupil_grid(128, xp=xp)
     print('start')
     assert hash(grid1) == hash(grid4)
     assert grid1 == grid4
@@ -230,7 +231,7 @@ def test_grid_hashing_and_comparison():
     assert grid1 != grid8
     assert grid7 == grid8
 
-    grid9 = make_pupil_grid(256)
+    grid9 = make_pupil_grid(256, xp=xp)
     assert hash(grid1) != hash(grid9)
     assert grid1 != grid9
 
@@ -242,17 +243,17 @@ def test_grid_hashing_and_comparison():
     assert grid1 != 'string'
 
 def test_grid_supersampled():
-    g = make_uniform_grid(128, [1, 1])
+    g = make_uniform_grid(128, [1, 1], xp=xp)
     g2 = make_supersampled_grid(g, 4)
     g3 = make_subsampled_grid(g2, 4)
 
-    assert np.allclose(g.x, g3.x)
-    assert np.allclose(g.y, g3.y)
+    assert all_close(g.x, g3.x)
+    assert all_close(g.y, g3.y)
 
     g4 = make_supersampled_grid(make_supersampled_grid(g, 2), 2)
 
-    assert np.allclose(g2.x, g4.x)
-    assert np.allclose(g2.y, g4.y)
+    assert all_close(g2.x, g4.x)
+    assert all_close(g2.y, g4.y)
 
 def allclose(x1, x2, /, *, rtol=1e-5, atol=1e-8):
     xp = x1.__array_namespace__()
@@ -269,7 +270,7 @@ def allclose(x1, x2, /, *, rtol=1e-5, atol=1e-8):
 
 @pytest.mark.parametrize('Field', [hcipy.field.NewStyleField, hcipy.field.OldStyleField])
 def test_field_arithmetic(Field):
-    grid = make_pupil_grid(16)
+    grid = make_pupil_grid(16, xp=xp)
 
     M = np.random.randn(grid.size, grid.size)
 
@@ -279,7 +280,7 @@ def test_field_arithmetic(Field):
     a = Field(a_data, grid)
     b = Field(b_data, grid)
 
-    xp = a.__array_namespace__()
+    fxps = a.__array_namespace__()
 
     assert allclose(a, b)
     assert allclose(a + b, 2)
@@ -289,7 +290,7 @@ def test_field_arithmetic(Field):
     assert is_field(a + b)
     assert is_field(a - b)
     assert is_field(a * b)
-    assert is_field(xp.exp(2j * a))
+    assert is_field(fxps.exp(2j * a))
 
     assert is_field(a.conj())
     assert is_field(a.conjugate())
@@ -314,7 +315,7 @@ def test_field_arithmetic(Field):
 
 @pytest.mark.parametrize('Field', [hcipy.field.NewStyleField, hcipy.field.OldStyleField])
 def test_field_pickle(Field):
-    grid = make_pupil_grid(16)
+    grid = make_pupil_grid(16, xp=xp)
 
     a = Field(np.ones(grid.size), grid)
 
@@ -323,4 +324,3 @@ def test_field_pickle(Field):
 
     assert allclose(a, b)
     assert a.grid == b.grid
-

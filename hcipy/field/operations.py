@@ -1,6 +1,19 @@
-from .field import Field
+from .field import Field, NewStyleField, is_field
 import numpy as np
 import string
+from .._math.einsum import einsum
+from .._math.backends import array_namespace, is_scalar
+
+def _normalize_field(a):
+    """Extract the underlying array from a field for numpy compatibility.
+
+    OldStyleField subclasses np.ndarray and can be used directly.
+    NewStyleField stores its data in ``.data`` and is not ndarray-compatible.
+    """
+    if isinstance(a, NewStyleField):
+        return a.data
+    else:
+        return a
 
 def field_einsum(subscripts, *operands, **kwargs):
     '''Evaluates the Einstein summation convention on the operand fields.
@@ -64,12 +77,12 @@ def field_einsum(subscripts, *operands, **kwargs):
         If all of the fields don't have    the same grid size. If the number of
         operands is not equal to the number of subscripts specified.
     '''
-    is_field = [isinstance(o, Field) for o in operands]
-    if not np.count_nonzero(is_field):
-        return np.einsum(subscripts, *operands, **kwargs)
+    operand_is_field = [is_field(o) for o in operands]
+    if not any(operand_is_field):
+        return einsum(subscripts, *operands, **kwargs)
 
-    field_sizes = [o.grid.size for i, o in enumerate(operands) if is_field[i]]
-    element_sizes = [o.shape[-1] for i, o in enumerate(operands) if is_field[i]]
+    field_sizes = [o.grid.size for i, o in enumerate(operands) if operand_is_field[i]]
+    element_sizes = [o.shape[-1] for i, o in enumerate(operands) if operand_is_field[i]]
 
     if not np.allclose(field_sizes, field_sizes[0]) or not np.allclose(element_sizes, element_sizes[0]):
         raise ValueError('All fields must be the same size for a field_einsum().')
@@ -91,7 +104,7 @@ def field_einsum(subscripts, *operands, **kwargs):
     unused_index = [a for a in string.ascii_lowercase if a not in subscripts][0]
 
     # Add the field dimension to the input field operands.
-    ss = [s + unused_index if is_field[i] else s for i, s in enumerate(ss)]
+    ss = [s + unused_index if operand_is_field[i] else s for i, s in enumerate(ss)]
 
     # Recombine all operands into the final subscripts
     if len(splitted_string) == 2:
@@ -99,8 +112,18 @@ def field_einsum(subscripts, *operands, **kwargs):
     else:
         subscripts_new = ','.join(ss)
 
-    res = np.einsum(subscripts_new, *operands, **kwargs)
-    grid = operands[np.flatnonzero(np.array(is_field))[0]].grid
+    unwrapped = [_normalize_field(o) if operand_is_field[i] else o for i, o in enumerate(operands)]
+
+    if 'out' in kwargs:
+        kwargs['out'] = _normalize_field(kwargs['out'])
+
+    res = einsum(subscripts_new, *unwrapped, **kwargs)
+
+    grid = None
+    for o in operands:
+        if hasattr(o, 'grid'):
+            grid = o.grid
+            break
 
     if 'out' in kwargs:
         kwargs['out'] = Field(res, grid)
@@ -126,21 +149,23 @@ def field_dot(a, b, out=None):
     # Find out if a or b are vectors or higher dimensional tensors
     if hasattr(a, 'tensor_order'):
         amat = a.tensor_order > 1
-    elif np.isscalar(a):
+    elif is_scalar(a):
         if out is None:
             return a * b
         else:
-            return np.multiply(a, b, out)
+            xp = array_namespace(a, b)
+            return xp.multiply(a, b, out=out)
     else:
         amat = a.ndim > 1
 
     if hasattr(b, 'tensor_order'):
         bmat = b.tensor_order > 1
-    elif np.isscalar(b):
+    elif is_scalar(b):
         if out is None:
             return a * b
         else:
-            return np.multiply(a, b, out)
+            xp = array_namespace(a, b)
+            return xp.multiply(a, b, out=out)
     else:
         bmat = b.ndim > 1
 
@@ -208,9 +233,10 @@ def field_inverse_tikhonov(f, rcond=1e-15):
         if f.tensor_order != 2:
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
-        res = np.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
+        xp = array_namespace(_normalize_field(f))
+        res = xp.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
         for i in range(f.grid.size):
-            res[..., i] = inverse_tikhonov(f[..., i], rcond)
+            res[..., i] = xp.asarray(inverse_tikhonov(_normalize_field(f[..., i]), rcond))
         return Field(res, f.grid)
     else:
         return inverse_tikhonov(f, rcond)
@@ -244,9 +270,10 @@ def field_inverse_truncated(f, rcond=1e-15):
         if f.tensor_order != 2:
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
-        res = np.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
+        xp = array_namespace(_normalize_field(f))
+        res = xp.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
         for i in range(f.grid.size):
-            res[..., i] = inverse_truncated(f[..., i], rcond)
+            res[..., i] = xp.asarray(inverse_truncated(_normalize_field(f[..., i]), rcond))
         return Field(res, f.grid)
     else:
         return inverse_truncated(f, rcond)
@@ -280,9 +307,10 @@ def field_inverse_truncated_modal(f, num_modes):
         if f.tensor_order != 2:
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
-        res = np.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
+        xp = array_namespace(_normalize_field(f))
+        res = xp.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
         for i in range(f.grid.size):
-            res[..., i] = inverse_truncated_modal(np.asarray(f[..., i]), num_modes)
+            res[..., i] = xp.asarray(inverse_truncated_modal(_normalize_field(f[..., i]), num_modes))
         return Field(res, f.grid)
     else:
         return inverse_truncated_modal(f, num_modes)
@@ -310,10 +338,13 @@ def field_inv(f):
         if f.tensor_order != 2:
             raise ValueError('Field must be a tensor field of order 2 to be able to compute inverses.')
 
-        res = np.moveaxis(np.linalg.inv(np.moveaxis(f, -1, 0)), 0, -1)
-        return Field(res, f.grid)
+        data = _normalize_field(f)
+        xp = array_namespace(data)
+        res = xp.linalg.inv(xp.moveaxis(data, -1, 0))
+        return Field(xp.moveaxis(res, 0, -1), f.grid)
     else:
-        return np.linalg.inv(f)
+        xp = array_namespace(f)
+        return xp.linalg.inv(f)
 
 def field_svd(f, full_matrices=True, compute_uv=True):
     '''Calculate the singular value decomposition for a tensor field of order 2.
@@ -338,20 +369,20 @@ def field_svd(f, full_matrices=True, compute_uv=True):
         The unitary matrices. Only returned if `compute_uv` is True.
     '''
 
-    res = np.linalg.svd(np.moveaxis(f, -1, 0), full_matrices, compute_uv)
+    data = _normalize_field(f)
+    xp = array_namespace(data)
 
     if compute_uv:
-        U, S, Vh = res
-        U = Field(np.moveaxis(U, 0, -1), f.grid)
-        Vh = Field(np.moveaxis(Vh, 0, -1), f.grid)
-    else:
-        S = res
+        U, S, Vh = xp.linalg.svd(xp.moveaxis(data, -1, 0), full_matrices=full_matrices)
+        U = Field(xp.moveaxis(U, 0, -1), f.grid)
+        Vh = Field(xp.moveaxis(Vh, 0, -1), f.grid)
+        S = Field(xp.moveaxis(S, 0, -1), f.grid)
 
-    S = Field(np.moveaxis(S, 0, -1), f.grid)
-
-    if compute_uv:
         return U, S, Vh
     else:
+        S = xp.linalg.svdvals(xp.moveaxis(data, -1, 0))
+        S = Field(xp.moveaxis(S, 0, -1), f.grid)
+
         return S
 
 def field_conjugate_transpose(a):
@@ -374,13 +405,17 @@ def field_conjugate_transpose(a):
         if a.tensor_order != 2:
             raise ValueError('Need a tensor field of rank 2.')
 
-        return Field(np.swapaxes(a.conj(), 0, 1), a.grid)
+        data = _normalize_field(a)
+        xp = array_namespace(data)
+        res = xp.permute_dims(xp.conj(data), (1, 0, 2))
+        return Field(res, a.grid)
     else:
         # if its an array, it must be two dimensional
         if len(a.shape) != 2:
             raise ValueError('Need a two dimensional array.')
 
-        return np.swapaxes(a.conj(), 0, 1)
+        xp = array_namespace(a)
+        return xp.permute_dims(xp.conj(a), (1, 0))
 
 def field_transpose(a):
     '''Performs the transpose of a rank 2 tensor field or two dimensional array.
@@ -401,13 +436,17 @@ def field_transpose(a):
         if a.tensor_order != 2:
             raise ValueError('Need a tensor field of rank 2.')
 
-        return Field(np.swapaxes(a, 0, 1), a.grid)
+        data = _normalize_field(a)
+        xp = array_namespace(data)
+        res = xp.permute_dims(data, (1, 0, 2))
+        return Field(res, a.grid)
     else:
         # if its an array, it must be two dimensional
         if len(a.shape) != 2:
             raise ValueError('Need a two dimensional array.')
 
-        return np.swapaxes(a, 0, 1)
+        xp = array_namespace(a)
+        return xp.permute_dims(a, (1, 0))
 
 def field_determinant(a):
     '''Calculates the determinant of a tensor field.
@@ -431,10 +470,12 @@ def field_determinant(a):
     if not all(n == a.tensor_shape[0] for n in a.tensor_shape):
         raise ValueError('Need square matrix for determinant.')
 
-    # First we need to swap the axes in order to use np.linalg.det
-    Temp = np.swapaxes(a, 0, 2)
+    # First we need to swap the axes in order to use xp.linalg.det
+    data = _normalize_field(a)
+    xp = array_namespace(data)
+    Temp = xp.permute_dims(data, (2, 0, 1))
 
-    return Field(np.linalg.det(Temp), a.grid)
+    return Field(xp.linalg.det(Temp), a.grid)
 
 def field_adjoint(a):
     '''Calculates the adjoint of a tensor field.
@@ -455,10 +496,14 @@ def field_adjoint(a):
     # Calculating the determinant.
     determinant = field_determinant(a)
 
-    if np.any(np.isclose(determinant, 0)):
+    det_data = _normalize_field(determinant)
+    xp = array_namespace(det_data)
+
+    if xp.any(xp.abs(det_data) <= 1e-8):
         raise ValueError('Matrix is non-invertible due to zero determinant.')
 
-    return Field(determinant[np.newaxis, np.newaxis, :] * field_inv(a), a.grid)
+    res = xp.reshape(det_data, (1, 1, -1)) * _normalize_field(field_inv(a))
+    return Field(res, a.grid)
 
 def field_cross(a, b):
     '''Calculates the cross product of two vector fields.
@@ -481,7 +526,11 @@ def field_cross(a, b):
     if a.shape[0] != 3 or b.shape[0] != 3:
         raise ValueError('Vector needs to be of length 3 for cross product.')
 
-    return Field(np.cross(a, b, axis=0), a.grid)
+    a_data = _normalize_field(a)
+    b_data = _normalize_field(b)
+    xp = array_namespace(a_data, b_data)
+
+    return Field(xp.linalg.cross(a_data, b_data, axis=-2), a.grid)
 
 def field_kron(a, b):
     '''Calculate the Kronecker product of two fields.

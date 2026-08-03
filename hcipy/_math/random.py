@@ -98,7 +98,7 @@ def _torch_gamma(scale=1.0, shape=1.0, size=None, generator=None):
 
 def _normalize_size(size):
     if size is None:
-        return None
+        return ()
     elif not isinstance(size, tuple):
         return (size,)
     return size
@@ -307,7 +307,7 @@ class RandomGeneratorTorch(RandomGenerator):
     def normal(self, mean=0.0, std=1.0, *, size=None):
         size = _normalize_size(size)
 
-        if size is None or len(size) == 0:
+        if len(size) == 0:
             return self._xp.randn(1, generator=self._rng)[0] * std + mean
         else:
             return self._xp.randn(*size, generator=self._rng) * std + mean
@@ -315,7 +315,7 @@ class RandomGeneratorTorch(RandomGenerator):
     def poisson(self, lam=1.0, *, size=None):
         size = _normalize_size(size)
 
-        if size is None or len(size) == 0:
+        if len(size) == 0:
             lam_tensor = self._xp.ones(1) * lam
             return self._xp.poisson(lam_tensor, generator=self._rng)[0]
         else:
@@ -325,7 +325,7 @@ class RandomGeneratorTorch(RandomGenerator):
     def gamma(self, scale=1.0, shape_param=1.0, *, size=None):
         size = _normalize_size(size)
 
-        if size is None or len(size) == 0:
+        if len(size) == 0:
             return _torch_gamma(scale, shape_param, size=(1,), generator=self._rng)[0]
         else:
             return _torch_gamma(scale, shape_param, size=size, generator=self._rng)
@@ -333,7 +333,7 @@ class RandomGeneratorTorch(RandomGenerator):
     def uniform(self, low=0.0, high=1.0, *, size=None):
         size = _normalize_size(size)
 
-        if size is None or len(size) == 0:
+        if len(size) == 0:
             return self._xp.rand(1, generator=self._rng)[0] * (high - low) + low
         else:
             return self._xp.rand(*size, generator=self._rng) * (high - low) + low
@@ -341,7 +341,7 @@ class RandomGeneratorTorch(RandomGenerator):
     def exponential(self, scale=1.0, *, size=None):
         size = _normalize_size(size)
 
-        if size is None or len(size) == 0:
+        if len(size) == 0:
             return -scale * self._xp.log(self._xp.rand(1, generator=self._rng)[0])
         else:
             return -scale * self._xp.log(self._xp.rand(*size, generator=self._rng))
@@ -351,7 +351,7 @@ class RandomGeneratorTorch(RandomGenerator):
 
         size = _normalize_size(size)
 
-        if size is None or len(size) == 0:
+        if len(size) == 0:
             draw_size = (1,)
             scalar = True
         else:

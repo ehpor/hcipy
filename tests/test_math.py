@@ -386,7 +386,7 @@ def test_einsum(xp, subscripts, shapes, optimize):
 
     got = einsum(subscripts, *arrays, optimize=optimize)
 
-    np.testing.assert_allclose(np.asarray(got), expected, rtol=1e-11)
+    np.testing.assert_allclose(np.asarray(got), expected, atol=1e-14)
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
 def test_einsum_dtype(xp, dtype):
@@ -400,13 +400,13 @@ def test_einsum_dtype(xp, dtype):
         a = a + xp.asarray(1j, dtype=dtype_xp) * xp.astype(rng.normal(size=(4, 5)), dtype_xp)
         b = b + xp.asarray(1j, dtype=dtype_xp) * xp.astype(rng.normal(size=(5, 6)), dtype_xp)
 
-    rtol = 1e-5 if xp.finfo(dtype_xp).bits <= 32 else 1e-11
+    atol = 1e-6 if xp.finfo(dtype_xp).bits <= 32 else 1e-14
 
     expected = np.einsum("ij,jk->ik", np.asarray(a), np.asarray(b))
     got = einsum("ij,jk->ik", a, b)
 
     assert got.dtype == dtype_xp
-    np.testing.assert_allclose(np.asarray(got), expected, rtol=rtol)
+    np.testing.assert_allclose(np.asarray(got), expected, atol=atol)
 
 def test_einsum_int_input(xp):
     a = xp.asarray([[1, 2], [3, 4]])

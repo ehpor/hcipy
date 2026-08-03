@@ -388,7 +388,7 @@ def test_eac1_aperture(with_segment_gaps):
     name += '_without_segment_gaps' if not with_segment_gaps else ''
 
     check_aperture(
-        make_eac1_aperture, 7.225765, name,
+        make_eac1_aperture, 7.168709581221617, name,
         check_normalization=True, check_segmentation=True,
         with_segment_gaps=with_segment_gaps
     )

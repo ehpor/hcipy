@@ -98,7 +98,7 @@ def _torch_gamma(scale=1.0, shape=1.0, size=None, generator=None):
 
 def _normalize_size(size):
     if size is None:
-        return (1,)
+        return None
     elif not isinstance(size, tuple):
         return (size,)
     return size
@@ -257,27 +257,27 @@ class RandomGeneratorNumpy(RandomGenerator):
 
     def normal(self, mean=0.0, std=1.0, *, size=None):
         size = _normalize_size(size)
-        return self._rng.normal(mean, std, size)
+        return self._xp.asarray(self._rng.normal(mean, std, size))
 
     def poisson(self, lam=1.0, *, size=None):
         size = _normalize_size(size)
-        return self._rng.poisson(lam, size)
+        return self._xp.asarray(self._rng.poisson(lam, size))
 
     def gamma(self, scale=1.0, shape_param=1.0, *, size=None):
         size = _normalize_size(size)
-        return self._rng.gamma(shape_param, scale, size)
+        return self._xp.asarray(self._rng.gamma(shape_param, scale, size))
 
     def uniform(self, low=0.0, high=1.0, *, size=None):
         size = _normalize_size(size)
-        return self._rng.uniform(low, high, size)
+        return self._xp.asarray(self._rng.uniform(low, high, size))
 
     def exponential(self, scale=1.0, *, size=None):
         size = _normalize_size(size)
-        return self._rng.exponential(scale, size)
+        return self._xp.asarray(self._rng.exponential(scale, size))
 
     def choice(self, a, *, size=None, replace=True, p=None):
         size = _normalize_size(size)
-        return self._rng.choice(a, size, replace=replace, p=p)
+        return self._xp.asarray(self._rng.choice(a, size, replace=replace, p=p))
 
 
 class RandomGeneratorCupy(RandomGeneratorNumpy):
@@ -306,30 +306,59 @@ class RandomGeneratorTorch(RandomGenerator):
 
     def normal(self, mean=0.0, std=1.0, *, size=None):
         size = _normalize_size(size)
-        return self._xp.randn(*size, generator=self._rng) * std + mean
+
+        if size is None or len(size) == 0:
+            return self._xp.randn(1, generator=self._rng)[0] * std + mean
+        else:
+            return self._xp.randn(*size, generator=self._rng) * std + mean
 
     def poisson(self, lam=1.0, *, size=None):
         size = _normalize_size(size)
-        lam_tensor = self._xp.ones(size=size) * lam
-        return self._xp.poisson(lam_tensor, generator=self._rng)
+
+        if size is None or len(size) == 0:
+            lam_tensor = self._xp.ones(1) * lam
+            return self._xp.poisson(lam_tensor, generator=self._rng)[0]
+        else:
+            lam_tensor = self._xp.ones(size=size) * lam
+            return self._xp.poisson(lam_tensor, generator=self._rng)
 
     def gamma(self, scale=1.0, shape_param=1.0, *, size=None):
         size = _normalize_size(size)
-        return _torch_gamma(scale, shape_param, size=size, generator=self._rng)
+
+        if size is None or len(size) == 0:
+            return _torch_gamma(scale, shape_param, size=(1,), generator=self._rng)[0]
+        else:
+            return _torch_gamma(scale, shape_param, size=size, generator=self._rng)
 
     def uniform(self, low=0.0, high=1.0, *, size=None):
         size = _normalize_size(size)
-        return self._xp.rand(*size, generator=self._rng) * (high - low) + low
+
+        if size is None or len(size) == 0:
+            return self._xp.rand(1, generator=self._rng)[0] * (high - low) + low
+        else:
+            return self._xp.rand(*size, generator=self._rng) * (high - low) + low
 
     def exponential(self, scale=1.0, *, size=None):
         size = _normalize_size(size)
-        return -scale * self._xp.log(self._xp.rand(*size, generator=self._rng))
+
+        if size is None or len(size) == 0:
+            return -scale * self._xp.log(self._xp.rand(1, generator=self._rng)[0])
+        else:
+            return -scale * self._xp.log(self._xp.rand(*size, generator=self._rng))
 
     def choice(self, a, *, size=None, replace=True, p=None):
         import math as _math
 
         size = _normalize_size(size)
-        n = _math.prod(size)
+
+        if size is None or len(size) == 0:
+            draw_size = (1,)
+            scalar = True
+        else:
+            draw_size = size
+            scalar = False
+
+        n = _math.prod(draw_size)
 
         if isinstance(a, int):
             population = None
@@ -339,16 +368,22 @@ class RandomGeneratorTorch(RandomGenerator):
             n_pop = len(population)
 
         if p is None:
-            indices = self._xp.randint(0, n_pop, size, generator=self._rng)
+            indices = self._xp.randint(0, n_pop, draw_size, generator=self._rng)
         else:
             p_tensor = self._xp.asarray(p, dtype=self._xp.float64)
             p_tensor = p_tensor / p_tensor.sum()
             indices = self._xp.multinomial(p_tensor, n, replacement=replace, generator=self._rng)
-            indices = indices.reshape(size)
+            indices = indices.reshape(draw_size)
 
         if population is None:
-            return indices
-        return population[indices]
+            result = indices
+        else:
+            result = population[indices]
+
+        if scalar:
+            return result[0]
+        else:
+            return result
 
 
 class RandomGeneratorJax(RandomGenerator):

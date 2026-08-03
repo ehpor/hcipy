@@ -203,6 +203,13 @@ def test_random_generator_different_sizes(xp, distribution, args):
 
     generation_func = getattr(rng, distribution)
 
+    # Test 0D array
+    arr_0d = generation_func(size=tuple(), **args[0])
+    assert arr_0d.shape == tuple()
+
+    arr_0d = generation_func(size=None, **args[0])
+    assert arr_0d.shape == tuple()
+
     # Test 1D array
     arr_1d = generation_func(size=5, **args[0])
     assert arr_1d.shape == (5,)

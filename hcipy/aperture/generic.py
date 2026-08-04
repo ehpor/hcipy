@@ -630,13 +630,13 @@ def make_wedge_aperture(inner_diameter, outer_diameter, angle_width, spider_widt
     inner_diameter : scalar
         The inner diameter of the sector, defining the starting boundary of the wedge.
     outer_diameter : scalar
-        The outer radius of the sector, defining the end boundary of the wedge.
+        The outer diameter of the sector, defining the end boundary of the wedge.
     angle_width : scalar
         The angular width of the wedge in degrees, specifying the span of the aperture.
     spider_width : scalar
         The full width of the spider.
     pointy_top : bool, optional
-        If True the wedge sector will be at the "top", by default True
+        If True, the wedge points to the right. Otherwise, it points up. Defaults to True.
 
     Returns
     -------

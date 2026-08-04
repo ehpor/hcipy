@@ -5,6 +5,7 @@ __all__ = [
     'make_irregular_polygon_aperture',
     'make_regular_polygon_aperture',
     'make_hexagonal_aperture',
+    'make_wedge_aperture',
     'make_spider',
     'make_spider_infinite',
     'make_obstructed_circular_aperture',

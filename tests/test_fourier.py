@@ -270,6 +270,43 @@ def test_mft_precomputations():
             assert (mft.M1 is not None) == precompute_matrices
             assert (mft.intermediate_array is not None) == allocate_intermediate
 
+def _apply_per_component(func, field):
+    if field.is_scalar_field:
+        return func(field)
+
+    f = field.reshape((-1, field.grid.size))
+    res = [func(Field(ff, field.grid)) for ff in f]
+
+    new_shape = tuple(field.tensor_shape) + (-1,)
+    return Field(np.array(res).reshape(new_shape), field.grid)
+
+@pytest.mark.parametrize('tensor_shape', [(3,), (3, 2), (4, 3, 2)])
+@pytest.mark.parametrize('dims', [16, [16, 17]])
+def test_fourier_transform_tensor_fields(tensor_shape, dims):
+    np.random.seed(0)
+
+    input_grid = make_uniform_grid(dims, 1, has_center=True).shifted(0.1)
+
+    f_shape = tensor_shape + (input_grid.size,)
+    f_in = Field(np.random.randn(*f_shape) + 1j * np.random.randn(*f_shape), input_grid).astype(np.complex128)
+
+    fourier_transforms = make_all_fourier_transforms(input_grid, q=1.3, fov=0.8, shift=0.1)
+
+    for ft in fourier_transforms:
+        # Check the forward transform against a manual loop over the tensor components.
+        f_out = ft.forward(f_in)
+        f_out_ref = _apply_per_component(ft.forward, f_in)
+
+        assert f_out.shape == f_out_ref.shape
+        assert np.allclose(f_out, f_out_ref)
+
+        # Check the backward transform against a manual loop over the tensor components.
+        f_in_roundtrip = ft.backward(f_out)
+        f_in_roundtrip_ref = _apply_per_component(ft.backward, f_out)
+
+        assert f_in_roundtrip.shape == f_in_roundtrip_ref.shape
+        assert np.allclose(f_in_roundtrip, f_in_roundtrip_ref)
+
 def test_fourier_filter():
     for n in [16, 17, [16, 17]]:
         for q in [1, 2, 3]:

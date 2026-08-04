@@ -3,6 +3,7 @@ __all__ = [
     'get_strehl_from_pupil',
     'get_mean_intensity_in_roi',
     'get_mean_raw_contrast',
+    'get_fringe_visibility',
     'binned_profile',
     'azimutal_profile',
     'radial_profile'

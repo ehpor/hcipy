@@ -73,3 +73,50 @@ def get_mean_raw_contrast(img, mask, ref_img):
     strehl = get_strehl_from_focal(img, ref_img)
 
     return mean_intensity / strehl
+
+def get_fringe_visibility(intensity):
+    '''Get the Michelson fringe visibility from intensity samples.
+
+    The visibility is calculated from the maximum and minimum intensity
+    values as
+
+    .. math:: V = \\frac{I_\\mathrm{max} - I_\\mathrm{min}}
+                       {I_\\mathrm{max} + I_\\mathrm{min}}.
+
+    Parameters
+    ----------
+    intensity : Field or array_like
+        The non-negative intensity samples of an interference pattern.
+
+    Returns
+    -------
+    scalar
+        The Michelson fringe visibility.
+
+    Raises
+    ------
+    ValueError
+        If the input is empty, contains non-finite or negative values,
+        or contains only zero-valued intensities.
+    '''
+    intensity = np.asarray(intensity)
+
+    if intensity.size == 0:
+        raise ValueError('The intensity samples must not be empty.')
+
+    if not np.all(np.isfinite(intensity)):
+        raise ValueError('The intensity samples must be finite.')
+
+    if np.any(intensity < 0):
+        raise ValueError('The intensity samples must be non-negative.')
+
+    intensity_min = np.min(intensity)
+    intensity_max = np.max(intensity)
+    denominator = intensity_max + intensity_min
+
+    if denominator == 0:
+        raise ValueError(
+            'Fringe visibility is undefined when all intensities are zero.'
+        )
+
+    return (intensity_max - intensity_min) / denominator

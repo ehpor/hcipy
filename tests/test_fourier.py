@@ -278,7 +278,7 @@ def _apply_per_component(func, field):
     res = [func(Field(ff, field.grid)) for ff in f]
 
     new_shape = tuple(field.tensor_shape) + (-1,)
-    return Field(np.array(res).reshape(new_shape), field.grid)
+    return Field(np.array(res).reshape(new_shape), res[0].grid)
 
 @pytest.mark.parametrize('tensor_shape', [(3,), (3, 2), (4, 3, 2)])
 @pytest.mark.parametrize('dims', [16, [16, 17]])
@@ -298,6 +298,7 @@ def test_fourier_transform_tensor_fields(tensor_shape, dims):
         f_out_ref = _apply_per_component(ft.forward, f_in)
 
         assert f_out.shape == f_out_ref.shape
+        assert f_out.grid == f_out_ref.grid
         assert np.allclose(f_out, f_out_ref)
 
         # Check the backward transform against a manual loop over the tensor components.
@@ -305,6 +306,7 @@ def test_fourier_transform_tensor_fields(tensor_shape, dims):
         f_in_roundtrip_ref = _apply_per_component(ft.backward, f_out)
 
         assert f_in_roundtrip.shape == f_in_roundtrip_ref.shape
+        assert f_in_roundtrip.grid == f_in_roundtrip_ref.grid
         assert np.allclose(f_in_roundtrip, f_in_roundtrip_ref)
 
 def test_fourier_filter():

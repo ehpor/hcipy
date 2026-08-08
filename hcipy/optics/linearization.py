@@ -54,7 +54,7 @@ class LinearizedOpticalSystem:
     def __call__(self, coefficients):
         '''Evaluate the linearized output electric field for given mode coefficients.
 
-        This evaluates `E = E_0 + G * phi` on the output grid, using a single
+        This evaluates :math:`E = E_0 + G * \\phi` on the output grid, using a single
         matrix-vector product without intermediate copies of the response basis.
 
         Parameters
@@ -78,6 +78,111 @@ class LinearizedOpticalSystem:
             raise ValueError('The number of coefficients must match the number of modes.')
 
         return self.static_field + self.field_response.transformation_matrix @ coefficients
+
+    def intensity_from_covariance(self, P):
+        '''The mean intensity on the output grid for mode coefficients with covariance `P`.
+
+        For mode coefficients `phi` with zero mean and covariance `P`, the mean
+        intensity of the linearized field is:
+
+        .. math::
+
+            E[I] = |E_0|^2 + diag(G P G^H)
+
+        If `P` is given as a vector, it is interpreted as the diagonal of the
+        covariance matrix (the per-mode variances). The diagonal of :math:`G P G^H` is
+        computed without materializing the `(n_out, n_out)` covariance matrix of
+        the output field, requiring only `(n_out, r)` storage.
+
+        Parameters
+        ----------
+        P : ndarray
+            The covariance matrix of the mode coefficients, of shape `(r, r)`,
+            or a vector of length `r` containing its diagonal.
+
+        Returns
+        -------
+        Field
+            The mean intensity on the output grid.
+
+        Raises
+        ------
+        ValueError
+            If `P` is not a vector of length `r` or a matrix of shape `(r, r)`.
+        '''
+        P = np.asarray(P)
+
+        if P.ndim == 1:
+            if P.shape != (self.modes.num_modes,):
+                raise ValueError('A vector P must have one entry per mode.')
+
+            # diag(G diag(P) G^H) = |G|^2 P, a single matrix-vector product.
+            variance = (np.abs(self.field_response.transformation_matrix)**2) @ P
+        elif P.ndim == 2:
+            if P.shape != (self.modes.num_modes, self.modes.num_modes):
+                raise ValueError('A matrix P must have shape (num_modes, num_modes).')
+
+            # diag(G P G^H) = sum_j (G P)_ij conj(G)_ij, computed via one
+            # (n_out, r) intermediate instead of the full (n_out, n_out) matrix.
+            G = self.field_response.transformation_matrix
+            variance = np.sum((G @ P) * np.conj(G), axis=1).real
+        else:
+            raise ValueError('P must be a vector of length r or a matrix of shape (r, r).')
+
+        return Field(np.abs(self.static_field)**2 + variance, self.output_grid)
+
+    def pastis_matrix(self, weights):
+        '''The PASTIS matrix of this linearized optical system, weighted per output point.
+
+        The PASTIS matrix describes the second-order response of the weighted
+        sum of the intensity on the output grid to the mode coefficients:
+
+        .. math::
+
+            M = G^H W G,
+
+        with ::math::`W = diag(weights)`. See [Leboulleux2018]_.
+
+        .. [Leboulleux2018]
+
+            L. Leboulleux, J.-F. Sauvage, L. A. Pueyo, T. Fusco, R. Soummer,
+            J. Mazoyer, A. Sivaramakrishnan, M. N'Diaye, and O. Fauvarque, "Pair-based Analytical
+            model for Segmented Telescopes Imaging from Space (PASTIS) for sensitivity analysis,"
+            Journal of Astronomical Telescopes, Instruments, and Systems, 4(3), 035002 (2018).
+            https://doi.org/10.1117/1.JATIS.4.3.035002
+
+        The contribution of a mode-coefficient covariance `P` to the weighted
+        intensity is `trace(M P)`. The matrix is Hermitian; for real symmetric
+        `P`, `trace(M P)` is real and the real part of `M` follows the usual
+        PASTIS convention. It is computed with `(n_out, r)` storage, without
+        materializing the weight matrix.
+
+        Parameters
+        ----------
+        weights : Field or ndarray
+            The weights for each point on the output grid, e.g. a dark hole mask.
+
+        Returns
+        -------
+        ndarray
+            The weighted PASTIS matrix, of shape `(r, r)`.
+
+        Raises
+        ------
+        ValueError
+            If the weights do not have one entry per point on the output grid.
+        '''
+        weights = np.asarray(weights)
+
+        if weights.shape != (self.output_grid.size,):
+            raise ValueError('The weights must have one entry per point on the output grid.')
+
+        # M = G^H W G = (W G)^H G, with the weight matrix applied as a
+        # column-wise scaling of the response basis.
+        G = self.field_response.transformation_matrix
+
+        return np.asarray((G * weights[:, np.newaxis]).conj().T @ G)
+
 
 def linearize_optical_system(optical_system, aperture, modes, wavelength=1, mode_type='opd'):
     '''Linearize an optical system with respect to wavefront error modes.

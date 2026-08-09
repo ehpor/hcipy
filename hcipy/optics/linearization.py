@@ -110,18 +110,10 @@ class LinearizedOpticalSystem:
         ValueError
             If `P` is not a vector of length `r` or a matrix of shape `(r, r)`.
         '''
-        P = np.asarray(P)
-
         if P.ndim == 1:
-            if P.shape != (self.modes.num_modes,):
-                raise ValueError('A vector P must have one entry per mode.')
-
             # diag(G diag(P) G^H) = |G|^2 P, a single matrix-vector product.
             variance = (np.abs(self.field_response.transformation_matrix)**2) @ P
         elif P.ndim == 2:
-            if P.shape != (self.modes.num_modes, self.modes.num_modes):
-                raise ValueError('A matrix P must have shape (num_modes, num_modes).')
-
             # diag(G P G^H) = sum_j (G P)_ij conj(G)_ij, computed via one
             # (n_out, r) intermediate instead of the full (n_out, n_out) matrix.
             G = self.field_response.transformation_matrix
@@ -139,7 +131,7 @@ class LinearizedOpticalSystem:
 
         .. math::
 
-            M = G^H W G,
+            M = \\Re[G^H W G],
 
         with ::math::`W = diag(weights)`. See [Leboulleux2018]_.
 
@@ -150,12 +142,6 @@ class LinearizedOpticalSystem:
             model for Segmented Telescopes Imaging from Space (PASTIS) for sensitivity analysis,"
             Journal of Astronomical Telescopes, Instruments, and Systems, 4(3), 035002 (2018).
             https://doi.org/10.1117/1.JATIS.4.3.035002
-
-        The contribution of a mode-coefficient covariance `P` to the weighted
-        intensity is `trace(M P)`. The matrix is Hermitian; for real symmetric
-        `P`, `trace(M P)` is real and the real part of `M` follows the usual
-        PASTIS convention. It is computed with `(n_out, r)` storage, without
-        materializing the weight matrix.
 
         Parameters
         ----------
@@ -172,16 +158,11 @@ class LinearizedOpticalSystem:
         ValueError
             If the weights do not have one entry per point on the output grid.
         '''
-        weights = np.asarray(weights)
-
-        if weights.shape != (self.output_grid.size,):
-            raise ValueError('The weights must have one entry per point on the output grid.')
-
         # M = G^H W G = (W G)^H G, with the weight matrix applied as a
         # column-wise scaling of the response basis.
         G = self.field_response.transformation_matrix
 
-        return np.asarray((G * weights[:, np.newaxis]).conj().T @ G)
+        return np.real((G * weights[:, np.newaxis]).conj().T @ G)
 
 
 def linearize_optical_system(optical_system, aperture, modes, wavelength=1, mode_type='opd'):
@@ -205,106 +186,58 @@ def linearize_optical_system(optical_system, aperture, modes, wavelength=1, mode
         :class:`OpticalSystem` can be passed as-is. The system must be
         complex-linear in the electric field; all standard HCIPy optical
         elements are.
-    aperture : Field or callable
-        The entrance electric field `A`, as a :class:`Field` or a callable
-        (e.g. an HCIPy aperture generator) evaluated on the input grid. The
-        field may be complex.
+    aperture : Field
+        The entrance electric field `A` on the input grid. The field may be complex.
     modes : ModeBasis
         The wavefront error modes. Their semantics are defined by `mode_type`.
     wavelength : scalar
         The wavelength for which the model is linearized.
     mode_type : str
         The semantics of the modes, and hence the units of the mode
-        coefficients and of the returned response:
-
-        ==============  ==============================================  =====================================
-        `mode_type`     Semantics of a mode `m_j`                      Response column
-        ==============  ==============================================  =====================================
-        'opd'           Optical path difference shape, in meters       `G[:, j] = 1j * k * F(A * m_j)`
-        'phase'         Phase shape, in radians                        `G[:, j] = 1j * F(A * m_j)`
-        'amplitude'     Dimensionless multiplicative amplitude         `G[:, j] = F(A * m_j)`
-        'field'         Additive complex field perturbation, with      `G[:, j] = F(m_j)`
-                        the support included in `m_j`
-        ==============  ==============================================  =====================================
-
-        with `k = 2 * pi / wavelength`.
+        coefficients and of the returned response. With 'opd', each mode
+        describes an optical path difference shape in meters, and the response
+        column is `G[:, j] = 1j * k * F(A * m_j)` with `k = 2 * pi / wavelength`.
+        With 'phase', each mode describes a phase shape in radians, and the
+        response column is `G[:, j] = 1j * F(A * m_j)`. With 'amplitude', each
+        mode is a dimensionless multiplicative amplitude perturbation, and the
+        response column is `G[:, j] = F(A * m_j)`. With 'field', each mode is an
+        additive complex field perturbation whose support is included in the
+        mode itself, and the response column is `G[:, j] = F(m_j)`.
 
     Returns
     -------
     LinearizedOpticalSystem
-        The linearized optical system, carrying the static field `E_0`, the
-        response basis `G`, the modes, the wavelength and the mode type.
+        The linearized optical system.
 
     Raises
     ------
     ValueError
-        If `mode_type` is not one of the supported values, or if no input grid
-        can be derived from the modes or the aperture, or if the grids of the
-        modes and the aperture do not match.
-    TypeError
-        If `optical_system` is not callable.
+        If `mode_type` is not one of the supported values.
     '''
-    if not callable(optical_system):
-        raise TypeError('The optical system must be callable with a Wavefront.')
-
     if mode_type not in ('opd', 'phase', 'amplitude', 'field'):
         raise ValueError('Unknown mode type %r. Mode type must be one of "opd", "phase", "amplitude" or "field".' % mode_type)
 
-    if isinstance(aperture, Field):
-        aperture_grid = aperture.grid
-    else:
-        aperture_grid = None
-
-    modes_grid = getattr(modes, 'grid', None)
-
-    if modes_grid is not None and aperture_grid is not None and modes_grid != aperture_grid:
-        raise ValueError('The grid of the modes and the grid of the aperture must match.')
-
-    input_grid = modes_grid if modes_grid is not None else aperture_grid
-
-    if input_grid is None:
-        raise ValueError('No input grid could be derived from the modes or the aperture. Supply modes with a grid, or an aperture Field.')
-
-    if modes_grid is None and isinstance(modes, ModeBasis):
-        # Attach the derived input grid to a copy of the modes, so that the
-        # model carries the input grid even when the modes were given without one.
-        modes = ModeBasis(modes.transformation_matrix.copy(), input_grid)
-
-    if isinstance(aperture, Field):
-        aperture_field = aperture
-    else:
-        aperture_field = aperture(input_grid)
-        if not isinstance(aperture_field, Field):
-            raise ValueError('The aperture callable did not return a Field.')
-
-    if not aperture_field.is_valid_field:
-        raise ValueError('The aperture field does not have the correct size for its grid.')
-
     # The unperturbed propagation. This also discovers the output grid.
-    static_field = optical_system(Wavefront(aperture_field, wavelength)).electric_field
+    static_field = optical_system(Wavefront(aperture, wavelength)).electric_field
 
     if mode_type == 'opd':
         factor = 1j * 2 * np.pi / wavelength
     elif mode_type == 'phase':
         factor = 1j
     else:
+        # for "amplitude" and "field"
         factor = 1
 
     response_columns = []
-    for j in range(len(modes)):
-        mode = modes[j]
-
-        if not isinstance(mode, Field):
-            mode = Field(np.asarray(mode), input_grid)
-
+    for mode in modes:
         if mode_type == 'field':
             input_field = mode
         else:
-            input_field = aperture_field * mode
+            input_field = aperture * mode
 
         response = optical_system(Wavefront(input_field, wavelength)).electric_field
         response_columns.append(factor * response)
 
-    field_response = ModeBasis(np.stack(response_columns, axis=-1), static_field.grid)
+    field_response = ModeBasis(response_columns, static_field.grid)
 
     return LinearizedOpticalSystem(static_field, field_response, modes, wavelength, mode_type)

@@ -1267,3 +1267,18 @@ def test_surface_aberration_at_distance():
     wf_back = sad.backward(wf_out)
 
     assert np.allclose(wf.electric_field, wf_back.electric_field)
+
+def test_simple_vibration_phase_matching():
+    pupil_grid = make_pupil_grid(32)
+    mode = pupil_grid.x
+
+    vib = SimpleVibration(mode, 1e-6, 10, phase_0=0)
+    vib.t = 0.5
+
+    # Store the phase before setting a new frequency.
+    phase_before = vib.phase
+    vib.frequency = 20
+    phase_after = vib.phase
+
+    # Check that the phase varies contiguously with time and is not affected by changing the frequency.
+    assert np.isclose(phase_before, phase_after)

@@ -66,17 +66,7 @@ class LinearizedOpticalSystem:
         -------
         Field
             The output electric field on the output grid.
-
-        Raises
-        ------
-        ValueError
-            If the number of coefficients does not match the number of modes.
         '''
-        coefficients = np.asarray(coefficients)
-
-        if coefficients.shape != (self.modes.num_modes,):
-            raise ValueError('The number of coefficients must match the number of modes.')
-
         return self.static_field + self.field_response.transformation_matrix @ coefficients
 
     def intensity_from_covariance(self, P):
@@ -152,11 +142,6 @@ class LinearizedOpticalSystem:
         -------
         ndarray
             The weighted PASTIS matrix, of shape `(r, r)`.
-
-        Raises
-        ------
-        ValueError
-            If the weights do not have one entry per point on the output grid.
         '''
         # M = G^H W G = (W G)^H G, with the weight matrix applied as a
         # column-wise scaling of the response basis.

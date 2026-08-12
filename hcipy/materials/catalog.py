@@ -98,7 +98,7 @@ class _PageSpec:
         self.filepath = filepath
 
     def load(self):
-        with open(self.filepath) as f:
+        with open(self.filepath, encoding='utf-8') as f:
             doc = yaml.load(f, Loader=_YAML_LOADER)
 
         n_grid = None
@@ -190,7 +190,7 @@ class MaterialCatalog:
         self._index = {}
         self._pages = []
 
-        with open(catalog_file) as f:
+        with open(catalog_file, encoding='utf-8') as f:
             catalog = yaml.load(f, Loader=_YAML_LOADER)
 
         for shelf_entry in catalog:

@@ -3,6 +3,8 @@ import inspect
 import collections
 import itertools
 
+from ..dev import deprecated
+
 class OpticalElement(object):
     '''Base class for all optical elements.
 
@@ -92,6 +94,7 @@ class OpticalElement(object):
         '''
         raise NotImplementedError()
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_forward(self, wavelength=1):
         '''Calculate the linear transformation matrix that corresponds
         to a forward propagation.
@@ -119,6 +122,7 @@ class OpticalElement(object):
         '''
         raise NotImplementedError()
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_backward(self, wavelength=1):
         '''Calculate the linear transformation matrix that corresponds
         to a backward propagation.
@@ -214,8 +218,9 @@ class EmptyOpticalElement(OpticalElement):
         '''
         return wavefront
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_forward(self, wavelength=1):
-        '''Calculate the backward linear transformation matrix for the empty optical element.
+        '''Calculate the linear transformation matrix for the empty optical element.
 
         Parameters
         ----------
@@ -229,6 +234,7 @@ class EmptyOpticalElement(OpticalElement):
         '''
         return np.array(1)
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_backward(self, wavelength=1):
         '''Calculate the backward linear transformation matrix for the empty optical element.
 
@@ -911,6 +917,7 @@ class OpticalSystem(object):
 
         return wf
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_forward(self, wavelength=1):
         '''Calculate the forward linear transformation matrix.
 
@@ -931,8 +938,9 @@ class OpticalSystem(object):
 
         return matrix
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_backward(self, wavelength=1):
-        '''Calculate the forward linear transformation matrix.
+        '''Calculate the backward linear transformation matrix.
 
         Parameters
         ----------

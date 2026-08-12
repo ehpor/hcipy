@@ -2,6 +2,7 @@ import numpy as np
 from ..optics import OpticalElement
 from ..mode_basis import ModeBasis
 from ..util import inverse_truncated
+from ..dev import deprecated
 
 class PerfectCoronagraph(OpticalElement):
     r'''A perfect coronagraph for a certain aperture and order.
@@ -104,6 +105,7 @@ class PerfectCoronagraph(OpticalElement):
         '''
         return self.forward(wavefront)
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_forward(self, wavelength=1):
         '''Get the forward propagation transformation matrix.
 
@@ -119,6 +121,7 @@ class PerfectCoronagraph(OpticalElement):
         '''
         return np.eye(self.pupil_grid.size) - self.transformation.dot(np.expand_dims(self.coeffs, axis=1) * self.transformation_inverse)
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_backward(self, wavelength=1):
         '''Get the backwards propagation transformation matrix.
 

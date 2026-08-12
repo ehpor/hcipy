@@ -104,7 +104,6 @@ class _PageSpec:
         n_grid = None
         k_grid = None
         formula = None
-        constant = None
         wavelength_range = None
 
         for data in doc.get('DATA', []):
@@ -130,8 +129,6 @@ class _PageSpec:
                 elif subtype == 'nk':
                     n_grid = (wl, c1)
                     k_grid = (wl, c2)
-            elif category == 'refractive_index':
-                constant = float(data['refractive_index'])
 
         if formula is not None:
             fid, coefficients = formula
@@ -143,8 +140,6 @@ class _PageSpec:
             n_wavelengths, n_values = n_grid
             def n_function(wavelength, _x=n_wavelengths, _y=n_values):
                 return np.interp(wavelength, _x, _y)
-        elif constant is not None:
-            n_function = _constant_refractive_index(constant)
         else:
             n_function = None
 
@@ -163,14 +158,6 @@ class _PageSpec:
             book=self.book,
             wavelength_range=wavelength_range
         )
-
-
-def _constant_refractive_index(constant):
-    def f(wavelength):
-        if np.isscalar(wavelength):
-            return float(constant)
-        return np.full(np.shape(wavelength), constant, dtype=float)
-    return f
 
 
 class MaterialCatalog:

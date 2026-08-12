@@ -38,8 +38,8 @@ jobs:
     - name: Install optional dependencies if available
       run: |
         while read requirement; do
-          conda install --yes $requirement || true
-        done < ./.github/conda_environments/optional_dependencies.txt
+          conda install --yes "$requirement" || true
+        done < <(tr -d '\r' < ./.github/conda_environments/optional_dependencies.txt)
       shell: bash -l {0}
 
     - name: Install our package

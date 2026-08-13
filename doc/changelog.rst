@@ -1,6 +1,17 @@
 Changelog
 =========
 
+0.7.1 (Aug 14, 2026)
+--------------------
+
+This HCIPy release provides a bugfix for grid hashing. This version supports Python 3.9-3.13.
+
+What's Changed
+~~~~~~~~~~~~~~
+- Fix Grid hashing with xxhash 4.0.0 in `#366 <https://github.com/ehpor/hcipy/pull/366>`__.
+
+**Full Changelog**: `v0.7.0...v0.7.1 <https://github.com/ehpor/hcipy/compare/v0.7.0...v0.7.1>`__
+
 0.7.0 (Aug 25, 2025)
 --------------------
 

@@ -460,7 +460,7 @@ class Grid(object):
 
     def __hash__(self):
         h = xxhash.xxh64()
-        h.update(self._coordinate_system)
+        h.update(self._coordinate_system.encode())
 
         if self.is_regular:
             h.update(to_numpy(self.delta).tobytes())

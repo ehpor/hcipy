@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.7.1 (unreleased)
+------------------
+
+- Fix Grid hashing with xxhash 4.0.0 in `#366 <https://github.com/ehpor/hcipy/pull/366>`__.
+
 0.7.0 (Aug 25, 2025)
 --------------------
 

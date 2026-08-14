@@ -4,7 +4,7 @@ import numpy as np
 from hcipy._math.backends import to_numpy, array_namespace
 from hcipy._math.einsum import einsum
 from hcipy._math.fourier import dft_matrix_regular, dft_matrix_separated
-from hcipy._math.phase_ramp import prepare_phase_ramp, apply_phase_ramp, apply_phase_ramp_numpy
+from hcipy._math.phase_ramp import prepare_phase_ramp, apply_phase_ramp, apply_phase_ramp_numpy, _ramp_1d, _ramp_2d, _kernel
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.subpixel_shift import separable_convolve, subpixel_shift, _row_pass, _col_pass
@@ -779,3 +779,42 @@ def test_prepare_phase_ramp_requires_separated_grid():
         prepare_phase_ramp([1e-3, 2e-3], grid)
 
 
+def _check_kernel(kernel, arr, factors):
+    out_compiled = np.empty_like(arr)
+    kernel(arr, *factors, out_compiled)
+
+    out_python = np.empty_like(arr)
+    kernel.py_func(arr, *factors, out_python)
+
+    assert np.allclose(out_compiled, out_python)
+
+    ref = arr.copy()
+    for a, f in enumerate(factors):
+        shape = [1] * arr.ndim
+        shape[a] = f.shape[0]
+        ref = ref * f.reshape(shape)
+    assert np.allclose(out_compiled, ref)
+
+
+def test_ramp_1d_kernel():
+    rng = np.random.default_rng(seed=0)
+    A = rng.standard_normal(37) + 1j * rng.standard_normal(37)
+    f = np.exp(1j * rng.standard_normal(37))
+    _check_kernel(_ramp_1d, A, (f,))
+
+
+def test_ramp_2d_kernel():
+    rng = np.random.default_rng(seed=0)
+    A = rng.standard_normal((20, 13)) + 1j * rng.standard_normal((20, 13))
+    f0 = np.exp(1j * rng.standard_normal(20))
+    f1 = np.exp(1j * rng.standard_normal(13))
+    _check_kernel(_ramp_2d, A, (f0, f1))
+
+
+@pytest.mark.parametrize('ndim', [1, 2, 3, 4])
+def test_ramp_nd_kernels(ndim):
+    shape = tuple(range(4, 4 + ndim))[::-1][:ndim]
+    rng = np.random.default_rng(seed=0)
+    A = rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
+    factors = tuple(np.exp(1j * rng.standard_normal(s)) for s in shape)
+    _check_kernel(_kernel(ndim), A, factors)

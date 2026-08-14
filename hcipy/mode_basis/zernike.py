@@ -88,7 +88,44 @@ def zernike_to_noll(n, m):
             return j
     raise ValueError(f'Could not find noll index for n={n}, m={m}.')
 
-def zernike_radial(n, m, r, cache=None):
+def zernike_radial_indices(num_modes):
+    """
+    Return the first `num_modes` unique (n, m) pairs for
+    radial Zernike polynomials.
+
+    The ordering is:
+        n = 0, m = 0
+        n = 1, m = 1
+        n = 2, m = 0, 2
+        n = 3, m = 1, 3
+        n = 4, m = 0, 2, 4
+        ...
+
+    Parameters
+    ----------
+    num_modes : int
+        Number of unique radial Zernike polynomials.
+
+    Returns
+    -------
+    list of tuple
+        List of (n, m) pairs.
+    """
+    indices = []
+
+    n = 0
+    while len(indices) < num_modes:
+        for m in range(n % 2, n + 1, 2):
+            indices.append((n, m))
+
+            if len(indices) == num_modes:
+                break
+
+        n += 1
+
+    return indices
+
+def zernike_radial_chong(n, m, r, cache=None):
     '''The radial component of a Zernike polynomial.
 
     We use the q-recursive method, which uses recurrence relations to calculate the radial
@@ -126,8 +163,8 @@ def zernike_radial(n, m, r, cache=None):
     if n == m:
         res = r**n
     elif (n - m) == 2:
-        z1 = zernike_radial(n, n, r, cache)
-        z2 = zernike_radial(n - 2, n - 2, r, cache)
+        z1 = zernike_radial_chong(n, n, r, cache)
+        z2 = zernike_radial_chong(n - 2, n - 2, r, cache)
 
         res = n * z1 - (n - 1) * z2
     else:
@@ -138,13 +175,130 @@ def zernike_radial(n, m, r, cache=None):
         h2 = h3 * (p + q) * (p - q + 2) / float(4 * (q - 1)) + (q - 2)
         h1 = q * (q - 1) / 2.0 - q * h2 + h3 * (p + q + 2) * (p - q) / 8.0
 
-        r2 = zernike_radial(2, 2, r, cache)
-        res = h1 * zernike_radial(p, q, r, cache) + (h2 + h3 / r2) * zernike_radial(n, q - 2, r, cache)
+        r2 = zernike_radial_chong(2, 2, r, cache)
+        res = h1 * zernike_radial_chong(p, q, r, cache) + (h2 + h3 / r2) * zernike_radial_chong(n, q - 2, r, cache)
 
     if cache is not None:
         cache[('rad', n, m)] = res
 
     return res
+
+def zernike_radial_andersen(n, m, r, cache=None):
+    """
+    The radial component of a Zernike polynomial.
+
+    This implementation uses the Cartesian/polar-compatible recurrence
+    described by Andersen [Andersen2018], rather than the q-recursive
+    recurrence that contains a 1/r**2 term.
+
+    In particular, it uses
+
+        R_n^m = r * (R_{n-1}^{m-1} + R_{n-1}^{m+1}) - R_{n-2}^m
+
+    with the appropriate boundary conditions.
+
+    This recurrence contains no division by r and therefore remains
+    well-defined when r == 0.
+
+    .. [Andersen2018] Andersen, T. B. (2018). Efficient and robust recurrence relations
+      for the Zernike circle polynomials and their derivatives in Cartesian coordinates. 
+      Optics Express, 26(15), 18878-18896.
+
+    Parameters
+    ----------
+    n : int
+        The radial Zernike order.
+    m : int
+        The azimuthal Zernike order.
+    r : array_like
+        The (normalized) radial coordinates on which to calculate the polynomial.
+    cache : dict or None
+        A dictionary containing previously calculated Zernike modes on the same grid.
+        This function is for speedup only, and therefore the cache is expected to be
+        valid. You can reuse the cache for future calculations on the same exact grid.
+        The given dictionary is updated with the current calculation.
+
+    Returns
+    -------
+    array_like
+        The radial component of the evaluated Zernike polynomial.
+    """
+
+    m = abs(m)
+
+    # Invalid Zernike combinations.
+    if m > n or (n - m) % 2 != 0:
+        return np.zeros_like(r)
+
+    if cache is not None:
+        key = ('rad', n, m)
+
+        if key in cache:
+            return cache[key]
+
+    # We calculate all radial polynomials up to n.
+    # The Andersen recurrence couples radial orders n-1 and n-2,
+    # so calculating the whole triangular set is considerably simpler
+    # than trying to recursively evaluate individual terms.
+
+    R = {}
+
+    # Starting polynomials:
+    # R_0^0 = 1
+    # R_1^1 = r
+    R[(0, 0)] = np.ones_like(r)
+
+    if n >= 1:
+        R[(1, 1)] = r
+
+    for nn in range(2, n + 1):
+
+        # Only m values with the same parity as n are valid.
+        for mm in range(nn % 2, nn + 1, 2):
+
+            if mm == 0:
+                R[(nn, 0)] = 2 * r * R[(nn - 1, 1)] - R[(nn - 2, 0)]
+            elif mm == nn:
+                R[(nn, mm)] = r * R[(nn - 1, mm - 1)]
+            else:
+                R[(nn, mm)] = r * (R[(nn - 1, mm-1)] + R[(nn - 1, mm + 1)]) - R[(nn - 2, mm)]
+
+    result = R[(n, m)]
+
+    if cache is not None:
+        cache[('rad', n, m)] = result
+
+    return result
+
+def zernike_radial(n, m, r, cache=None, use_andersen=True):
+    """
+    The radial component of a Zernike polynomial.
+
+    Parameters
+    ----------
+    n : int
+        The radial Zernike order.
+    m : int
+        The azimuthal Zernike order.
+    r : array_like
+        The (normalized) radial coordinates on which to calculate the polynomial.
+    cache : dict or None
+        A dictionary containing previously calculated Zernike modes on the same grid.
+        This function is for speedup only, and therefore the cache is expected to be
+        valid. You can reuse the cache for future calculations on the same exact grid.
+        The given dictionary is updated with the current calculation.
+    use_andersen : boolean
+        This function uses the Andersen recurrence relationship if True and otherwise the Chong one.
+
+    Returns
+    -------
+    array_like
+        The radial component of the evaluated Zernike polynomial.
+    """
+    if use_andersen:
+        return zernike_radial_andersen(n, m, r, cache)
+    else:
+        return zernike_radial_chong(n, m, r, cache)
 
 def zernike_azimuthal(m, theta, cache=None):
     '''The azimuthal component of a Zernike polynomial.

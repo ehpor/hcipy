@@ -3,7 +3,7 @@ import scipy.linalg
 from math import sqrt
 
 from .mode_basis import ModeBasis
-from ..aperture import make_hexagonal_aperture
+from ..aperture import make_hexagonal_aperture, make_wedge_aperture
 
 def noll_to_zernike(i):
     '''Get the Zernike index from a Noll index.
@@ -493,3 +493,246 @@ def make_hexike_basis(grid, num_modes, circum_diameter, hexagon_angle=0, cache=N
     hexike_basis.transformation_matrix *= np.array(np.sqrt(area_hexagon) / sqrt_weights)[:, np.newaxis]
 
     return hexike_basis
+
+def keystone(n, m, inner_diameter, outer_diameter, angle_width, spider_width, keystone_angle=0, grid=None, cache=None):
+    '''Evaluate a keystone mode on a grid.
+
+    Parameters
+    ----------
+    n : int
+        The radial keystone order.
+    m : int
+        The azimuthal keystone order.
+    inner_diameter : scalar
+        The inner diameter of the keystone aperture.
+    outer_diameter : scalar
+        The outer diameter of the keystone aperture.
+    angle_width : scalar
+        The angular width of the keystone aperture in degrees.
+    spider_width : scalar
+        The full width of the spiders bordering the keystone aperture.
+    keystone_angle : float
+        The angle of the keystone aperture in radians. At an angle of 0, the center
+        of the keystone points to the right.
+    grid : Grid or None
+        The grid on which to evaluate the keystone mode. If this is None, a Field
+        generator will be returned.
+    cache : dictionary or None
+        A dictionary of intermediate calculations for this exact grid, aperture
+        geometry, and orientation. The dictionary is updated in place.
+
+    Returns
+    -------
+    Field or Field generator
+        The evaluated keystone mode. If grid is None, a Field generator is returned,
+        which evaluates the keystone mode on the supplied grid.
+    '''
+    if grid is None:
+        return lambda grid: keystone(n, m, inner_diameter, outer_diameter, angle_width, spider_width, keystone_angle, grid, cache)
+
+    noll_index = zernike_to_noll(n, m)
+
+    basis = make_keystone_basis(grid, noll_index, inner_diameter, outer_diameter, angle_width, spider_width, keystone_angle, cache)
+
+    return basis[-1]
+
+def keystone_ansi(i, inner_diameter, outer_diameter, angle_width, spider_width, keystone_angle=0, grid=None, cache=None):
+    '''Evaluate a keystone mode on a grid using an ANSI index.
+
+    Parameters
+    ----------
+    i : int
+        The ANSI index.
+    inner_diameter : scalar
+        The inner diameter of the keystone aperture.
+    outer_diameter : scalar
+        The outer diameter of the keystone aperture.
+    angle_width : scalar
+        The angular width of the keystone aperture in degrees.
+    spider_width : scalar
+        The full width of the spiders bordering the keystone aperture.
+    keystone_angle : float
+        The angle of the keystone aperture in radians. At an angle of 0, the center
+        of the keystone points to the right.
+    grid : Grid or None
+        The grid on which to evaluate the keystone mode. If this is None, a Field
+        generator will be returned.
+    cache : dictionary or None
+        A dictionary of intermediate calculations for this exact grid, aperture
+        geometry, and orientation. The dictionary is updated in place.
+
+    Returns
+    -------
+    Field or Field generator
+        The evaluated keystone mode. If grid is None, a Field generator is returned,
+        which evaluates the keystone mode on the supplied grid.
+    '''
+    n, m = ansi_to_zernike(i)
+    return keystone(n, m, inner_diameter, outer_diameter, angle_width, spider_width, keystone_angle, grid, cache)
+
+def keystone_noll(i, inner_diameter, outer_diameter, angle_width, spider_width, keystone_angle=0, grid=None, cache=None):
+    '''Evaluate a keystone mode on a grid using a Noll index.
+
+    Parameters
+    ----------
+    i : int
+        The Noll index.
+    inner_diameter : scalar
+        The inner diameter of the keystone aperture.
+    outer_diameter : scalar
+        The outer diameter of the keystone aperture.
+    angle_width : scalar
+        The angular width of the keystone aperture in degrees.
+    spider_width : scalar
+        The full width of the spiders bordering the keystone aperture.
+    keystone_angle : float
+        The angle of the keystone aperture in radians. At an angle of 0, the center
+        of the keystone points to the right.
+    grid : Grid or None
+        The grid on which to evaluate the keystone mode. If this is None, a Field
+        generator will be returned.
+    cache : dictionary or None
+        A dictionary of intermediate calculations for this exact grid, aperture
+        geometry, and orientation. The dictionary is updated in place.
+
+    Returns
+    -------
+    Field or Field generator
+        The evaluated keystone mode. If grid is None, a Field generator is returned,
+        which evaluates the keystone mode on the supplied grid.
+    '''
+    n, m = noll_to_zernike(i)
+    return keystone(n, m, inner_diameter, outer_diameter, angle_width, spider_width, keystone_angle, grid, cache)
+
+def _keystone_geometry(inner_diameter, outer_diameter, angle_width, spider_width):
+    '''Calculate the area, radial centroid and Zernike diameter of a keystone aperture.'''
+    inner_radius = inner_diameter / 2
+    outer_radius = outer_diameter / 2
+    half_angle = np.radians(angle_width) / 2
+    half_spider_width = spider_width / 2
+
+    if inner_radius < 0:
+        raise ValueError('inner_diameter must be non-negative.')
+    if outer_radius <= inner_radius:
+        raise ValueError('outer_diameter must be larger than inner_diameter.')
+    if angle_width <= 0 or angle_width > 360:
+        raise ValueError('angle_width must be larger than zero and at most 360 degrees.')
+    if spider_width < 0:
+        raise ValueError('spider_width must be non-negative.')
+
+    if half_spider_width == 0:
+        area = half_angle * (outer_radius**2 - inner_radius**2)
+        first_moment = 2 / 3 * np.sin(half_angle) * (outer_radius**3 - inner_radius**3)
+    else:
+        def area_term(radius):
+            return radius**2 * np.arcsin(half_spider_width / radius) + half_spider_width * np.sqrt(radius**2 - half_spider_width**2)
+
+        def first_moment_term(radius):
+            return 2 / 3 * np.sin(half_angle) * (radius**2 - half_spider_width**2)**1.5 - half_spider_width * np.cos(half_angle) * radius**2
+
+        area = 0
+        first_moment = 0
+
+        if half_angle > np.pi / 2 and inner_radius < half_spider_width:
+            transition_radius = min(outer_radius, half_spider_width)
+            area += (half_angle - np.pi / 2) * (transition_radius**2 - inner_radius**2)
+            first_moment -= 2 / 3 * np.cos(half_angle) * (transition_radius**3 - inner_radius**3)
+            integration_radius = half_spider_width
+        elif half_angle <= np.pi / 2:
+            integration_radius = max(inner_radius, half_spider_width / np.sin(half_angle))
+        else:
+            integration_radius = inner_radius
+
+        if integration_radius < outer_radius:
+            area += half_angle * (outer_radius**2 - integration_radius**2)
+            area -= area_term(outer_radius) - area_term(integration_radius)
+            first_moment += first_moment_term(outer_radius) - first_moment_term(integration_radius)
+
+        if area <= 0:
+            raise ValueError('spider_width is too large for the angle width.')
+
+    centroid_radius = first_moment / area
+    inner_extent = np.sqrt(inner_radius**2 + centroid_radius**2 - 2 * inner_radius * centroid_radius * np.cos(half_angle))
+    outer_extent = np.sqrt(outer_radius**2 + centroid_radius**2 - 2 * outer_radius * centroid_radius * np.cos(half_angle))
+    zernike_diameter = 2 * max(inner_extent, outer_extent)
+
+    return area, centroid_radius, zernike_diameter
+
+def make_keystone_basis(grid, num_modes, inner_diameter, outer_diameter, angle_width, spider_width, keystone_angle=0, cache=None):
+    '''Make a keystone mode basis.
+
+    This function orthogonalizes Noll-ordered Zernike polynomials over HCIPy's
+    spider-trimmed annular-sector aperture using a weighted QR decomposition.
+    The construction follows the general-aperture method of [Swantner1994]_
+    and the annular-sector treatment of [Diaz2013]_.
+
+    .. [Swantner1994] W. Swantner and Weng W. Chow,
+        "Gram-Schmidt orthonormalization of Zernike polynomials for general
+        aperture shapes," Appl. Opt. 33, 1832-1837 (1994).
+    .. [Diaz2013] Jose Antonio Diaz and Virendra N. Mahajan,
+        "Orthonormal aberration polynomials for optical systems with circular
+        and annular sector pupils," Appl. Opt. 52, 1136-1147 (2013).
+
+    Parameters
+    ----------
+    grid : hcipy.Grid
+        The grid on which to compute the mode basis.
+    num_modes : int
+        The number of keystone modes to compute.
+    inner_diameter : float
+        The inner diameter of the keystone aperture.
+    outer_diameter : float
+        The outer diameter of the keystone aperture.
+    angle_width : float
+        The angular width of the keystone aperture in degrees.
+    spider_width : float
+        The full width of the spiders bordering the keystone aperture.
+    keystone_angle : float
+        The angle of the keystone aperture in radians. At an angle of 0, the center
+        of the keystone points to the right.
+    cache : dictionary or None
+        A dictionary of intermediate calculations for this exact grid, aperture
+        geometry, and orientation. The dictionary is updated in place.
+    '''
+    if cache is None:
+        cache = {}
+
+    area, centroid_radius, zernike_diameter = _keystone_geometry(inner_diameter, outer_diameter, angle_width, spider_width)
+
+    keystone_grid = grid.rotated(-keystone_angle)
+    zernike_grid = keystone_grid.shifted([-centroid_radius, 0])
+    zernike_basis = make_zernike_basis(num_modes, zernike_diameter, zernike_grid, radial_cutoff=False, cache=cache)
+    keystone_aperture = make_wedge_aperture(inner_diameter, outer_diameter, angle_width, spider_width)(keystone_grid)
+
+    sqrt_weights = np.sqrt(grid.weights)
+
+    if np.isscalar(sqrt_weights):
+        sqrt_weights = np.array([sqrt_weights])
+
+    # Apply the aperture mask and quadrature weights before orthogonalization.
+    zernike_basis.transformation_matrix *= np.array(keystone_aperture * sqrt_weights)[:, np.newaxis]
+
+    # Reuse the cached QR decomposition when available.
+    if 'R' in cache and cache['R'].shape[0] >= num_modes:
+        R = cache['R'][:num_modes, :num_modes]
+
+        Q = scipy.linalg.solve_triangular(R, zernike_basis.transformation_matrix.T, trans=1, lower=False, overwrite_b=True).T
+    else:
+        # Orthogonalize the weighted modes using a QR decomposition.
+        Q, R = np.linalg.qr(zernike_basis.transformation_matrix)
+
+        if np.linalg.matrix_rank(R) < num_modes:
+            raise ValueError('The requested number of keystone modes is not supported by this grid.')
+
+        cache['R'] = R.copy()
+
+    # Correct for numerical leakage outside the keystone aperture.
+    Q *= np.array(keystone_aperture)[:, np.newaxis]
+
+    # Fix the arbitrary signs of the QR modes.
+    keystone_basis = ModeBasis(Q / np.sign(np.diag(R)), grid)
+
+    # Normalize the modes to unit RMS over the keystone aperture.
+    keystone_basis.transformation_matrix *= np.array(np.sqrt(area) / sqrt_weights)[:, np.newaxis]
+
+    return keystone_basis

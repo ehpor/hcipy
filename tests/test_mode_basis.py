@@ -1,4 +1,5 @@
 from hcipy import *
+from hcipy.mode_basis.zernike import _keystone_geometry
 import numpy as np
 import scipy
 import pytest
@@ -42,6 +43,77 @@ def test_hexike_modes():
         zn, zm = noll_to_zernike(i + 1)
         assert np.allclose(m, hexike(zn, zm, 1, grid=grid))
 
+def test_keystone_modes():
+    grid = make_pupil_grid(128, 6)
+    keystone_angle = np.pi / 2
+    aperture_mask = make_wedge_aperture(3.05, 6, 60, 0.05)(grid.rotated(-keystone_angle)) > 0
+
+    num_modes = 2 + 3 + 4 + 5
+    modes = make_keystone_basis(grid, num_modes, 3.05, 6, 60, 0.05, keystone_angle)
+
+    assert np.all(modes.transformation_matrix[~aperture_mask] == 0)
+
+    area = 3.4209428985748556
+    gram_matrix = modes.transformation_matrix.T @ (modes.transformation_matrix * grid.weights) / area
+    assert np.allclose(gram_matrix, np.eye(num_modes), atol=1e-12)
+
+    assert abs(np.std(modes[0][aperture_mask])) < 2e-2
+
+    for mode in modes[1:]:
+        assert abs(np.std(mode[aperture_mask]) - 1) < 2e-2
+
+def test_keystone_rank_deficient():
+    grid = make_pupil_grid(3, 6)
+    cache = {}
+
+    for _ in range(2):
+        with pytest.raises(ValueError, match='not supported by this grid'):
+            make_keystone_basis(grid, 8, 3.05, 6, 60, 0.05, cache=cache)
+
+@pytest.mark.parametrize('inner_diameter, outer_diameter, message', [
+    (-1, 6, 'inner_diameter must be non-negative'),
+    (6, 2, 'outer_diameter must be larger than inner_diameter')
+])
+def test_keystone_diameter_validation(inner_diameter, outer_diameter, message):
+    grid = make_pupil_grid(8, 6)
+
+    with pytest.raises(ValueError, match=message):
+        make_keystone_basis(grid, 1, inner_diameter, outer_diameter, 60, 0.05)
+
+@pytest.mark.parametrize('angle_width', [0, 361])
+def test_keystone_angle_validation(angle_width):
+    grid = make_pupil_grid(8, 6)
+
+    with pytest.raises(ValueError, match='angle_width must be larger than zero and at most 360 degrees'):
+        make_keystone_basis(grid, 1, 3.05, 6, angle_width, 0.05)
+
+def test_keystone_spider_width_validation():
+    grid = make_pupil_grid(8, 6)
+
+    with pytest.raises(ValueError, match='spider_width must be non-negative'):
+        make_keystone_basis(grid, 1, 3.05, 6, 60, -0.05)
+
+@pytest.mark.parametrize('parameters, expected_area, expected_centroid_radius', [
+    ((2, 6, 60, 0), 4.1887902047863905, 2.0690142601946393),
+    ((2, 6, 60, 1.5), 1.2339921311218038, 2.4753899378819586),
+    ((2, 6, 180, 1.5), 9.457835635644885, 1.7071801358577754),
+    ((0, 6, 240, 2.5), 11.572604503974347, 1.469859085530058),
+    ((2, 6, 240, 1.5), 13.646625840431275, 1.2444867175582508)
+])
+def test_keystone_geometry(parameters, expected_area, expected_centroid_radius):
+    area, centroid_radius, _ = _keystone_geometry(*parameters)
+
+    assert np.allclose(area, expected_area)
+    assert np.allclose(centroid_radius, expected_centroid_radius)
+
+def test_keystone_overlapping_spiders():
+    grid = make_pupil_grid(128, 6)
+    aperture_mask = make_wedge_aperture(2, 6, 60, 1.5)(grid) > 0
+    modes = make_keystone_basis(grid, 8, 2, 6, 60, 1.5)
+
+    assert np.any(aperture_mask)
+    assert np.all(modes.transformation_matrix[~aperture_mask] == 0)
+
 def test_zernike_ansi_noll():
     grid = make_pupil_grid(64)
 
@@ -78,6 +150,24 @@ def test_hexike_ansi_noll():
 
         assert np.allclose(mode_noll, mode_nm)
 
+def test_keystone_ansi_noll():
+    grid = make_pupil_grid(64, 6)
+
+    for index in [1, 4, 5, 6]:
+        mode_ansi = keystone_ansi(index, 3.05, 6, 60, 0.05, np.pi / 2)(grid)
+
+        n, m = ansi_to_zernike(index)
+        mode_nm = keystone(n, m, 3.05, 6, 60, 0.05, np.pi / 2, grid=grid)
+
+        assert np.allclose(mode_ansi, mode_nm)
+
+        mode_noll = keystone_noll(index, 3.05, 6, 60, 0.05, np.pi / 2)(grid)
+
+        n, m = noll_to_zernike(index)
+        mode_nm = keystone(n, m, 3.05, 6, 60, 0.05, np.pi / 2)(grid)
+
+        assert np.allclose(mode_noll, mode_nm)
+
 def test_hexike_cache():
     grid = make_pupil_grid(64)
     circum_diameter = 1
@@ -88,6 +178,19 @@ def test_hexike_cache():
     basis = make_hexike_basis(grid, 20, circum_diameter, cache=cache)
 
     m1 = hexike(n, m, circum_diameter, grid=grid, cache=cache)
+    m2 = basis[zernike_to_noll(n, m) - 1]
+
+    assert np.allclose(m1, m2)
+
+def test_keystone_cache():
+    grid = make_pupil_grid(64, 6)
+    n = 2
+    m = 2
+
+    cache = {}
+    basis = make_keystone_basis(grid, 20, 3.05, 6, 60, 0.05, np.pi / 2, cache)
+
+    m1 = keystone(n, m, 3.05, 6, 60, 0.05, np.pi / 2, grid=grid, cache=cache)
     m2 = basis[zernike_to_noll(n, m) - 1]
 
     assert np.allclose(m1, m2)

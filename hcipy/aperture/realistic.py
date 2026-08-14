@@ -324,10 +324,10 @@ def make_magellan_aperture(normalized=False, with_spiders=True):
     if not with_spiders:
         return obstructed_aperture
 
-    spider1 = make_spider_infinite(-spider_offset, 45.0, spider_width1)
-    spider2 = make_spider_infinite(-spider_offset, -45.0, spider_width1)
-    spider3 = make_spider_infinite(spider_offset, 45.0 + 180.0, spider_width2)
-    spider4 = make_spider_infinite(spider_offset, -45.0 + 180.0, spider_width2)
+    spider1 = make_spider_infinite(spider_offset, 45.0, spider_width1)
+    spider2 = make_spider_infinite(spider_offset, -45.0, spider_width1)
+    spider3 = make_spider_infinite(-spider_offset, 45.0 + 180.0, spider_width2)
+    spider4 = make_spider_infinite(-spider_offset, -45.0 + 180.0, spider_width2)
 
     def func(grid):
         return obstructed_aperture(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
@@ -475,8 +475,8 @@ def make_luvoir_a_aperture(
 
     if with_spiders:
         spider1 = make_spider_infinite([0, 0], 90, spider_width)
-        spider2 = make_spider_infinite([spid_start, 0], 270 - lower_spider_angle, spider_width)
-        spider3 = make_spider_infinite([-spid_start, 0], 270 + lower_spider_angle, spider_width)
+        spider2 = make_spider_infinite([-spid_start, 0], 270 - lower_spider_angle, spider_width)
+        spider3 = make_spider_infinite([spid_start, 0], 270 + lower_spider_angle, spider_width)
 
     segmented_aperture = make_segmented_aperture(segment, segment_positions, segment_transmissions, return_segments=return_segments)
 
@@ -576,8 +576,8 @@ def make_luvoir_a_lyot_stop(
 
     if with_spiders:
         spider1 = make_spider_infinite([0, 0], 90, pad_spid_width)
-        spider2 = make_spider_infinite([spid_start, 0], 270 - lower_spider_angle, pad_spid_width)
-        spider3 = make_spider_infinite([-spid_start, 0], 270 + lower_spider_angle, pad_spid_width)
+        spider2 = make_spider_infinite([-spid_start, 0], 270 - lower_spider_angle, pad_spid_width)
+        spider3 = make_spider_infinite([spid_start, 0], 270 + lower_spider_angle, pad_spid_width)
 
     def aper(grid):
         result = outer_diameter(grid) - central_obscuration(grid)
@@ -1766,10 +1766,10 @@ def make_subaru_lyot_stop(normalized=False, inner_diameter_fraction=0.3, outer_d
     if not with_spiders:
         return obstructed_aperture
 
-    spider1 = make_spider_infinite((-spider_offset, 0), spider_angle, spider_width)
-    spider2 = make_spider_infinite((-spider_offset, 0), -spider_angle, spider_width)
-    spider3 = make_spider_infinite((spider_offset, 0), spider_angle + 180, spider_width)
-    spider4 = make_spider_infinite((spider_offset, 0), -spider_angle + 180, spider_width)
+    spider1 = make_spider_infinite((spider_offset, 0), spider_angle, spider_width)
+    spider2 = make_spider_infinite((spider_offset, 0), -spider_angle, spider_width)
+    spider3 = make_spider_infinite((-spider_offset, 0), spider_angle + 180, spider_width)
+    spider4 = make_spider_infinite((-spider_offset, 0), -spider_angle + 180, spider_width)
 
     def func(grid):
         return obstructed_aperture(grid) * spider1(grid) * spider2(grid) * spider3(grid) * spider4(grid)
@@ -1841,7 +1841,7 @@ def make_scexao_lyot_stop(normalized=False, inner_diameter_fraction=0.307, outer
 
     pupil_diameter = 7.95  # m
     mask_spider_width = 0.081  # m
-    mask_spider_offset = np.array((-0.491, -1.117))
+    mask_spider_offset = np.array((0.491, 1.117))
     mask_diameter = 0.583  # m
     mask_offsets = np.array((  # (x, y), m
         (-0.448, 2.308),

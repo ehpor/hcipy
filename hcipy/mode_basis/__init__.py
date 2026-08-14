@@ -30,6 +30,7 @@ __all__ = [
     'zernike_to_ansi',
     'zernike_radial_indices',
     'zernike_radial',
+    'zernike_azimuthal',
     'disk_harmonic',
     'disk_harmonic_energy',
     'make_disk_harmonic_basis',

@@ -221,8 +221,8 @@ def test_radial_zernike():
     mask = make_circular_aperture(1)(grid) > 0
     for k in range(num_radial_max):
         n, m = indices[k]
-        z_r_andersen = zernike_radial(n, m, 2 * R, cache_andersen, True)
-        z_r_chong = zernike_radial(n, m, 2 * R, cache_chong, False)
+        z_r_andersen = zernike_radial(n, m, 2 * R, cache_andersen, 'andersen')
+        z_r_chong = zernike_radial(n, m, 2 * R, cache_chong, 'chong')
         assert np.allclose(z_r_andersen[mask], z_r_chong[mask])
 
     # Now test for validity of the point at the origin.

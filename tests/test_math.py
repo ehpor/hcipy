@@ -4,7 +4,7 @@ import numpy as np
 from hcipy._math.backends import to_numpy, array_namespace
 from hcipy._math.einsum import einsum
 from hcipy._math.fourier import dft_matrix_regular, dft_matrix_separated
-from hcipy._math.phase_ramp import prepare_phase_ramp, apply_phase_ramp, apply_phase_ramp_numpy, _ramp_1d, _ramp_2d, _kernel
+from hcipy._math.phase_ramp import make_phase_ramp, make_separable_filter, _filter_1d, _filter_2d, _kernel
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.subpixel_shift import separable_convolve, subpixel_shift, _row_pass, _col_pass
@@ -744,39 +744,75 @@ _PHASE_RAMP_CASES = [
 @pytest.mark.parametrize('ndim, N', _PHASE_RAMP_CASES)
 def test_phase_ramp_roundtrip(xp, ndim, N):
     slopes, grid, A, ref = _phase_ramp_data(xp, ndim, N)
-    ramp = prepare_phase_ramp(slopes, grid)
-    result = apply_phase_ramp(A, ramp)
+    filt = make_phase_ramp(slopes, grid)
+    result = filt.apply(A)
     assert result.shape == grid.shape
     assert np.allclose(to_numpy(result), ref, rtol=1e-4, atol=1e-5)
+
+    result_full = filt.apply(np.ones_like(A))
+    assert np.allclose(to_numpy(result_full), to_numpy(filt.full), rtol=1e-4, atol=1e-5)
 
 
 @pytest.mark.parametrize('ndim, N', _PHASE_RAMP_CASES)
 def test_phase_ramp_numpy_roundtrip(ndim, N):
     slopes, grid, A, ref = _phase_ramp_data(np, ndim, N)
-    ramp = prepare_phase_ramp(slopes, grid)
+    filt = make_phase_ramp(slopes, grid)
 
-    result = apply_phase_ramp_numpy(A, ramp)
+    result = filt.apply(A)
     assert np.allclose(result, ref, rtol=1e-4, atol=1e-5)
 
-    result_generic = apply_phase_ramp(A, ramp)
-    assert np.allclose(result_generic, ref, rtol=1e-4, atol=1e-5)
-
     out = np.empty_like(A)
-    result_out = apply_phase_ramp_numpy(A, ramp, out=out)
+    result_out = filt.apply_with_out(A, out)
     assert result_out is out
     assert np.allclose(out, ref, rtol=1e-4, atol=1e-5)
 
     A_in = A.copy()
-    result_in = apply_phase_ramp_numpy(A_in, ramp, out=A_in)
+    result_in = filt.apply_with_out(A_in, A_in)
     assert result_in is A_in
     assert np.allclose(A_in, ref, rtol=1e-4, atol=1e-5)
 
+    phase = ref / A
 
-def test_prepare_phase_ramp_requires_separated_grid():
+    result_inv = filt.apply(A, inverse=True)
+    assert np.allclose(result_inv, A / phase, rtol=1e-4, atol=1e-5)
+
+    out_inv = np.empty_like(A)
+    result_out_inv = filt.apply_with_out(A, out_inv, inverse=True)
+    assert result_out_inv is out_inv
+    assert np.allclose(out_inv, A / phase, rtol=1e-4, atol=1e-5)
+
+    A_in_inv = A.copy()
+    result_in_inv = filt.apply_with_out(A_in_inv, A_in_inv, inverse=True)
+    assert result_in_inv is A_in_inv
+    assert np.allclose(A_in_inv, A / phase, rtol=1e-4, atol=1e-5)
+
+
+@pytest.mark.parametrize('ndim, N', _PHASE_RAMP_CASES)
+def test_separable_filter_roundtrip(ndim, N):
+    slopes, grid, A, ref = _phase_ramp_data(np, ndim, N)
+    rng = np.random.default_rng(seed=0)
+    apod = tuple(np.exp(rng.standard_normal(N)) for _ in range(ndim))
+    filt = make_separable_filter(apod, threshold=0)
+
+    result = filt.apply(A)
+    assert np.allclose(result, A * filt.full, rtol=1e-4, atol=1e-5)
+
+    ref_filt = np.ones((N,) * ndim)
+    for a, f in enumerate(apod):
+        shape = [1] * ndim
+        shape[a] = N
+        ref_filt = ref_filt * f.reshape(shape)
+    assert np.allclose(filt.full, ref_filt, rtol=1e-4, atol=1e-5)
+
+    result_inv = filt.apply(A, inverse=True)
+    assert np.allclose(result_inv, A / ref_filt, rtol=1e-4, atol=1e-5)
+
+
+def test_make_phase_ramp_requires_separated_grid():
     x = np.arange(8) * 1e-3
     grid = hcipy.CartesianGrid(hcipy.UnstructuredCoords((x, x + 1)))
     with pytest.raises(ValueError):
-        prepare_phase_ramp([1e-3, 2e-3], grid)
+        make_phase_ramp([1e-3, 2e-3], grid)
 
 
 def _check_kernel(kernel, arr, factors):
@@ -796,23 +832,23 @@ def _check_kernel(kernel, arr, factors):
     assert np.allclose(out_compiled, ref)
 
 
-def test_ramp_1d_kernel():
+def test_filter_1d_kernel():
     rng = np.random.default_rng(seed=0)
     A = rng.standard_normal(37) + 1j * rng.standard_normal(37)
     f = np.exp(1j * rng.standard_normal(37))
-    _check_kernel(_ramp_1d, A, (f,))
+    _check_kernel(_filter_1d, A, (f,))
 
 
-def test_ramp_2d_kernel():
+def test_filter_2d_kernel():
     rng = np.random.default_rng(seed=0)
     A = rng.standard_normal((20, 13)) + 1j * rng.standard_normal((20, 13))
     f0 = np.exp(1j * rng.standard_normal(20))
     f1 = np.exp(1j * rng.standard_normal(13))
-    _check_kernel(_ramp_2d, A, (f0, f1))
+    _check_kernel(_filter_2d, A, (f0, f1))
 
 
 @pytest.mark.parametrize('ndim', [1, 2, 3, 4])
-def test_ramp_nd_kernels(ndim):
+def test_filter_nd_kernels(ndim):
     shape = tuple(range(4, 4 + ndim))[::-1][:ndim]
     rng = np.random.default_rng(seed=0)
     A = rng.standard_normal(shape) + 1j * rng.standard_normal(shape)

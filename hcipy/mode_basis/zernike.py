@@ -360,7 +360,7 @@ def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_rel
         The given dictionary is updated with the current calculation.
     recurrence_relationship : str
         Determence which recurrence relationship is used. The default is Andersen.
-        
+
     Returns
     -------
     Field or Field generator

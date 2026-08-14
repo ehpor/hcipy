@@ -226,51 +226,46 @@ def zernike_radial_andersen(n, m, r, cache=None):
 
     m = abs(m)
 
-    # Invalid Zernike combinations.
-    if m > n or (n - m) % 2 != 0:
+    # Invalid Zernike combination.
+    if m > n or (n - m) % 2:
         return np.zeros_like(r)
 
-    if cache is not None:
-        key = ('rad', n, m)
+    # Use a local cache if none was supplied.
+    if cache is None:
+        cache = {}
 
-        if key in cache:
-            return cache[key]
+    key = ('rad', n, m)
 
-    # We calculate all radial polynomials up to n.
-    # The Andersen recurrence couples radial orders n-1 and n-2,
-    # so calculating the whole triangular set is considerably simpler
-    # than trying to recursively evaluate individual terms.
+    if key in cache:
+        return cache[key]
 
-    R = {}
+    # Base cases.
+    if n == 0:
+        result = np.ones_like(r)
 
-    # Starting polynomials:
-    # R_0^0 = 1
-    # R_1^1 = r
-    R[(0, 0)] = np.ones_like(r)
+    elif n == 1:
+        result = r
 
-    if n >= 1:
-        R[(1, 1)] = r
+    # Special case m = 0.
+    elif m == 0:
+        result = 2 * r * zernike_radial_andersen(n - 1, 1, r, cache) - zernike_radial_andersen(n - 2, 0, r, cache)
 
-    for nn in range(2, n + 1):
+    # Highest azimuthal order.
+    elif m == n:
+        result = r * zernike_radial_andersen(n - 1, m - 1, r, cache)
 
-        # Only m values with the same parity as n are valid.
-        for mm in range(nn % 2, nn + 1, 2):
+    # General Andersen recurrence.
+    else:
+        z1 = zernike_radial_andersen(n - 1, m - 1, r, cache)
+        z2 = zernike_radial_andersen(n - 1, m + 1, r, cache)
+        z3 = zernike_radial_andersen(n - 2, m, r, cache)
+        result = r * (z1 + z2) - z3
 
-            if mm == 0:
-                R[(nn, 0)] = 2 * r * R[(nn - 1, 1)] - R[(nn - 2, 0)]
-            elif mm == nn:
-                R[(nn, mm)] = r * R[(nn - 1, mm - 1)]
-            else:
-                R[(nn, mm)] = r * (R[(nn - 1, mm - 1)] + R[(nn - 1, mm + 1)]) - R[(nn - 2, mm)]
-
-    result = R[(n, m)]
-
-    if cache is not None:
-        cache[('rad', n, m)] = result
+    cache[key] = result
 
     return result
 
-def zernike_radial(n, m, r, cache=None, use_andersen=True):
+def zernike_radial(n, m, r, cache=None, recurrence_relationship='andersen'):
     """
     The radial component of a Zernike polynomial.
 
@@ -287,18 +282,20 @@ def zernike_radial(n, m, r, cache=None, use_andersen=True):
         This function is for speedup only, and therefore the cache is expected to be
         valid. You can reuse the cache for future calculations on the same exact grid.
         The given dictionary is updated with the current calculation.
-    use_andersen : boolean
-        This function uses the Andersen recurrence relationship if True and otherwise the Chong one.
+    recurrence_relationship : str
+        Determence which recurrence relationship is used. Default is Andersen.
 
     Returns
     -------
     array_like
         The radial component of the evaluated Zernike polynomial.
     """
-    if use_andersen:
+    if recurrence_relationship == 'andersen':
         return zernike_radial_andersen(n, m, r, cache)
-    else:
+    elif recurrence_relationship == 'chong':
         return zernike_radial_chong(n, m, r, cache)
+    else:
+        raise NotImplementedError("The requested recurrence relationship {:s} is not implemented.".format(recurrence_relationship))
 
 def zernike_azimuthal(m, theta, cache=None):
     '''The azimuthal component of a Zernike polynomial.
@@ -338,7 +335,7 @@ def zernike_azimuthal(m, theta, cache=None):
 
     return res
 
-def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None):
+def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_relationship='andersen'):
     '''Evaluate the Zernike polynomial on a grid.
 
     Parameters
@@ -359,7 +356,9 @@ def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None):
         This function is for speedup only, and therefore the cache is expected to be
         valid. You can reuse the cache for future calculations on the same exact grid.
         The given dictionary is updated with the current calculation.
-
+    recurrence_relationship : str
+        Determence which recurrence relationship is used. The default is Andersen.
+        
     Returns
     -------
     Field or Field generator
@@ -369,7 +368,7 @@ def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None):
     from ..field import Field
 
     if grid is None:
-        return lambda grid: zernike(n, m, D, grid, radial_cutoff, cache)
+        return lambda grid: zernike(n, m, D, grid, radial_cutoff, cache, recurrence_relationship)
 
     if grid.is_separated and grid.is_('polar'):
         R, Theta = grid.separated_coords
@@ -379,13 +378,13 @@ def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None):
         z = sqrt(n + 1) * np.outer(zernike_azimuthal(m, Theta, cache), z_r).flatten()
     else:
         r, theta = grid.as_('polar').coords
-        z = sqrt(n + 1) * zernike_azimuthal(m, theta, cache) * zernike_radial(n, m, 2 * r / D, cache)
+        z = sqrt(n + 1) * zernike_azimuthal(m, theta, cache) * zernike_radial(n, m, 2 * r / D, cache, recurrence_relationship)
         if radial_cutoff:
             z *= (2 * r) < D
 
     return Field(z, grid)
 
-def zernike_ansi(i, D=1, grid=None, radial_cutoff=True, cache=None):
+def zernike_ansi(i, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_relationship='andersen'):
     '''Evaluate the Zernike polynomial on a grid using an ANSI index.
 
     Parameters
@@ -404,6 +403,8 @@ def zernike_ansi(i, D=1, grid=None, radial_cutoff=True, cache=None):
         This function is for speedup only, and therefore the cache is expected to be
         valid. You can reuse the cache for future calculations on the same exact grid.
         The given dictionary is updated with the current calculation.
+    recurrence_relationship : str
+        Determence which recurrence relationship is used. The default is Andersen.
 
     Returns
     -------
@@ -412,9 +413,9 @@ def zernike_ansi(i, D=1, grid=None, radial_cutoff=True, cache=None):
         which evaluates the Zernike polynomial on the supplied grid.
     '''
     n, m = ansi_to_zernike(i)
-    return zernike(n, m, D, grid, radial_cutoff, cache)
+    return zernike(n, m, D, grid, radial_cutoff, cache, recurrence_relationship)
 
-def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None):
+def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_relationship='andersen'):
     '''Evaluate the Zernike polynomial on a grid using a Noll index.
 
     Parameters
@@ -433,6 +434,8 @@ def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None):
         This function is for speedup only, and therefore the cache is expected to be
         valid. You can reuse the cache for future calculations on the same exact grid.
         The given dictionary is updated with the current calculation.
+    recurrence_relationship : str
+        Determence which recurrence relationship is used. The default is Andersen.
 
     Returns
     -------
@@ -441,9 +444,9 @@ def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None):
         which evaluates the Zernike polynomial on the supplied grid.
     '''
     n, m = noll_to_zernike(i)
-    return zernike(n, m, D, grid, radial_cutoff, cache)
+    return zernike(n, m, D, grid, radial_cutoff, cache, recurrence_relationship)
 
-def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_cutoff=True, use_cache=True, cache=None):
+def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_cutoff=True, use_cache=True, cache=None, recurrence_relationship='andersen'):
     '''Make a ModeBasis of Zernike polynomials.
 
     Parameters
@@ -465,6 +468,8 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
     use_cache : boolean
         Whether to use a cache while calculating the modes. A cache uses memory, so turn it
         off when you are limited on memory.
+    recurrence_relationship : str
+        Determence which recurrence relationship is used. The default is Andersen.
 
     Returns
     -------
@@ -486,7 +491,7 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
     else:
         cache = None
 
-    modes = [f(i, D, polar_grid, radial_cutoff, cache) for i in range(starting_mode, starting_mode + num_modes)]
+    modes = [f(i, D, polar_grid, radial_cutoff, cache, recurrence_relationship) for i in range(starting_mode, starting_mode + num_modes)]
 
     if grid is None:
         return modes

@@ -209,6 +209,39 @@ def test_zernike_cache():
 
     assert np.allclose(m1, m2)
 
+def test_radial_zernike():
+    grid = make_pupil_grid(32)
+    R = grid.as_('polar').r
+
+    num_radial_max = 16
+    indices = zernike_radial_indices(num_radial_max)
+
+    cache_andersen = {}
+    cache_chong = {}
+    mask = make_circular_aperture(1)(grid) > 0
+    for k in range(num_radial_max):
+        n,m = indices[k]
+        z_r_andersen = zernike_radial(n, m, 2 * R, cache_andersen, True)
+        z_r_chong = zernike_radial(n, m, 2 * R, cache_chong, False)
+        assert np.allclose(z_r_andersen[mask], z_r_chong[mask])
+
+    # Now test for validity of the point at the origin.
+    def zernike_at_origin(n, m):
+        """Value of the standard Zernike radial polynomial R_n^m at rho=0."""
+
+        if n < 0 or abs(m) > n or (n - abs(m)) % 2 != 0:
+            raise ValueError("Invalid Zernike indices (n, m).")
+
+        if m != 0 or n % 2 != 0:
+            return 0
+
+        return (-1) ** (n // 2)
+
+    for k in range(num_radial_max):
+        n,m = indices[k]
+        z_r_andersen = zernike_radial(n, m, np.array([0,]))
+        assert z_r_andersen == zernike_at_origin(n, m)
+
 @pytest.mark.parametrize('bc', ['dirichlet', 'neumann'])
 def test_disk_harmonic_modes(bc):
     grid = make_pupil_grid(128)

@@ -4,6 +4,11 @@ import numpy as np
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.backends import to_numpy, array_namespace
+from hcipy._math.phase_ramp import (
+    prepare_phase_ramp,
+    apply_phase_ramp,
+    apply_phase_ramp_numpy,
+)
 import math
 
 
@@ -303,3 +308,71 @@ def test_to_numpy(xp):
 def test_array_namespace(xp):
     arr = xp.zeros(10)
     _ = array_namespace(arr)
+
+
+def _phase_ramp_data(xp, ndim, N):
+    """Build phase ramp inputs plus a float64 numpy reference result."""
+    rng = make_random_generator(xp, seed=42)
+    A = rng.normal(0, 1, size=(N,) * ndim) + 1j * rng.normal(0, 1, size=(N,) * ndim)
+
+    x_coords = [xp.arange(N, dtype=xp.float64) * 1e-3 for _ in range(ndim)]
+    grid = hcipy.CartesianGrid(hcipy.SeparatedCoords(x_coords))
+
+    slopes = [(a + 1) * 1e-3 for a in range(ndim)]
+
+    ref = to_numpy(A)
+    for a in range(ndim):
+        x_np = np.arange(N) * 1e-3
+        shape = [1] * ndim
+        shape[ndim - 1 - a] = N
+        ref = ref * np.exp(1j * slopes[a] * x_np).reshape(shape)
+
+    return slopes, grid, A, ref
+
+
+_PHASE_RAMP_CASES = [
+    (1, 64), (1, 512), (1, 2048),
+    (2, 64), (2, 512), (2, 2048),
+    (3, 32), (3, 64),
+    (4, 16), (4, 32),
+]
+
+
+@pytest.mark.parametrize('ndim, N', _PHASE_RAMP_CASES)
+def test_phase_ramp_roundtrip(xp, ndim, N):
+    slopes, grid, A, ref = _phase_ramp_data(xp, ndim, N)
+    ramp = prepare_phase_ramp(slopes, grid)
+    result = apply_phase_ramp(A, ramp)
+    assert result.shape == grid.shape
+    assert np.allclose(to_numpy(result), ref, rtol=1e-4, atol=1e-5)
+
+
+@pytest.mark.parametrize('ndim, N', _PHASE_RAMP_CASES)
+def test_phase_ramp_numpy_roundtrip(ndim, N):
+    slopes, grid, A, ref = _phase_ramp_data(np, ndim, N)
+    ramp = prepare_phase_ramp(slopes, grid)
+
+    result = apply_phase_ramp_numpy(A, ramp)
+    assert np.allclose(result, ref, rtol=1e-4, atol=1e-5)
+
+    result_generic = apply_phase_ramp(A, ramp)
+    assert np.allclose(result_generic, ref, rtol=1e-4, atol=1e-5)
+
+    out = np.empty_like(A)
+    result_out = apply_phase_ramp_numpy(A, ramp, out=out)
+    assert result_out is out
+    assert np.allclose(out, ref, rtol=1e-4, atol=1e-5)
+
+    A_in = A.copy()
+    result_in = apply_phase_ramp_numpy(A_in, ramp, out=A_in)
+    assert result_in is A_in
+    assert np.allclose(A_in, ref, rtol=1e-4, atol=1e-5)
+
+
+def test_prepare_phase_ramp_requires_separated_grid():
+    x = np.arange(8) * 1e-3
+    grid = hcipy.CartesianGrid(hcipy.UnstructuredCoords((x, x + 1)))
+    with pytest.raises(ValueError):
+        prepare_phase_ramp([1e-3, 2e-3], grid)
+
+

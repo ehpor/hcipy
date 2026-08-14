@@ -110,7 +110,7 @@ def prepare_phase_ramp(slopes, grid, threshold=256 * 256):
         return tuple(reversed(factors))
 
 
-def apply_phase_ramp_numpy(arr, ramp, out=None):
+def apply_phase_ramp_numpy(arr, ramp, out=None, inverse=False):
     '''Apply a prepared phase ramp to an array, numpy backend.
 
     Returns `arr * exp(1j * sum_a (k_a * x_a[i_a]))`. If `ramp` is a tuple
@@ -128,6 +128,11 @@ def apply_phase_ramp_numpy(arr, ramp, out=None):
         Buffer in which to place the result, of the same shape and dtype as
         `arr`. It is trusted as is; no checks are performed. If `out` is
         `arr`, the operation is performed in-place.
+    inverse : bool, optional
+        If True, multiply by the inverse (reciprocal) of the ramp instead of
+        the ramp itself. For the phase ramps produced by `prepare_phase_ramp`
+        this is equal to multiplying by the complex conjugate. By default
+        False.
 
     Returns
     -------
@@ -141,13 +146,16 @@ def apply_phase_ramp_numpy(arr, ramp, out=None):
         if len(ramp) == 0 or not is_numpy_array(ramp[0]):
             result = arr
             for a, f in enumerate(ramp):
-                result = result * _factor_view(f, a, len(ramp))
+                f_view = _factor_view(f, a, len(ramp))
+                result = result * f_view if not inverse else result / f_view
             if out is None:
                 return result
             out[:] = result
             return out
 
         factors = ramp
+        if inverse:
+            factors = [1 / f for f in factors]
         ndim = arr.ndim
 
         if ndim == 1:
@@ -164,20 +172,23 @@ def apply_phase_ramp_numpy(arr, ramp, out=None):
         return out
     else:
         if not is_numpy_array(ramp):
-            result = arr * ramp
+            result = arr / ramp if inverse else arr * ramp
             if out is None:
                 return result
             out[:] = result
             return out
 
         if out is None:
-            return arr * ramp
+            return arr / ramp if inverse else arr * ramp
 
-        np.multiply(arr, ramp, out=out)
+        if inverse:
+            np.divide(arr, ramp, out=out)
+        else:
+            np.multiply(arr, ramp, out=out)
         return out
 
 
-def apply_phase_ramp(arr, ramp):
+def apply_phase_ramp(arr, ramp, inverse=False):
     '''Apply a prepared phase ramp to an array.
 
     Returns `arr * exp(1j * sum_a (k_a * x_a[i_a]))`.
@@ -193,6 +204,11 @@ def apply_phase_ramp(arr, ramp):
     ramp : ndarray or tuple of ndarray
         The output of `prepare_phase_ramp`: either the full N-D phase array
         or a tuple of 1-D factors.
+    inverse : bool, optional
+        If True, multiply by the inverse (reciprocal) of the ramp instead of
+        the ramp itself. For the phase ramps produced by `prepare_phase_ramp`
+        this is equal to multiplying by the complex conjugate. By default
+        False.
 
     Returns
     -------
@@ -200,12 +216,13 @@ def apply_phase_ramp(arr, ramp):
         The array multiplied by the phase ramp.
     '''
     if is_numpy_array(arr):
-        return apply_phase_ramp_numpy(arr, ramp)
+        return apply_phase_ramp_numpy(arr, ramp, inverse=inverse)
 
     if isinstance(ramp, tuple):
         result = arr
         for a, f in enumerate(ramp):
-            result = result * _factor_view(f, a, len(ramp))
+            f_view = _factor_view(f, a, len(ramp))
+            result = result * f_view if not inverse else result / f_view
         return result
 
-    return arr * ramp
+    return arr / ramp if inverse else arr * ramp

@@ -248,7 +248,9 @@ def zernike_radial_andersen(n, m, r, cache=None):
 
     # Special case m = 0.
     elif m == 0:
-        result = 2 * r * zernike_radial_andersen(n - 1, 1, r, cache) - zernike_radial_andersen(n - 2, 0, r, cache)
+        z1 = zernike_radial_andersen(n - 1, 1, r, cache)
+        z2 = zernike_radial_andersen(n - 2, 0, r, cache)
+        result = 2 * r * z1 - z2
 
     # Highest azimuthal order.
     elif m == n:

@@ -201,7 +201,7 @@ def zernike_radial_andersen(n, m, r, cache=None):
     well-defined when r == 0.
 
     .. [Andersen2018] Andersen, T. B. (2018). Efficient and robust recurrence relations
-      for the Zernike circle polynomials and their derivatives in Cartesian coordinates. 
+      for the Zernike circle polynomials and their derivatives in Cartesian coordinates.
       Optics Express, 26(15), 18878-18896.
 
     Parameters
@@ -261,7 +261,7 @@ def zernike_radial_andersen(n, m, r, cache=None):
             elif mm == nn:
                 R[(nn, mm)] = r * R[(nn - 1, mm - 1)]
             else:
-                R[(nn, mm)] = r * (R[(nn - 1, mm-1)] + R[(nn - 1, mm + 1)]) - R[(nn - 2, mm)]
+                R[(nn, mm)] = r * (R[(nn - 1, mm - 1)] + R[(nn - 1, mm + 1)]) - R[(nn - 2, mm)]
 
     result = R[(n, m)]
 

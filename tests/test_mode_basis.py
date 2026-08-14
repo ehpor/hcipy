@@ -220,7 +220,7 @@ def test_radial_zernike():
     cache_chong = {}
     mask = make_circular_aperture(1)(grid) > 0
     for k in range(num_radial_max):
-        n,m = indices[k]
+        n, m = indices[k]
         z_r_andersen = zernike_radial(n, m, 2 * R, cache_andersen, True)
         z_r_chong = zernike_radial(n, m, 2 * R, cache_chong, False)
         assert np.allclose(z_r_andersen[mask], z_r_chong[mask])
@@ -238,8 +238,8 @@ def test_radial_zernike():
         return (-1) ** (n // 2)
 
     for k in range(num_radial_max):
-        n,m = indices[k]
-        z_r_andersen = zernike_radial(n, m, np.array([0,]))
+        n, m = indices[k]
+        z_r_andersen = zernike_radial(n, m, np.array([0, ]))
         assert z_r_andersen == zernike_at_origin(n, m)
 
 @pytest.mark.parametrize('bc', ['dirichlet', 'neumann'])

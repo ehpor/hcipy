@@ -7,8 +7,6 @@ from hcipy._math.backends import to_numpy, array_namespace
 from hcipy._math.separable_filter import (
     make_phase_ramp,
     make_separable_filter,
-    _filter_1d,
-    _filter_2d,
     _kernel,
 )
 import math
@@ -348,7 +346,7 @@ def test_phase_ramp_roundtrip(xp, ndim, N):
     assert result.shape == grid.shape
     assert np.allclose(to_numpy(result), ref, rtol=1e-4, atol=1e-5)
 
-    result_full = filt.apply(np.ones_like(A))
+    result_full = filt.apply(xp.ones_like(A))
     assert np.allclose(to_numpy(result_full), to_numpy(filt.full), rtol=1e-4, atol=1e-5)
 
 
@@ -429,21 +427,6 @@ def _check_kernel(kernel, arr, factors):
         shape[a] = f.shape[0]
         ref = ref * f.reshape(shape)
     assert np.allclose(out_compiled, ref)
-
-
-def test_filter_1d_kernel():
-    rng = np.random.default_rng(seed=0)
-    A = rng.standard_normal(37) + 1j * rng.standard_normal(37)
-    f = np.exp(1j * rng.standard_normal(37))
-    _check_kernel(_filter_1d, A, (f,))
-
-
-def test_filter_2d_kernel():
-    rng = np.random.default_rng(seed=0)
-    A = rng.standard_normal((20, 13)) + 1j * rng.standard_normal((20, 13))
-    f0 = np.exp(1j * rng.standard_normal(20))
-    f1 = np.exp(1j * rng.standard_normal(13))
-    _check_kernel(_filter_2d, A, (f0, f1))
 
 
 @pytest.mark.parametrize('ndim', [1, 2, 3, 4])

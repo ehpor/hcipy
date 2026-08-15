@@ -1,8 +1,9 @@
 import numpy as np
 
-from .fast_fourier_transform import FastFourierTransform, make_fft_grid, _numexpr_grid_shift
+from .fast_fourier_transform import FastFourierTransform, make_fft_grid
 from .fourier_transform import make_fourier_transform
 from ..field import Field, field_dot, field_conjugate_transpose, CartesianGrid, RegularCoords, make_uniform_grid
+from .._math.separable_filter import make_phase_ramp, make_separable_filter
 from .._math import fft as _fft_module
 
 class FourierFilter(object):
@@ -286,7 +287,6 @@ class FourierShift:
         self._shift = shift
 
         # Find out which axes to Fourier transform.
-        mask = shift != 0
         self._ft_axes = tuple(np.flatnonzero(shift) - 1)
 
         if not self._ft_axes:
@@ -294,22 +294,13 @@ class FourierShift:
             self._shift_filter = None
             return
 
-        broadcasting_slice = tuple(slice(None) if m else np.newaxis for m in mask[::-1])
-
-        # Compute the Fourier transform grid for these axes.
+        # Compute the shift filter on the Fourier transform grid. The filter
+        # is applied to the Fourier-transformed field, so the FFTshift of the
+        # native FFT is undone per axis by shifting the factors.
         fft_grid = make_fft_grid(self.input_grid, q=1, fov=1)
-
-        delta = fft_grid.delta[mask]
-        dims = tuple(dim for dim, m in zip(fft_grid.dims, mask) if m)
-        zero = fft_grid.zero[mask]
-        fft_grid = CartesianGrid(RegularCoords(delta, dims, zero))
-
-        # Compute the shift filter on this grid and broadcast to the original field shape.
-        shift_filter = _numexpr_grid_shift(-shift, fft_grid).reshape(fft_grid.shape)
-        shift_filter = np.fft.ifftshift(shift_filter)
-        shift_filter = shift_filter[broadcasting_slice]
-
-        self._shift_filter = shift_filter
+        filt = make_phase_ramp(-shift, fft_grid)
+        factors = [np.fft.ifftshift(f) for f in filt.factors]
+        self._shift_filter = make_separable_filter(factors)
 
     def forward(self, field):
         '''Return the forward filtering of the input field.
@@ -348,10 +339,7 @@ class FourierShift:
         # Never overwrite the input, so don't use kwargs here.
         f = _fft_module.fftn(field.shaped, axes=self._ft_axes)
 
-        if adjoint:
-            f *= np.conj(self._shift_filter)
-        else:
-            f *= self._shift_filter
+        self._shift_filter.apply_numpy(f, out=f, inverse=adjoint)
 
         # Fine to overwrite the input, if supported.
         f = _fft_module.ifftn(f, axes=self._ft_axes, overwrite_x=True)

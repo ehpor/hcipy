@@ -1,5 +1,6 @@
 import math
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 from numba import njit, prange
@@ -7,7 +8,7 @@ from array_api_compat import is_numpy_array
 from .backends import array_namespace
 
 
-_KERNEL_CACHE = {}
+_KERNEL_CACHE: dict[int, Any] = {}
 
 
 def _kernel(ndim):

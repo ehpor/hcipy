@@ -412,27 +412,47 @@ def test_make_phase_ramp_requires_separated_grid():
         make_phase_ramp([1e-3, 2e-3], grid)
 
 
-def _check_kernel(kernel, arr, factors):
-    out_compiled = np.empty_like(arr)
-    kernel(arr, *factors, out_compiled)
+def _check_kernel(kernel, arr, factors, nbatch=1):
+    A = arr.reshape((nbatch,) + arr.shape[-len(factors):])
+    out_compiled = np.empty_like(A)
+    kernel(A, *factors, out_compiled)
 
-    out_python = np.empty_like(arr)
-    kernel.py_func(arr, *factors, out_python)
+    out_python = np.empty_like(A)
+    kernel.py_func(A, *factors, out_python)
 
     assert np.allclose(out_compiled, out_python)
 
-    ref = arr.copy()
+    ref = A.copy()
     for a, f in enumerate(factors):
-        shape = [1] * arr.ndim
-        shape[a] = f.shape[0]
+        shape = [1] * A.ndim
+        shape[a + 1] = f.shape[0]
         ref = ref * f.reshape(shape)
     assert np.allclose(out_compiled, ref)
 
 
 @pytest.mark.parametrize('ndim', [1, 2, 3, 4])
-def test_filter_nd_kernels(ndim):
+@pytest.mark.parametrize('nbatch', [1, 2, 6])
+def test_filter_nd_kernels(ndim, nbatch):
     shape = tuple(range(4, 4 + ndim))[::-1][:ndim]
     rng = np.random.default_rng(seed=0)
-    A = rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
+    A = rng.standard_normal((nbatch,) + shape) + 1j * rng.standard_normal((nbatch,) + shape)
     factors = tuple(np.exp(1j * rng.standard_normal(s)) for s in shape)
-    _check_kernel(_kernel(ndim), A, factors)
+    _check_kernel(_kernel(ndim), A, factors, nbatch)
+
+
+@pytest.mark.parametrize('ndim, N', [(2, 64), (2, 512)])
+def test_separable_filter_batched(ndim, N):
+    slopes, grid, A, ref = _phase_ramp_data(np, ndim, N)
+    filt = make_phase_ramp(slopes, grid)
+
+    B = A[np.newaxis, np.newaxis] * np.ones((2, 3) + (1,) * ndim, dtype=A.dtype)
+    result = filt.apply(B)
+    assert np.allclose(result, B * (ref / A), rtol=1e-4, atol=1e-5)
+
+    out = np.empty_like(B)
+    result_out = filt.apply_numpy(B, out=out)
+    assert result_out is out
+    assert np.allclose(out, B * (ref / A), rtol=1e-4, atol=1e-5)
+
+    result_inv = filt.apply(B, inverse=True)
+    assert np.allclose(result_inv, B / (ref / A), rtol=1e-4, atol=1e-5)

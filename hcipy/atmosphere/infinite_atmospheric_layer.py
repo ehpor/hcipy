@@ -10,6 +10,7 @@ from scipy.ndimage import affine_transform
 
 import warnings
 import copy
+import math
 
 class InfiniteAtmosphericLayer(AtmosphericLayer):
     '''An atmospheric layer that can be infinitely extended in any direction.
@@ -123,6 +124,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
         self.stencil_bottom = self.stencil_bottom.ravel()
         self.num_stencils_vertical = np.sum(self.stencil_bottom)
+        self.stencil_bottom_idx = np.where(self.stencil_bottom)[0]
 
         # Horizontal
         zero = self.input_grid.zero - self.input_grid.delta * xp.asarray([1, 0])
@@ -136,6 +138,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
 
         self.stencil_left = self.stencil_left.ravel()
         self.num_stencils_horizontal = np.sum(self.stencil_left)
+        self.stencil_left_idx = np.where(self.stencil_left)[0]
 
     def _make_covariance_matrices(self):
         phase_covariance = phase_covariance_von_karman(fried_parameter_from_Cn_squared(1, 1), self.L0)
@@ -211,41 +214,50 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
         # This avoids reusing the same randomness every call to reset().
         self.rng = layer.rng
 
-    def _extrude(self, where=None):
-        flipped = (where == 'top') or (where == 'right')
-        horizontal = (where == 'left') or (where == 'right')
+    def _extrude(self, where):
+        horizontal = where in ('left', 'right')
+        with_flip = where in ('top', 'right')
 
-        if where == 'top' or where == 'right':
-            screen = self._achromatic_screen[::-1]
+        # the A/B matrices are unidirectional (bottom/left); a 1D view
+        # reversal puts the stencil on the opposite edge for top/right
+        if with_flip:
+            screen_1d = self._achromatic_screen[::-1]
         else:
-            screen = self._achromatic_screen
+            screen_1d = self._achromatic_screen
 
         if horizontal:
-            stencil = self.stencil_left
+            stencil_idx = self.stencil_left_idx
             A = self.A_horizontal
             B = self.B_horizontal
         else:
-            stencil = self.stencil_bottom
+            stencil_idx = self.stencil_bottom_idx
             A = self.A_vertical
             B = self.B_vertical
 
-        stencil_data = screen[stencil]
-        random_data = self.rng.normal(0, 1, size=B.shape[1])
-        new_slice = A.dot(stencil_data) + B.dot(random_data) * np.sqrt(self._Cn_squared)
+        # Autoregressive computation of the new slice.
+        stencil_data = screen_1d[stencil_idx]
+        random_data = self.rng.normal(0, math.sqrt(self._Cn_squared), size=B.shape[1])
+        new_slice = A.dot(stencil_data) + B.dot(random_data)
 
-        screen = screen.shaped
-
-        if horizontal:
-            screen = np.hstack((new_slice[:, np.newaxis], screen[:, :-1]))
+        # Stitch the new slice onto the achromatic phase
+        screen_2d = self._achromatic_screen.shaped
+        out = np.empty_like(screen_2d)
+        if where == 'top':
+            out[:-1, :] = screen_2d[1:, :]
+            out[-1, :] = new_slice[::-1]
+        elif where == 'bottom':
+            out[0, :] = new_slice
+            out[1:, :] = screen_2d[:-1, :]
+        elif where == 'left':
+            out[:, 0] = new_slice
+            out[:, 1:] = screen_2d[:, :-1]
+        elif where == 'right':
+            out[:, :-1] = screen_2d[:, 1:]
+            out[:, -1] = new_slice[::-1]
         else:
-            screen = np.vstack((new_slice[np.newaxis, :], screen[:-1, :]))
+            raise ValueError('Invalid value for `where`')
 
-        screen = Field(screen, self.input_grid)
-
-        if flipped:
-            self._achromatic_screen = screen[::-1, ::-1].ravel()
-        else:
-            self._achromatic_screen = screen.ravel()
+        self._achromatic_screen = out.ravel()
 
     def phase_for(self, wavelength):
         '''Compute the phase at a certain wavelength.

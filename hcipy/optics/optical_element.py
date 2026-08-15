@@ -811,7 +811,9 @@ def get_optical_element_input_grid(optical_element):
         return grid
 
     try:
-        return optical_element.get_input_grid(None, None)
+        grid = optical_element.get_input_grid(None, None)
+        if grid is not None and not callable(grid):
+            return grid
     except (AttributeError, TypeError, ValueError):
         pass
 
@@ -836,8 +838,6 @@ def get_optical_element_input_grid(optical_element):
                 stack.extend(vars(value).values())
             except TypeError:
                 pass
-
-    raise ValueError('Could not determine the input grid of the optical element. Please pass focal_plane_mask_grid explicitly.')
 
 class OpticalSystem(OpticalElement):
     '''An linear path of optical elements.

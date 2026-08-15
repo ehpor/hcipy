@@ -7,29 +7,15 @@ from array_api_compat import is_numpy_array
 from .backends import array_namespace
 
 
-# ---------------------------------------------------------------- kernels
-@njit(cache=True)
-def _filter_1d(A, f, out):
-    for i in range(A.shape[0]):
-        out[i] = A[i] * f[i]
-
-
-@njit(cache=True, parallel=True)
-def _filter_2d(A, f0, f1, out):
-    for i in prange(A.shape[0]):
-        for j in range(A.shape[1]):
-            out[i, j] = A[i, j] * f0[i] * f1[j]
-
-
 _KERNEL_CACHE = {}
 
 
 def _kernel(ndim):
     '''Return the fused kernel for `ndim` axes, generating it on first use.
 
-    Kernels for 1 and 2 dimensions are written by hand; higher-dimensional
-    kernels are generated at runtime. Generated kernels cannot be cached on
-    disk by numba (no source locator), so they are cached in memory here.
+    The kernel is generated at runtime for every number of dimensions.
+    Generated kernels cannot be cached on disk by numba (no source locator),
+    so they are cached in memory here.
     '''
     kernel = _KERNEL_CACHE.get(ndim)
     if kernel is not None:
@@ -53,7 +39,6 @@ def _kernel(ndim):
     return kernel
 
 
-# ---------------------------------------------------------------- helpers
 def _factor_view(f, a, ndim):
     return f[(None,) * a + (slice(None),) + (None,) * (ndim - 1 - a)]
 
@@ -66,7 +51,6 @@ def _expand_factors(factors):
     return result
 
 
-# ---------------------------------------------------------------- filter
 @dataclass
 class SeparableFilter:
     '''A separable multiplication filter, one 1-D factor per axis.
@@ -166,27 +150,12 @@ class SeparableFilter:
                 np.multiply(arr, full, out=out)
             return out
 
-        if not is_numpy_array(self.factors[0]):
-            result = arr
-            for a, f in enumerate(self.factors):
-                f_view = _factor_view(f, a, len(self.factors))
-                result = result * f_view if not inverse else result / f_view
-            if out is None:
-                return result
-            out[:] = result
-            return out
-
         factors = self.factors
         if inverse:
             factors = tuple(1 / f for f in factors)
-        ndim = arr.ndim
+        ndim = len(factors)
 
-        if ndim == 1:
-            kernel = _filter_1d
-        elif ndim == 2:
-            kernel = _filter_2d
-        else:
-            kernel = _kernel(ndim)
+        kernel = _kernel(ndim)
 
         if out is None:
             out = np.empty_like(arr)
@@ -206,7 +175,6 @@ class SeparableFilter:
         return result
 
 
-# ---------------------------------------------------------------- factories
 def make_phase_ramp(slopes, grid, threshold=256 * 256):
     '''A `SeparableFilter` implementing the phase ramp `exp(1j * sum_a (slope_a * x_a))`.
 

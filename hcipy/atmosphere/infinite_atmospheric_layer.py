@@ -61,7 +61,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
         can be unintuitive. The default value of 2 is usually sufficient in
         most instances.
     use_interpolation : boolean
-        whether to use sub-pixel interpolation of the phase screen. Bilinear
+        whether to use sub-pixel interpolation of the phase screen. Fifth-order Bezier
         interpolation is used. Without interpolation, for short integration times
         or fast loop speeds, the phase screen may stay on the same pixel for
         multiple frames. With interpolation, these discrete pixel transitions
@@ -355,7 +355,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
                 self._extrude('top')
 
         if self.use_interpolation:
-            # Use bilinear interpolation to interpolate the achromatic phase screen to the correct position.
+            # Use fifth-order Bezier interpolation to interpolate the achromatic phase screen to the correct position.
             # This is to avoid sudden shifts by discrete pixels.
             ps = self._achromatic_screen.shaped
 

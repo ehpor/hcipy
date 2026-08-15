@@ -209,6 +209,42 @@ def test_zernike_cache():
 
     assert np.allclose(m1, m2)
 
+def test_radial_zernike():
+    grid = make_pupil_grid(32)
+    R = grid.as_('polar').r
+
+    num_radial_max = 16
+    indices = zernike_radial_indices(num_radial_max)
+
+    cache_andersen = {}
+    cache_chong = {}
+    mask = make_circular_aperture(1)(grid) > 0
+    for k in range(num_radial_max):
+        n, m = indices[k]
+        z_r_andersen = zernike_radial(n, m, 2 * R, cache_andersen, 'andersen')
+        z_r_chong = zernike_radial(n, m, 2 * R, cache_chong, 'chong')
+        assert np.allclose(z_r_andersen[mask], z_r_chong[mask])
+
+def test_radial_zernike_at_origin():
+    '''
+    This only tests the default recurrence relationship (andersen)
+    The other implemented version (chong) diverges at the origin and
+    is therefore not well defined there.
+    '''
+    def zernike_at_origin(n, m):
+        """Value of the standard Zernike radial polynomial R_n^m at rho=0."""
+        if m != 0 or n % 2 != 0:
+            return 0
+        return (-1) ** (n // 2)
+
+    num_radial_max = 16
+    indices = zernike_radial_indices(num_radial_max)
+
+    for k in range(num_radial_max):
+        n, m = indices[k]
+        z_r = zernike_radial(n, m, np.array([0, ]))
+        assert z_r == zernike_at_origin(n, m)
+
 @pytest.mark.parametrize('bc', ['dirichlet', 'neumann'])
 def test_disk_harmonic_modes(bc):
     grid = make_pupil_grid(128)

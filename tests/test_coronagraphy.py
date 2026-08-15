@@ -1,6 +1,34 @@
 from hcipy import *
 import numpy as np
 
+def test_lyot_coronagraph_with_agnostic_mask_uses_mask_grid():
+    pupil_grid = make_pupil_grid(32)
+    focal_grid = make_focal_grid(4, 16)
+
+    class Mask(AgnosticOpticalElement):
+        def __init__(self, grid):
+            self._grid = grid
+            super().__init__()
+
+        def get_input_grid(self, output_grid, wavelength):
+            return self._grid
+
+        def get_output_grid(self, input_grid, wavelength):
+            return self._grid
+
+        @make_agnostic_forward
+        def forward(self, instance_data, wavefront):
+            return wavefront
+
+        @make_agnostic_backward
+        def backward(self, instance_data, wavefront):
+            return wavefront
+
+    mask = Mask(focal_grid)
+    coro = LyotCoronagraph(pupil_grid, mask)
+
+    assert coro.prop is not None
+
 def test_vortex_coronagraph():
     pupil_grid = make_pupil_grid(256)
     focal_grid = make_focal_grid(4, 32)

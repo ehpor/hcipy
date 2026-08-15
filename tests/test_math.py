@@ -361,12 +361,12 @@ def test_phase_ramp_numpy_roundtrip(ndim, N):
     assert np.allclose(result, ref, rtol=1e-4, atol=1e-5)
 
     out = np.empty_like(A)
-    result_out = filt.apply_with_out(A, out)
+    result_out = filt.apply_numpy(A, out=out)
     assert result_out is out
     assert np.allclose(out, ref, rtol=1e-4, atol=1e-5)
 
     A_in = A.copy()
-    result_in = filt.apply_with_out(A_in, A_in)
+    result_in = filt.apply_numpy(A_in, out=A_in)
     assert result_in is A_in
     assert np.allclose(A_in, ref, rtol=1e-4, atol=1e-5)
 
@@ -376,12 +376,12 @@ def test_phase_ramp_numpy_roundtrip(ndim, N):
     assert np.allclose(result_inv, A / phase, rtol=1e-4, atol=1e-5)
 
     out_inv = np.empty_like(A)
-    result_out_inv = filt.apply_with_out(A, out_inv, inverse=True)
+    result_out_inv = filt.apply_numpy(A, out=out_inv, inverse=True)
     assert result_out_inv is out_inv
     assert np.allclose(out_inv, A / phase, rtol=1e-4, atol=1e-5)
 
     A_in_inv = A.copy()
-    result_in_inv = filt.apply_with_out(A_in_inv, A_in_inv, inverse=True)
+    result_in_inv = filt.apply_numpy(A_in_inv, out=A_in_inv, inverse=True)
     assert result_in_inv is A_in_inv
     assert np.allclose(A_in_inv, A / phase, rtol=1e-4, atol=1e-5)
 

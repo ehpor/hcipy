@@ -131,22 +131,22 @@ class SeparableFilter:
             The filtered array.
         '''
         if is_numpy_array(arr):
-            return self._apply_numpy(arr, None, inverse)
+            return self.apply_numpy(arr, inverse=inverse)
         return self._apply_generic(arr, inverse)
 
-    def apply_with_out(self, arr, out, inverse=False):
-        '''Multiply `arr` by the filter, storing the result in `out`.
+    def apply_numpy(self, arr, out=None, inverse=False):
+        '''Multiply `arr` by the filter, numpy backend.
 
         Parameters
         ----------
         arr : ndarray
             The array to multiply. Its shape must match the lengths of the
             factors.
-        out : ndarray
+        out : ndarray, optional
             Buffer in which to place the result, of the same shape and
             dtype as `arr`. It is trusted as is; no checks are performed.
-            If `out` is `arr`, the operation is performed in-place. Only
-            used for numpy arrays.
+            If `out` is `arr`, the operation is performed in-place. If
+            None (default), a new array is allocated and returned.
         inverse : bool, optional
             If True, divide by the filter (multiply by its reciprocal)
             instead of multiplying. By default False.
@@ -154,13 +154,8 @@ class SeparableFilter:
         Returns
         -------
         ndarray
-            The filtered array, i.e. `out` for numpy arrays.
+            The filtered array, i.e. `out` if given.
         '''
-        if is_numpy_array(arr):
-            return self._apply_numpy(arr, out, inverse)
-        return self._apply_generic(arr, inverse)
-
-    def _apply_numpy(self, arr, out, inverse):
         if self._use_full:
             full = self.full
             if out is None:

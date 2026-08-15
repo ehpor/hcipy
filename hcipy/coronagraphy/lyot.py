@@ -39,7 +39,10 @@ class LyotCoronagraph(OpticalElement):
         if isinstance(focal_plane_mask, OpticalElement):
             # Focal plane mask is an optical element.
             if focal_plane_mask_grid is None:
-                grid = get_optical_element_input_grid(focal_plane_mask)
+                try:
+                    grid = get_optical_element_input_grid(focal_plane_mask)
+                except ValueError:
+                    raise ValueError('Could not determine the input grid of the focal plane mask. Please pass focal_plane_mask_grid explicitly.')
             else:
                 grid = focal_plane_mask_grid
 
@@ -150,7 +153,10 @@ class OccultedLyotCoronagraph(OpticalElement):
         if isinstance(focal_plane_mask, OpticalElement):
             # Focal plane mask is an optical element.
             if focal_plane_mask_grid is None:
-                grid = get_optical_element_input_grid(focal_plane_mask)
+                try:
+                    grid = get_optical_element_input_grid(focal_plane_mask)
+                except ValueError:
+                    raise ValueError('Could not determine the input grid of the focal plane mask. Please pass focal_plane_mask_grid explicitly.')
             else:
                 grid = focal_plane_mask_grid
 

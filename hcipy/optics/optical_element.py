@@ -789,6 +789,56 @@ def make_agnostic_backward(backward):
         return backward(self, instance_data, wavefront, *args, **kwargs)
     return res
 
+def get_optical_element_input_grid(optical_element):
+    '''Get the input grid of an optical element.
+
+    This function tries to get the input grid of an optical element by
+    checking its attributes and methods. If the input grid cannot be
+    determined, a ValueError is raised.
+
+    Parameters
+    ----------
+    optical_element : OpticalElement
+        The optical element for which to get the input grid.
+    
+    Returns
+    -------
+    Grid
+        The input grid of the optical element.
+    '''
+    grid = getattr(optical_element, 'input_grid', None)
+    if grid is not None and not callable(grid):
+        return grid
+
+    try:
+        return optical_element.get_input_grid(None, None)
+    except (AttributeError, TypeError, ValueError):
+        pass
+
+    seen = set()
+    stack = [optical_element]
+    while stack:
+        value = stack.pop()
+        if value is None or id(value) in seen:
+            continue
+        seen.add(id(value))
+
+        grid = getattr(value, 'grid', None)
+        if grid is not None and not callable(grid):
+            return grid
+
+        if isinstance(value, dict):
+            stack.extend(value.values())
+        elif isinstance(value, (list, tuple, set)):
+            stack.extend(value)
+        else:
+            try:
+                stack.extend(vars(value).values())
+            except TypeError:
+                pass
+
+    raise ValueError('Could not determine the input grid of the optical element. Please pass focal_plane_mask_grid explicitly.')
+
 class OpticalSystem(OpticalElement):
     '''An linear path of optical elements.
 

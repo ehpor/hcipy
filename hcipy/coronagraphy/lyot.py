@@ -1,27 +1,7 @@
 import numpy as np
 
-from ..optics import Apodizer, OpticalElement
+from ..optics import Apodizer, OpticalElement, get_optical_element_input_grid
 from ..propagation import FraunhoferPropagator
-
-
-def _get_optical_element_input_grid(optical_element):
-    grid = getattr(optical_element, 'input_grid', None)
-    if grid is not None and not callable(grid):
-        return grid
-
-    try:
-        return optical_element.get_input_grid(None, None)
-    except (AttributeError, TypeError, ValueError):
-        pass
-
-    apodization = getattr(optical_element, 'apodization', None)
-    if apodization is not None:
-        grid = getattr(apodization, 'grid', None)
-        if grid is not None:
-            return grid
-
-    raise ValueError('Could not determine the input grid of the optical element. Please pass focal_plane_mask_grid explicitly.')
-
 
 class LyotCoronagraph(OpticalElement):
     '''A Lyot coronagraph with a small focal-plane mask.
@@ -59,7 +39,7 @@ class LyotCoronagraph(OpticalElement):
         if isinstance(focal_plane_mask, OpticalElement):
             # Focal plane mask is an optical element.
             if focal_plane_mask_grid is None:
-                grid = _get_optical_element_input_grid(focal_plane_mask)
+                grid = get_optical_element_input_grid(focal_plane_mask)
             else:
                 grid = focal_plane_mask_grid
 
@@ -170,7 +150,7 @@ class OccultedLyotCoronagraph(OpticalElement):
         if isinstance(focal_plane_mask, OpticalElement):
             # Focal plane mask is an optical element.
             if focal_plane_mask_grid is None:
-                grid = _get_optical_element_input_grid(focal_plane_mask)
+                grid = get_optical_element_input_grid(focal_plane_mask)
             else:
                 grid = focal_plane_mask_grid
 

@@ -37,6 +37,7 @@ __all__ = [
     'AgnosticOpticalElement',
     'make_agnostic_forward',
     'make_agnostic_backward',
+    'get_optical_element_input_grid',
     'OpticalSystem',
     'PeriodicOpticalElement',
     'jones_to_mueller',

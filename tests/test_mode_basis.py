@@ -239,7 +239,7 @@ def test_radial_zernike_at_origin():
 
     num_radial_max = 16
     indices = zernike_radial_indices(num_radial_max)
-    
+
     for k in range(num_radial_max):
         n, m = indices[k]
         z_r = zernike_radial(n, m, np.array([0, ]))

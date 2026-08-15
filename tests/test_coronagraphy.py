@@ -1,34 +1,6 @@
 from hcipy import *
 import numpy as np
 
-def test_lyot_coronagraph_with_agnostic_mask_uses_mask_grid():
-    pupil_grid = make_pupil_grid(32)
-    focal_grid = make_focal_grid(4, 16)
-
-    class Mask(AgnosticOpticalElement):
-        def __init__(self, grid):
-            self._grid = grid
-            super().__init__()
-
-        def get_input_grid(self, output_grid, wavelength):
-            return self._grid
-
-        def get_output_grid(self, input_grid, wavelength):
-            return self._grid
-
-        @make_agnostic_forward
-        def forward(self, instance_data, wavefront):
-            return wavefront
-
-        @make_agnostic_backward
-        def backward(self, instance_data, wavefront):
-            return wavefront
-
-    mask = Mask(focal_grid)
-    coro = LyotCoronagraph(pupil_grid, mask)
-
-    assert coro.prop is not None
-
 def test_vortex_coronagraph():
     pupil_grid = make_pupil_grid(256)
     focal_grid = make_focal_grid(4, 32)
@@ -287,6 +259,9 @@ def test_lyot_coronagraph():
     fpm2 = 1 - evaluate_supersampled(make_circular_aperture(5 * focal_length), fpm_grid2, 8)
     cor2 = LyotCoronagraph(pupil_grid, fpm2, lyot_stop, focal_length=focal_length)
 
+    # Coronagraph 3 with optical element for focal plane mask
+    cor3 = LyotCoronagraph(pupil_grid, Apodizer(fpm), lyot_stop)
+
     # The grid on which the performance is evaluated
     focal_grid = make_focal_grid(q=3, num_airy=25)
     prop = FraunhoferPropagator(pupil_grid, focal_grid)
@@ -296,10 +271,11 @@ def test_lyot_coronagraph():
     norm = prop(wf).power.max()
     wf_foc = prop(cor(wf))
     wf_foc2 = prop(cor2(wf))
-
+    wf_foc3 = prop(cor3(wf))
     # Checks performance of the coronagraph and if the focal length does not introduce artifacts
     assert (wf_foc.power.max() / norm) < 5e-3
     np.testing.assert_allclose(wf_foc.power, wf_foc2.power)
+    np.testing.assert_allclose(wf_foc.power, wf_foc3.power)
 
 def test_vortex_fiber_nuller():
     pupil_grid = make_pupil_grid(256)

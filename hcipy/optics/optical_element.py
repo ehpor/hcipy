@@ -800,7 +800,7 @@ def get_optical_element_input_grid(optical_element):
     ----------
     optical_element : OpticalElement
         The optical element for which to get the input grid.
-    
+
     Returns
     -------
     Grid

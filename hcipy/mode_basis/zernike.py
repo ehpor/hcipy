@@ -285,16 +285,17 @@ def zernike_radial(n, m, r, cache=None, recurrence_relationship='andersen'):
         valid. You can reuse the cache for future calculations on the same exact grid.
         The given dictionary is updated with the current calculation.
     recurrence_relationship : str
-        Determence which recurrence relationship is used. Default is Andersen.
+        Determine which recurrence relationship is used. Currently the options
+        are andersen or chong. The default is andersen.
 
     Returns
     -------
     array_like
         The radial component of the evaluated Zernike polynomial.
     """
-    if recurrence_relationship == 'andersen':
+    if recurrence_relationship.lower() == 'andersen':
         return zernike_radial_andersen(n, m, r, cache)
-    elif recurrence_relationship == 'chong':
+    elif recurrence_relationship.lower() == 'chong':
         return zernike_radial_chong(n, m, r, cache)
     else:
         raise NotImplementedError("The requested recurrence relationship {:s} is not implemented.".format(recurrence_relationship))
@@ -359,7 +360,8 @@ def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_rel
         valid. You can reuse the cache for future calculations on the same exact grid.
         The given dictionary is updated with the current calculation.
     recurrence_relationship : str
-        Determence which recurrence relationship is used. The default is Andersen.
+        Determine which recurrence relationship is used. Currently the options
+        are andersen or chong. The default is andersen.
 
     Returns
     -------
@@ -406,7 +408,8 @@ def zernike_ansi(i, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_r
         valid. You can reuse the cache for future calculations on the same exact grid.
         The given dictionary is updated with the current calculation.
     recurrence_relationship : str
-        Determence which recurrence relationship is used. The default is Andersen.
+        Determine which recurrence relationship is used. Currently the options
+        are andersen or chong. The default is andersen.
 
     Returns
     -------
@@ -437,7 +440,8 @@ def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_r
         valid. You can reuse the cache for future calculations on the same exact grid.
         The given dictionary is updated with the current calculation.
     recurrence_relationship : str
-        Determence which recurrence relationship is used. The default is Andersen.
+        Determine which recurrence relationship is used. Currently the options
+        are andersen or chong. The default is andersen.
 
     Returns
     -------
@@ -471,7 +475,8 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
         Whether to use a cache while calculating the modes. A cache uses memory, so turn it
         off when you are limited on memory.
     recurrence_relationship : str
-        Determence which recurrence relationship is used. The default is Andersen.
+        Determine which recurrence relationship is used. Currently the options
+        are andersen or chong. The default is andersen.
 
     Returns
     -------

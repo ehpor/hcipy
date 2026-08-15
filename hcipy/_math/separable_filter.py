@@ -13,6 +13,8 @@ _KERNEL_CACHE = {}
 def _kernel(ndim):
     '''Return the fused kernel for `ndim` axes, generating it on first use.
 
+    The kernel expects an array with a leading batch axis in front of the
+    `ndim` filter axes, so it can broadcast over tensor (batch) dimensions.
     The kernel is generated at runtime for every number of dimensions.
     Generated kernels cannot be cached on disk by numba (no source locator),
     so they are cached in memory here.
@@ -26,15 +28,16 @@ def _kernel(ndim):
     factor_str = ' * '.join(f'f{d}[i{d}]' for d in range(ndim))
 
     lines = [f'def _filter_nd_{ndim}(A, {param_str}, out):']
-    lines.append('    for i0 in prange(A.shape[0]):')
+    lines.append('    for b in range(A.shape[0]):')
+    lines.append('        for i0 in prange(A.shape[1]):')
     for d in range(1, ndim):
-        lines.append('    ' * (d + 1) + f'for i{d} in range(A.shape[{d}]):')
-    lines.append('    ' * (ndim + 1) + f'out[{index_str}] = A[{index_str}] * {factor_str}')
+        lines.append('    ' * (d + 2) + f'for i{d} in range(A.shape[{d + 1}]):')
+    lines.append('    ' * (ndim + 2) + f'out[b, {index_str}] = A[b, {index_str}] * {factor_str}')
     src = '\n'.join(lines)
 
     ns = {}
     exec(src, {'prange': prange}, ns)
-    kernel = njit(cache=False)(ns[f'_filter_nd_{ndim}'])
+    kernel = njit(cache=False, parallel=True)(ns[f'_filter_nd_{ndim}'])
     _KERNEL_CACHE[ndim] = kernel
     return kernel
 
@@ -157,10 +160,18 @@ class SeparableFilter:
 
         kernel = _kernel(ndim)
 
+        # The kernel expects a leading batch axis in front of the filter
+        # axes, so any extra leading (tensor) axes are flattened into one.
+        original_shape = arr.shape
+        spatial_shape = tuple(f.shape[0] for f in self.factors)
+        arr = arr.reshape((-1,) + spatial_shape)
+
         if out is None:
             out = np.empty_like(arr)
+            kernel(arr, *factors, out)
+            return out.reshape(original_shape)
 
-        kernel(arr, *factors, out)
+        kernel(arr, *factors, out.reshape((-1,) + spatial_shape))
         return out
 
     def _apply_generic(self, arr, inverse):

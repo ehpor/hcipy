@@ -29,7 +29,7 @@ def _make_shift_filter(slopes, grid, internal_grid, cutout, f_shift, piston=0.0,
 
     factors = [np.exp(1j * (slopes[a] * x + consts[a])) for a, x in enumerate(grid.separated_coords)]
     factors[-1] = factors[-1] * np.exp(1j * piston) * scale
-    return make_separable_filter(tuple(reversed(factors)), threshold=grid.size)
+    return make_separable_filter(tuple(reversed(factors)))
 
 def _allclose(a, b, rtol=1e-5, atol=1e-8):
     if len(a) != len(b):

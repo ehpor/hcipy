@@ -3,7 +3,7 @@ from scipy.linalg import blas
 from .fourier_transform import FourierTransform, ComputationalComplexity, multiplex_for_tensor_fields, _get_float_and_complex_dtype
 from ..field import Field
 from ..config import Configuration
-import numexpr as ne
+from .._math.fourier import dft_matrix_regular, dft_matrix_separated
 
 class MatrixFourierTransform(FourierTransform):
     '''A Matrix Fourier Transform (MFT) object.
@@ -89,17 +89,31 @@ class MatrixFourierTransform(FourierTransform):
                 self.weights_output = self.weights_output[0]
 
             if self.ndim == 1:
-                xu = np.outer(self.output_grid.x, self.input_grid.x)
-                self.M = ne.evaluate('exp(-1j * xu)', local_dict={'xu': xu}).astype(complex_dtype, copy=False)
+                if self.input_grid.is_regular and self.output_grid.is_regular:
+                    self.M = dft_matrix_regular(
+                        self.output_grid.zero[0], self.input_grid.zero[0],
+                        self.output_grid.delta[0], self.input_grid.delta[0],
+                        self.output_grid.size, self.input_grid.size,
+                        np, np.dtype(complex_dtype), conjugate=True)
+                else:
+                    self.M = dft_matrix_separated(self.output_grid.x, self.input_grid.x, conjugate=True).astype(complex_dtype, copy=False)
             elif self.ndim == 2:
-                x, y = self.input_grid.coords.separated_coords
-                u, v = self.output_grid.coords.separated_coords
+                if self.input_grid.is_regular and self.output_grid.is_regular:
+                    delta_in, dims_in, zero_in = self.input_grid.regular_coords
+                    delta_out, dims_out, zero_out = self.output_grid.regular_coords
 
-                vy = np.outer(v, y)
-                xu = np.outer(x, u)
+                    self.M1 = dft_matrix_regular(
+                        zero_out[1], zero_in[1], delta_out[1], delta_in[1],
+                        dims_out[1], dims_in[1], np, np.dtype(complex_dtype), conjugate=True)
+                    self.M2 = dft_matrix_regular(
+                        zero_in[0], zero_out[0], delta_in[0], delta_out[0],
+                        dims_in[0], dims_out[0], np, np.dtype(complex_dtype), conjugate=True)
+                else:
+                    x, y = self.input_grid.coords.separated_coords
+                    u, v = self.output_grid.coords.separated_coords
 
-                self.M1 = ne.evaluate('exp(-1j * vy)', local_dict={'vy': vy}).astype(complex_dtype, copy=False)
-                self.M2 = ne.evaluate('exp(-1j * xu)', local_dict={'xu': xu}).astype(complex_dtype, copy=False)
+                    self.M1 = dft_matrix_separated(v, y, conjugate=True).astype(complex_dtype, copy=False)
+                    self.M2 = dft_matrix_separated(x, u, conjugate=True).astype(complex_dtype, copy=False)
 
             self.matrices_dtype = complex_dtype
 

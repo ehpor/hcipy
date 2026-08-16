@@ -514,14 +514,16 @@ class FastFourierTransform(FourierTransform):
         '''
         q, _, shift = get_fft_parameters(output_grid, input_grid)
 
-        shape = tuple(n * qq for n, qq in zip(input_grid.shape, q))
-
-        N_internal = math.prod(shape)
+        internal = tuple(n * qq for n, qq in zip(input_grid.shape, q))
         N_input = math.prod(input_grid.shape)
         N_output = math.prod(output_grid.shape)
 
-        num_complex_multiplications = 0.5 * N_internal * math.log2(N_internal)
-        num_complex_additions = N_internal * math.log2(N_internal)
+        fft_work = sum(
+            math.prod(output_grid.shape[:a]) * math.prod(input_grid.shape[a + 1:]) * internal[a] * math.log2(internal[a])
+            for a in range(input_grid.ndim))
+
+        num_complex_multiplications = 0.5 * fft_work
+        num_complex_additions = fft_work
 
         # Add complexity for initial multiplication by shift_output.
         # The multiplication happens on `field.reshape(self.shape_in)` which has N_input elements.

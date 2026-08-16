@@ -5,6 +5,7 @@ from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.backends import to_numpy, array_namespace
 from hcipy._math.subpixel_shift import separable_convolve, subpixel_shift, _row_pass, _col_pass
+from hcipy._math import cpu
 import math
 from scipy.ndimage import affine_transform
 
@@ -436,3 +437,32 @@ def test_row_col_pass_compiled():
     _col_pass(img, kernel, r, out_jit)
 
     assert np.allclose(out_py, out_jit)
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        "_cgroup_v2_quota",
+        "_cgroup_v1_quota",
+        "_cgroup_quota_cpus",
+    ],
+)
+def test_quota_functions_return_sensible_value(func):
+    value = getattr(cpu, func)()
+    assert value is None or value > 0
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        "_blas_threadpool_count",
+        "_blas_env_override_count",
+        "_scheduler_env_override_count",
+        "_linux_affinity_count",
+        "_windows_affinity_count",
+    ],
+)
+def test_count_functions_return_sensible_value(func):
+    value = getattr(cpu, func)()
+    assert value is None or value >= 1
+
+def test_get_num_available_cores():
+    assert cpu.get_num_available_cores() >= 1

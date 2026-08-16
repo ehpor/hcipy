@@ -35,8 +35,72 @@ def _cgroup_quota_cpus():
     return _cgroup_v2_quota() or _cgroup_v1_quota()
 
 
+def _blas_threadpool_count():
+    """Actual thread count BLAS is using right now, or None if no BLAS info is available.
+    """
+    pools = threadpoolctl.threadpool_info()
+    if not pools:
+        return None
+    return min(p["num_threads"] for p in pools)
+
+
+def _blas_env_override_count():
+    """BLAS/threading environment variable override, or None if none is set.
+    """
+    BLAS_THREAD_ENV_VARS = [
+        "OMP_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+    ]
+
+    for env_var in BLAS_THREAD_ENV_VARS:
+        val = os.environ.get(env_var)
+        if val is not None:
+            # Deal with comma-separated values.
+            return int(val.split(",")[0])
+    return None
+
+
+def _scheduler_env_override_count():
+    """HPC scheduler allocation from the environment, or None if none is set.
+    """
+    _SCHEDULER_ENV_VARS = [
+        "SLURM_CPUS_PER_TASK",
+        "NSLOTS",
+    ]
+
+    for env_var in _SCHEDULER_ENV_VARS:
+        val = os.environ.get(env_var)
+        if val is not None:
+            # Deal with comma-separated values.
+            return int(val.split(",")[0])
+    return None
+
+
+def _linux_affinity_count():
+    """Process CPU affinity, intersected with cgroup CPU quota, or None if unavailable.
+    """
+    if not hasattr(os, "sched_getaffinity"):
+        return None
+
+    affinity_count = len(os.sched_getaffinity(0))
+    quota = _cgroup_quota_cpus()
+
+    if quota is not None:
+        n = math.ceil(quota)
+        return max(1, min(affinity_count, n))
+
+    return affinity_count
+
+
 def _windows_affinity_count():
-    """Process CPU affinity count via Win32 GetProcessAffinityMask, or None on failure."""
+    """Process CPU affinity count via Win32 GetProcessAffinityMask, or None on failure.
+    """
+    if platform.system() != "Windows":
+        return None
+
     import ctypes
     import ctypes.wintypes
 
@@ -78,49 +142,19 @@ def get_num_available_cores():
     int
         The number of available cores, always >= 1.
     '''
-    # 1. Ground truth — what BLAS is actually using right now
-    pools = threadpoolctl.threadpool_info()
-    if pools:
-        return min(p["num_threads"] for p in pools)
-
-    # 2. Explicit BLAS/threading env var overrides
-    env_vars = [
-        "OMP_NUM_THREADS",
-        "OPENBLAS_NUM_THREADS",
-        "MKL_NUM_THREADS",
-        "VECLIB_MAXIMUM_THREADS",
-        "NUMEXPR_NUM_THREADS",
+    funcs = [
+        _blas_threadpool_count,
+        _blas_env_override_count,
+        _scheduler_env_override_count,
+        _linux_affinity_count,
+        _windows_affinity_count,
     ]
 
-    for env_var in env_vars:
-        val = os.environ.get(env_var)
-        if val is not None:
-            # Deal with comma-separated values.
-            return int(val.split(",")[0])
+    for func in funcs:
+        count = func()
 
-    # 3. HPC scheduler allocations
-    for env_var in ("SLURM_CPUS_PER_TASK", "NSLOTS"):
-        val = os.environ.get(env_var)
-        if val is not None:
-            # Deal with comma-separated values.
-            return int(val.split(",")[0])
-
-    # 4a. Linux: process affinity, intersected with cgroup CPU quota
-    #     (a container can show a full affinity mask while throttled
-    #     to a fraction of a CPU by cpu.max / cfs_quota_us)
-    if hasattr(os, "sched_getaffinity"):
-        affinity_count = len(os.sched_getaffinity(0))
-        quota = _cgroup_quota_cpus()
-        if quota is not None:
-            n = math.ceil(quota)
-            return max(1, min(affinity_count, n))
-        return affinity_count
-
-    # 4b. Windows: Win32 affinity mask
-    if platform.system() == "Windows":
-        count = _windows_affinity_count()
         if count is not None:
             return count
 
-    # 5. Last resort
+    # Fallback.
     return multiprocessing.cpu_count()

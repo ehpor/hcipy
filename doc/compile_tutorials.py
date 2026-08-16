@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 import time
 import sys
 
@@ -10,6 +11,23 @@ from nbconvert.writers import FilesWriter
 import nbformat
 
 from PIL import Image, ImageChops
+
+def get_binder_ref():
+    """Get the git ref to use for Binder links.
+
+    Returns
+    -------
+    string
+        The current git tag if on a tagged release, otherwise 'HEAD'.
+    """
+    try:
+        result = subprocess.run(
+            ['git', 'describe', '--tags', '--exact-match'],
+            capture_output=True, text=True, check=True
+        )
+        return result.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return 'HEAD'
 
 def compile_tutorial(tutorial_name, force_recompile=False):
     print('- Tutorial "' + tutorial_name + '"')
@@ -127,6 +145,16 @@ def compile_tutorial(tutorial_name, force_recompile=False):
     print('  Rendering tutorial...')
     exporter = RSTExporter()
     output, resources = exporter.from_notebook_node(notebook, resources)
+
+    # Add Binder badge at the top of the RST output
+    git_ref = get_binder_ref()
+    binder_url = f"https://mybinder.org/v2/gh/ehpor/hcipy/{git_ref}?labpath=doc/tutorial_notebooks/{tutorial_name}/{tutorial_name}.ipynb"
+    binder_badge = f""".. image:: https://mybinder.org/badge_logo.svg
+   :target: {binder_url}
+   :alt: Open in Binder
+
+"""
+    output = binder_badge + output
 
     writer = FilesWriter(build_directory=os.path.dirname(export_path))
     writer.write(output, resources, notebook_name=os.path.basename(export_path))

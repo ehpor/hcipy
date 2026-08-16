@@ -4,6 +4,7 @@ import numpy as np
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.backends import to_numpy, array_namespace
+from hcipy._math import cpu
 import math
 
 
@@ -303,3 +304,32 @@ def test_to_numpy(xp):
 def test_array_namespace(xp):
     arr = xp.zeros(10)
     _ = array_namespace(arr)
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        "_cgroup_v2_quota",
+        "_cgroup_v1_quota",
+        "_cgroup_quota_cpus",
+    ],
+)
+def test_quota_functions_return_sensible_value(func):
+    value = getattr(cpu, func)()
+    assert value is None or value > 0
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        "_blas_threadpool_count",
+        "_blas_env_override_count",
+        "_scheduler_env_override_count",
+        "_linux_affinity_count",
+        "_windows_affinity_count",
+    ],
+)
+def test_count_functions_return_sensible_value(func):
+    value = getattr(cpu, func)()
+    assert value is None or value >= 1
+
+def test_get_num_available_cores():
+    assert cpu.get_num_available_cores() >= 1

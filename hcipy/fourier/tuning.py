@@ -60,6 +60,11 @@ def compute_fourier_performance_dataset(fourier_class, Ns, qs, fovs, t_max=0.01)
             ft = FastFourierTransform(input_grid, q, fov)
         else:
             ft = fourier_class(input_grid, output_grid)
+
+        # One iteration for warmup.
+        ft.forward(field)
+
+        # Measure execution time.
         execution_time = _time_it(lambda: ft.forward(field), t_max=t_max)
 
         # Convert complexity to GFLOP.

@@ -176,9 +176,8 @@ def is_fft_grid(grid, input_grid):
     return True
 
 def _fft_wrapped_slices(K, L):
-    '''The parts of a K-length axis that hold a central cutout of length L
-    after applying an FFTshift (a roll by K // 2): the cutout wraps
-    around the edges of the axis.'''
+    '''The two blocks of a K-length axis that hold a central cutout of
+    length L after an FFTshift.'''
     return (slice(0, (L + 1) // 2), slice(K - L // 2, K))
 
 
@@ -299,50 +298,51 @@ class FastFourierTransform(FourierTransform):
         # is kept for comparison and performance tuning.
         self._use_multipass = True
 
-    def _fft_multipass(self, arr, axes, forward=True):
-        '''An N-D FFT over `axes` as one 1D FFT per axis.
+    @staticmethod
+    def _fft_inplace(view, axis, forward):
+        '''Transform `view` along `axis` in place.
         '''
         fft_func = _fft_module.fft if forward else _fft_module.ifft
 
+        fft_array = fft_func(view, axis=axis, overwrite_x=True)
+
+        if not np.shares_memory(fft_array, view):
+            view[...] = fft_array
+
+    def _fft_multipass(self, arr, forward=True):
+        '''An N-D FFT over the last `self.ndim` axes, as one 1D FFT per axis in place.
+        '''
         tensor_order = arr.ndim - self.ndim
         cutin = self.cutout_input if forward else self.cutout_output
         cout = self.cutout_output if forward else self.cutout_input
         in_shape = self.shape_in if forward else self.shape_out
         out_shape = self.shape_out if forward else self.shape_in
 
-        # The parts of each axis that hold data: the cutout itself when
-        # the FFTshifts are emulated by phase multiplications, or the
-        # cutout wrapped around the edges of the axis after applying the
-        # FFTshift.
-        if self.emulate_fftshifts:
-            in_blocks = tuple((cutin[j] if cutin is not None else slice(None),) for j in range(self.ndim))
-            out_blocks = tuple((cout[j] if cout is not None else slice(None),) for j in range(self.ndim))
-        else:
-            in_blocks = tuple(_fft_wrapped_slices(self.internal_shape[j], in_shape[j]) for j in range(self.ndim))
-            out_blocks = tuple(_fft_wrapped_slices(self.internal_shape[j], out_shape[j]) for j in range(self.ndim))
+        in_slices = tuple(cutin[j] if cutin is not None else slice(None) for j in range(self.ndim))
+        out_slices = tuple(cout[j] if cout is not None else slice(None) for j in range(self.ndim))
 
-        for a in range(self.ndim):
-            # The views of this pass: the output blocks on the transformed
-            # axes, the full internal extent on the current axis, and the
-            # input blocks on the rest.
-            blocks = [out_blocks[j] if j < a else in_blocks[j] for j in range(self.ndim)]
-            other = [j for j in range(self.ndim) if j != a]
-            for combo in itertools.product(*[blocks[j] for j in other]):
-                sl = [slice(None)] * arr.ndim
-                for j, block in zip(other, combo):
-                    sl[tensor_order + j] = block
-                view = arr[tuple(sl)]
-                fft_array = fft_func(view, axis=axes[a], overwrite_x=True)
-
-                # The FFT is not guaranteed to write its result back into
-                # `arr` in place; if it did not, copy the transformed axis
-                # into the output blocks of this axis.
-                if not np.shares_memory(fft_array, view):
-                    for out_block in out_blocks[a]:
-                        src = fft_array[(slice(None),) * tensor_order + (slice(None),) * a + (out_block,) + (slice(None),) * (self.ndim - a - 1)]
-                        sl[tensor_order + a] = out_block
-                        dst = arr[tuple(sl)]
-                        dst[...] = src
+        for axis in range(self.ndim):
+            if self.emulate_fftshifts:
+                # The cutouts are single blocks: one FFT over the view of
+                # this pass.
+                idx = [slice(None)] * arr.ndim
+                for j in range(axis):
+                    idx[tensor_order + j] = out_slices[j]
+                for j in range(axis + 1, self.ndim):
+                    idx[tensor_order + j] = in_slices[j]
+                self._fft_inplace(arr[tuple(idx)], tensor_order + axis, forward)
+            else:
+                # The cutouts wrap around the edges of the axes after the
+                # FFTshift, into two blocks per axis; the FFTs are
+                # performed on every combination of blocks.
+                in_blocks = tuple(_fft_wrapped_slices(self.internal_shape[j], in_shape[j]) for j in range(self.ndim))
+                out_blocks = tuple(_fft_wrapped_slices(self.internal_shape[j], out_shape[j]) for j in range(self.ndim))
+                others = [j for j in range(self.ndim) if j != axis]
+                for combo in itertools.product(*[out_blocks[j] if j < axis else in_blocks[j] for j in others]):
+                    idx = [slice(None)] * arr.ndim
+                    for j, block in zip(others, combo):
+                        idx[tensor_order + j] = block
+                    self._fft_inplace(arr[tuple(idx)], tensor_order + axis, forward)
 
         if self.emulate_fftshifts:
             # Avoid aliasing of arr.
@@ -403,7 +403,7 @@ class FastFourierTransform(FourierTransform):
             self.internal_array = np.fft.ifftshift(self.internal_array, axes=axes)
 
         if self._use_multipass:
-            fft_array = self._fft_multipass(self.internal_array, axes, forward=True)
+            fft_array = self._fft_multipass(self.internal_array, forward=True)
         else:
             fft_array = _fft_module.fftn(self.internal_array, axes=axes)
 
@@ -451,7 +451,7 @@ class FastFourierTransform(FourierTransform):
             self.internal_array = np.fft.ifftshift(self.internal_array, axes=axes)
 
         if self._use_multipass:
-            fft_array = self._fft_multipass(self.internal_array, axes, forward=False)
+            fft_array = self._fft_multipass(self.internal_array, forward=False)
         else:
             fft_array = _fft_module.ifftn(self.internal_array, axes=axes)
 

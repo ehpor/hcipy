@@ -30,6 +30,7 @@ dependencies = [
     "imageio",
     "xxhash",
     "numexpr",
+    "numba",
     "asdf",
     "packaging",
     "tqdm",

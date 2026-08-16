@@ -4,6 +4,11 @@ import numpy as np
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.backends import to_numpy, array_namespace
+from hcipy._math.separable_filter import (
+    make_phase_ramp,
+    make_separable_filter,
+    _kernel,
+)
 import math
 
 
@@ -303,3 +308,151 @@ def test_to_numpy(xp):
 def test_array_namespace(xp):
     arr = xp.zeros(10)
     _ = array_namespace(arr)
+
+
+def _phase_ramp_data(xp, ndim, N):
+    """Build phase ramp inputs plus a float64 numpy reference result."""
+    rng = make_random_generator(xp, seed=42)
+    A = rng.normal(0, 1, size=(N,) * ndim) + 1j * rng.normal(0, 1, size=(N,) * ndim)
+
+    x_coords = [xp.arange(N, dtype=xp.float64) * 1e-3 for _ in range(ndim)]
+    grid = hcipy.CartesianGrid(hcipy.SeparatedCoords(x_coords))
+
+    slopes = [(a + 1) * 1e-3 for a in range(ndim)]
+
+    ref = to_numpy(A)
+    for a in range(ndim):
+        x_np = np.arange(N) * 1e-3
+        shape = [1] * ndim
+        shape[ndim - 1 - a] = N
+        ref = ref * np.exp(1j * slopes[a] * x_np).reshape(shape)
+
+    return slopes, grid, A, ref
+
+
+_PHASE_RAMP_CASES = [
+    (1, 64), (1, 512), (1, 2048),
+    (2, 64), (2, 512), (2, 2048),
+    (3, 32), (3, 64),
+    (4, 16), (4, 32),
+]
+
+
+@pytest.mark.parametrize('ndim, N', _PHASE_RAMP_CASES)
+def test_phase_ramp_roundtrip(xp, ndim, N):
+    slopes, grid, A, ref = _phase_ramp_data(xp, ndim, N)
+    filt = make_phase_ramp(slopes, grid)
+    result = filt.apply(A)
+    assert result.shape == grid.shape
+    assert np.allclose(to_numpy(result), ref, rtol=1e-4, atol=1e-5)
+
+    result_full = filt.apply(xp.ones_like(A))
+    assert np.allclose(to_numpy(result_full), to_numpy(filt.full), rtol=1e-4, atol=1e-5)
+
+
+@pytest.mark.parametrize('ndim, N', _PHASE_RAMP_CASES)
+def test_phase_ramp_numpy_roundtrip(ndim, N):
+    slopes, grid, A, ref = _phase_ramp_data(np, ndim, N)
+    filt = make_phase_ramp(slopes, grid)
+
+    result = filt.apply(A)
+    assert np.allclose(result, ref, rtol=1e-4, atol=1e-5)
+
+    out = np.empty_like(A)
+    result_out = filt.apply_numpy(A, out=out)
+    assert result_out is out
+    assert np.allclose(out, ref, rtol=1e-4, atol=1e-5)
+
+    A_in = A.copy()
+    result_in = filt.apply_numpy(A_in, out=A_in)
+    assert result_in is A_in
+    assert np.allclose(A_in, ref, rtol=1e-4, atol=1e-5)
+
+    phase = ref / A
+
+    result_inv = filt.apply(A, inverse=True)
+    assert np.allclose(result_inv, A / phase, rtol=1e-4, atol=1e-5)
+
+    out_inv = np.empty_like(A)
+    result_out_inv = filt.apply_numpy(A, out=out_inv, inverse=True)
+    assert result_out_inv is out_inv
+    assert np.allclose(out_inv, A / phase, rtol=1e-4, atol=1e-5)
+
+    A_in_inv = A.copy()
+    result_in_inv = filt.apply_numpy(A_in_inv, out=A_in_inv, inverse=True)
+    assert result_in_inv is A_in_inv
+    assert np.allclose(A_in_inv, A / phase, rtol=1e-4, atol=1e-5)
+
+
+@pytest.mark.parametrize('ndim, N', _PHASE_RAMP_CASES)
+def test_separable_filter_roundtrip(ndim, N):
+    slopes, grid, A, ref = _phase_ramp_data(np, ndim, N)
+    rng = np.random.default_rng(seed=0)
+    apod = tuple(np.exp(rng.standard_normal(N)) for _ in range(ndim))
+    filt = make_separable_filter(apod, threshold=0)
+
+    result = filt.apply(A)
+    assert np.allclose(result, A * filt.full, rtol=1e-4, atol=1e-5)
+
+    ref_filt = np.ones((N,) * ndim)
+    for a, f in enumerate(apod):
+        shape = [1] * ndim
+        shape[a] = N
+        ref_filt = ref_filt * f.reshape(shape)
+    assert np.allclose(filt.full, ref_filt, rtol=1e-4, atol=1e-5)
+
+    result_inv = filt.apply(A, inverse=True)
+    assert np.allclose(result_inv, A / ref_filt, rtol=1e-4, atol=1e-5)
+
+
+def test_make_phase_ramp_requires_separated_grid():
+    x = np.arange(8) * 1e-3
+    grid = hcipy.CartesianGrid(hcipy.UnstructuredCoords((x, x + 1)))
+    with pytest.raises(ValueError):
+        make_phase_ramp([1e-3, 2e-3], grid)
+
+
+def _check_kernel(kernel, arr, factors, nbatch=1):
+    A = arr.reshape((nbatch,) + arr.shape[-len(factors):])
+    out_compiled = np.empty_like(A)
+    kernel(A, *factors, out_compiled)
+
+    out_python = np.empty_like(A)
+    kernel.py_func(A, *factors, out_python)
+
+    assert np.allclose(out_compiled, out_python)
+
+    ref = A.copy()
+    for a, f in enumerate(factors):
+        shape = [1] * A.ndim
+        shape[a + 1] = f.shape[0]
+        ref = ref * f.reshape(shape)
+    assert np.allclose(out_compiled, ref)
+
+
+@pytest.mark.parametrize('ndim', [1, 2, 3, 4])
+@pytest.mark.parametrize('nbatch', [1, 2, 6])
+def test_filter_nd_kernels(ndim, nbatch):
+    shape = tuple(range(4, 4 + ndim))[::-1][:ndim]
+    rng = np.random.default_rng(seed=0)
+    A = rng.standard_normal((nbatch,) + shape) + 1j * rng.standard_normal((nbatch,) + shape)
+    factors = tuple(np.exp(1j * rng.standard_normal(s)) for s in shape)
+    _check_kernel(_kernel(ndim), A, factors, nbatch)
+
+
+@pytest.mark.parametrize('ndim, N', [(2, 64), (2, 512)])
+def test_separable_filter_batched(ndim, N):
+    slopes, grid, A, ref = _phase_ramp_data(np, ndim, N)
+    filt = make_phase_ramp(slopes, grid)
+
+    B = A[np.newaxis, np.newaxis] * np.ones((2, 3) + (1,) * ndim, dtype=A.dtype)
+    result = filt.apply(B)
+    assert np.allclose(result, B * (ref / A), rtol=1e-4, atol=1e-5)
+
+    out = np.empty_like(B)
+    result_out = filt.apply_numpy(B, out=out)
+    assert result_out is out
+    assert np.allclose(out, B * (ref / A), rtol=1e-4, atol=1e-5)
+
+    result_inv = filt.apply(B, inverse=True)
+    assert np.allclose(result_inv, B / (ref / A), rtol=1e-4, atol=1e-5)

@@ -813,7 +813,6 @@ def _get_optical_element_input_grid(optical_element):
         If no supported input-grid property could be determined.
     '''
     for attribute_name in [
-        'input_grid',
         'grid',
         'apodization',
         'phase',
@@ -836,14 +835,6 @@ def _get_optical_element_input_grid(optical_element):
             grid = value.grid
             if grid is not None and not callable(grid):
                 return grid
-
-        if hasattr(value, 'input_grid'):
-            grid = value.input_grid
-            if grid is not None and not callable(grid):
-                return grid
-
-        if not isinstance(value, (str, bytes)):
-            return value
 
     try:
         grid = optical_element.get_input_grid(None, None)

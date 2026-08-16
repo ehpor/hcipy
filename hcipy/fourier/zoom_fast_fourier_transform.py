@@ -81,12 +81,17 @@ class ZoomFastFourierTransform(FourierTransform):
         '''
         self._compute_shifts_and_weights(field.dtype)
 
+        # The CZT is applied along the last axis, so each grid axis (which are
+        # the trailing axes of the shaped field, with any tensor axes leading)
+        # is moved to the last position, transformed, and moved back.
         f = (field * self.input_weights).shaped
 
         for i, (czt, shift) in enumerate(zip(self.czts, self.shifts)):
-            f = np.moveaxis(f, -i, 0)
+            axis = -i - 1
+
+            f = np.moveaxis(f, axis, -1)
             f = czt(f) * shift
-            f = np.moveaxis(f, -i, 0)
+            f = np.moveaxis(f, -1, axis)
 
         shape = tuple(field.tensor_shape) + (-1,)
 
@@ -110,9 +115,11 @@ class ZoomFastFourierTransform(FourierTransform):
         f = (field * self.output_weights).shaped
 
         for i, (czt, shift) in enumerate(zip(self.inv_czts, self.inv_shifts)):
-            f = np.moveaxis(f, -i, 0)
+            axis = -i - 1
+
+            f = np.moveaxis(f, axis, -1)
             f = czt(f) * shift
-            f = np.moveaxis(f, -i, 0)
+            f = np.moveaxis(f, -1, axis)
 
         shape = tuple(field.tensor_shape) + (-1,)
 

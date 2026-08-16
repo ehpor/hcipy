@@ -789,12 +789,13 @@ def make_agnostic_backward(backward):
         return backward(self, instance_data, wavefront, *args, **kwargs)
     return res
 
-def get_optical_element_input_grid(optical_element):
+def _get_optical_element_input_grid(optical_element):
     '''Get the input grid of an optical element.
 
-    This function tries to get the input grid of an optical element by
-    checking its attributes and methods. If the input grid cannot be
-    determined, a ValueError is raised.
+    This function checks a small, explicit list of the grid-bearing properties that
+    are used throughout this module. The order is intentional: direct input-grid
+    information is preferred, followed by the most common field-like properties that
+    carry their own grid metadata.
 
     Parameters
     ----------
@@ -805,10 +806,44 @@ def get_optical_element_input_grid(optical_element):
     -------
     Grid
         The input grid of the optical element.
+
+    Raises
+    ------
+    ValueError
+        If no supported input-grid property could be determined.
     '''
-    grid = getattr(optical_element, 'input_grid', None)
-    if grid is not None and not callable(grid):
-        return grid
+    for attribute_name in [
+        'input_grid',
+        'grid',
+        'apodization',
+        'phase',
+        'surface_sag',
+        'amplitude',
+        'surface',
+        'phase_retardation',
+        'fast_axis_orientation',
+        'jones_matrix',
+    ]:
+        try:
+            value = getattr(optical_element, attribute_name)
+        except AttributeError:
+            continue
+
+        if value is None or callable(value):
+            continue
+
+        if hasattr(value, 'grid'):
+            grid = value.grid
+            if grid is not None and not callable(grid):
+                return grid
+
+        if hasattr(value, 'input_grid'):
+            grid = value.input_grid
+            if grid is not None and not callable(grid):
+                return grid
+
+        if not isinstance(value, (str, bytes)):
+            return value
 
     try:
         grid = optical_element.get_input_grid(None, None)
@@ -817,27 +852,7 @@ def get_optical_element_input_grid(optical_element):
     except (AttributeError, TypeError, ValueError):
         pass
 
-    seen = set()
-    stack = [optical_element]
-    while stack:
-        value = stack.pop()
-        if value is None or id(value) in seen:
-            continue
-        seen.add(id(value))
-
-        grid = getattr(value, 'grid', None)
-        if grid is not None and not callable(grid):
-            return grid
-
-        if isinstance(value, dict):
-            stack.extend(value.values())
-        elif isinstance(value, (list, tuple, set)):
-            stack.extend(value)
-        else:
-            try:
-                stack.extend(vars(value).values())
-            except TypeError:
-                pass
+    raise ValueError('Could not determine the input grid of the optical element.')
 
 class OpticalSystem(OpticalElement):
     '''An linear path of optical elements.

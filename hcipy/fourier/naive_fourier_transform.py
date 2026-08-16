@@ -1,6 +1,6 @@
 import numpy as np
 
-from .fourier_transform import FourierTransform, ComputationalComplexity, multiplex_for_tensor_fields, _get_float_and_complex_dtype
+from .fourier_transform import FourierTransform, ComputationalComplexity, _get_float_and_complex_dtype
 from ..field import Field
 from ..config import Configuration
 
@@ -78,7 +78,6 @@ class NaiveFourierTransform(FourierTransform):
 
         return self._matrix_backward
 
-    @multiplex_for_tensor_fields
     def forward(self, field):
         '''Returns the forward Fourier transform of the :class:`Field` field.
 
@@ -93,14 +92,14 @@ class NaiveFourierTransform(FourierTransform):
             The Fourier transform of the field.
         '''
         if self.precompute_matrices:
-            res = self.matrix_forward.dot(field.ravel())
+            res = np.einsum('ij,...j->...i', self.matrix_forward, field)
         else:
-            res = np.array([(field * self.input_grid.weights).dot(np.exp(-1j * np.dot(p, self.coords_in))) for p in self.coords_out.T])
+            A = np.exp(-1j * np.dot(self.coords_out.T, self.coords_in))
+            res = np.einsum('ij,...j->...i', A, field * self.input_grid.weights)
 
         float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
         return Field(res, self.output_grid).astype(complex_dtype, copy=False)
 
-    @multiplex_for_tensor_fields
     def backward(self, field):
         '''Returns the inverse Fourier transform of the :class:`Field` field.
 
@@ -115,9 +114,10 @@ class NaiveFourierTransform(FourierTransform):
             The inverse Fourier transform of the field.
         '''
         if self.precompute_matrices:
-            res = self.matrix_backward.dot(field.ravel())
+            res = np.einsum('ij,...j->...i', self.matrix_backward, field)
         else:
-            res = np.array([(field * self.output_grid.weights).dot(np.exp(1j * np.dot(p, self.coords_out))) for p in self.coords_in.T])
+            A = np.exp(1j * np.dot(self.coords_in.T, self.coords_out))
+            res = np.einsum('ij,...j->...i', A, field * self.output_grid.weights)
             res /= (2 * np.pi)**self.input_grid.ndim
 
         float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)

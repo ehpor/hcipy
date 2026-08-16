@@ -5,6 +5,7 @@ from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.backends import to_numpy, array_namespace
 from hcipy._math import cpu
+import io
 import math
 
 
@@ -305,17 +306,65 @@ def test_array_namespace(xp):
     arr = xp.zeros(10)
     _ = array_namespace(arr)
 
+
+_CGROUP_V2_PATH = "/sys/fs/cgroup/cpu.max"
+_CGROUP_V1_QUOTA_PATH = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
+_CGROUP_V1_PERIOD_PATH = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
+
+
+@pytest.fixture
+def cgroup_files(monkeypatch):
+    files = {}
+
+    def fake_open(path, *args, **kwargs):
+        try:
+            return io.StringIO(files[str(path)])
+        except KeyError:
+            raise FileNotFoundError(str(path))
+
+    monkeypatch.setattr(cpu, "open", fake_open, raising=False)
+    return files
+
+
 @pytest.mark.parametrize(
-    "func",
+    "content, expected",
     [
-        "_cgroup_v2_quota",
-        "_cgroup_v1_quota",
-        "_cgroup_quota_cpus",
+        ("50000 100000\n", 0.5),
+        ("400000 100000\n", 4.0),
+        ("max 100000\n", None),
+        ("not_a_number 100000\n", None),
+        ("100000\n", None),
     ],
 )
-def test_quota_functions_return_sensible_value(func):
-    value = getattr(cpu, func)()
-    assert value is None or value > 0
+def test_cgroup_v2_quota(cgroup_files, content, expected):
+    cgroup_files[_CGROUP_V2_PATH] = content
+    assert cpu._cgroup_v2_quota() == expected
+
+
+def test_cgroup_v2_quota_missing_file(cgroup_files):
+    assert cpu._cgroup_v2_quota() is None
+
+
+@pytest.mark.parametrize(
+    "quota, period, expected",
+    [
+        ("50000", "100000", 0.5),
+        ("800000", "100000", 8.0),
+        ("-1", "100000", None),
+        ("0", "100000", None),
+        ("not_a_number", "100000", None),
+        ("100000", "not_a_number", None),
+    ],
+)
+def test_cgroup_v1_quota(cgroup_files, quota, period, expected):
+    cgroup_files[_CGROUP_V1_QUOTA_PATH] = quota + "\n"
+    cgroup_files[_CGROUP_V1_PERIOD_PATH] = period + "\n"
+    assert cpu._cgroup_v1_quota() == expected
+
+
+def test_cgroup_v1_quota_missing_file(cgroup_files):
+    assert cpu._cgroup_v1_quota() is None
+
 
 @pytest.mark.parametrize(
     "func",
@@ -327,7 +376,7 @@ def test_quota_functions_return_sensible_value(func):
         "_windows_affinity_count",
     ],
 )
-def test_count_functions_return_sensible_value(func):
+def test_cpu_count_functions(func):
     value = getattr(cpu, func)()
     assert value is None or value >= 1
 

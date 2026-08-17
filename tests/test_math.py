@@ -4,6 +4,7 @@ import numpy as np
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.backends import to_numpy, array_namespace
+from hcipy._math.einsum import einsum
 import math
 
 
@@ -197,6 +198,13 @@ def test_random_generator_different_sizes(xp, distribution, args):
 
     generation_func = getattr(rng, distribution)
 
+    # Test 0D array
+    arr_0d = generation_func(size=tuple(), **args[0])
+    assert arr_0d.shape == tuple()
+
+    arr_0d = generation_func(size=None, **args[0])
+    assert arr_0d.shape == tuple()
+
     # Test 1D array
     arr_1d = generation_func(size=5, **args[0])
     assert arr_1d.shape == (5,)
@@ -303,3 +311,111 @@ def test_to_numpy(xp):
 def test_array_namespace(xp):
     arr = xp.zeros(10)
     _ = array_namespace(arr)
+
+@pytest.mark.parametrize('subscripts, shapes', [
+    # basic contractions
+    pytest.param("ij,jk->ik", [(4, 5), (5, 6)], id="matmul"),
+    pytest.param("bij,bjk->bik", [(3, 4, 5), (3, 5, 6)], id="batched-matmul"),
+    pytest.param("ii->", [(5, 5)], id="trace"),
+    pytest.param("ii->i", [(5, 5)], id="diagonal"),
+    pytest.param("ij->ji", [(4, 5)], id="transpose"),
+    pytest.param("i,j->ij", [(4,), (5,)], id="outer-product"),
+    pytest.param("i,i->", [(6,), (6,)], id="dot-product"),
+    pytest.param("ij,ij->ij", [(4, 5), (4, 5)], id="hadamard"),
+    pytest.param("abcd,cdef->abef", [(3, 4, 5, 6), (5, 6, 7, 8)], id="multi-index-contraction"),
+    pytest.param("iij,jkk->ik", [(4, 4, 5), (5, 6, 6)], id="diagonals-plus-contraction"),
+    # implicit output
+    pytest.param("ij,jk", [(4, 5), (5, 6)], id="implicit-matmul"),
+    pytest.param("i,j", [(4,), (5,)], id="implicit-outer"),
+    pytest.param("ii", [(5, 5)], id="implicit-trace"),
+    # scalar (0-d) operands
+    pytest.param(",i->i", [(), (5,)], id="scalar-times-vector"),
+    pytest.param(",ij->ij", [(), (4, 5)], id="scalar-times-matrix"),
+    pytest.param("i,->i", [(5,), ()], id="vector-times-scalar"),
+    pytest.param(",->", [(), ()], id="scalar-scalar"),
+    # empty dimensions
+    pytest.param("ij,jk->ik", [(0, 5), (5, 6)], id="empty-dimension"),
+    pytest.param("ij,kj->ik", [(0, 5), (4, 5)], id="empty-result"),
+    # multi-operand chains
+    pytest.param("ij,jk,kl->il", [(2, 3), (3, 4), (4, 5)], id="three-operand-chain"),
+    pytest.param("ij,jk,kl,lm->im", [(2, 3), (3, 4), (4, 5), (5, 6)], id="four-operand"),
+    pytest.param("pi,qj,ijkl,rk,sl->pqrs", [(4, 4), (4, 4), (4, 4, 4, 4), (4, 4), (4, 4)], id="five-operand"),
+    # single-operand einsum
+    pytest.param("ij->", [(3, 4)], id="sum-all"),
+    pytest.param("ij->i", [(3, 4)], id="sum-axis-0"),
+    pytest.param("ij->j", [(3, 4)], id="sum-axis-1"),
+    # diagonals within one operand
+    pytest.param("iij->j", [(4, 4, 5)], id="trace-with-extra-axes"),
+    pytest.param("iijj->", [(3, 3, 4, 4)], id="double-trace"),
+    pytest.param("iii->i", [(3, 3, 3)], id="triple-diagonal"),
+    pytest.param("ij,jkk->ik", [(4, 5), (5, 6, 6)], id="diagonal-on-right"),
+    pytest.param("iij,jkk->ik", [(4, 4, 5), (5, 6, 6)], id="diagonals-on-both"),
+    # broadcast / batch over several dims
+    pytest.param("abij,abjk->abik", [(2, 3, 4, 5), (2, 3, 5, 6)], id="multi-batch-dims"),
+    pytest.param("bi,cj->bcij", [(2, 3), (4, 5)], id="batch-outer"),
+    # stress / high-dimensional
+    pytest.param("abcdef,bcdefg->ag", [(2, 3, 4, 5, 2, 3), (3, 4, 5, 2, 3, 6)], id="6d-contraction"),
+    pytest.param("abcij,abcjk->abcik", [(2, 3, 4, 5, 6), (2, 3, 4, 6, 7)], id="high-dim-batched"),
+    pytest.param("ij,ij->", [(6, 7), (6, 7)], id="all-batch"),
+    pytest.param("dc,ba->abcd", [(7, 6), (5, 4)], id="shuffled-index-order"),
+    # edge cases
+    pytest.param("ij,jk->ik", [(1, 1), (1, 1)], id="size-one-dims"),
+    pytest.param("i->", [(1,)], id="single-element-tensor"),
+    pytest.param("i,j,k->ijk", [(3,), (4,), (5,)], id="outer-product-3way"),
+    pytest.param("bij,bjk->bik", [(20, 10, 12), (20, 12, 8)], id="large-batched"),
+    pytest.param("ijk->kji", [(4, 5, 6)], id="chain-transpose"),
+    # ellipsis
+    pytest.param("...i,...i->...", [(3, 4), (4,)], id="ellipsis-matvec-broadcast"),
+    pytest.param("...ij,...jk->...ik", [(2, 3, 4), (4, 5)], id="ellipsis-matmul-broadcast"),
+    pytest.param("...ij,...ij->...", [(2, 3, 4), (3, 4)], id="ellipsis-common-batch"),
+    pytest.param("i...i->...", [(3, 5, 3)], id="ellipsis-middle"),
+    pytest.param("ij->...ij", [(4, 5)], id="out-only-ellipsis"),
+    pytest.param("...i->...", [(3, 4)], id="ellipsis-reduce-index"),
+    # implicit output with ellipsis
+    pytest.param("...i", [(3, 4)], id="implicit-ellipsis"),
+    pytest.param("...i,...i", [(3, 4), (4,)], id="implicit-ellipsis-broadcast"),
+    pytest.param("i...i", [(3, 5, 3)], id="implicit-ellipsis-middle"),
+])
+@pytest.mark.parametrize('optimize', [False, True])
+def test_einsum(xp, subscripts, shapes, optimize):
+    rng = make_random_generator(xp)
+    arrays = [xp.astype(rng.normal(size=s), xp.float64) for s in shapes]
+
+    arrays_numpy = [np.asarray(arr) for arr in arrays]
+    expected = np.einsum(subscripts, *arrays_numpy)
+
+    got = einsum(subscripts, *arrays, optimize=optimize)
+
+    np.testing.assert_allclose(np.asarray(got), expected, atol=1e-14)
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
+def test_einsum_dtype(xp, dtype):
+    dtype_xp = getattr(xp, dtype)
+    rng = make_random_generator(xp)
+
+    a = xp.astype(rng.normal(size=(4, 5)), dtype_xp)
+    b = xp.astype(rng.normal(size=(5, 6)), dtype_xp)
+
+    if xp.isdtype(dtype_xp, 'complex floating'):
+        a = a + xp.asarray(1j, dtype=dtype_xp) * xp.astype(rng.normal(size=(4, 5)), dtype_xp)
+        b = b + xp.asarray(1j, dtype=dtype_xp) * xp.astype(rng.normal(size=(5, 6)), dtype_xp)
+
+    atol = 1e-6 if xp.finfo(dtype_xp).bits <= 32 else 1e-14
+
+    expected = np.einsum("ij,jk->ik", np.asarray(a), np.asarray(b))
+    got = einsum("ij,jk->ik", a, b)
+
+    assert got.dtype == dtype_xp
+    np.testing.assert_allclose(np.asarray(got), expected, atol=atol)
+
+def test_einsum_int_input(xp):
+    a = xp.asarray([[1, 2], [3, 4]])
+    b = xp.asarray([[5, 6], [7, 8]])
+
+    expected = np.einsum("ij,jk->ik", np.asarray(a), np.asarray(b))
+    got = einsum("ij,jk->ik", a, b)
+    np.testing.assert_array_equal(np.asarray(got), expected)
+
+def test_einsum_result_is_scalar(xp):
+    result = einsum("i,i->", xp.asarray([1.0, 2.0]), xp.asarray([3.0, 4.0]))
+    assert result.ndim == 0

@@ -812,6 +812,13 @@ def _get_optical_element_input_grid(optical_element):
     ValueError
         If no supported input-grid property could be determined.
     '''
+    try:
+        grid = optical_element.get_input_grid(None, None)
+        if grid is not None and not callable(grid):
+            return grid
+    except (AttributeError, TypeError, ValueError):
+        pass
+    
     for attribute_name in [
         'grid',
         'apodization',
@@ -835,13 +842,6 @@ def _get_optical_element_input_grid(optical_element):
             grid = value.grid
             if grid is not None and not callable(grid):
                 return grid
-
-    try:
-        grid = optical_element.get_input_grid(None, None)
-        if grid is not None and not callable(grid):
-            return grid
-    except (AttributeError, TypeError, ValueError):
-        pass
 
     raise ValueError('Could not determine the input grid of the optical element.')
 

@@ -818,7 +818,7 @@ def _get_optical_element_input_grid(optical_element):
             return grid
     except (AttributeError, TypeError, ValueError):
         pass
-    
+
     for attribute_name in [
         'grid',
         'apodization',

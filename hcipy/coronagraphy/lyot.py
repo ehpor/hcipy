@@ -1,6 +1,7 @@
 import numpy as np
 
 from ..optics import Apodizer, OpticalElement
+from ..optics.optical_element import _get_optical_element_input_grid
 from ..propagation import FraunhoferPropagator
 
 class LyotCoronagraph(OpticalElement):
@@ -36,10 +37,13 @@ class LyotCoronagraph(OpticalElement):
         the grid will be determined from the focal plane mask. The default value is None.
     '''
     def __init__(self, input_grid, focal_plane_mask, lyot_stop=None, focal_length=1, focal_plane_mask_grid=None):
-        if hasattr(focal_plane_mask, 'input_grid'):
+        if isinstance(focal_plane_mask, OpticalElement):
             # Focal plane mask is an optical element.
             if focal_plane_mask_grid is None:
-                grid = focal_plane_mask.apodization.grid
+                try:
+                    grid = _get_optical_element_input_grid(focal_plane_mask)
+                except ValueError:
+                    raise ValueError('Could not determine the input grid of the focal plane mask. Please pass focal_plane_mask_grid explicitly.')
             else:
                 grid = focal_plane_mask_grid
 
@@ -53,7 +57,7 @@ class LyotCoronagraph(OpticalElement):
 
             self.focal_plane_mask = Apodizer(focal_plane_mask)
 
-        if lyot_stop is not None and not hasattr(lyot_stop, 'input_grid'):
+        if lyot_stop is not None and not isinstance(lyot_stop, OpticalElement):
             lyot_stop = Apodizer(lyot_stop)
         self.lyot_stop = lyot_stop
 
@@ -147,10 +151,13 @@ class OccultedLyotCoronagraph(OpticalElement):
     '''
     def __init__(self, input_grid, focal_plane_mask, focal_length=1, focal_plane_mask_grid=None):
 
-        if hasattr(focal_plane_mask, 'input_grid'):
+        if isinstance(focal_plane_mask, OpticalElement):
             # Focal plane mask is an optical element.
             if focal_plane_mask_grid is None:
-                grid = focal_plane_mask.apodization.grid
+                try:
+                    grid = _get_optical_element_input_grid(focal_plane_mask)
+                except ValueError:
+                    raise ValueError('Could not determine the input grid of the focal plane mask. Please pass focal_plane_mask_grid explicitly.')
             else:
                 grid = focal_plane_mask_grid
 

@@ -52,6 +52,32 @@ def test_fqpm_coronagraph():
     assert img.total_power < 1e-6
     assert img.intensity.max() / img_ref.intensity.max() < 4e-8
 
+
+def test_lyot_coronagraph_with_phase_apodizer_mask():
+    pupil_grid = make_pupil_grid(32)
+    focal_grid = make_focal_grid(4, 16)
+
+    phase = make_circular_aperture(1.0)(focal_grid) * 0.3
+    mask = PhaseApodizer(phase)
+
+    coro = LyotCoronagraph(pupil_grid, mask)
+
+    assert coro.prop.get_instance_data(pupil_grid, None, 1).output_grid is focal_grid
+
+
+def test_lyot_coronagraph_with_polarization_mask():
+    pupil_grid = make_pupil_grid(32)
+    focal_grid = make_focal_grid(4, 16)
+
+    phase_retardation = make_circular_aperture(1.0)(focal_grid) * 0.3
+    fast_axis_orientation = Field(np.zeros(focal_grid.size), focal_grid)
+    mask = LinearRetarder(phase_retardation, fast_axis_orientation)
+
+    coro = LyotCoronagraph(pupil_grid, mask)
+
+    assert coro.prop.get_instance_data(pupil_grid, None, 1).output_grid is focal_grid
+
+
 def test_vector_vortex_coronagraph():
     pupil_grid = make_pupil_grid(256)
     focal_grid = make_focal_grid(4, 32)
@@ -259,6 +285,9 @@ def test_lyot_coronagraph():
     fpm2 = 1 - evaluate_supersampled(make_circular_aperture(5 * focal_length), fpm_grid2, 8)
     cor2 = LyotCoronagraph(pupil_grid, fpm2, lyot_stop, focal_length=focal_length)
 
+    # Coronagraph 3 with optical element for focal plane mask
+    cor3 = LyotCoronagraph(pupil_grid, Apodizer(fpm), lyot_stop)
+
     # The grid on which the performance is evaluated
     focal_grid = make_focal_grid(q=3, num_airy=25)
     prop = FraunhoferPropagator(pupil_grid, focal_grid)
@@ -268,10 +297,11 @@ def test_lyot_coronagraph():
     norm = prop(wf).power.max()
     wf_foc = prop(cor(wf))
     wf_foc2 = prop(cor2(wf))
-
+    wf_foc3 = prop(cor3(wf))
     # Checks performance of the coronagraph and if the focal length does not introduce artifacts
     assert (wf_foc.power.max() / norm) < 5e-3
     np.testing.assert_allclose(wf_foc.power, wf_foc2.power)
+    np.testing.assert_allclose(wf_foc.power, wf_foc3.power)
 
 def test_vortex_fiber_nuller():
     pupil_grid = make_pupil_grid(256)

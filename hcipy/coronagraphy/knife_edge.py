@@ -55,11 +55,11 @@ class KnifeEdgeLyotCoronagraph(OpticalElement):
         # FIXME: not necessary when 1D FFTs on 2D grids are implemented.
         self.focal_mask = np.fft.fftshift(self.focal_mask)
 
-        if apodizer is not None and not hasattr(apodizer, 'input_grid'):
+        if apodizer is not None and not isinstance(apodizer, OpticalElement):
             apodizer = Apodizer(apodizer)
         self.apodizer = apodizer
 
-        if lyot_stop is not None and not hasattr(lyot_stop, 'input_grid'):
+        if lyot_stop is not None and not isinstance(lyot_stop, OpticalElement):
             lyot_stop = Apodizer(lyot_stop)
         self.lyot_stop = lyot_stop
 

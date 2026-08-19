@@ -32,7 +32,7 @@ class GaussianBeam(object):
 
     @property
     def zR(self):  # noqa: N802
-        '''The Rayleight distance of the Gaussian beam.
+        '''The Rayleigh distance of the Gaussian beam.
         '''
         return np.pi * self.w0**2 / self.wavelength
 

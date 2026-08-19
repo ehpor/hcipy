@@ -102,6 +102,50 @@ class RayTransferMatrix:
 
         return (abs(a - 1.0) < tol) and (abs(c) < tol) and (abs(d - 1.0) < tol)
 
+    def forward(self, beam):
+        '''Transform a Gaussian beam through this matrix, returning a new beam.
+
+        The complex beam parameter of the beam is transformed according to the
+        ABCD law
+
+            q' = (A q + B) / (C q + D).
+
+        A new GaussianBeam is returned; the input beam is not modified. A
+        dispersive matrix is evaluated at the wavelength of the beam.
+
+        Parameters
+        ----------
+        beam : GaussianBeam
+            The Gaussian beam to transform.
+
+        Returns
+        -------
+        GaussianBeam
+            The transformed Gaussian beam.
+        '''
+        return beam.propagate(self(beam.wavelength))
+
+    def backward(self, beam):
+        '''Inverse-transform a Gaussian beam through this matrix.
+
+        The numerical inverse of the matrix is applied, so this works for any
+        invertible matrix.
+
+        Parameters
+        ----------
+        beam : GaussianBeam
+            The Gaussian beam to transform.
+
+        Returns
+        -------
+        GaussianBeam
+            The inverse-transformed Gaussian beam.
+        '''
+        M = self(beam.wavelength)
+        xp = infer_xp(M)
+
+        return beam.propagate(xp.linalg.inv(M))
+
     def __matmul__(self, other):
         '''Compose two ray-transfer matrices: self is applied after other.'''
         other = other if isinstance(other, RayTransferMatrix) else RayTransferMatrix(other)

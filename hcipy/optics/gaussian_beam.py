@@ -1,4 +1,5 @@
 import numpy as np
+from .._math.backends import infer_xp
 from ..field import Field
 from .wavefront import Wavefront
 
@@ -113,6 +114,50 @@ class GaussianBeam(object):
         self.wavelength = 2 * np.pi / k
 
     wavenumber = k
+
+    def propagate(self, matrix):
+        '''Propagate the Gaussian beam through an ABCD (ray-transfer) matrix.
+
+        The complex beam parameter of the beam is transformed according to the
+        ABCD law
+
+            q' = (A q + B) / (C q + D),
+
+        and a new GaussianBeam with the propagated parameters is returned.
+        The beam itself is not modified.
+
+        Parameters
+        ----------
+        matrix : Array or callable
+            The 2x2 ABCD (ray-transfer) matrix to propagate the beam through,
+            or a function of the wavelength (in meters) that returns one. A
+            callable is evaluated at the wavelength of the beam.
+
+        Returns
+        -------
+        GaussianBeam
+            The propagated Gaussian beam.
+
+        Raises
+        ------
+        ValueError
+            If the matrix is not 2x2.
+        '''
+        if callable(matrix):
+            matrix = matrix(self.wavelength)
+
+        xp = infer_xp(matrix)
+        matrix = xp.asarray(matrix)
+
+        if matrix.shape != (2, 2):
+            raise ValueError('The ABCD matrix should be a 2x2 array.')
+
+        q = self.q
+        q_new = (float(matrix[0, 0]) * q + float(matrix[0, 1])) / (float(matrix[1, 0]) * q + float(matrix[1, 1]))
+
+        new_beam = GaussianBeam(self.w0, self.z, self.wavelength)
+        new_beam.q = q_new
+        return new_beam
 
     def evaluate(self, grid):
         '''Evaluate the wavefront of the Gaussian beam at the current position on

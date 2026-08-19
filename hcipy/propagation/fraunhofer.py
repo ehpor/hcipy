@@ -1,8 +1,8 @@
-import numpy as np
-
 from ..optics import Wavefront, AgnosticOpticalElement, make_agnostic_forward, make_agnostic_backward
 from ..field import Field
 from ..fourier import make_fourier_transform
+
+import math
 
 class FraunhoferPropagator(AgnosticOpticalElement):
     '''A monochromatic perfect lens propagator.
@@ -32,7 +32,7 @@ class FraunhoferPropagator(AgnosticOpticalElement):
     def make_instance(self, instance_data, input_grid, output_grid, wavelength):
         focal_length = self.evaluate_parameter(self.focal_length, input_grid, output_grid, wavelength)
 
-        instance_data.uv_grid = output_grid.scaled(2 * np.pi / (focal_length * wavelength))
+        instance_data.uv_grid = output_grid.scaled(2 * math.pi / (focal_length * wavelength))
         instance_data.fourier_transform = make_fourier_transform(input_grid, instance_data.uv_grid)
 
         instance_data.norm_factor = 1 / (1j * focal_length * wavelength)

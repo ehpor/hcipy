@@ -209,7 +209,7 @@ class ZoomFastFourierTransform(FourierTransform):
         num_operations = num_multiplications + num_additions
 
         # Predict execution time.
-        prediction_coefficients = Configuration().fourier.zfft.execution_time_prediction_coefficients
+        prediction_coefficients = Configuration().zfft_runtime_coeffs
         expected_execution_time = FourierTransform._predict_execution_time(num_operations, prediction_coefficients)
 
         return ComputationalComplexity(

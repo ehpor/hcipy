@@ -62,7 +62,7 @@ def test_atmosphere_total_variance(wavelength, pupil_diameter, fried_parameter, 
     aperture = make_circular_aperture(pupil_diameter)(pupil_grid)
 
     Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
-    layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, velocity, use_interpolation=True)
+    layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, velocity)
 
     num_iterations = 2000
     total_variance = []
@@ -105,7 +105,7 @@ def test_atmosphere_zernike_variances(wavelength, pupil_diameter, fried_paramete
     pupil_grid = make_pupil_grid(128, pupil_diameter)
 
     Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
-    layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, velocity, use_interpolation=False)
+    layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, velocity, interpolation_order=0)
 
     zernike_modes = make_zernike_basis(num_modes + 20, pupil_diameter, pupil_grid, starting_mode=2, radial_cutoff=False)
 

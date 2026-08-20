@@ -29,15 +29,14 @@ Using GPU Acceleration
 
 The following example demonstrates how to use GPU acceleration with HCIPy. This example uses CuPy, but you can substitute any Array API-compliant backend such as JAX or PyTorch.
 
-First, configure HCIPy to use NewStyleField by creating or editing your configuration file at ``~/.hcipy/config.yaml``:
+First, configure HCIPy to use NewStyleField by creating or editing a configuration file at ``./hcipy_config.yaml`` (project-specific) or ``~/.hcipy/hcipy_config.yaml`` (user-wide), setting the ``use_array_api`` option:
 
 .. code-block:: yaml
 
-   core:
-     use_new_style_fields: true
+   use_array_api: true
 
 .. important::
-   The choice between OldStyleField and NewStyleField is made at the time HCIPy is imported and **cannot be changed afterwards**. You must set this configuration before importing HCIPy in your Python script.
+   The choice between OldStyleField and NewStyleField is made at the time HCIPy is imported and **cannot be changed afterwards**. You must set this configuration before importing HCIPy in your Python script, either in a configuration file or through the ``HCIPY_USE_ARRAY_API=true`` environment variable, e.g. ``HCIPY_USE_ARRAY_API=true python your_script.py``.
 
 Note that backend selection is explicit - HCIPy does not automatically switch to GPU backends even when available. You must intentionally create fields using a backend that uses GPU acceleration. This design gives you full control over where computations occur and allows you to mix CPU and GPU operations in the same script by creating different fields with different backends.
 
@@ -186,6 +185,14 @@ The tuning process typically produces output like this:
        b: 1.543
        c: -0.876
 
-These coefficients describe the performance characteristics of each method on your hardware. To use the newly tuned parameters, add them to your HCIPy configuration file. The configuration file is typically located at ``~/.hcipy/config.yaml`` or in your project's configuration directory. Add the tuning results under the ``fourier`` section.
+These coefficients describe the performance characteristics of each method on your hardware. To use the newly tuned parameters, add them to your configuration file (``./hcipy_config.yaml`` or ``~/.hcipy/hcipy_config.yaml``) using the flat ``*_runtime_coeffs`` keys:
+
+.. code-block:: yaml
+
+   fft_runtime_coeffs: [1.234, 0.987, -2.109]
+   mft_runtime_coeffs: [0.876, 1.234, -1.098]
+   zfft_runtime_coeffs: [0.567, 1.543, -0.876]
+
+Alternatively, you can save the coefficients directly in this format by passing ``--coeffs-out <file>`` to ``hcipy_tune_fourier``, or set them in code after importing HCIPy.
 
 Once configured, HCIPy uses your tuned models instead of its built-in ones to select the optimal method for each propagation.

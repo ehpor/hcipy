@@ -203,8 +203,6 @@ class DynamicSurfaceAberration(OpticalElement):
         Spatial modes defining the surface aberration pattern.
     dynamics : StateSpaceDynamics
         The underlying state space dynamics object.
-    refractive_index : float or callable
-        The refractive index.
     """
     def __init__(self, modes, dynamics, refractive_index):
         if len(modes) != dynamics.num_outputs:
@@ -212,7 +210,9 @@ class DynamicSurfaceAberration(OpticalElement):
 
         self.modes = modes
         self.dynamics = dynamics
-        self.refractive_index = refractive_index
+
+        surface = modes.linear_combination(dynamics.coefficients)
+        self._apodizer = SurfaceApodizer(surface, refractive_index)
 
     @property
     def state(self):
@@ -245,21 +245,13 @@ class DynamicSurfaceAberration(OpticalElement):
             Target time to evolve to.
         """
         self.dynamics.evolve_until(t)
+        self._apodizer.surface_sag = self.modes.linear_combination(self.coefficients)
 
     @property
-    def surface(self):
-        """The surface height in meters.
+    def surface_sag(self):
+        """The current surface sag in meters.
         """
-        return self.modes.linear_combination(self.coefficients)
-
-    def _get_phase_multiplier(self, wavelength):
-        """Get the phase multiplier based on our refractive index.
-        """
-        if callable(self.refractive_index):
-            n = self.refractive_index(wavelength)
-        else:
-            n = self.refractive_index
-        return 2 * np.pi * (n - 1) / wavelength
+        return self._apodizer.surface_sag
 
     def forward(self, wavefront):
         """Propagate wavefront forward through the aberration.
@@ -276,12 +268,7 @@ class DynamicSurfaceAberration(OpticalElement):
         Wavefront
             Modulated wavefront with applied phase.
         """
-        wf = wavefront.copy()
-
-        phase_multiplier = self._get_phase_multiplier(wf.wavelength)
-        wf.electric_field *= np.exp(1j * phase_multiplier * self.surface)
-
-        return wf
+        return self._apodizer.forward(wavefront)
 
     def backward(self, wavefront):
         """Propagate wavefront backward through the aberration.
@@ -298,9 +285,4 @@ class DynamicSurfaceAberration(OpticalElement):
         Wavefront
             Modulated wavefront with inverse phase.
         """
-        wf = wavefront.copy()
-
-        phase_multiplier = self._get_phase_multiplier(wf.wavelength)
-        wf.electric_field *= np.exp(-1j * phase_multiplier * self.surface)
-
-        return wf
+        return self._apodizer.backward(wavefront)

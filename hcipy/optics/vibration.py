@@ -92,16 +92,13 @@ class SimpleVibration(OpticalElement):
         wf.electric_field *= np.exp(-1j * (self.mode * self.amplitude / wf.wavelength * np.sin(self.phase)))
         return wf
 
-class DampedHarmonicVibration(OpticalElement):
+class DampedHarmonicVibration(DynamicSurfaceAberration):
     '''A damped harmonic oscillator vibration model driven by white noise.
 
     This class models a damped harmonic oscillator with natural frequency and
     damping ratio, driven by white noise with a given power spectral density.
     The model uses a continuous-time state space representation with exact
     covariance evolution.
-
-    This class uses composition with :class:`DynamicSurfaceAberration` to
-    apply the time-varying phase modulation.
 
     Parameters
     ----------
@@ -149,10 +146,7 @@ class DampedHarmonicVibration(OpticalElement):
         dynamics = StateSpaceDynamics(A, B, C, seed=seed)
 
         # Create mode basis from single mode
-        modes = ModeBasis([mode])
-
-        # Create dynamic surface aberration
-        self._aberration = DynamicSurfaceAberration(modes, dynamics, refractive_index)
+        super().__init__(ModeBasis([mode]), dynamics, refractive_index)
 
     @property
     def damping_ratio(self):
@@ -170,7 +164,7 @@ class DampedHarmonicVibration(OpticalElement):
     def mode(self):
         '''The spatial mode of the vibration.
         '''
-        return self._aberration.modes[0]
+        return self.modes[0]
 
     @property
     def natural_frequency(self):
@@ -212,16 +206,6 @@ class DampedHarmonicVibration(OpticalElement):
         return np.sqrt(self.driving_psd / (4 * self.damping_ratio * self._omega_0**3))
 
     @property
-    def t(self):
-        '''The current time in seconds.
-        '''
-        return self._aberration.t
-
-    @t.setter
-    def t(self, t):
-        self._aberration.t = t
-
-    @property
     def displacement(self):
         '''The current displacement of the oscillator in meters.
 
@@ -230,44 +214,4 @@ class DampedHarmonicVibration(OpticalElement):
         float
             The displacement in meters.
         '''
-        return self._aberration.coefficients[0]
-
-    def evolve_until(self, t):
-        '''Evolve the oscillator until time t.
-
-        Parameters
-        ----------
-        t : scalar
-            The target time in seconds. Must be >= current time.
-        '''
-        self._aberration.evolve_until(t)
-
-    def forward(self, wavefront):
-        '''Propagate the wavefront forward through the vibration.
-
-        Parameters
-        ----------
-        wavefront : Wavefront
-            The input wavefront.
-
-        Returns
-        -------
-        Wavefront
-            The output wavefront with the vibration applied.
-        '''
-        return self._aberration.forward(wavefront)
-
-    def backward(self, wavefront):
-        '''Propagate the wavefront backward through the vibration.
-
-        Parameters
-        ----------
-        wavefront : Wavefront
-            The input wavefront.
-
-        Returns
-        -------
-        Wavefront
-            The output wavefront with the inverse vibration applied.
-        '''
-        return self._aberration.backward(wavefront)
+        return self.coefficients[0]

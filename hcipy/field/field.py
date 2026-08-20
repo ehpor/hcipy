@@ -1229,7 +1229,7 @@ def make_field_namespace(backend):
 
     return namespace
 
-Field = NewStyleField if Configuration()["core"]["use_new_style_fields"] else OldStyleField
+Field = NewStyleField if Configuration().use_array_api else OldStyleField
 
 def is_field(obj):
     '''Check if the object is an HCIPy Field.

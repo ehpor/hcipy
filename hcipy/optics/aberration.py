@@ -35,7 +35,7 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
         The surface error calculated on `pupil_grid`.
     '''
     def psd(grid):
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide='ignore', invalid='ignore'):
             res = Field(grid.as_('polar').r**exponent, grid)
         res[grid.as_('polar').r == 0] = 0
         return res
@@ -178,3 +178,129 @@ class SurfaceAberrationAtDistance(OpticalElement):
         wf = self.fresnel.forward(wavefront)
         wf = self.surface_aberration.backward(wf)
         return self.fresnel.backward(wf)
+
+class DynamicSurfaceAberration(OpticalElement):
+    """A dynamic surface aberration using state space dynamics.
+
+    This class models time-varying surface aberrations using a continuous-time
+    state space model. It wraps a :class:`StateSpaceDynamics` object and applies
+    phase modulation to wavefronts based on the current state.
+
+    Parameters
+    ----------
+    modes : ModeBasis
+        Spatial modes defining the surface aberration pattern. These represent
+        surface height in meters.
+    dynamics : StateSpaceDynamics
+        The state space dynamics object that provides time-varying coefficients.
+    refractive_index : float or callable
+        Refractive index of the medium. Can be a constant (float) or a callable
+        that takes wavelength and returns refractive index.
+
+    Attributes
+    ----------
+    modes : ModeBasis
+        Spatial modes defining the surface aberration pattern.
+    dynamics : StateSpaceDynamics
+        The underlying state space dynamics object.
+    refractive_index : float or callable
+        The refractive index.
+    """
+    def __init__(self, modes, dynamics, refractive_index):
+        if len(modes) != dynamics.num_outputs:
+            raise ValueError(f"Number of modes ({len(modes)}) must match number of dynamics outputs ({dynamics.num_outputs})")
+
+        self.modes = modes
+        self.dynamics = dynamics
+        self.refractive_index = refractive_index
+
+    @property
+    def state(self):
+        """Current internal state vector.
+        """
+        return self.dynamics.state
+
+    @property
+    def coefficients(self):
+        """Current mode coefficients (y = C @ x).
+        """
+        return self.dynamics.coefficients
+
+    @property
+    def t(self):
+        """Current simulation time.
+        """
+        return self.dynamics.t
+
+    @t.setter
+    def t(self, t):
+        self.evolve_until(t)
+
+    def evolve_until(self, t):
+        """Evolve the state from current time to time t.
+
+        Parameters
+        ----------
+        t : float
+            Target time to evolve to.
+        """
+        self.dynamics.evolve_until(t)
+
+    @property
+    def surface(self):
+        """The surface height in meters.
+        """
+        return self.modes.linear_combination(self.coefficients)
+
+    def _get_phase_multiplier(self, wavelength):
+        """Get the phase multiplier based on our refractive index.
+        """
+        if callable(self.refractive_index):
+            n = self.refractive_index(wavelength)
+        else:
+            n = self.refractive_index
+        return 2 * np.pi * (n - 1) / wavelength
+
+    def forward(self, wavefront):
+        """Propagate wavefront forward through the aberration.
+
+        Applies phase modulation based on the current state and modes.
+
+        Parameters
+        ----------
+        wavefront : Wavefront
+            Input wavefront.
+
+        Returns
+        -------
+        Wavefront
+            Modulated wavefront with applied phase.
+        """
+        wf = wavefront.copy()
+
+        phase_multiplier = self._get_phase_multiplier(wf.wavelength)
+        wf.electric_field *= np.exp(1j * phase_multiplier * self.surface)
+
+        return wf
+
+    def backward(self, wavefront):
+        """Propagate wavefront backward through the aberration.
+
+        Applies inverse phase modulation based on the current state and modes.
+
+        Parameters
+        ----------
+        wavefront : Wavefront
+            Input wavefront.
+
+        Returns
+        -------
+        Wavefront
+            Modulated wavefront with inverse phase.
+        """
+        wf = wavefront.copy()
+
+        phase_multiplier = self._get_phase_multiplier(wf.wavelength)
+        wf.electric_field *= np.exp(-1j * phase_multiplier * self.surface)
+
+        return wf

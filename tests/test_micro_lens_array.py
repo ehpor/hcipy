@@ -66,8 +66,11 @@ def test_micro_lens_array_multiple_lenslets():
     assert np.all(mla.mla_opd[~assigned] == 0)
 
     wf = Wavefront(input_grid.ones())
-    mla.forward(wf)
-    mla.backward(wf)
+    wf_fwd = mla.forward(wf)
+    wf_bwd = mla.backward(wf_fwd)
+
+    # Make sure that no amplitude is applied.
+    assert np.allclose(wf.electric_field, wf_bwd.electric_field)
 
 def test_spherical_micro_lens_array():
     input_grid = make_pupil_grid(64, 1)

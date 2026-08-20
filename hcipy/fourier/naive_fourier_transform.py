@@ -48,7 +48,7 @@ class NaiveFourierTransform(FourierTransform):
         self._matrix_backward = None
 
         if precompute_matrices is None:
-            precompute_matrices = Configuration().fourier.nft.precompute_matrices
+            precompute_matrices = Configuration().nft_precompute_matrices
         self.precompute_matrices = precompute_matrices
 
         self.coords_in = np.array(self.input_grid.as_('cartesian').coords)

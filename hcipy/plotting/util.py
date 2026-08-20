@@ -77,7 +77,7 @@ def imshow_psf(
         psf_norm = normalization
 
     if cmap is None:
-        cmap = Configuration().plotting.psf_colormap
+        cmap = Configuration().cmap_psf
 
     img = psf / psf_norm
 
@@ -203,7 +203,7 @@ def imshow_pupil_phase(
         vmax = phase_limits
 
     if cmap is None:
-        cmap = Configuration().plotting.pupil_phase_colormap
+        cmap = Configuration().cmap_pupil_phase
 
     im = imshow_field(phase, ax=ax, cmap=cmap, mask=mask, vmin=vmin, vmax=vmax, **kwargs)
 

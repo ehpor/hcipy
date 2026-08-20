@@ -1,5 +1,6 @@
 __all__ = [
-    'Configuration'
+    'Configuration',
+    'on_config_change',
 ]
 
 from .config import *

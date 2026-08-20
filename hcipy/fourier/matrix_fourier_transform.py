@@ -52,12 +52,12 @@ class MatrixFourierTransform(FourierTransform):
 
         # Get the value from the configuration file if left at default.
         if precompute_matrices is None:
-            precompute_matrices = Configuration().fourier.mft.precompute_matrices
+            precompute_matrices = Configuration().mft_precompute_matrices
         self.precompute_matrices = precompute_matrices
 
         # Get the value from the configuration file if left at default.
         if allocate_intermediate is None:
-            allocate_intermediate = Configuration().fourier.mft.allocate_intermediate
+            allocate_intermediate = Configuration().mft_allocate_intermediate
         self.allocate_intermediate = allocate_intermediate
 
         self.matrices_dtype = None
@@ -314,7 +314,7 @@ class MatrixFourierTransform(FourierTransform):
         num_operations = num_multiplications + num_additions
 
         # Predict execution time.
-        prediction_coefficients = Configuration().fourier.mft.execution_time_prediction_coefficients
+        prediction_coefficients = Configuration().mft_runtime_coeffs
         expected_execution_time = FourierTransform._predict_execution_time(num_operations, prediction_coefficients)
 
         return ComputationalComplexity(

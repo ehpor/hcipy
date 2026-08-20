@@ -37,6 +37,8 @@ dependencies = [
     "threadpoolctl",
     "array_api_compat",
     "opt_einsum",
+    "pydantic",
+    "pydantic-settings",
 ]
 
 [project.optional-dependencies]

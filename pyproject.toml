@@ -34,6 +34,8 @@ dependencies = [
     "packaging",
     "tqdm",
     "array_api_compat",
+    "pydantic",
+    "pydantic-settings",
 ]
 
 [project.optional-dependencies]

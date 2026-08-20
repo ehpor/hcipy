@@ -40,6 +40,10 @@ def zernike_variance_von_karman(n, m, R, k0, Cn_squared, wavelength):
 
     return coeffs_all * (term11 * term12 + term21 * term22)
 
+@pytest.mark.parametrize('velocity', [
+    pytest.param([7, 7]),
+    pytest.param([-7, -7])
+])
 @pytest.mark.parametrize('propagate_phase_screen', [
     pytest.param(True, id='infinite'),
     pytest.param(False, id='finite')
@@ -51,15 +55,14 @@ def zernike_variance_von_karman(n, m, R, k0, Cn_squared, wavelength):
     pytest.param(0.5e-6, 1, 0.3, 10, id='larger_fried_parameter', marks=pytest.mark.slow),
     pytest.param(0.5e-6, 1, 0.1, 40, id='larger_outer_diameter', marks=pytest.mark.slow)
 ])
-def test_atmosphere_total_variance(wavelength, pupil_diameter, fried_parameter, outer_scale, propagate_phase_screen):
-    velocity = 10.0  # meters/sec
+def test_atmosphere_total_variance(wavelength, pupil_diameter, fried_parameter, outer_scale, propagate_phase_screen, velocity):
     num_modes = 1000
 
     pupil_grid = make_pupil_grid(64, pupil_diameter)
     aperture = make_circular_aperture(pupil_diameter)(pupil_grid)
 
     Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
-    layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, [velocity / np.sqrt(2), velocity / np.sqrt(2)], use_interpolation=False)
+    layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, velocity, use_interpolation=True)
 
     num_iterations = 2000
     total_variance = []
@@ -67,7 +70,7 @@ def test_atmosphere_total_variance(wavelength, pupil_diameter, fried_parameter, 
     for it in range(num_iterations):
         layer.reset(make_independent_realization=True)
         if propagate_phase_screen:
-            layer.t = np.sqrt(2) * pupil_diameter / velocity
+            layer.t = np.sqrt(2) * pupil_diameter / np.linalg.norm(velocity)
 
         phase = layer.phase_for(wavelength)
         total_variance.append(np.var(phase[aperture > 0]))
@@ -81,6 +84,10 @@ def test_atmosphere_total_variance(wavelength, pupil_diameter, fried_parameter, 
 
     assert (variance_measured / variance_theory - 1) < 0.1
 
+@pytest.mark.parametrize('velocity', [
+    pytest.param([7, 7]),
+    pytest.param([-7, -7])
+])
 @pytest.mark.parametrize('propagate_phase_screen', [
     pytest.param(True, id='infinite'),
     pytest.param(False, id='finite')
@@ -92,14 +99,13 @@ def test_atmosphere_total_variance(wavelength, pupil_diameter, fried_parameter, 
     pytest.param(0.5e-6, 1, 0.3, 10, id='larger_fried_parameter', marks=pytest.mark.slow),
     pytest.param(0.5e-6, 1, 0.1, 40, id='larger_outer_diameter', marks=pytest.mark.slow)
 ])
-def test_atmosphere_zernike_variances(wavelength, pupil_diameter, fried_parameter, outer_scale, propagate_phase_screen):
-    velocity = 10.0  # meters/sec
+def test_atmosphere_zernike_variances(wavelength, pupil_diameter, fried_parameter, outer_scale, propagate_phase_screen, velocity):
     num_modes = 50
 
     pupil_grid = make_pupil_grid(128, pupil_diameter)
 
     Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
-    layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, [velocity / np.sqrt(2), velocity / np.sqrt(2)], use_interpolation=False)
+    layer = InfiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, velocity, use_interpolation=False)
 
     zernike_modes = make_zernike_basis(num_modes + 20, pupil_diameter, pupil_grid, starting_mode=2, radial_cutoff=False)
 
@@ -115,7 +121,7 @@ def test_atmosphere_zernike_variances(wavelength, pupil_diameter, fried_paramete
     for it in range(num_iterations):
         layer.reset(make_independent_realization=True)
         if propagate_phase_screen:
-            layer.t = np.sqrt(2) * pupil_diameter / velocity
+            layer.t = np.sqrt(2) * pupil_diameter / np.linalg.norm(velocity)
 
         phase = layer.phase_for(wavelength)
         coeffs = projection_matrix.dot(phase * np.sqrt(weights))[:num_modes]

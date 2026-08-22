@@ -20,7 +20,7 @@ def infer_xp(*arrays):
     Raises
     ------
     ValueError
-        If xp cannot be inferred and use_new_style_fields is True
+        If xp cannot be inferred and use_array_api is True
     """
     # Filter out None values
     arrays = tuple(a for a in arrays if a is not None)
@@ -32,7 +32,7 @@ def infer_xp(*arrays):
             pass
 
     # If we get here, xp could not be inferred
-    if Configuration().core.use_new_style_fields:
+    if Configuration().use_array_api:
         raise ValueError("xp must be specified when arrays don't provide it")
     return np
 

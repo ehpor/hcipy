@@ -163,9 +163,9 @@ class FourierTransform(object):
         ----------
         num_operations : int
             The number of floating-point operations that will be performed.
-        prediction_coefficients : dict of string to float, or None
-            The prediction coefficients for the execution time. The
-            key values and their interpretation are specific to the
+        prediction_coefficients : tuple of float, or None
+            The (a, b, c) prediction coefficients for the execution time. The
+            interpretation of the coefficients is specific to the
             implementation.
 
         Returns
@@ -173,9 +173,7 @@ class FourierTransform(object):
         float
             The predicted execution time in seconds.
         '''
-        a = prediction_coefficients['a']
-        b = prediction_coefficients['b']
-        c = prediction_coefficients['c']
+        a, b, c = prediction_coefficients
 
         billion_operations = num_operations / 1e9
         time_in_ms = math.exp(a) * billion_operations**b + math.exp(c)

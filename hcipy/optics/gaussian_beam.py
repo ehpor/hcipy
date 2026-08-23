@@ -19,6 +19,10 @@ class _ScalarNamespace:
 class GaussianBeam(object):
     '''An analytical description of a light beam with a Gaussian profile.
 
+    The complex beam parameter q and the refractive index n of the medium
+    are the primary parameters of the beam, from which all other quantities
+    are derived. The beam is immutable.
+
     Parameters
     ----------
     q : scalar or Array
@@ -29,27 +33,21 @@ class GaussianBeam(object):
         The refractive index of the medium in which the beam propagates.
     '''
     def __init__(self, q, wavelength, n=1.0):
-        self.q = q
-        self.wavelength = wavelength
-        self.n = n
+        self._q = q
+        self._wavelength = wavelength
+        self._n = n
 
-    @property
-    def _xp(self):
-        params = (self.q, self.wavelength, self.n)
+        params = (q, wavelength, n)
         if any(is_array_api_obj(p) for p in params):
-            return array_namespace(*params)
+            self._xp = array_namespace(*params)
         else:
-            return _ScalarNamespace
+            self._xp = _ScalarNamespace
 
     @property
     def q(self):
         '''The complex beam parameter of the Gaussian beam.
         '''
         return self._q
-
-    @q.setter
-    def q(self, q):
-        self._q = q
 
     complex_beam_parameter = q
 
@@ -59,10 +57,6 @@ class GaussianBeam(object):
         '''
         return self._n
 
-    @n.setter
-    def n(self, n):
-        self._n = n
-
     refractive_index = n
 
     @property
@@ -71,29 +65,17 @@ class GaussianBeam(object):
         '''
         return self._wavelength
 
-    @wavelength.setter
-    def wavelength(self, wavelength):
-        self._wavelength = wavelength
-
     @property
     def z(self):
         '''The current distance from the beam waist.
         '''
         return self._xp.real(self.q)
 
-    @z.setter
-    def z(self, z):
-        self.q = z + 1j * self._xp.imag(self.q)
-
     @property
     def zR(self):  # noqa: N802
         '''The Rayleigh distance of the Gaussian beam.
         '''
         return self._xp.imag(self.q)
-
-    @zR.setter
-    def zR(self, zR):  # noqa: N802
-        self.q = self._xp.real(self.q) + 1j * zR
 
     rayleigh_distance = zR
 
@@ -103,10 +85,6 @@ class GaussianBeam(object):
         '''
         return self._xp.sqrt(self.zR * self.wavelength / (math.pi * self.n))
 
-    @w0.setter
-    def w0(self, w0):
-        self.zR = math.pi * self.n * w0**2 / self.wavelength
-
     beam_waist = w0
 
     @property
@@ -114,10 +92,6 @@ class GaussianBeam(object):
         '''The beam divergence of the Gaussian beam in the medium.
         '''
         return self.wavelength / (math.pi * self.n * self.w0)
-
-    @theta.setter
-    def theta(self, theta):
-        self.w0 = self.wavelength / (theta * math.pi * self.n)
 
     beam_divergence = theta
 
@@ -162,10 +136,6 @@ class GaussianBeam(object):
         '''The wavenumber of the Gaussian beam in the medium.
         '''
         return 2 * math.pi * self.n / self.wavelength
-
-    @k.setter
-    def k(self, k):
-        self.wavelength = 2 * math.pi * self.n / k
 
     wavenumber = k
 

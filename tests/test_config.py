@@ -1,7 +1,10 @@
 from hcipy import Configuration
 from hcipy.config import on_config_change
+from hcipy.config.migrate import _cli
 import pytest
 from pydantic import ValidationError
+import sys
+import yaml
 
 @pytest.fixture(autouse=True)
 def reset_config():
@@ -66,3 +69,51 @@ def test_assignment_errors():
 
     with pytest.raises(ValidationError):
         Configuration().fft_method = 'scipy'
+
+def test_migrate_config_file():
+    from hcipy.config import migrate_config_file
+
+    legacy = {
+        'fourier': {
+            'fft': {
+                'emulate_fftshifts': True,
+                'method': ['scipy', 'numpy'],
+                'execution_time_prediction_coefficients': {'a': 1.0, 'b': 2.0, 'c': -3.0},
+            },
+            'mft': {'precompute_matrices': False},
+        },
+        'plotting': {'psf_colormap': 'magma'},
+        'core': {'use_new_style_fields': True},
+    }
+
+    migrated = migrate_config_file(legacy)
+
+    assert migrated == {
+        'fft_emulate_fftshifts': True,
+        'fft_method': ['scipy', 'numpy'],
+        'fft_runtime_coeffs': [1.0, 2.0, -3.0],
+        'mft_precompute_matrices': False,
+        'cmap_psf': 'magma',
+        'use_array_api': True,
+    }
+
+    # A configuration in the current format is left untouched.
+    assert migrate_config_file({'fft_method': ['scipy']}) is None
+
+    # Non-dict input is left untouched.
+    assert migrate_config_file('fourier: ...') is None
+    assert migrate_config_file(None) is None
+
+def test_migrate_config_cli(tmp_path, monkeypatch):
+    config_file = tmp_path / 'hcipy_config.yaml'
+    config_file.write_text('fourier:\n  fft:\n    method: [scipy]\ncore:\n  use_new_style_fields: true\n')
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, 'argv', ['hcipy_migrate_config'])
+    _cli()
+
+    assert yaml.safe_load(config_file.read_text()) == {
+        'fft_method': ['scipy'],
+        'use_array_api': True,
+    }
+    assert config_file.with_suffix('.yaml.bak').exists()

@@ -3,6 +3,7 @@ import array_api_compat
 from hcipy import *
 import array_api_strict as xp
 from hcipy._math.backends import all_close
+import math
 
 WL = 500e-9
 
@@ -155,65 +156,65 @@ def test_gaussian_beam_forward():
     w0 = 1e-3
     z = 0.5
     wavelength = 500e-9
-    beam = GaussianBeam(w0, z, wavelength)
+    beam = GaussianBeam(z + 1j * math.pi * w0**2 / wavelength, wavelength)
 
     # Free-space propagation by a distance d forwards z by d and leaves zR unchanged.
     d = 0.3
     zR = beam.zR
     new_beam = make_abcd_free_space(d, xp=xp).forward(beam)
     assert new_beam is not beam
-    assert new_beam.z == pytest.approx(z + d)
-    assert new_beam.zR == pytest.approx(zR)
-    assert beam.z == pytest.approx(z)
+    assert float(new_beam.z) == pytest.approx(z + d)
+    assert float(new_beam.zR) == pytest.approx(zR)
+    assert float(beam.z) == pytest.approx(z)
 
     # A thin lens transforms q as q' = q f / (f - q).
-    beam = GaussianBeam(w0, z, wavelength)
+    beam = GaussianBeam(z + 1j * math.pi * w0**2 / wavelength, wavelength)
     f = 2.0
     q = z + 1j * beam.zR
     new_beam = make_abcd_thin_lens(f, xp=xp).forward(beam)
-    assert new_beam.q == pytest.approx((q * f) / (f - q))
+    assert complex(new_beam.q) == pytest.approx((q * f) / (f - q))
 
     # Composing matrices is equivalent to forwarding through each consecutively.
     beam1 = make_abcd_free_space(d, xp=xp).forward(make_abcd_thin_lens(f, xp=xp).forward(beam))
     beam2 = (make_abcd_free_space(d, xp=xp) @ make_abcd_thin_lens(f, xp=xp)).forward(beam)
-    assert beam1.q == pytest.approx(beam2.q)
+    assert complex(beam1.q) == pytest.approx(complex(beam2.q))
 
 def test_gaussian_beam_backward():
     w0 = 1e-3
     z = 0.5
     wavelength = 500e-9
-    beam = GaussianBeam(w0, z, wavelength)
+    beam = GaussianBeam(z + 1j * math.pi * w0**2 / wavelength, wavelength)
 
     # Backward through a free space of distance d moves z by -d.
     d = 0.3
     new_beam = make_abcd_free_space(d, xp=xp).backward(beam)
-    assert new_beam.z == pytest.approx(z - d)
+    assert float(new_beam.z) == pytest.approx(z - d)
 
     # Forward then backward returns (numerically) to the original beam.
     M = make_abcd_refractive_interface(1.0, 1.5, 2.0, xp=xp)
     back = M.backward(M.forward(beam))
-    assert back.q == pytest.approx(beam.q)
+    assert complex(back.q) == pytest.approx(complex(beam.q))
 
 def test_gaussian_beam_forward_uses_beam_wavelength():
-    beam = GaussianBeam(1e-3, 0.5, 500e-9)
+    beam = GaussianBeam(0.5 + 1j * math.pi * (1e-3)**2 / 500e-9, 500e-9)
 
     # Forwarding through 'distance' B = wavelength * 1e6 equals 0.5 at 500 nm.
     M = RayTransferMatrix(lambda wl: xp.asarray([[1.0, wl * 1e6], [0.0, 1.0]]))
 
     new_beam = M.forward(beam)
-    assert new_beam.z == pytest.approx(1.0)
+    assert float(new_beam.z) == pytest.approx(1.0)
 
 def test_gaussian_beam_propagate():
-    beam = GaussianBeam(1e-3, 0.5, 500e-9)
+    beam = GaussianBeam(0.5 + 1j * math.pi * (1e-3)**2 / 500e-9, 500e-9)
 
     # A raw 2x2 matrix propagates directly.
     new_beam = beam.propagate(xp.asarray([[1.0, 0.3], [0.0, 1.0]]))
     assert new_beam is not beam
-    assert new_beam.z == pytest.approx(0.8)
+    assert float(new_beam.z) == pytest.approx(0.8)
 
     # A callable is evaluated at the wavelength of the beam.
     new_beam = beam.propagate(lambda wl: xp.asarray([[1.0, wl * 1e6], [0.0, 1.0]]))
-    assert new_beam.z == pytest.approx(1.0)
+    assert float(new_beam.z) == pytest.approx(1.0)
 
     with pytest.raises(ValueError):
         beam.propagate(xp.eye(3))

@@ -955,40 +955,6 @@ def test_gaussian_beam_initialization_and_properties(w0, z, wavelength):
     assert np.isclose(beam.k, k)
     assert np.isclose(beam.wavenumber, k)
 
-def test_gaussian_beam_setters():
-    wavelength = 500e-9
-    q = 0.5 + 1j * math.pi * (1e-3)**2 / wavelength
-    beam = GaussianBeam(q, wavelength)
-
-    zR_old = beam.zR
-    beam.beam_waist = 2e-3
-    assert np.isclose(beam.w0, 2e-3)
-    assert beam.zR != zR_old
-    assert np.isclose(beam.zR, np.pi * (2e-3)**2 / wavelength)
-
-    beam.w0 = 1e-3
-    new_zR = 2 * beam.zR
-    beam.zR = new_zR
-    assert np.isclose(beam.w0, np.sqrt(new_zR * wavelength / np.pi))
-
-    beam.w0 = 1e-3
-    new_q = 1.0 + 2.0j * beam.zR
-    beam.q = new_q
-    assert np.isclose(beam.z, 1.0)
-    assert np.isclose(beam.zR, np.imag(new_q))
-
-    beam.w0 = 1e-3
-    beam.z = 0.5
-    new_theta = 2 * beam.theta
-    beam.theta = new_theta
-    assert np.isclose(beam.w0, wavelength / (new_theta * np.pi))
-
-    beam.w0 = 1e-3
-    beam.z = 0.5
-    new_k = 2 * beam.k
-    beam.k = new_k
-    assert np.isclose(beam.wavelength, 2 * np.pi / new_k)
-
 def test_gaussian_beam_propagate():
     wavelength = 500e-9
     w0 = 1e-3

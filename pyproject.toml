@@ -34,6 +34,7 @@ dependencies = [
     "asdf",
     "packaging",
     "tqdm",
+    "threadpoolctl",
     "array_api_compat",
 ]
 

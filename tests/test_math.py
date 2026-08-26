@@ -1,9 +1,10 @@
 import pytest
 import hcipy
 import numpy as np
+from hcipy._math.backends import to_numpy, array_namespace
+from hcipy._math.fourier import dft_matrix_regular, dft_matrix_separated
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
-from hcipy._math.backends import to_numpy, array_namespace
 from hcipy._math.subpixel_shift import separable_convolve, subpixel_shift, _row_pass, _col_pass
 from hcipy._math import cpu
 import io
@@ -515,3 +516,82 @@ def test_cpu_count_functions(func):
 
 def test_get_num_available_cores():
     assert cpu.get_num_available_cores() >= 1
+
+def _dft_matrix_naive(x0, u0, dx, du, Nx, Nu):
+    """Naive NumPy reference for the DFT matrix exp(1j * u[k] * x[i])."""
+    x = np.arange(Nx, dtype=np.float64) * dx + x0
+    u = np.arange(Nu, dtype=np.float64) * du + u0
+    return np.exp(1j * x[:, None] * u[None, :])
+
+
+@pytest.mark.parametrize('Nx, Nu', [(3, 4), (16, 8), (64, 64)])
+@pytest.mark.parametrize('dtype', ['complex64', 'complex128'])
+@pytest.mark.parametrize('conjugate', [False, True])
+@pytest.mark.parametrize('transpose', [False, True])
+def test_dft_matrix_regular(xp, Nx, Nu, dtype, conjugate, transpose):
+    x0, u0, dx, du = -0.3, 1.7, 0.2, -0.05
+    dtype = getattr(xp, dtype)
+
+    ref = _dft_matrix_naive(x0, u0, dx, du, Nx, Nu)
+    if conjugate:
+        ref = np.conj(ref)
+    if transpose:
+        ref = ref.T
+
+    result = dft_matrix_regular(x0, u0, dx, du, Nx, Nu, xp, dtype, conjugate=conjugate, transpose=transpose)
+    result_np = np.asarray(result)
+
+    atol = 1e-12 if dtype == xp.complex128 else 1e-6
+
+    assert result.dtype == dtype
+    assert result_np.shape == ref.shape
+    assert np.allclose(result_np, ref, atol=atol)
+
+@pytest.mark.parametrize('Nx, Nu', [(3, 4), (16, 8), (64, 64)])
+@pytest.mark.parametrize('dtype', ['complex64', 'complex128'])
+@pytest.mark.parametrize('conjugate', [False, True])
+@pytest.mark.parametrize('transpose', [False, True])
+def test_dft_matrix_separated(xp, Nx, Nu, dtype, conjugate, transpose):
+    x0, u0, dx, du = -0.3, 1.7, 0.2, -0.05
+
+    dtype = getattr(xp, dtype)
+    float_dtype = xp.float32 if dtype == xp.complex64 else xp.float64
+
+    x = xp.arange(Nx, dtype=float_dtype) * dx + x0
+    u = xp.arange(Nu, dtype=float_dtype) * du + u0
+
+    ref = _dft_matrix_naive(x0, u0, dx, du, Nx, Nu)
+    if conjugate:
+        ref = np.conj(ref)
+    if transpose:
+        ref = ref.T
+
+    result = dft_matrix_separated(x, u, conjugate=conjugate, transpose=transpose)
+    result_np = np.asarray(result)
+
+    atol = 1e-12 if dtype == xp.complex128 else 1e-6
+
+    assert result.dtype == dtype
+    assert result_np.shape == ref.shape
+    assert np.allclose(result_np, ref, atol=atol)
+
+def test_dft_matrix_regular_out():
+    x0, u0, dx, du = -0.3, 1.7, 0.2, -0.05
+    Nx, Nu = 16, 8
+    out = np.empty((Nx, Nu), dtype=np.complex128)
+
+    result = dft_matrix_regular(x0, u0, dx, du, Nx, Nu, np, np.complex128, out=out)
+
+    assert result is out
+
+def test_dft_matrix_separated_out():
+    x0, u0, dx, du = -0.3, 1.7, 0.2, -0.05
+    Nx, Nu = 16, 8
+
+    x = np.asarray(np.arange(Nx, dtype=np.float64) * dx + x0)
+    u = np.asarray(np.arange(Nu, dtype=np.float64) * du + u0)
+    out = np.empty((Nx, Nu), dtype=np.complex128)
+
+    result = dft_matrix_separated(x, u, out=out)
+
+    assert result is out

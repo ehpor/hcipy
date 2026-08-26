@@ -36,6 +36,7 @@ dependencies = [
     "tqdm",
     "threadpoolctl",
     "array_api_compat",
+    "numba",
 ]
 
 [project.optional-dependencies]

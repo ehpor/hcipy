@@ -4,7 +4,7 @@ import numpy as np
 from hcipy._math.backends import to_numpy, array_namespace
 from hcipy._math.einsum import einsum
 from hcipy._math.fourier import dft_matrix_regular, dft_matrix_separated
-from hcipy._math.phase_ramp import make_phase_ramp, make_separable_filter, _kernel
+from hcipy._math.separable_filter import make_phase_ramp, make_separable_filter, _kernel
 from hcipy._math.random import make_random_generator
 from hcipy._math.stats import median, nanmedian
 from hcipy._math.subpixel_shift import separable_convolve, subpixel_shift, _row_pass, _col_pass

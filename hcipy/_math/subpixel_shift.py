@@ -4,35 +4,54 @@ from array_api_compat import is_numpy_array, is_jax_array
 from .backends import array_namespace
 
 
-def _quintic_weights(shift):
-    """Compute the 7-element quintic B-spline kernel for a fractional shift.
+def _bspline_basis(n, x):
+    """Uniform B-spline basis B_n(x) with support ``[0, n)``.
 
     Parameters
     ----------
+    n : int
+        B-spline order (``degree + 1``).
+    x : float
+        Evaluation point.
+
+    Returns
+    -------
+    float
+        ``B_n(x)``.
+    """
+    if n == 1:
+        return 1.0 if 0.0 <= x < 1.0 else 0.0
+    return (x / (n - 1)) * _bspline_basis(n - 1, x) + ((n - x) / (n - 1)) * _bspline_basis(n - 1, x - 1)
+
+
+def _bspline_weights(order, shift):
+    """Compute the B-spline convolution kernel for a given order and shift.
+
+    Parameters
+    ----------
+    order : int
+        B-spline polynomial degree (``1`` = linear, …, ``5`` = quintic).
+        Internally converted to B-spline order ``n = order + 1``.
     shift : float
         Fractional shift in ``[-0.5, 0.5]``.  The sign determines the
         padding direction of the kernel.
 
     Returns
     -------
-    ndarray of shape (7,)
-        The 7-element 1-D convolution kernel.
+    ndarray of shape (K,)
+        Odd-length 1-D convolution kernel.
     """
+    n = order + 1
     f = abs(shift)
-    b = np.empty(6)
-    for i, offset in enumerate([2.0 + f, 1.0 + f, f, 1.0 - f, 2.0 - f, 3.0 - f]):
-        s = 0.0
-        x = offset + 3.0
-        for c in (1.0, -6.0, 15.0, -20.0, 15.0, -6.0, 1.0):
-            if x > 0.0:
-                s += c * (x ** 5)
-            x -= 1.0
-        b[i] = s / 120.0
-
-    if shift >= 0:
-        return np.asarray([0.0, b[0], b[1], b[2], b[3], b[4], b[5]], dtype=b.dtype)
-    else:
-        return np.asarray([b[5], b[4], b[3], b[2], b[1], b[0], 0.0], dtype=b.dtype)
+    K = n + 1 if n % 2 == 0 else n + 2
+    half = K // 2
+    kernel = np.array(
+        [_bspline_basis(n, k - half + n / 2 - f) for k in range(K)],
+        dtype=np.float64,
+    )
+    if shift < 0:
+        kernel = kernel[::-1]
+    return kernel
 
 
 @njit(parallel=True, fastmath=True, cache=True)
@@ -303,17 +322,16 @@ def separable_convolve(img, kernel_row, kernel_col):
         return separable_convolve_fallback(img, kernel_row, kernel_col)
 
 
-def subpixel_shift(img, row_shift, col_shift):
-    """Sub-pixel shift via separable 5th-order B-spline convolution.
+def subpixel_shift(img, row_shift, col_shift, order):
+    """Sub-pixel shift via separable B-spline convolution.
 
-    The image is shifted by the specified fractional amounts using quintic
-    B-spline interpolation (no IIR pre-filter — acceptable for band-limited
-    atmospheric data).
+    The image is shifted by the specified fractional amounts using
+    B-spline interpolation of the given order (no IIR pre-filter).
 
     ``row_shift`` and ``col_shift`` **must** be in ``[-0.5, 0.5]``.
     The caller is responsible for removing integer-pixel shifts (e.g. via
-    :func:`numpy.roll` or :func:`numpy.roll` equivalents on other backends)
-    before calling this function.
+    :func:`numpy.roll` or equivalent on other backends) before calling
+    this function.
 
     Parameters
     ----------
@@ -323,6 +341,8 @@ def subpixel_shift(img, row_shift, col_shift):
         Fractional shift along axis 0 (rows).  Must be in ``[-0.5, 0.5]``.
     col_shift : float
         Fractional shift along axis 1 (columns).  Must be in ``[-0.5, 0.5]``.
+    order : int
+        B-spline polynomial degree (``1`` = linear, …, ``5`` = quintic).
 
     Returns
     -------
@@ -337,7 +357,7 @@ def subpixel_shift(img, row_shift, col_shift):
     if not (-0.5 <= row_shift <= 0.5) or not (-0.5 <= col_shift <= 0.5):
         raise ValueError("row_shift and col_shift must be in [-0.5, 0.5]")
 
-    wy = _quintic_weights(row_shift)
-    wx = _quintic_weights(col_shift)
+    wy = _bspline_weights(order, row_shift)
+    wx = _bspline_weights(order, col_shift)
 
     return separable_convolve(img, wx, wy)

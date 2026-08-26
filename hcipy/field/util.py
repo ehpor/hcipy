@@ -698,13 +698,17 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
         return subsample_field(field, oversampling, grid, statistic)
 
 def _normalize_width(width, ndim, name):
+    '''Normalize pad widths to (before_0, after_0, before_1, ..., after_n).
+    '''
+    # In case width is an integer, before and after are the same for all axes.
     if isinstance(width, (int, np.integer)):
-        return ((int(width), int(width)),) * ndim
+        return (int(width),) * (2 * ndim)
 
     width = tuple(width)
 
+    # In case width is a 2-tuple, (before, after) for all axes.
     if len(width) == 2 and all(isinstance(p, (int, np.integer)) for p in width):
-        return (tuple(int(p) for p in width),) * ndim
+        return width * ndim
 
     if len(width) != ndim:
         raise ValueError(f'{name} must have the same length as the number of dimensions of the grid.')
@@ -712,9 +716,9 @@ def _normalize_width(width, ndim, name):
     processed = []
     for w in width:
         if isinstance(w, (int, np.integer)):
-            processed.append((int(w), int(w)))
+            processed.extend((int(w),) * 2)
         elif len(w) == 2:
-            processed.append((int(w[0]), int(w[1])))
+            processed.extend((int(w[0]), int(w[1])))
         else:
             raise ValueError(f'Each element of {name} must be an int or a tuple of 2 ints.')
     return tuple(processed)
@@ -745,28 +749,29 @@ def pad_grid(grid, pad_width):
 
     if grid.is_regular:
         delta_new = grid.delta
-        dims_new = tuple(d + pw[0] + pw[1] for d, pw in zip(grid.dims, pad_width))
-        zero_new = tuple(z - pw[0] * d for z, d, pw in zip(grid.zero, grid.delta, pad_width))
+        dims_new = tuple(d + before + after for d, before, after in zip(grid.dims, pad_width[::2], pad_width[1::2]))
+        zero_new = grid.zero - grid.xp.asarray(pad_width[::2], dtype=grid.delta.dtype) * grid.delta
 
         return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
     else:
         new_coords = []
         for i in range(grid.ndim):
             coords = grid.separated_coords[i]
-            pw = pad_width[i]
+            before = pad_width[2 * i]
+            after = pad_width[2 * i + 1]
 
-            if (pw[0] > 0 or pw[1] > 0) and len(coords) < 2:
+            if (before > 0 or after > 0) and coords.shape[0] < 2:
                 raise ValueError('Cannot pad a separated grid dimension with fewer than 2 points.')
 
-            if pw[0] > 0:
+            if before > 0:
                 edge_spacing = coords[1] - coords[0]
-                before = np.arange(-pw[0], 0) * edge_spacing + coords[0]
-                coords = np.concatenate([before, coords])
+                before_coords = grid.xp.astype(grid.xp.arange(-before, 0), edge_spacing.dtype) * edge_spacing + coords[0]
+                coords = grid.xp.concat([before_coords, coords])
 
-            if pw[1] > 0:
+            if after > 0:
                 edge_spacing = coords[-1] - coords[-2]
-                after = np.arange(1, pw[1] + 1) * edge_spacing + coords[-1]
-                coords = np.concatenate([coords, after])
+                after_coords = grid.xp.astype(grid.xp.arange(1, after + 1), edge_spacing.dtype) * edge_spacing + coords[-1]
+                coords = grid.xp.concat([coords, after_coords])
 
             new_coords.append(coords)
 
@@ -796,22 +801,23 @@ def crop_grid(grid, crop_width):
 
     crop_width = _normalize_width(crop_width, grid.ndim, 'crop_width')
 
-    for d, cw in zip(grid.dims, crop_width):
-        if cw[0] + cw[1] >= d:
+    for d, before, after in zip(grid.dims, crop_width[::2], crop_width[1::2]):
+        if before + after >= d:
             raise ValueError('Cropping removes all points in at least one dimension.')
 
     if grid.is_regular:
         delta_new = grid.delta
-        dims_new = tuple(d - cw[0] - cw[1] for d, cw in zip(grid.dims, crop_width))
-        zero_new = tuple(z + cw[0] * d for z, d, cw in zip(grid.zero, grid.delta, crop_width))
+        dims_new = tuple(d - before - after for d, before, after in zip(grid.dims, crop_width[::2], crop_width[1::2]))
+        zero_new = grid.zero + grid.xp.asarray(crop_width[::2], dtype=grid.delta.dtype) * grid.delta
 
         return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
     else:
         new_coords = []
         for i in range(grid.ndim):
             coords = grid.separated_coords[i]
-            cw = crop_width[i]
-            new_coords.append(coords[cw[0]:len(coords) - cw[1]])
+            before = crop_width[2 * i]
+            after = crop_width[2 * i + 1]
+            new_coords.append(coords[before:-after])
 
         return grid.__class__(SeparatedCoords(new_coords))
 

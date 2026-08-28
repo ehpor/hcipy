@@ -697,6 +697,130 @@ def evaluate_supersampled(field_generator, grid, oversampling, statistic='mean',
         field = field_generator(supersampled_grid)
         return subsample_field(field, oversampling, grid, statistic)
 
+def _normalize_width(width, ndim, name):
+    '''Normalize pad widths to (before_0, after_0, before_1, ..., after_n).
+    '''
+    # In case width is an integer, before and after are the same for all axes.
+    if isinstance(width, (int, np.integer)):
+        return (int(width),) * (2 * ndim)
+
+    width = tuple(width)
+
+    # In case width is a 2-tuple, (before, after) for all axes.
+    if len(width) == 2 and all(isinstance(p, (int, np.integer)) for p in width):
+        return width * ndim
+
+    if len(width) != ndim:
+        raise ValueError(f'{name} must have the same length as the number of dimensions of the grid.')
+
+    processed = []
+    for w in width:
+        if isinstance(w, (int, np.integer)):
+            processed.extend((int(w),) * 2)
+        elif len(w) == 2:
+            processed.extend((int(w[0]), int(w[1])))
+        else:
+            raise ValueError(f'Each element of {name} must be an int or a tuple of 2 ints.')
+    return tuple(processed)
+
+def pad_grid(grid, pad_width):
+    '''Pad a regularly-spaced or separated grid by adding points on each side.
+
+    Parameters
+    ----------
+    grid : Grid
+        The grid to pad. Must have regular or separated coordinates.
+    pad_width : int, tuple of ints, or tuple of tuples of ints
+        The number of points to pad on each side.
+        If int: the same number of points is padded on all sides in all dimensions.
+        If tuple of 2 ints: ``(pad_before, pad_after)`` for all dimensions.
+        If tuple of tuples: ``((pad_before_0, pad_after_0), (pad_before_1, pad_after_1), ...)``
+        for each dimension.
+
+    Returns
+    -------
+    Grid
+        The padded grid.
+    '''
+    if not grid.is_regular and not grid.is_separated:
+        raise ValueError('The grid must have regular or separated coordinates.')
+
+    pad_width = _normalize_width(pad_width, grid.ndim, 'pad_width')
+
+    if grid.is_regular:
+        delta_new = grid.delta
+        dims_new = tuple(d + before + after for d, before, after in zip(grid.dims, pad_width[::2], pad_width[1::2]))
+        zero_new = grid.zero - grid.xp.asarray(pad_width[::2], dtype=grid.delta.dtype) * grid.delta
+
+        return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
+    else:
+        new_coords = []
+        for i in range(grid.ndim):
+            coords = grid.separated_coords[i]
+            before = pad_width[2 * i]
+            after = pad_width[2 * i + 1]
+
+            if (before > 0 or after > 0) and coords.shape[0] < 2:
+                raise ValueError('Cannot pad a separated grid dimension with fewer than 2 points.')
+
+            if before > 0:
+                edge_spacing = coords[1] - coords[0]
+                before_coords = grid.xp.astype(grid.xp.arange(-before, 0), edge_spacing.dtype) * edge_spacing + coords[0]
+                coords = grid.xp.concat([before_coords, coords])
+
+            if after > 0:
+                edge_spacing = coords[-1] - coords[-2]
+                after_coords = grid.xp.astype(grid.xp.arange(1, after + 1), edge_spacing.dtype) * edge_spacing + coords[-1]
+                coords = grid.xp.concat([coords, after_coords])
+
+            new_coords.append(coords)
+
+        return grid.__class__(SeparatedCoords(new_coords))
+
+def crop_grid(grid, crop_width):
+    '''Crop a regularly-spaced or separated grid by removing points from each side.
+
+    Parameters
+    ----------
+    grid : Grid
+        The grid to crop. Must have regular or separated coordinates.
+    crop_width : int, tuple of ints, or tuple of tuples of ints
+        The number of points to remove from each side.
+        If int: the same number of points is removed from all sides in all dimensions.
+        If tuple of 2 ints: ``(crop_before, crop_after)`` for all dimensions.
+        If tuple of tuples: ``((crop_before_0, crop_after_0), (crop_before_1, crop_after_1), ...)``
+        for each dimension.
+
+    Returns
+    -------
+    Grid
+        The cropped grid.
+    '''
+    if not grid.is_regular and not grid.is_separated:
+        raise ValueError('The grid must have regular or separated coordinates.')
+
+    crop_width = _normalize_width(crop_width, grid.ndim, 'crop_width')
+
+    for d, before, after in zip(grid.dims, crop_width[::2], crop_width[1::2]):
+        if before + after >= d:
+            raise ValueError('Cropping removes all points in at least one dimension.')
+
+    if grid.is_regular:
+        delta_new = grid.delta
+        dims_new = tuple(d - before - after for d, before, after in zip(grid.dims, crop_width[::2], crop_width[1::2]))
+        zero_new = grid.zero + grid.xp.asarray(crop_width[::2], dtype=grid.delta.dtype) * grid.delta
+
+        return grid.__class__(RegularCoords(delta_new, dims_new, zero_new))
+    else:
+        new_coords = []
+        for i in range(grid.ndim):
+            coords = grid.separated_coords[i]
+            before = crop_width[2 * i]
+            after = crop_width[2 * i + 1]
+            new_coords.append(coords[before:-after])
+
+        return grid.__class__(SeparatedCoords(new_coords))
+
 def make_uniform_vector_field(field, jones_vector):
     '''Make an uniform vector field from a scalar field and a jones vector.
 

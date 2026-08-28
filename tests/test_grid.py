@@ -444,6 +444,122 @@ def test_evaluate_supersampled():
     assert field.grid.dims == (10,)
     assert all_close(field, 1)
 
+def test_pad_grid():
+    # 1D
+    grid = make_uniform_grid(dims=10, extent=1, xp=xp)
+    padded = pad_grid(grid, 2)
+    assert padded.is_regular
+    assert padded.dims == (14,)
+    assert all_close(padded.delta, 0.1)
+    assert all_close(padded.zero, -0.65)
+
+    # 1D with tuple of 2
+    grid = make_uniform_grid(dims=10, extent=1, xp=xp)
+    padded = pad_grid(grid, (2, 3))
+    assert padded.dims == (15,)
+    assert all_close(padded.zero, -0.65)
+
+    # 2D with int
+    grid = make_uniform_grid(dims=[10, 20], extent=[1, 2], xp=xp)
+    padded = pad_grid(grid, 2)
+    assert padded.dims == (14, 24)
+    assert all_close(padded.delta, xp.asarray([0.1, 0.1]))
+    assert all_close(padded.zero, xp.asarray([-0.65, -1.15]))
+
+    # 2D with per-dim tuple
+    padded = pad_grid(grid, ((2, 3), (4, 5)))
+    assert padded.dims == (15, 29)
+
+    # Separated grid 1D
+    grid = CartesianGrid(SeparatedCoords([xp.asarray([0.0, 1.0, 2.0, 3.0])]))
+    padded = pad_grid(grid, 2)
+    assert padded.is_separated
+    assert all_close(padded.separated_coords[0], xp.asarray([-2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0]))
+
+    # Separated grid 2D
+    grid = CartesianGrid(SeparatedCoords([xp.asarray([0.0, 1.0, 2.0]), xp.asarray([10.0, 20.0])]))
+    padded = pad_grid(grid, (1, 2))
+    assert padded.dims == (6, 5)
+
+    # Unstructured grid raises
+    ug = CartesianGrid(UnstructuredCoords([xp.asarray([1, 2]), xp.asarray([3, 4])]))
+    with pytest.raises(ValueError):
+        pad_grid(ug, 2)
+
+def test_crop_grid():
+    # 1D
+    grid = make_uniform_grid(dims=10, extent=1, xp=xp)
+    cropped = crop_grid(grid, 2)
+    assert cropped.is_regular
+    assert cropped.dims == (6,)
+    assert all_close(cropped.delta, 0.1)
+    assert all_close(cropped.zero, -0.25)
+
+    # 1D with tuple of 2
+    grid = make_uniform_grid(dims=10, extent=1, xp=xp)
+    cropped = crop_grid(grid, (2, 3))
+    assert cropped.dims == (5,)
+    assert all_close(cropped.zero, -0.25)
+
+    # 2D with int
+    grid = make_uniform_grid(dims=[10, 20], extent=[1, 2], xp=xp)
+    cropped = crop_grid(grid, 2)
+    assert cropped.dims == (6, 16)
+    assert all_close(cropped.delta, xp.asarray([0.1, 0.1]))
+    assert all_close(cropped.zero, xp.asarray([-0.25, -0.75]))
+
+    # 2D with per-dim tuple
+    cropped = crop_grid(grid, ((2, 3), (4, 5)))
+    assert cropped.dims == (5, 11)
+
+    # Cropping all points raises
+    with pytest.raises(ValueError):
+        crop_grid(grid, 10)
+
+    # Separated grid 1D
+    grid = CartesianGrid(SeparatedCoords([xp.asarray([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])]))
+    cropped = crop_grid(grid, 2)
+    assert cropped.is_separated
+    assert all_close(cropped.separated_coords[0], xp.asarray([2.0, 3.0]))
+
+    # Separated grid 2D
+    grid = CartesianGrid(SeparatedCoords([xp.asarray([0.0, 1.0, 2.0]), xp.asarray([10.0, 20.0, 30.0, 40.0])]))
+    cropped = crop_grid(grid, (1, 1))
+    assert cropped.dims == (1, 2)
+
+    # Unstructured grid raises
+    ug = CartesianGrid(UnstructuredCoords([xp.asarray([1, 2]), xp.asarray([3, 4])]))
+    with pytest.raises(ValueError):
+        crop_grid(ug, 2)
+
+def test_pad_crop_inverse():
+    # Regular grid - symmetric
+    grid = make_uniform_grid(dims=[10, 20], extent=[1, 2], xp=xp)
+
+    padded = pad_grid(grid, 2)
+    restored = crop_grid(padded, 2)
+    assert restored.dims == grid.dims
+    assert all_close(restored.delta, grid.delta)
+    assert all_close(restored.zero, grid.zero)
+
+    # Regular grid - asymmetric
+    padded = pad_grid(grid, ((2, 3), (4, 5)))
+    restored = crop_grid(padded, ((2, 3), (4, 5)))
+    assert restored.dims == grid.dims
+    assert all_close(restored.delta, grid.delta)
+    assert all_close(restored.zero, grid.zero)
+
+    # Separated grid
+    grid = CartesianGrid(SeparatedCoords([xp.asarray([0.0, 1.0, 2.0, 3.0, 4.0])]))
+    padded = pad_grid(grid, 2)
+    restored = crop_grid(padded, 2)
+    assert all_close(restored.separated_coords[0], grid.separated_coords[0])
+
+    # Separated grid - asymmetric
+    padded = pad_grid(grid, (2, 1))
+    restored = crop_grid(padded, (2, 1))
+    assert all_close(restored.separated_coords[0], grid.separated_coords[0])
+
 def test_make_uniform_vector_field():
     grid = make_uniform_grid(dims=10, extent=1, xp=xp)
 

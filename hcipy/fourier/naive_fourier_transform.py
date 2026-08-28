@@ -1,8 +1,10 @@
 import numpy as np
+import math
 
 from .fourier_transform import FourierTransform, ComputationalComplexity, _get_float_and_complex_dtype
 from ..field import Field
 from ..config import Configuration
+from .._math.einsum import einsum
 
 class NaiveFourierTransform(FourierTransform):
     '''The naive Fourier transform (NFT).
@@ -92,10 +94,10 @@ class NaiveFourierTransform(FourierTransform):
             The Fourier transform of the field.
         '''
         if self.precompute_matrices:
-            res = np.einsum('ij,...j->...i', self.matrix_forward, field)
+            res = einsum('ij,...j->...i', self.matrix_forward, field)
         else:
             A = np.exp(-1j * np.dot(self.coords_out.T, self.coords_in))
-            res = np.einsum('ij,...j->...i', A, field * self.input_grid.weights)
+            res = einsum('ij,...j->...i', A, field * self.input_grid.weights)
 
         float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
         return Field(res, self.output_grid).astype(complex_dtype, copy=False)
@@ -114,11 +116,11 @@ class NaiveFourierTransform(FourierTransform):
             The inverse Fourier transform of the field.
         '''
         if self.precompute_matrices:
-            res = np.einsum('ij,...j->...i', self.matrix_backward, field)
+            res = einsum('ij,...j->...i', self.matrix_backward, field)
         else:
             A = np.exp(1j * np.dot(self.coords_in.T, self.coords_out))
-            res = np.einsum('ij,...j->...i', A, field * self.output_grid.weights)
-            res /= (2 * np.pi)**self.input_grid.ndim
+            res = einsum('ij,...j->...i', A, field * self.output_grid.weights)
+            res /= (2 * math.pi)**self.input_grid.ndim
 
         float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
         return Field(res, self.input_grid).astype(complex_dtype, copy=False)
@@ -174,5 +176,5 @@ class NaiveFourierTransform(FourierTransform):
         return ComputationalComplexity(
             num_multiplications=num_multiplications,
             num_additions=num_additions,
-            expected_execution_time=np.inf
+            expected_execution_time=math.inf
         )

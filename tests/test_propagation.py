@@ -61,6 +61,61 @@ def test_fraunhofer_propagation_rectangular():
                         # This should never happen.
                         assert False
 
+def test_closest_fft_wavelength():
+    num_pix, num_pix2 = 512, 1024
+    dx, dxp = 10.0 / num_pix, 0.025
+    f = 1000.0
+
+    pupil_grid = CartesianGrid(RegularCoords([dx, dx], [num_pix, num_pix], [-dx * num_pix / 2, -dx * num_pix / 2]))
+    focal_grid = CartesianGrid(RegularCoords([dxp, dxp], [num_pix2, num_pix2], [-dxp * num_pix2 / 2, -dxp * num_pix2 / 2]))
+    prop = FraunhoferPropagator(pupil_grid, focal_grid, focal_length=f)
+
+    b = f / (dx * dxp)
+    zp_min = max(num_pix, num_pix2)
+
+    # A scalar input returns a scalar.
+    wavelength = prop.closest_fft_wavelength(5.5e-4)
+    assert isinstance(wavelength, float)
+    assert np.isclose(wavelength, np.round(b * 5.5e-4) / b)
+
+    # An array input returns an array of the same shape.
+    targets = np.array([5.0e-4, 5.5e-4, 6.0e-4, 4.5e-4])
+    wavelengths = prop.closest_fft_wavelength(targets)
+    assert isinstance(wavelengths, np.ndarray)
+    assert wavelengths.shape == targets.shape
+    assert np.allclose(wavelengths, np.maximum(np.round(b * targets), zp_min) / b)
+
+    # The returned wavelength is the closest native FFT grid.
+    for target in np.linspace(5.1e-4, 6.5e-4, 10):
+        wavelength = prop.closest_fft_wavelength(target)
+        uv_grid = focal_grid.scaled(2 * np.pi / (f * wavelength))
+        assert is_fft_grid(uv_grid, pupil_grid)
+        assert isinstance(make_fourier_transform(pupil_grid, uv_grid), FastFourierTransform)
+
+        # No closer wavelength that is a native FFT grid exists.
+        for k in range(max(zp_min, int(np.floor(b * target)) - 5), int(np.ceil(b * target)) + 6):
+            candidate = k / b
+            if abs(candidate - target) >= abs(wavelength - target):
+                continue
+            uv_candidate = focal_grid.scaled(2 * np.pi / (f * candidate))
+            assert not is_fft_grid(uv_candidate, pupil_grid)
+
+    # Wavelengths that would round below the minimum are clamped to it.
+    assert np.isclose(prop.closest_fft_wavelength(4.5e-4), zp_min / b)
+    assert np.isclose(prop.closest_fft_wavelength(4.99e-4), zp_min / b)
+
+    # An anisotropic grid with a consistent delta product works as well.
+    pupil_aniso = CartesianGrid(RegularCoords([0.02, 0.03], [256, 512], [0, 0]))
+    focal_aniso = CartesianGrid(RegularCoords([1.0, 2.0 / 3.0], [256, 512], [0, 0]))
+    prop_aniso = FraunhoferPropagator(pupil_aniso, focal_aniso, focal_length=500.0)
+    assert prop_aniso.closest_fft_wavelength([1e-3, 2e-3]).shape == (2,)
+
+    # A delta product that is not equal over the axes raises a ValueError.
+    focal_inconsistent = CartesianGrid(RegularCoords([0.05, 0.05], [512, 1024], [0, 0]))
+    prop_bad = FraunhoferPropagator(pupil_aniso, focal_inconsistent, focal_length=500.0)
+    with pytest.raises(ValueError):
+        prop_bad.closest_fft_wavelength(1e-3)
+
 @pytest.mark.parametrize('propagator', [FresnelPropagator, AngularSpectrumPropagator])
 @pytest.mark.parametrize('number_of_pixels', [
     pytest.param(512),

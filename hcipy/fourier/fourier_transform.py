@@ -1,5 +1,4 @@
 import numpy as np
-from ..field import Field
 
 from dataclasses import dataclass
 import math
@@ -298,27 +297,6 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, shift=0, pl
         return FastFourierTransform(input_grid, q, fov, shift)
     else:
         return options[best_method](input_grid, output_grid)
-
-def multiplex_for_tensor_fields(func):
-    '''A decorator for automatically multiplexing a function over the tensor directions.
-
-    This function is used internally for simplifying the implementation of the Fourier transforms.
-
-    Parameters
-    ----------
-    func : function
-        The function to multiplex. This function gets called for each of the tensor elements.
-    '''
-    def inner(self, field):
-        if field.is_scalar_field:
-            return func(self, field)
-        else:
-            f = field.reshape((-1, field.grid.size))
-            res = [func(self, ff) for ff in f]
-            new_shape = np.concatenate((field.tensor_shape, [-1]))
-            return Field(np.array(res).reshape(new_shape), res[0].grid)
-
-    return inner
 
 def _get_float_and_complex_dtype(dtype):
     '''Return the floating point and complex numpy data types with the same

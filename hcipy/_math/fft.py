@@ -50,7 +50,7 @@ def _make_1d_fft(func_name):
             xp = array_api_compat.array_namespace(x)
             return getattr(xp.fft, func_name)(x, n=n, axis=axis, norm=norm)
 
-        methods = Configuration().fourier.fft.method if method is None else [method]
+        methods = Configuration().fft_method if method is None else [method]
         threads_attempts = ([1] if x.size < 256**2 else [_CPU_COUNT, 1]) if threads is None else [threads]
 
         dtype_in = x.dtype
@@ -113,7 +113,7 @@ def _make_nd_fft(func_name):
             xp = array_api_compat.array_namespace(x)
             return getattr(xp.fft, func_name)(x, s=s, axes=axes, norm=norm)
 
-        methods = Configuration().fourier.fft.method if method is None else [method]
+        methods = Configuration().fft_method if method is None else [method]
         threads_attempts = ([1] if x.size < 256**2 else [_CPU_COUNT, 1]) if threads is None else [threads]
 
         dtype_in = x.dtype

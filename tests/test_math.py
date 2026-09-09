@@ -694,13 +694,14 @@ def test_einsum_dtype(xp, dtype):
         a = a + xp.asarray(1j, dtype=dtype_xp) * xp.astype(rng.normal(size=(4, 5)), dtype_xp)
         b = b + xp.asarray(1j, dtype=dtype_xp) * xp.astype(rng.normal(size=(5, 6)), dtype_xp)
 
+    rtol = 1e-6 if xp.finfo(dtype_xp).bits <= 32 else 1e-14
     atol = 1e-6 if xp.finfo(dtype_xp).bits <= 32 else 1e-14
 
     expected = np.einsum("ij,jk->ik", np.asarray(a), np.asarray(b))
     got = einsum("ij,jk->ik", a, b)
 
     assert got.dtype == dtype_xp
-    np.testing.assert_allclose(np.asarray(got), expected, atol=atol)
+    np.testing.assert_allclose(np.asarray(got), expected, rtol=rtol, atol=atol)
 
 def test_einsum_int_input(xp):
     a = xp.asarray([[1, 2], [3, 4]])

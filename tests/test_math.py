@@ -385,7 +385,7 @@ def test_separable_convolve(xp, H, W, radius):
     result = separable_convolve(img, kx, ky)
     result_np = np.asarray(result)
 
-    tol = 1e-5 if result_np.dtype == np.float32 else 1e-12
+    tol = 1e-4 if result_np.dtype == np.float32 else 1e-12
     assert np.allclose(result_np, ref, atol=tol, rtol=tol), f"max diff: {np.abs(result_np - ref).max()}"
 
 

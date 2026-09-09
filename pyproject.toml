@@ -37,6 +37,8 @@ dependencies = [
     "threadpoolctl",
     "array_api_compat",
     "opt_einsum",
+    "pydantic",
+    "pydantic-settings",
 ]
 
 [project.optional-dependencies]
@@ -82,6 +84,7 @@ write_to = "hcipy/_version.py"
 
 [project.scripts]
 hcipy_tune_fourier = "hcipy.fourier.tuning:_cli"
+hcipy_migrate_config = "hcipy.config.migrate:_cli"
 
 [tool.ruff]
 target-version = "py310"

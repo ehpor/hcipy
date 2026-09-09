@@ -245,7 +245,7 @@ class FastFourierTransform(FourierTransform):
 
         # Get the value from the configuration file if left at the default.
         if emulate_fftshifts is None:
-            emulate_fftshifts = Configuration().fourier.fft.emulate_fftshifts
+            emulate_fftshifts = Configuration().fft_emulate_fftshifts
         self.emulate_fftshifts = emulate_fftshifts
 
         self.output_grid = make_fft_grid(input_grid, q, fov, shift)
@@ -472,7 +472,7 @@ class FastFourierTransform(FourierTransform):
         num_operations = num_multiplications + num_additions
 
         # Predict execution time.
-        prediction_coefficients = Configuration().fourier.fft.execution_time_prediction_coefficients
+        prediction_coefficients = Configuration().fft_runtime_coeffs
         expected_execution_time = FourierTransform._predict_execution_time(num_operations, prediction_coefficients)
 
         return ComputationalComplexity(

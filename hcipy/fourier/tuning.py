@@ -218,8 +218,12 @@ def _cli():
     tuned_parameters = tune_fourier_transforms(None, args.plot_out, args.show_plot)
 
     if args.coeffs_out:
+        tuned_config = {}
+        for label, params in tuned_parameters.items():
+            tuned_config[label + '_runtime_coeffs'] = [params['a'], params['b'], params['c']]
+
         with open(args.coeffs_out, 'w') as f:
-            yaml.dump(tuned_parameters, f)
+            yaml.dump(tuned_config, f)
 
     print('Fit results:')
     for label, params in tuned_parameters.items():

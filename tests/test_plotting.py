@@ -9,7 +9,7 @@ import pytest
 import shutil
 
 def is_ffmpeg_installed():
-    ffmpeg_path = Configuration().plotting.ffmpeg_path
+    ffmpeg_path = Configuration().ffmpeg_path
 
     if ffmpeg_path is None:
         ffmpeg_path = 'ffmpeg'

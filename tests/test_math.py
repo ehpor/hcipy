@@ -386,7 +386,7 @@ def test_separable_convolve(xp, H, W, radius):
     result_np = np.asarray(result)
 
     tol = 1e-5 if result_np.dtype == np.float32 else 1e-12
-    assert np.allclose(result_np, ref, atol=tol), f"max diff: {np.abs(result_np - ref).max()}"
+    assert np.allclose(result_np, ref, atol=tol, rtol=tol), f"max diff: {np.abs(result_np - ref).max()}"
 
 
 @pytest.mark.parametrize('order', [1, 2, 3, 4, 5])
@@ -414,7 +414,7 @@ def test_subpixel_shift(xp, order, row_shift, col_shift):
     )
 
     tol = 1e-5 if result.dtype == np.float32 else 1e-12
-    assert np.allclose(result, expected, atol=tol)
+    assert np.allclose(result, expected, atol=tol, rtol=tol)
 
 def test_zero_kernel(xp):
     rng = make_random_generator(xp, seed=0)

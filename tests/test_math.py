@@ -374,7 +374,7 @@ def _random_kernel(rng, radius):
     (33, 33, 2),
 ])
 def test_separable_convolve(xp, H, W, radius):
-    rng = make_random_generator(xp)
+    rng = make_random_generator(xp, seed=42)
 
     img = rng.normal(size=(H, W))
     kx = _random_kernel(rng, radius)
@@ -398,7 +398,7 @@ def test_separable_convolve(xp, H, W, radius):
     (0.5, 0.5),
 ])
 def test_subpixel_shift(xp, order, row_shift, col_shift):
-    rng = make_random_generator(xp)
+    rng = make_random_generator(xp, seed=42)
 
     img = rng.normal(size=(64, 64))
 
@@ -672,7 +672,7 @@ def test_dft_matrix_separated_out():
 ])
 @pytest.mark.parametrize('optimize', [False, True])
 def test_einsum(xp, subscripts, shapes, optimize):
-    rng = make_random_generator(xp)
+    rng = make_random_generator(xp, seed=42)
     arrays = [xp.astype(rng.normal(size=s), xp.float64) for s in shapes]
 
     arrays_numpy = [np.asarray(arr) for arr in arrays]
@@ -685,7 +685,7 @@ def test_einsum(xp, subscripts, shapes, optimize):
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
 def test_einsum_dtype(xp, dtype):
     dtype_xp = getattr(xp, dtype)
-    rng = make_random_generator(xp)
+    rng = make_random_generator(xp, seed=42)
 
     a = xp.astype(rng.normal(size=(4, 5)), dtype_xp)
     b = xp.astype(rng.normal(size=(5, 6)), dtype_xp)

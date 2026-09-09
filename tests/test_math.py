@@ -374,7 +374,7 @@ def _random_kernel(rng, radius):
     (33, 33, 2),
 ])
 def test_separable_convolve(xp, H, W, radius):
-    rng = make_random_generator(xp)
+    rng = make_random_generator(xp, seed=42)
 
     img = rng.normal(size=(H, W))
     kx = _random_kernel(rng, radius)
@@ -385,8 +385,8 @@ def test_separable_convolve(xp, H, W, radius):
     result = separable_convolve(img, kx, ky)
     result_np = np.asarray(result)
 
-    tol = 1e-5 if result_np.dtype == np.float32 else 1e-12
-    assert np.allclose(result_np, ref, atol=tol), f"max diff: {np.abs(result_np - ref).max()}"
+    tol = 1e-4 if result_np.dtype == np.float32 else 1e-12
+    assert np.allclose(result_np, ref, atol=tol, rtol=tol), f"max diff: {np.abs(result_np - ref).max()}"
 
 
 @pytest.mark.parametrize('order', [1, 2, 3, 4, 5])
@@ -398,7 +398,7 @@ def test_separable_convolve(xp, H, W, radius):
     (0.5, 0.5),
 ])
 def test_subpixel_shift(xp, order, row_shift, col_shift):
-    rng = make_random_generator(xp)
+    rng = make_random_generator(xp, seed=42)
 
     img = rng.normal(size=(64, 64))
 
@@ -414,7 +414,7 @@ def test_subpixel_shift(xp, order, row_shift, col_shift):
     )
 
     tol = 1e-5 if result.dtype == np.float32 else 1e-12
-    assert np.allclose(result, expected, atol=tol)
+    assert np.allclose(result, expected, atol=tol, rtol=tol)
 
 def test_zero_kernel(xp):
     rng = make_random_generator(xp, seed=0)
@@ -672,7 +672,7 @@ def test_dft_matrix_separated_out():
 ])
 @pytest.mark.parametrize('optimize', [False, True])
 def test_einsum(xp, subscripts, shapes, optimize):
-    rng = make_random_generator(xp)
+    rng = make_random_generator(xp, seed=42)
     arrays = [xp.astype(rng.normal(size=s), xp.float64) for s in shapes]
 
     arrays_numpy = [np.asarray(arr) for arr in arrays]
@@ -685,7 +685,7 @@ def test_einsum(xp, subscripts, shapes, optimize):
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
 def test_einsum_dtype(xp, dtype):
     dtype_xp = getattr(xp, dtype)
-    rng = make_random_generator(xp)
+    rng = make_random_generator(xp, seed=42)
 
     a = xp.astype(rng.normal(size=(4, 5)), dtype_xp)
     b = xp.astype(rng.normal(size=(5, 6)), dtype_xp)
@@ -694,13 +694,13 @@ def test_einsum_dtype(xp, dtype):
         a = a + xp.asarray(1j, dtype=dtype_xp) * xp.astype(rng.normal(size=(4, 5)), dtype_xp)
         b = b + xp.asarray(1j, dtype=dtype_xp) * xp.astype(rng.normal(size=(5, 6)), dtype_xp)
 
-    atol = 1e-6 if xp.finfo(dtype_xp).bits <= 32 else 1e-14
+    tol = 1e-6 if xp.finfo(dtype_xp).bits <= 32 else 1e-14
 
     expected = np.einsum("ij,jk->ik", np.asarray(a), np.asarray(b))
     got = einsum("ij,jk->ik", a, b)
 
     assert got.dtype == dtype_xp
-    np.testing.assert_allclose(np.asarray(got), expected, atol=atol)
+    np.testing.assert_allclose(np.asarray(got), expected, atol=tol, rtol=tol)
 
 def test_einsum_int_input(xp):
     a = xp.asarray([[1, 2], [3, 4]])

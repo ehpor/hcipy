@@ -1,6 +1,6 @@
 import numpy as np
-from scipy.linalg import blas
-from .fourier_transform import FourierTransform, ComputationalComplexity, multiplex_for_tensor_fields, _get_float_and_complex_dtype
+from scipy.linalg import get_blas_funcs
+from .fourier_transform import FourierTransform, ComputationalComplexity, _get_float_and_complex_dtype
 from ..field import Field
 from ..config import Configuration
 from .._math.fourier import dft_matrix_regular, dft_matrix_separated
@@ -143,7 +143,6 @@ class MatrixFourierTransform(FourierTransform):
                 self.intermediate_array = None
                 self.intermediate_dtype = None
 
-    @multiplex_for_tensor_fields
     def forward(self, field):
         '''Returns the forward Fourier transform of the :class:`Field` field.
 
@@ -160,36 +159,47 @@ class MatrixFourierTransform(FourierTransform):
         self._compute_matrices(field.dtype)
         field = field.astype(self.matrices_dtype, copy=False)
 
-        if self.ndim == 1:
-            f = field * self.weights_input
-            res = np.dot(self.M, f)
-        elif self.ndim == 2:
-            # Use handcoded BLAS call. BLAS is better when all inputs are Fortran ordered,
-            # so we apply matrix multiplications on the transpose of each of the arrays
-            # (which are C ordered).
-            if field.dtype == 'complex64':
-                gemm = blas.cgemm
-            else:
-                gemm = blas.zgemm
+        gemm = get_blas_funcs('gemm', dtype=self.matrices_dtype)
 
+        if self.ndim == 1:
             if np.isscalar(self.weights_input):
                 # Weights can be included in the gemm call as that multiplication
                 # happens anyway (and it saves an array copy).
-                f = field.reshape(self.shape_input)
                 alpha = self.weights_input
+                f = field
             else:
                 # Fallback in case the weights is not a scalar.
-                f = (field * self.weights_input).reshape(self.shape_input)
                 alpha = 1
+                f = field * self.weights_input
 
-            gemm(1, self.M2.T, f.T, c=self.intermediate_array.T, overwrite_c=True)
-            res = gemm(alpha, self.intermediate_array.T, self.M1.T).T.reshape(-1)
+            # The leading tensor dimensions act as the batch.
+            res = np.empty(tuple(field.tensor_shape) + (self.M.shape[0],), dtype=self.matrices_dtype)
+
+            for i in np.ndindex(field.tensor_shape):
+                gemm(alpha, f[i][np.newaxis, :], self.M.T, c=res[i][np.newaxis, :], overwrite_c=True)
+        elif self.ndim == 2:
+            if np.isscalar(self.weights_input):
+                # Weights can be included in the gemm call as that multiplication
+                # happens anyway (and it saves an array copy).
+                alpha = self.weights_input
+                f = field
+            else:
+                # Fallback in case the weights is not a scalar.
+                alpha = 1
+                f = field * self.weights_input
+
+            # The leading tensor dimensions act as the batch. Reshape as a 2D array.
+            f = f.reshape(tuple(field.tensor_shape) + self.shape_input)
+            res = np.empty(tuple(field.tensor_shape) + self.shape_output, dtype=self.matrices_dtype)
+
+            for i in np.ndindex(field.tensor_shape):
+                gemm(1, self.M2.T, f[i].T, c=self.intermediate_array.T, overwrite_c=True)
+                gemm(alpha, self.intermediate_array.T, self.M1.T, c=res[i].T, overwrite_c=True)
 
         self._remove_matrices()
 
-        return Field(res, self.output_grid)
+        return Field(res.reshape(tuple(field.tensor_shape) + (-1,)), self.output_grid)
 
-    @multiplex_for_tensor_fields
     def backward(self, field):
         '''Returns the inverse Fourier transform of the :class:`Field` field.
 
@@ -206,36 +216,47 @@ class MatrixFourierTransform(FourierTransform):
         self._compute_matrices(field.dtype)
         field = field.astype(self.matrices_dtype, copy=False)
 
-        if self.ndim == 1:
-            f = field * self.weights_output
-            res = np.dot(self.M.conj().T, f)
-        elif self.ndim == 2:
-            # Use handcoded BLAS call. BLAS is better when all inputs are Fortran ordered,
-            # so we apply matrix multiplications on the transpose of each of the arrays
-            # (which are C ordered). Adjoint is handled by GEMM, which avoids an array
-            # copy for these array as well.
-            if field.dtype == 'complex64':
-                gemm = blas.cgemm
-            else:
-                gemm = blas.zgemm
+        gemm = get_blas_funcs('gemm', dtype=self.matrices_dtype)
 
+        if self.ndim == 1:
             if np.isscalar(self.weights_output):
                 # Weights can be included in the gemm call as that multiplication
                 # happens anyway (and it saves an array copy).
-                f = field.reshape(self.shape_output)
                 alpha = self.weights_output
+                f = field
             else:
                 # Fallback in case the weights is not a scalar.
-                f = (field * self.weights_output).reshape(self.shape_output)
                 alpha = 1
+                f = field * self.weights_output
 
-            # Use trans_a=2 and trans_b=2 to apply the conjugte transpose on the a and b arrays.
-            gemm(1, f.T, self.M1.T, trans_b=2, c=self.intermediate_array.T, overwrite_c=True)
-            res = gemm(alpha, self.M2.T, self.intermediate_array.T, trans_a=2).T.reshape(-1)
+            # The leading tensor dimensions act as the batch.
+            res = np.empty(tuple(field.tensor_shape) + (self.M.shape[1],), dtype=self.matrices_dtype)
+
+            for i in np.ndindex(field.tensor_shape):
+                gemm(alpha, f[i][np.newaxis, :], self.M.T, trans_b=2, c=res[i][np.newaxis, :], overwrite_c=True)
+        elif self.ndim == 2:
+            if np.isscalar(self.weights_output):
+                # Weights can be included in the gemm call as that multiplication
+                # happens anyway (and it saves an array copy).
+                alpha = self.weights_output
+                f = field
+            else:
+                # Fallback in case the weights is not a scalar.
+                alpha = 1
+                f = field * self.weights_output
+
+            # The leading tensor dimensions act as the batch. Reshape as a 2D array.
+            f = f.reshape(tuple(field.tensor_shape) + self.shape_output)
+            res = np.empty(tuple(field.tensor_shape) + self.shape_input, dtype=self.matrices_dtype)
+
+            # Use trans_a=2 and trans_b=2 to apply the conjugate transpose on the a and b arrays.
+            for i in np.ndindex(field.tensor_shape):
+                gemm(1, f[i].T, self.M1.T, trans_b=2, c=self.intermediate_array.T, overwrite_c=True)
+                gemm(alpha, self.M2.T, self.intermediate_array.T, trans_a=2, c=res[i].T, overwrite_c=True)
 
         self._remove_matrices()
 
-        return Field(res, self.input_grid)
+        return Field(res.reshape(tuple(field.tensor_shape) + (-1,)), self.input_grid)
 
     @classmethod
     def check_if_supported(cls, input_grid, output_grid):

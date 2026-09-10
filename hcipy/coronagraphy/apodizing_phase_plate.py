@@ -2,6 +2,7 @@ import numpy as np
 from ..field import Field
 
 from ..optics import GeometricPhaseElement
+from ..dev import deprecated
 
 def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0):
     """
@@ -87,6 +88,7 @@ def generate_app_keller(wavefront, propagator, contrast, num_iterations, beta=0)
 
     return app
 
+@deprecated('This function depends on deprecated functionality.', version='0.9.0')
 def generate_app_por(wavefront, propagator, propagator_max, contrast, num_iterations=1):
     '''Optimize a one-sided APP using a globally optimal algorithm.
 

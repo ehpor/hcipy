@@ -2,6 +2,9 @@ import numpy as np
 
 from importlib.resources import files
 
+from ..dev import deprecated
+
+@deprecated('Use hcipy.make_sellmeier_index instead.')
 def make_sellmeier_glass(A, K, L):
     r'''The Sellmeier equation for the dispersion of the refractive index of materials.
 
@@ -36,6 +39,7 @@ def make_sellmeier_glass(A, K, L):
 
     return refractive_index
 
+@deprecated('Use hcipy.make_cauchy_index instead.')
 def make_cauchy_glass(coefficients):
     r'''The Cauchy equation for the dispersion of the refractive index of materials.
 
@@ -63,6 +67,7 @@ def make_cauchy_glass(coefficients):
 
 _glass_catalogue = None
 
+@deprecated('Use hcipy.get_material instead.')
 def get_refractive_index(glass_name):
     '''Get the refractive index for one of the glasses in the catalogue.
 
@@ -90,6 +95,7 @@ def get_refractive_index(glass_name):
 
     return _glass_catalogue[glass_name]
 
+@deprecated('Use hcipy.search_material instead.')
 def get_glasses_in_catalogue():
     '''Get the names of all the glasses in the glass catalogue.
 

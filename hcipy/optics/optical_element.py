@@ -27,6 +27,33 @@ class OpticalElement(object):
         '''
         return self.forward(wavefront)
 
+    def __matmul__(self, other):
+        '''Compose this optical element with another optical element or optical system.
+
+        The composition `self @ other` returns a new :class:`OpticalSystem`,
+        which propagates the incoming wavefront first through `other` (or
+        through the elements of `other`, if `other` is an
+        :class:`OpticalSystem`), and then through `self`. That is,
+        `(self @ other)(wavefront)` is equivalent to `self(other(wavefront))`.
+
+        Parameters
+        ----------
+        other : OpticalElement or OpticalSystem
+            The optical element or system to propagate the wavefront through
+            before this element.
+
+        Returns
+        -------
+        OpticalSystem
+            A new optical system composed of the two.
+        '''
+        if isinstance(other, OpticalElement):
+            return OpticalSystem([other, self])
+        elif isinstance(other, OpticalSystem):
+            return OpticalSystem(other.optical_elements + [self])
+
+        return NotImplemented
+
     def forward(self, wavefront):
         '''Propagate a wavefront forward through the optical element.
 
@@ -845,7 +872,8 @@ def _get_optical_element_input_grid(optical_element):
 
     raise ValueError('Could not determine the input grid of the optical element.')
 
-class OpticalSystem(OpticalElement):
+
+class OpticalSystem(object):
     '''An linear path of optical elements.
 
     Parameters
@@ -855,6 +883,48 @@ class OpticalSystem(OpticalElement):
     '''
     def __init__(self, optical_elements):
         self.optical_elements = optical_elements
+
+    def __call__(self, wavefront):
+        '''Propagate a wavefront forward through the optical system.
+
+        Parameters
+        ----------
+        wavefront : Wavefront
+            The wavefront to propagate.
+
+        Returns
+        -------
+        Wavefront
+            The propagated wavefront.
+        '''
+        return self.forward(wavefront)
+
+    def __matmul__(self, other):
+        '''Compose this optical system with another optical element or optical system.
+
+        The composition `self @ other` returns a new :class:`OpticalSystem`,
+        which propagates the incoming wavefront first through `other` (or
+        through the elements of `other`, if `other` is an
+        :class:`OpticalSystem`), and then through the elements of `self`. That
+        is, `(self @ other)(wavefront)` is equivalent to `self(other(wavefront))`.
+
+        Parameters
+        ----------
+        other : OpticalElement or OpticalSystem
+            The optical element or system to propagate the wavefront through
+            before this system.
+
+        Returns
+        -------
+        OpticalSystem
+            A new optical system composed of the two.
+        '''
+        if isinstance(other, OpticalElement):
+            return OpticalSystem([other] + self.optical_elements)
+        elif isinstance(other, OpticalSystem):
+            return OpticalSystem(other.optical_elements + self.optical_elements)
+
+        return NotImplemented
 
     def forward(self, wavefront):
         '''Propagate a wavefront forward through the optical system.

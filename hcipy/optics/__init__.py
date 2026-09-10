@@ -38,6 +38,8 @@ __all__ = [
     'make_agnostic_forward',
     'make_agnostic_backward',
     'OpticalSystem',
+    'LinearizedOpticalSystem',
+    'linearize_optical_system',
     'PeriodicOpticalElement',
     'jones_to_mueller',
     'JonesMatrixOpticalElement',
@@ -71,6 +73,7 @@ __all__ = [
 ]
 
 from .optical_element import *
+from .linearization import *
 from .wavefront import *
 
 from .aberration import *

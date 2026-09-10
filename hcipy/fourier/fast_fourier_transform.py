@@ -1,5 +1,6 @@
 from __future__ import division
 from collections.abc import Iterable
+import itertools
 
 import numpy as np
 from .fourier_transform import FourierTransform, ComputationalComplexity, _get_float_and_complex_dtype
@@ -174,6 +175,12 @@ def is_fft_grid(grid, input_grid):
         return False
     return True
 
+def _fft_wrapped_slices(K, L):
+    '''The two blocks of a K-length axis that hold a central cutout of
+    length L after an FFTshift.'''
+    return (slice(0, (L + 1) // 2), slice(K - L // 2, K))
+
+
 class FastFourierTransform(FourierTransform):
     '''A Fast Fourier Transform (FFT) object.
 
@@ -286,6 +293,63 @@ class FastFourierTransform(FourierTransform):
         else:
             self.shift_output_filter = None
 
+        # Always use the multi-pass FFT: one 1D FFT per axis over the views
+        # of the internal array that hold nonzero data. The single-pass FFT
+        # is kept for comparison and performance tuning.
+        self._use_multipass = True
+
+    @staticmethod
+    def _fft_inplace(view, axis, forward):
+        '''Transform `view` along `axis` in place.
+        '''
+        fft_func = _fft_module.fft if forward else _fft_module.ifft
+
+        fft_array = fft_func(view, axis=axis, overwrite_x=True)
+
+        if not np.shares_memory(fft_array, view):
+            view[...] = fft_array
+
+    def _fft_multipass(self, arr, forward=True):
+        '''An N-D FFT over the last `self.ndim` axes, as one 1D FFT per axis in place.
+        '''
+        tensor_order = arr.ndim - self.ndim
+        cutin = self.cutout_input if forward else self.cutout_output
+        cout = self.cutout_output if forward else self.cutout_input
+        in_shape = self.shape_in if forward else self.shape_out
+        out_shape = self.shape_out if forward else self.shape_in
+
+        in_slices = tuple(cutin[j] if cutin is not None else slice(None) for j in range(self.ndim))
+        out_slices = tuple(cout[j] if cout is not None else slice(None) for j in range(self.ndim))
+
+        for axis in range(self.ndim):
+            if self.emulate_fftshifts:
+                # The cutouts are single blocks: one FFT over the view of
+                # this pass.
+                idx = [slice(None)] * arr.ndim
+                for j in range(axis):
+                    idx[tensor_order + j] = out_slices[j]
+                for j in range(axis + 1, self.ndim):
+                    idx[tensor_order + j] = in_slices[j]
+                self._fft_inplace(arr[tuple(idx)], tensor_order + axis, forward)
+            else:
+                # The cutouts wrap around the edges of the axes after the
+                # FFTshift, into two blocks per axis; the FFTs are
+                # performed on every combination of blocks.
+                in_blocks = tuple(_fft_wrapped_slices(self.internal_shape[j], in_shape[j]) for j in range(self.ndim))
+                out_blocks = tuple(_fft_wrapped_slices(self.internal_shape[j], out_shape[j]) for j in range(self.ndim))
+                others = [j for j in range(self.ndim) if j != axis]
+                for combo in itertools.product(*[out_blocks[j] if j < axis else in_blocks[j] for j in others]):
+                    idx = [slice(None)] * arr.ndim
+                    for j, block in zip(others, combo):
+                        idx[tensor_order + j] = block
+                    self._fft_inplace(arr[tuple(idx)], tensor_order + axis, forward)
+
+        if self.emulate_fftshifts:
+            # Avoid aliasing of arr.
+            return arr.copy()
+
+        return arr
+
     def _compute_internal_array(self, field):
         '''(Re)allocate the internal array for the given field if necessary.
 
@@ -338,7 +402,10 @@ class FastFourierTransform(FourierTransform):
         if not self.emulate_fftshifts:
             self.internal_array = np.fft.ifftshift(self.internal_array, axes=axes)
 
-        fft_array = _fft_module.fftn(self.internal_array, axes=axes)
+        if self._use_multipass:
+            fft_array = self._fft_multipass(self.internal_array, forward=True)
+        else:
+            fft_array = _fft_module.fftn(self.internal_array, axes=axes)
 
         if not self.emulate_fftshifts:
             fft_array = np.fft.fftshift(fft_array, axes=axes)
@@ -383,7 +450,10 @@ class FastFourierTransform(FourierTransform):
         if not self.emulate_fftshifts:
             self.internal_array = np.fft.ifftshift(self.internal_array, axes=axes)
 
-        fft_array = _fft_module.ifftn(self.internal_array, axes=axes)
+        if self._use_multipass:
+            fft_array = self._fft_multipass(self.internal_array, forward=False)
+        else:
+            fft_array = _fft_module.ifftn(self.internal_array, axes=axes)
 
         if not self.emulate_fftshifts:
             fft_array = np.fft.fftshift(fft_array, axes=axes)
@@ -444,14 +514,16 @@ class FastFourierTransform(FourierTransform):
         '''
         q, _, shift = get_fft_parameters(output_grid, input_grid)
 
-        shape = tuple(n * qq for n, qq in zip(input_grid.shape, q))
-
-        N_internal = math.prod(shape)
+        internal = tuple(n * qq for n, qq in zip(input_grid.shape, q))
         N_input = math.prod(input_grid.shape)
         N_output = math.prod(output_grid.shape)
 
-        num_complex_multiplications = 0.5 * N_internal * math.log2(N_internal)
-        num_complex_additions = N_internal * math.log2(N_internal)
+        fft_work = sum(
+            math.prod(output_grid.shape[:a]) * math.prod(input_grid.shape[a + 1:]) * internal[a] * math.log2(internal[a])
+            for a in range(input_grid.ndim))
+
+        num_complex_multiplications = 0.5 * fft_work
+        num_complex_additions = fft_work
 
         # Add complexity for initial multiplication by shift_output.
         # The multiplication happens on `field.reshape(self.shape_in)` which has N_input elements.

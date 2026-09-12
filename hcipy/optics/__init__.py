@@ -1,4 +1,11 @@
 __all__ = [
+    'RayTransferMatrix',
+    'make_abcd_refractive_interface',
+    'make_abcd_fraunhofer',
+    'make_abcd_free_space',
+    'make_abcd_magnifier',
+    'make_abcd_mirror',
+    'make_abcd_thin_lens',
     'make_power_law_error',
     'make_high_pass_power_law_error',
     'SurfaceAberration',
@@ -73,6 +80,7 @@ __all__ = [
 from .optical_element import *
 from .wavefront import *
 
+from .abcd import *
 from .aberration import *
 from .apodization import *
 from .deformable_mirror import *

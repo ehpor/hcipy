@@ -1,9 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from hcipy import *
+from hcipy._math.backends import all_close
 import pytest
 import os
 import warnings
+import math
+
+if Configuration().core.use_new_style_fields:
+    import array_api_strict as xp
+else:
+    import numpy as xp
 
 def test_agnostic_apodizer():
     aperture_achromatic = make_circular_aperture(1)
@@ -905,19 +912,20 @@ def test_surface_profile_fill_value():
     (1e-3, -0.5, 500e-9),
 ])
 def test_gaussian_beam_initialization_and_properties(w0, z, wavelength):
-    beam = GaussianBeam(w0, z, wavelength)
+    q = z + 1j * np.pi * w0**2 / wavelength
+    beam = GaussianBeam(q, wavelength)
 
-    assert beam.w0 == w0
-    assert beam.z == z
+    assert np.isclose(beam.w0, w0)
+    assert np.isclose(beam.z, z)
     assert beam.wavelength == wavelength
-    assert beam.beam_waist == w0
+    assert np.isclose(beam.beam_waist, w0)
 
     zR = np.pi * w0**2 / wavelength
     assert np.isclose(beam.zR, zR)
     assert np.isclose(beam.rayleigh_distance, zR)
 
-    assert np.isclose(beam.q, z + 1j * zR)
-    assert np.isclose(beam.complex_beam_parameter, z + 1j * zR)
+    assert np.isclose(beam.q, q)
+    assert np.isclose(beam.complex_beam_parameter, q)
 
     theta = wavelength / (np.pi * w0)
     assert np.isclose(beam.theta, theta)
@@ -947,44 +955,84 @@ def test_gaussian_beam_initialization_and_properties(w0, z, wavelength):
     assert np.isclose(beam.k, k)
     assert np.isclose(beam.wavenumber, k)
 
-def test_gaussian_beam_setters():
-    beam = GaussianBeam(1e-3, 0.5, 500e-9)
-    wavelength = beam.wavelength
+def test_gaussian_beam_propagate():
+    wavelength = 500e-9
+    w0 = 1e-3
+    zR = np.pi * w0**2 / wavelength
+    beam = GaussianBeam(1j * zR, wavelength)
 
-    zR_old = beam.zR
-    beam.beam_waist = 2e-3
-    assert beam.w0 == 2e-3
-    assert beam.zR != zR_old
-    assert np.isclose(beam.zR, np.pi * (2e-3)**2 / wavelength)
+    z = 0.3
+    beam_out = beam.propagate(np.array([[1, z], [0, 1.0]]))
+    assert np.isclose(beam_out.z, z)
+    assert np.isclose(beam_out.zR, zR)
+    assert beam_out.n == 1
+    assert np.isclose(beam.z, 0)
 
-    beam.w0 = 1e-3
-    new_zR = 2 * beam.zR
-    beam.zR = new_zR
-    assert np.isclose(beam.w0, np.sqrt(new_zR * wavelength / np.pi))
+    beam = GaussianBeam(1j * zR, wavelength)
+    n = 1.5
+    beam_out = beam.propagate(np.array([[1, 0], [0, 1.0 / n]]))
+    assert np.isclose(beam_out.n, n)
+    assert np.isclose(beam_out.w0, w0)
 
-    beam.w0 = 1e-3
-    new_q = 1.0 + 2.0j * beam.zR
-    beam.q = new_q
-    assert np.isclose(beam.z, 1.0)
-    assert np.isclose(beam.zR, np.imag(new_q))
+    beam = GaussianBeam(1j * zR, wavelength)
+    with pytest.raises(NotImplementedError):
+        beam.propagate(np.array([[1, 0], [-1j / (2e-3), 1.0]]))
 
-    beam.w0 = 1e-3
-    beam.z = 0.5
-    new_theta = 2 * beam.theta
-    beam.theta = new_theta
-    assert np.isclose(beam.w0, wavelength / (new_theta * np.pi))
+    beam = GaussianBeam(1j * zR, wavelength)
+    beam_out = beam.propagate(lambda wl: np.array([[1, 0.2], [0, 1.0]]))
+    assert np.isclose(beam_out.z, 0.2)
 
-    beam.w0 = 1e-3
-    beam.z = 0.5
-    new_k = 2 * beam.k
-    beam.k = new_k
-    assert np.isclose(beam.wavelength, 2 * np.pi / new_k)
+    with pytest.raises(ValueError):
+        beam.propagate(np.array([[1, 0], [0, 1.0], [0, 0]]))
+
+def test_gaussian_beam_array_api():
+    wavelength = xp.asarray(500e-9)
+    w0 = xp.asarray(1e-3)
+    z = xp.asarray(0.5)
+    zR = math.pi * w0**2 / wavelength
+    q = z + 1j * zR
+
+    beam = GaussianBeam(q, wavelength)
+
+    assert all_close(beam.w0, w0)
+    assert all_close(beam.z, z)
+    assert all_close(beam.zR, zR)
+    assert all_close(beam.theta, wavelength / (math.pi * w0))
+    assert all_close(beam.psi, math.atan(z / zR))
+    assert all_close(beam.w, w0 * math.sqrt(1 + (z / zR)**2))
+    assert all_close(beam.k, 2 * math.pi / wavelength)
+
+    beam_at_waist = GaussianBeam(1j * zR, wavelength)
+    assert math.isinf(float(beam_at_waist.R))
+
+    d = xp.asarray(0.3)
+    M = xp.asarray([[1.0, d], [0.0, 1.0]])
+
+    beam_prop = beam.propagate(M)
+    assert all_close(beam_prop.z, z + d)
+    assert all_close(beam_prop.zR, zR)
+    assert all_close(beam_prop.n, xp.asarray(1.0))
+    assert all_close(beam.z, z)
+
+    with pytest.raises(NotImplementedError):
+        beam.propagate(xp.asarray([[1, 0], [-1j, 1]]))
+
+    with pytest.raises(ValueError):
+        beam.propagate(xp.asarray([[1, 0], [0, 1], [0, 0]]))
+
+def test_gaussian_beam_scalar():
+    beam_scalar = GaussianBeam(0.5 + 1j * math.pi * (1e-3)**2 / 500e-9, 500e-9)
+
+    assert type(beam_scalar.z) is float
+    assert type(beam_scalar.w0) is float
+    assert beam_scalar.w0 == pytest.approx(1e-3)
+    assert beam_scalar.z == pytest.approx(0.5)
 
 def test_gaussian_beam_evaluate():
     w0 = 1e-3
     z = 0.5
     wavelength = 500e-9
-    beam = GaussianBeam(w0, z, wavelength)
+    beam = GaussianBeam(z + 1j * np.pi * w0**2 / wavelength, wavelength)
 
     for grid in [
         make_pupil_grid(64, 4e-3),

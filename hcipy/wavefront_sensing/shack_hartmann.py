@@ -19,10 +19,33 @@ class ShackHartmannWavefrontSensorOptics(WavefrontSensorOptics):
 
 class SquareShackHartmannWavefrontSensorOptics(ShackHartmannWavefrontSensorOptics):
     ## Helper class to create a Shack-Hartmann WFS with square microlens array
-    def __init__(self, input_grid, f_number, num_lenslets, pupil_diameter):
+    def __init__(self, input_grid, f_number, num_lenslets, pupil_diameter, offset=None):
+        '''
+        Create a square Shack-Hartmann wavefront sensor optics.
+
+        MLA offset control is achieved as:
+        - Default: centering (offset=None)
+            - if num_lenslets is even, a lenslet corner is at (0,0) coordinates.
+            - if num_lenslets is odd, a lenslet center is at (0,0) coordinates.
+            - equivalent of offset = (0.5, 0.5) if num_lenslet is even else (0,0)
+        - Legacy behavior: set offset=(0,0). A lenslet center is at (0,0) regardless of parity
+        - Offset parameter: specify (x,y) offset of the MLA grid in lenslet pitch units.
+            This is specified by setting a lenslet center at (x,y) coordinates.
+        '''
         lenslet_diameter = float(pupil_diameter) / num_lenslets
-        x = np.arange(-pupil_diameter, pupil_diameter, lenslet_diameter)
-        self.mla_grid = CartesianGrid(SeparatedCoords((x, x)))
+
+        if offset is None:
+            _o = lenslet_diameter / 2 if num_lenslets % 2 == 0 else 0
+            offset_coords = (_o, _o)
+        else: # assert offset: tuple[int, int]
+            x,y = offset
+            offset_coords = (x * lenslet_diameter, y * lenslet_diameter)
+
+        x = np.arange(-pupil_diameter + offset_coords[0],
+                      +pupil_diameter, lenslet_diameter)
+        y = np.arange(-pupil_diameter + offset_coords[1],
+                      +pupil_diameter, lenslet_diameter)
+        self.mla_grid = CartesianGrid(SeparatedCoords((x, y)))
 
         focal_length = f_number * lenslet_diameter
         self.micro_lens_array = MicroLensArray(input_grid, self.mla_grid, focal_length)

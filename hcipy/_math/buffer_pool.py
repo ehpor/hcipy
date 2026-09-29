@@ -39,13 +39,13 @@ class BufferPool:
     used after they have been released.
 
     This module exposes a single process-wide pool through the module-level
-    functions :func:`temp` and :func:`clear`.
+    functions :func:`empty`, :func:`zeros` and :func:`ones`.
     '''
     def __init__(self):
         self._lock = threading.Lock()
         self._free = {}
 
-    def _acquire(self, shape, dtype):
+    def _acquire(self, shape, dtype, order):
         '''Return a buffer with the requested shape and dtype.
 
         Parameters
@@ -55,6 +55,8 @@ class BufferPool:
             1-D shape.
         dtype : dtype
             The data type of the returned array.
+        order : {'C', 'F'}
+            Whether to return the array in C- or Fortran-contiguous order.
 
         Returns
         -------
@@ -62,6 +64,9 @@ class BufferPool:
             A buffer with the requested shape and dtype. Its contents are
             unspecified.
         '''
+        if order not in ('C', 'F'):
+            raise ValueError(f"only 'C' or 'F' order is permitted, not {order!r}")
+
         if isinstance(shape, (int, np.integer)):
             shape = (int(shape),)
         else:
@@ -74,7 +79,7 @@ class BufferPool:
         size = int(np.prod(shape)) if shape else 1
         nbytes = size * dtype.itemsize
         bucket_size = _round_up_to_power_of_two(nbytes)
-        if bucket_size % dtype.itemsize:
+        if bucket_size % dtype.itemsize != 0:
             # Non-power-of-two itemsizes cannot be viewed from a power-of-two
             # byte buffer; fall back to the exact size.
             bucket_size = nbytes
@@ -83,7 +88,7 @@ class BufferPool:
             bucket = self._free.get(bucket_size)
             flat = bucket.pop() if bucket else np.empty(bucket_size, dtype=np.uint8)
 
-        return flat.view(dtype)[:size].reshape(shape)
+        return flat.view(dtype)[:size].reshape(shape, order=order)
 
     def _release(self, array):
         '''Return `array` to the pool.
@@ -112,25 +117,84 @@ class BufferPool:
             self._free.setdefault(key, []).append(flat)
 
     @contextmanager
-    def temp(self, shape, dtype):
-        '''Context manager yielding a temporary buffer with the given shape.
+    def empty(self, shape, dtype=None, order='C'):
+        '''Yield a temporary buffer with uninitialized contents.
 
-        The buffer is returned to the pool when the context exits, also when
-        an exception is raised.
+        The buffer is returned to the pool when the context exits, also when an
+        exception is raised.
 
         Parameters
         ----------
         shape : int or tuple of int
             The shape of the yielded array.
-        dtype : dtype
-            The data type of the yielded array.
-
+        dtype : dtype, optional
+            The data type of the yielded array. Defaults to float.
+        order : {'C', 'F'}, optional
+            Whether to yield the array in C- or Fortran-contiguous order.
+            Defaults to 'C'.
         Yields
         ------
         ndarray
-            A buffer with the requested shape and dtype.
+            A buffer with the requested shape and dtype. Its contents are
+            unspecified.
         '''
-        array = self._acquire(shape, dtype)
+        array = self._acquire(shape, dtype, order)
+        try:
+            yield array
+        finally:
+            self._release(array)
+
+    @contextmanager
+    def zeros(self, shape, dtype=None, order='C'):
+        '''Yield a temporary buffer filled with zeros.
+
+        The buffer is returned to the pool when the context exits, also when an
+        exception is raised.
+
+        Parameters
+        ----------
+        shape : int or tuple of int
+            The shape of the yielded array.
+        dtype : dtype, optional
+            The data type of the yielded array. Defaults to float.
+        order : {'C', 'F'}, optional
+            Whether to yield the array in C- or Fortran-contiguous order.
+            Defaults to 'C'.
+        Yields
+        ------
+        ndarray
+            A buffer with the requested shape and dtype, filled with zeros.
+        '''
+        array = self._acquire(shape, dtype, order)
+        array.fill(0)
+        try:
+            yield array
+        finally:
+            self._release(array)
+
+    @contextmanager
+    def ones(self, shape, dtype=None, order='C'):
+        '''Yield a temporary buffer filled with ones.
+
+        The buffer is returned to the pool when the context exits, also when an
+        exception is raised.
+
+        Parameters
+        ----------
+        shape : int or tuple of int
+            The shape of the yielded array.
+        dtype : dtype, optional
+            The data type of the yielded array. Defaults to float.
+        order : {'C', 'F'}, optional
+            Whether to yield the array in C- or Fortran-contiguous order.
+            Defaults to 'C'.
+        Yields
+        ------
+        ndarray
+            A buffer with the requested shape and dtype, filled with ones.
+        '''
+        array = self._acquire(shape, dtype, order)
+        array.fill(1)
         try:
             yield array
         finally:
@@ -145,22 +209,25 @@ class BufferPool:
 _pool = BufferPool()
 
 
-def temp(shape, dtype):
-    '''Context manager yielding a temporary buffer with the given shape.
+def empty(shape, dtype=None, order='C'):
+    '''Yield a temporary buffer with uninitialized contents.
 
-    The buffer is returned to the pool when the context exits, also when
-    an exception is raised.
-
-    Parameters
-    ----------
-    shape : int or tuple of int
-        The shape of the yielded array.
-    dtype : dtype
-        The data type of the yielded array.
-
-    Yields
-    ------
-    ndarray
-        A buffer with the requested shape and dtype.
+    See :meth:`BufferPool.empty` for the parameters and yielded value.
     '''
-    return _pool.temp(shape, dtype)
+    return _pool.empty(shape, dtype, order)
+
+
+def zeros(shape, dtype=None, order='C'):
+    '''Yield a temporary buffer filled with zeros.
+
+    See :meth:`BufferPool.zeros` for the parameters and yielded value.
+    '''
+    return _pool.zeros(shape, dtype, order)
+
+
+def ones(shape, dtype=None, order='C'):
+    '''Yield a temporary buffer filled with ones.
+
+    See :meth:`BufferPool.ones` for the parameters and yielded value.
+    '''
+    return _pool.ones(shape, dtype, order)

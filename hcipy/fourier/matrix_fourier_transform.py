@@ -1,9 +1,12 @@
+import warnings
+
 import numpy as np
 from scipy.linalg import get_blas_funcs
 from .fourier_transform import FourierTransform, ComputationalComplexity, _get_float_and_complex_dtype
 from ..field import Field
 from ..config import Configuration
 from .._math.fourier import dft_matrix_regular, dft_matrix_separated
+from .._math import buffer_pool
 
 class MatrixFourierTransform(FourierTransform):
     '''A Matrix Fourier Transform (MFT) object.
@@ -29,9 +32,8 @@ class MatrixFourierTransform(FourierTransform):
         calculated once, and reused for future evaluations. If this is None, the choice will be
         determined by the configuration file.
     allocate_intermediate : boolean or None
-        Whether to reserve memory for the intermediate result for the MFT. This provides a 5-10%
-        speedup in exchange for higher memory usage. If this is None, the choice will be determined
-        by the configuration file.
+        Deprecated. An intermediate array is now always used, taken from the buffer pool.
+        Passing False raises a `DeprecationWarning`; True and None are accepted.
 
     Raises
     ------
@@ -40,6 +42,14 @@ class MatrixFourierTransform(FourierTransform):
         dimensional, or if the output grid has a different dimension than the input grid.
     '''
     def __init__(self, input_grid, output_grid, precompute_matrices=None, allocate_intermediate=None):
+        if allocate_intermediate is False:
+            warnings.warn(
+                'The allocate_intermediate argument is deprecated. An intermediate array is now '
+                'always used, taken from the buffer pool.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         self.check_if_supported(input_grid, output_grid)
 
         self.input_grid = input_grid
@@ -55,13 +65,7 @@ class MatrixFourierTransform(FourierTransform):
             precompute_matrices = Configuration().fourier.mft.precompute_matrices
         self.precompute_matrices = precompute_matrices
 
-        # Get the value from the configuration file if left at default.
-        if allocate_intermediate is None:
-            allocate_intermediate = Configuration().fourier.mft.allocate_intermediate
-        self.allocate_intermediate = allocate_intermediate
-
         self.matrices_dtype = None
-        self.intermediate_dtype = None
         self._remove_matrices()
 
     def _compute_matrices(self, dtype):
@@ -117,13 +121,6 @@ class MatrixFourierTransform(FourierTransform):
 
             self.matrices_dtype = complex_dtype
 
-        # Checki if the intermediate array needs to be (re)allocated.
-        if self.intermediate_dtype != complex_dtype:
-            if self.ndim == 2:
-                self.intermediate_array = np.empty((self.input_grid.shape[0], self.M2.shape[1]), dtype=complex_dtype)
-
-                self.intermediate_dtype = complex_dtype
-
     def _remove_matrices(self):
         '''Remove the matrices after a Fourier transform.
 
@@ -137,11 +134,6 @@ class MatrixFourierTransform(FourierTransform):
                 self.M2 = None
 
             self.matrices_dtype = None
-
-        if not self.allocate_intermediate:
-            if self.ndim == 2:
-                self.intermediate_array = None
-                self.intermediate_dtype = None
 
     def forward(self, field):
         '''Returns the forward Fourier transform of the :class:`Field` field.
@@ -192,9 +184,11 @@ class MatrixFourierTransform(FourierTransform):
             f = f.reshape(tuple(field.tensor_shape) + self.shape_input)
             res = np.empty(tuple(field.tensor_shape) + self.shape_output, dtype=self.matrices_dtype)
 
-            for i in np.ndindex(field.tensor_shape):
-                gemm(1, self.M2.T, f[i].T, c=self.intermediate_array.T, overwrite_c=True)
-                gemm(alpha, self.intermediate_array.T, self.M1.T, c=res[i].T, overwrite_c=True)
+            intermediate_shape = (self.input_grid.shape[0], self.M2.shape[1])
+            with buffer_pool.empty(intermediate_shape, self.matrices_dtype) as intermediate_array:
+                for i in np.ndindex(field.tensor_shape):
+                    gemm(1, self.M2.T, f[i].T, c=intermediate_array.T, overwrite_c=True)
+                    gemm(alpha, intermediate_array.T, self.M1.T, c=res[i].T, overwrite_c=True)
 
         self._remove_matrices()
 
@@ -249,10 +243,12 @@ class MatrixFourierTransform(FourierTransform):
             f = f.reshape(tuple(field.tensor_shape) + self.shape_output)
             res = np.empty(tuple(field.tensor_shape) + self.shape_input, dtype=self.matrices_dtype)
 
-            # Use trans_a=2 and trans_b=2 to apply the conjugate transpose on the a and b arrays.
-            for i in np.ndindex(field.tensor_shape):
-                gemm(1, f[i].T, self.M1.T, trans_b=2, c=self.intermediate_array.T, overwrite_c=True)
-                gemm(alpha, self.M2.T, self.intermediate_array.T, trans_a=2, c=res[i].T, overwrite_c=True)
+            intermediate_shape = (self.input_grid.shape[0], self.M2.shape[1])
+            with buffer_pool.empty(intermediate_shape, self.matrices_dtype) as intermediate_array:
+                # Use trans_a=2 and trans_b=2 to apply the conjugate transpose on the a and b arrays.
+                for i in np.ndindex(field.tensor_shape):
+                    gemm(1, f[i].T, self.M1.T, trans_b=2, c=intermediate_array.T, overwrite_c=True)
+                    gemm(alpha, self.M2.T, intermediate_array.T, trans_a=2, c=res[i].T, overwrite_c=True)
 
         self._remove_matrices()
 
@@ -322,7 +318,7 @@ class MatrixFourierTransform(FourierTransform):
             num_complex_multiplications = N_in_y * N_in_x * N_out_y
             num_complex_additions = N_out_y * N_in_x * (N_in_y - 1)
 
-            # Complexity for gemm(alpha, self.intermediate_array.T, self.M1.T)
+            # Complexity for gemm(alpha, intermediate_array.T, self.M1.T)
             num_complex_multiplications += N_in_x * N_out_x * N_out_y
             num_complex_additions += N_out_x * N_out_y * (N_in_x - 1)
 

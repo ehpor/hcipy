@@ -130,13 +130,21 @@ _pool = BufferPool()
 
 
 def temp(shape, dtype):
-    '''Context manager yielding a temporary buffer from the process-wide pool.
+    '''Context manager yielding a temporary buffer with the given shape.
 
-    See :meth:`BufferPool.temp`.
+    The buffer is returned to the pool when the context exits, also when
+    an exception is raised.
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        The shape of the yielded array.
+    dtype : dtype
+        The data type of the yielded array.
+
+    Yields
+    ------
+    ndarray
+        A buffer with the requested shape and dtype.
     '''
     return _pool.temp(shape, dtype)
-
-
-def clear():
-    '''Drop all buffers held by the process-wide pool.'''
-    return _pool.clear()

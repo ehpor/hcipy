@@ -5,6 +5,7 @@ from .fourier_transform import make_fourier_transform
 from ..field import Field, field_dot, field_conjugate_transpose, CartesianGrid, RegularCoords, make_uniform_grid
 from .._math.separable_filter import make_phase_ramp, make_separable_filter
 from .._math import fft as _fft_module
+from .._math import buffer_pool
 
 class FourierFilter(object):
     '''A filter in the Fourier domain.
@@ -37,7 +38,6 @@ class FourierFilter(object):
         self.transfer_function = transfer_function
 
         self._transfer_function = None
-        self.internal_array = None
 
     def _compute_functions(self, field):
         if self._transfer_function is None or self._transfer_function.dtype != field.dtype:
@@ -48,14 +48,6 @@ class FourierFilter(object):
 
             tf = np.fft.ifftshift(tf.shaped, axes=tuple(range(-self.input_grid.ndim, 0)))
             self._transfer_function = tf.astype(field.dtype, copy=False)
-
-        recompute_internal_array = self.internal_array is None
-        recompute_internal_array = recompute_internal_array or (self.internal_array.ndim != (field.grid.ndim + field.tensor_order))
-        recompute_internal_array = recompute_internal_array or (self.internal_array.dtype != field.dtype)
-        recompute_internal_array = recompute_internal_array or not np.array_equal(self.internal_array.shape[:field.tensor_order], field.tensor_shape)
-
-        if recompute_internal_array:
-            self.internal_array = self.internal_grid.zeros(field.tensor_shape, field.dtype).shaped
 
     def forward(self, field):
         '''Return the forward filtering of the input field.
@@ -105,15 +97,16 @@ class FourierFilter(object):
         self._compute_functions(field)
 
         if self.cutout is None:
-            f = field.shaped
-        else:
-            f = self.internal_array
-            f[:] = 0
-            c = tuple([slice(None)] * field.tensor_order) + self.cutout
-            f[c] = field.shaped
+            return self._apply(field, field.shaped, adjoint, overwrite_x=False)
 
+        shape = tuple(field.tensor_shape) + tuple(self.internal_grid.shape)
+        with buffer_pool.zeros(shape, field.dtype) as internal_array:
+            c = tuple([slice(None)] * field.tensor_order) + self.cutout
+            internal_array[c] = field.shaped
+            return self._apply(field, internal_array, adjoint, overwrite_x=True)
+
+    def _apply(self, field, f, adjoint, overwrite_x):
         # Don't overwrite f if it shares memory with the input field.
-        overwrite_x = self.cutout is not None
         axes = tuple(range(-self.input_grid.ndim, 0))
 
         f = _fft_module.fftn(f, axes=axes, overwrite_x=overwrite_x)
@@ -147,6 +140,7 @@ class FourierFilter(object):
         if self.cutout is None:
             res = f.reshape(s)
         else:
+            c = tuple([slice(None)] * field.tensor_order) + self.cutout
             res = f[c].reshape(s)
 
         return Field(res, self.input_grid)

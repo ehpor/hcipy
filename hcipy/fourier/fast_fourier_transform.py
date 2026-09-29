@@ -9,6 +9,7 @@ import math
 
 from .._math.separable_filter import make_separable_filter
 from .._math import fft as _fft_module
+from .._math import buffer_pool
 
 
 def _make_shift_filter(slopes, grid, internal_grid, cutout, f_shift, piston=0.0, scale=1):
@@ -244,7 +245,6 @@ class FastFourierTransform(FourierTransform):
 
         self.shape_out = self.output_grid.shape
         self.internal_shape = self.internal_grid.shape
-        self.internal_array = None
 
         # Calculate the part of the array in which to insert the input field (for zeropadding).
         if self.internal_shape == self.shape_in:
@@ -286,24 +286,6 @@ class FastFourierTransform(FourierTransform):
         else:
             self.shift_output_filter = None
 
-    def _compute_internal_array(self, field):
-        '''(Re)allocate the internal array for the given field if necessary.
-
-        The internal array follows the ``tensor_shape + grid.shape`` layout,
-        with the leading tensor axes of the field.
-        '''
-        _, complex_dtype = _get_float_and_complex_dtype(field.dtype)
-
-        tensor_shape = tuple(field.tensor_shape)
-
-        recompute = self.internal_array is None
-        recompute = recompute or (self.internal_array.dtype != complex_dtype)
-        recompute = recompute or (self.internal_array.ndim != field.grid.ndim + field.tensor_order)
-        recompute = recompute or (self.internal_array.shape[:field.tensor_order] != tensor_shape)
-
-        if recompute:
-            self.internal_array = np.zeros(tensor_shape + self.internal_shape, complex_dtype)
-
     def forward(self, field):
         '''Returns the forward Fourier transform of the :class:`Field` field.
 
@@ -317,31 +299,32 @@ class FastFourierTransform(FourierTransform):
         Field
             The Fourier transform of the field.
         '''
-        self._compute_internal_array(field)
-
         tensor_shape = tuple(field.tensor_shape)
         c = (slice(None),) * field.tensor_order
         axes = tuple(range(-self.ndim, 0))
 
-        if self.cutout_input is None:
-            if self.shift_output_filter is None:
-                self.internal_array[:] = field.reshape(tensor_shape + self.shape_in)
+        _, complex_dtype = _get_float_and_complex_dtype(field.dtype)
+
+        with buffer_pool.empty(tensor_shape + self.internal_shape, complex_dtype) as internal_array:
+            if self.cutout_input is None:
+                if self.shift_output_filter is None:
+                    internal_array[:] = field.reshape(tensor_shape + self.shape_in)
+                else:
+                    self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array)
             else:
-                self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=self.internal_array)
-        else:
-            self.internal_array[:] = 0
-            if self.shift_output_filter is None:
-                self.internal_array[c + self.cutout_input] = field.reshape(tensor_shape + self.shape_in)
-            else:
-                self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=self.internal_array[c + self.cutout_input])
+                internal_array[:] = 0
+                if self.shift_output_filter is None:
+                    internal_array[c + self.cutout_input] = field.reshape(tensor_shape + self.shape_in)
+                else:
+                    self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array[c + self.cutout_input])
 
-        if not self.emulate_fftshifts:
-            self.internal_array = np.fft.ifftshift(self.internal_array, axes=axes)
+            if not self.emulate_fftshifts:
+                internal_array = np.fft.ifftshift(internal_array, axes=axes)
 
-        fft_array = _fft_module.fftn(self.internal_array, axes=axes)
+            fft_array = _fft_module.fftn(internal_array, axes=axes)
 
-        if not self.emulate_fftshifts:
-            fft_array = np.fft.fftshift(fft_array, axes=axes)
+            if not self.emulate_fftshifts:
+                fft_array = np.fft.fftshift(fft_array, axes=axes)
 
         if self.cutout_output is None:
             res = fft_array
@@ -368,25 +351,26 @@ class FastFourierTransform(FourierTransform):
         Field
             The inverse Fourier transform of the field.
         '''
-        self._compute_internal_array(field)
-
         tensor_shape = tuple(field.tensor_shape)
         c = (slice(None),) * field.tensor_order
         axes = tuple(range(-self.ndim, 0))
 
-        if self.cutout_output is None:
-            self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=self.internal_array, inverse=True)
-        else:
-            self.internal_array[:] = 0
-            self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=self.internal_array[c + self.cutout_output], inverse=True)
+        _, complex_dtype = _get_float_and_complex_dtype(field.dtype)
 
-        if not self.emulate_fftshifts:
-            self.internal_array = np.fft.ifftshift(self.internal_array, axes=axes)
+        with buffer_pool.empty(tensor_shape + self.internal_shape, complex_dtype) as internal_array:
+            if self.cutout_output is None:
+                self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=internal_array, inverse=True)
+            else:
+                internal_array[:] = 0
+                self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=internal_array[c + self.cutout_output], inverse=True)
 
-        fft_array = _fft_module.ifftn(self.internal_array, axes=axes)
+            if not self.emulate_fftshifts:
+                internal_array = np.fft.ifftshift(internal_array, axes=axes)
 
-        if not self.emulate_fftshifts:
-            fft_array = np.fft.fftshift(fft_array, axes=axes)
+            fft_array = _fft_module.ifftn(internal_array, axes=axes)
+
+            if not self.emulate_fftshifts:
+                fft_array = np.fft.fftshift(fft_array, axes=axes)
 
         if self.cutout_input is None:
             res = fft_array

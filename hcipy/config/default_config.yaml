@@ -19,10 +19,6 @@ fourier:
     # This provides a 20-30% speedup, in exchange for higher memory usage.
     precompute_matrices: true
 
-    # Whether to reserve memory for intermediate results.
-    # This provides a 5-10% speedup, in exchange for higher memory usage.
-    allocate_intermediate: true
-
     # The performance prediction parameters for an MFT.
     # The default parameters are based on an Apple M2 Max chip.
     execution_time_prediction_coefficients:

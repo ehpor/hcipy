@@ -20,9 +20,10 @@ def test_temp_shape_and_dtype():
     with pool.temp((3, 4), np.float64) as array:
         assert array.shape == (3, 4)
         assert array.dtype == np.float64
-        # The yielded array is a shaped view onto a flat pooled buffer.
+        # The yielded array is a shaped view onto a flat pooled byte buffer.
         assert flat_base(array).ndim == 1
-        assert flat_base(array).size == 12
+        assert flat_base(array).dtype == np.uint8
+        assert flat_base(array).size == 12 * np.dtype(np.float64).itemsize
 
 
 def test_temp_integer_shape_is_1d():
@@ -53,14 +54,41 @@ def test_temp_does_not_reuse_different_size():
         assert flat_base(second) is not base
 
 
-def test_temp_does_not_reuse_different_dtype():
+def test_temp_reuses_same_bytes_different_dtype():
+    # Buckets are keyed by byte size, so dtypes can share buffers.
+    pool = BufferPool()
+
+    with pool.temp((2, 3), np.complex128) as first:
+        base = flat_base(first)
+
+    with pool.temp(12, np.float64) as second:
+        assert flat_base(second) is base
+
+
+def test_temp_does_not_reuse_different_byte_size():
     pool = BufferPool()
 
     with pool.temp((2, 3), np.float64) as first:
         base = flat_base(first)
 
     with pool.temp((2, 3), np.complex128) as second:
+        # 48 bytes versus 96 bytes.
         assert flat_base(second) is not base
+
+
+def test_temp_rejects_object_dtype():
+    pool = BufferPool()
+
+    with pytest.raises(TypeError):
+        with pool.temp((3,), object):
+            pass
+
+
+def test_release_rejects_object_dtype():
+    pool = BufferPool()
+
+    with pytest.raises(TypeError):
+        pool._release(np.empty(3, dtype=object))
 
 
 def test_temp_reuses_equal_size_different_shape():

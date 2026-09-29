@@ -7,11 +7,18 @@ import numpy as np
 class BufferPool:
     '''A thread-safe pool of reusable, flat NumPy buffers.
 
-    Buffers are stored as flat (1-D, C-contiguous) arrays and bucketed by
-    ``(dtype, number of elements)``. Acquiring a buffer of a given shape
-    returns a view with that shape; releasing it returns the underlying flat
-    buffer to the pool so that it can be handed out again. If no buffer of the
-    requested size is available, a new one is allocated from scratch.
+    Buffers are stored as flat (1-D, C-contiguous) ``uint8`` byte arrays and
+    bucketed by their number of bytes. Acquiring a buffer of a given shape
+    returns a typed view with that shape; releasing it returns the underlying
+    flat byte buffer to the pool so that it can be handed out again. If no
+    buffer of the requested size is available, a new one is allocated from
+    scratch.
+
+    Because buffers are bucketed by size in bytes, a released buffer can be
+    reinterpreted by a later acquisition of a different dtype, as long as the
+    total byte sizes match. Data types containing Python objects are not
+    supported, since reinterpreting uninitialized bytes as object pointers is
+    unsafe.
 
     Acquired buffers have unspecified contents: a released buffer is handed
     back out as-is.
@@ -50,33 +57,41 @@ class BufferPool:
             shape = tuple(int(s) for s in shape)
 
         dtype = np.dtype(dtype)
+        if dtype.hasobject:
+            raise TypeError('The buffer pool does not support object dtypes.')
+
         size = int(np.prod(shape)) if shape else 1
-        key = (dtype.str, size)
+        nbytes = size * dtype.itemsize
 
         with self._lock:
-            bucket = self._free.get(key)
-            flat = bucket.pop() if bucket else np.empty(size, dtype)
+            bucket = self._free.get(nbytes)
+            flat = bucket.pop() if bucket else np.empty(nbytes, dtype=np.uint8)
 
-        return flat.reshape(shape)
+        return flat.view(dtype).reshape(shape)
 
     def _release(self, array):
         '''Return `array` to the pool.
 
-        The underlying flat buffer is pooled, so passing a view (such as the
-        result of :meth:`_acquire`) is allowed. The array must not be used
+        The underlying flat byte buffer is pooled, so passing a view (such as
+        the result of :meth:`_acquire`) is allowed. The array must not be used
         afterwards.
         '''
         if not isinstance(array, np.ndarray):
             raise TypeError('Can only release numpy arrays to the buffer pool.')
+        if array.dtype.hasobject:
+            raise TypeError('The buffer pool does not support object dtypes.')
 
         flat = array
         while flat.base is not None:
             flat = flat.base
 
+        if flat.dtype != np.uint8:
+            flat = np.ascontiguousarray(flat).view(np.uint8)
+
         if flat.ndim != 1:
             flat = flat.reshape(-1)
 
-        key = (flat.dtype.str, flat.size)
+        key = flat.size
         with self._lock:
             self._free.setdefault(key, []).append(flat)
 

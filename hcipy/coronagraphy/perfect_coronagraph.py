@@ -1,4 +1,6 @@
-import numpy as np
+import math
+from .._math.einsum import einsum
+from ..field import NewStyleField
 from ..optics import OpticalElement
 from ..mode_basis import ModeBasis
 from ..util import inverse_truncated
@@ -42,10 +44,10 @@ class PerfectCoronagraph(OpticalElement):
         self._aperture = aperture
 
         if coeffs is not None:
-            order = int(2 * np.ceil(0.5 * (np.sqrt(8 * len(coeffs) + 1) - 1)))
+            order = int(2 * math.ceil(0.5 * (math.sqrt(8 * len(coeffs) + 1) - 1)))
             self.coeffs = coeffs
         else:
-            self.coeffs = np.ones(int(order * (order / 2 + 1) / 4))
+            self.coeffs = self.pupil_grid.xp.ones(int(order * (order / 2 + 1) / 4))
 
         self._p = order // 2
 
@@ -69,35 +71,43 @@ class PerfectCoronagraph(OpticalElement):
         This sets up the two-dimensional power matrices for the x- and y-coordinates, as well as
         the inverse-Gram correction matrix.
         '''
+        xp = self.pupil_grid.xp
         x, y = self.pupil_grid.separated_coords
+
         apv = self._aperture.shaped
+        if isinstance(apv, NewStyleField):
+            apv = apv.data
 
         # Build {1, x, x^2, ...} and same for y.
-        X = x[:, np.newaxis]**np.arange(self._p)
-        Y = y[:, np.newaxis]**np.arange(self._p)
+        X = x[:, xp.newaxis]**xp.arange(self._p, dtype=x.dtype)
+        Y = y[:, xp.newaxis]**xp.arange(self._p, dtype=y.dtype)
 
         # We need higher powers of x and y to construct the Gram matrix.
         dmax = 2 * self._p - 1
-        Xp = x[:, np.newaxis]**np.arange(dmax)
-        Yp = y[:, np.newaxis]**np.arange(dmax)
+        Xp = x[:, xp.newaxis]**xp.arange(dmax, dtype=x.dtype)
+        Yp = y[:, xp.newaxis]**xp.arange(dmax, dtype=y.dtype)
 
-        # Computed all weighted dot products.
-        T = Xp.T.dot((np.abs(apv)**2).T).dot(Yp)
+        # Computed all weighted dot products. apv has shape (ny, nx), so we contract the x-axis
+        # via Xp and the y-axis via Yp.
+        T = xp.matmul(xp.matrix_transpose(Xp), xp.matmul(xp.matrix_transpose(xp.abs(apv)**2), Yp))
 
         # Triangular mode indices (j, k) with x^j y^k of total degree j + k < p.
         triangular = [(j, i - j) for i in range(self._p) for j in range(i + 1)]
-        tri_j = np.array([t[0] for t in triangular])
-        tri_k = np.array([t[1] for t in triangular])
+        mode_j, mode_k = zip(*triangular)
 
         # G[a, b] = <mode_a, mode_b> = T[j_a + j_b, k_a + k_b].
-        j = tri_j[:, np.newaxis] + tri_j[np.newaxis, :]
-        k = tri_k[:, np.newaxis] + tri_k[np.newaxis, :]
-        G = T[j, k]
+        j = xp.asarray(mode_j)
+        k = xp.asarray(mode_k)
+        G = T[j[:, xp.newaxis] + j[xp.newaxis, :], k[:, xp.newaxis] + k[xp.newaxis, :]]
 
+        # Compute the lower Cholesky factor L with G = L L^H.
         try:
-            R = np.linalg.cholesky(G).T
-            R_inverse = np.linalg.inv(R)
-        except np.linalg.LinAlgError as e:
+            L = xp.linalg.cholesky(G)
+
+            # Some backends (Jax) return NaNs instead of raising for a non-positive-definite matrix.
+            if not bool(xp.all(xp.isfinite(L))):
+                raise ValueError('Cholesky returned indeterminate result.')
+        except Exception as e:
             raise ValueError(
                 'The Gram matrix of the pupil modes is not positive definite, which means the modes are '
                 'linearly dependent on this aperture. This typically happens when the coronagraph order is '
@@ -105,15 +115,18 @@ class PerfectCoronagraph(OpticalElement):
                 'increase the pupil sampling.'
             ) from e
 
-        K = R_inverse.dot(np.diag(self.coeffs)).dot(R_inverse.conj().T)
+        # K = L^-H diag(coeffs) L^-1.
+        L_inverse = xp.linalg.inv(L)
+        coeffs = xp.asarray(self.coeffs)
+        self._K = xp.matmul(xp.matrix_transpose(xp.conj(L_inverse)) * coeffs[xp.newaxis, :], L_inverse)
 
         # Embed the triangular correction into a full p^2 x p^2 matrix acting on the flattened
-        # p x p coefficient matrix. Its rows and columns outside the triangle are zero, so the
-        # reconstructed coefficient matrix is automatically zero there as well.
-        flat = tri_j * self._p + tri_k
-        self._K_full = np.zeros((self._p**2, self._p**2), dtype=K.dtype)
-        self._K_full[flat[:, np.newaxis], flat[np.newaxis, :]] = K
-        self._flat = flat
+        # p x p coefficient matrix.
+        flat = xp.asarray([a * self._p + b for a, b in zip(mode_j, mode_k)])
+        identity = xp.eye(self._p**2, dtype=self._K.dtype)
+        selection = xp.take(identity, flat, axis=0)
+        selection_transpose = xp.take(identity, flat, axis=1)
+        self._K_full = xp.matmul(selection_transpose, xp.matmul(self._K, selection))
 
         self._X = X
         self._Y = Y
@@ -139,7 +152,10 @@ class PerfectCoronagraph(OpticalElement):
         This is only used for the rarely-called transformation matrix methods, so it is built
         on demand rather than stored.
         '''
-        return np.stack([np.asarray(mode) for mode in self._make_modes()], axis=-1)
+        xp = self.pupil_grid.xp
+        modes = self._make_modes()
+        modes = [mode.data if isinstance(mode, NewStyleField) else xp.asarray(mode) for mode in modes]
+        return xp.stack([xp.reshape(xp.asarray(mode), (-1,)) for mode in modes], axis=-1)
 
     def forward(self, wavefront):
         '''Propagate the wavefront through the perfect coronagraph.
@@ -157,33 +173,37 @@ class PerfectCoronagraph(OpticalElement):
         wf = wavefront.copy()
 
         if self._use_separated_path:
+            xp = self.pupil_grid.xp
             electric_field = wf.electric_field
             leading_shape = electric_field.shape[:-1]
+
             aperture = self._aperture.shaped
+            if isinstance(aperture, NewStyleField):
+                aperture = aperture.data
 
             # Project the wavefront onto the pupil modes using the separability of the modes.
-            weighted = aperture.conj() * electric_field.reshape(leading_shape + aperture.shape)
-            coefficients = np.einsum('...li,ij,lk->...jk', weighted, self._X, self._Y, optimize=True)
+            weighted = xp.conj(aperture) * xp.reshape(electric_field, leading_shape + aperture.shape)
+            coefficients = einsum('...li,ij,lk->...jk', weighted, self._X, self._Y)
 
             # Correct the coefficients with the pre-calculated inverse Gram matrix to get the
-            # actual coefficients.
-            coefficients = np.einsum('mn,...n->...m', self._K_full, coefficients.reshape(leading_shape + (self._p**2,)), optimize=True)
-            coefficient_matrix = coefficients.reshape(leading_shape + (self._p, self._p))
+            # actual coefficients. _K_full is symmetric, so we right-multiply the coefficients.
+            coefficients = xp.reshape(coefficients, (-1, self._p**2))
+            coefficients = xp.matmul(coefficients, self._K_full)
+            coefficient_matrix = xp.reshape(coefficients, leading_shape + (self._p, self._p))
 
             # Transform back to the pupil.
-            correction = aperture * np.einsum('...jk,ij,lk->...li', coefficient_matrix, self._X, self._Y, optimize=True)
+            correction = aperture * einsum('...jk,ij,lk->...li', coefficient_matrix, self._X, self._Y)
 
-            wf.electric_field -= correction.reshape(electric_field.shape)
+            wf.electric_field -= xp.reshape(correction, electric_field.shape)
         else:
             # Project the wavefront onto the pupil modes and attenuate by coeffs, then transform back to the pupil.
             # This is done for each polarization separately.
-            correction = np.einsum(
+            correction = einsum(
                 'kj,j,ji,...i->...k',
                 self._transformation,
                 self.coeffs,
                 self._transformation_inverse,
-                wf.electric_field,
-                optimize='optimal'
+                wf.electric_field
             )
 
             # Then subtract this from the original wavefront to compute the post-coronagraphic field.
@@ -221,12 +241,14 @@ class PerfectCoronagraph(OpticalElement):
         ndarray
             The forward transformation_matrix.
         '''
+        xp = self.pupil_grid.xp
+
         if self._use_separated_path:
             mode_matrix = self._explicit_mode_matrix()
-            k = self._K_full[self._flat[:, np.newaxis], self._flat[np.newaxis, :]]
-            return np.eye(self.pupil_grid.size) - mode_matrix.dot(k.dot(mode_matrix.conj().T))
+            k = self._K
+            return xp.eye(self.pupil_grid.size, dtype=k.dtype) - xp.matmul(mode_matrix, xp.matmul(k, xp.matrix_transpose(xp.conj(mode_matrix))))
 
-        return np.eye(self.pupil_grid.size) - self._transformation.dot(np.expand_dims(self.coeffs, axis=1) * self._transformation_inverse)
+        return xp.eye(self.pupil_grid.size) - xp.matmul(self._transformation, self.coeffs[:, xp.newaxis] * self._transformation_inverse)
 
     def get_transformation_matrix_backward(self, wavelength=1):
         '''Get the backwards propagation transformation matrix.

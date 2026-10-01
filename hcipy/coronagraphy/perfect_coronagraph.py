@@ -49,12 +49,13 @@ class PerfectCoronagraph(OpticalElement):
 
         self._p = order // 2
 
-        # For order 2 there is only a single mode, for which the separable path is slower than
-        # simply applying the full mode projection.
+        # Can we use the separated grid path? Grid needs to be 2D and
+        # separated. Also for order 2, there is only one mode, so
+        # the separated path is slower.
         self._use_separated_path = (
-            order > 2
-            and self.pupil_grid.is_separated
+            self.pupil_grid.is_separated
             and self.pupil_grid.ndim == 2
+            and order > 2
         )
 
         if self._use_separated_path:
@@ -71,19 +72,22 @@ class PerfectCoronagraph(OpticalElement):
         x, y = self.pupil_grid.separated_coords
         apv = self._aperture.shaped
 
+        # Build {1, x, x^2, ...} and same for y.
+        X = x[:, np.newaxis]**np.arange(self._p)
+        Y = y[:, np.newaxis]**np.arange(self._p)
+
+        # We need higher powers of x and y to construct the Gram matrix.
+        dmax = 2 * self._p - 1
+        Xp = x[:, np.newaxis]**np.arange(dmax)
+        Yp = y[:, np.newaxis]**np.arange(dmax)
+
+        # Computed all weighted dot products.
+        T = Xp.T.dot((np.abs(apv)**2).T).dot(Yp)
+
         # Triangular mode indices (j, k) with x^j y^k of total degree j + k < p.
         triangular = [(j, i - j) for i in range(self._p) for j in range(i + 1)]
         tri_j = np.array([t[0] for t in triangular])
         tri_k = np.array([t[1] for t in triangular])
-
-        X = x[:, np.newaxis] ** np.arange(self._p)
-        Y = y[:, np.newaxis] ** np.arange(self._p)
-
-        dmax = 2 * self._p - 1
-        Xp = x[:, np.newaxis] ** np.arange(dmax)
-        Yp = y[:, np.newaxis] ** np.arange(dmax)
-
-        T = Xp.T.dot((np.abs(apv) ** 2).T).dot(Yp)
 
         # G[a, b] = <mode_a, mode_b> = T[j_a + j_b, k_a + k_b].
         j = tri_j[:, np.newaxis] + tri_j[np.newaxis, :]

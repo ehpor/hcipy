@@ -74,10 +74,6 @@ class PerfectCoronagraph(OpticalElement):
         xp = self.pupil_grid.xp
         x, y = self.pupil_grid.separated_coords
 
-        apv = self._aperture.shaped
-        if isinstance(apv, NewStyleField):
-            apv = apv.data
-
         # Build {1, x, x^2, ...} and same for y.
         X = x[:, xp.newaxis]**xp.arange(self._p, dtype=x.dtype)
         Y = y[:, xp.newaxis]**xp.arange(self._p, dtype=y.dtype)
@@ -87,17 +83,17 @@ class PerfectCoronagraph(OpticalElement):
         Xp = x[:, xp.newaxis]**xp.arange(dmax, dtype=x.dtype)
         Yp = y[:, xp.newaxis]**xp.arange(dmax, dtype=y.dtype)
 
-        # Computed all weighted dot products. apv has shape (ny, nx), so we contract the x-axis
-        # via Xp and the y-axis via Yp.
-        T = xp.matmul(xp.matrix_transpose(Xp), xp.matmul(xp.matrix_transpose(xp.abs(apv)**2), Yp))
+        # Computed all weighted dot products.
+        aperture_shaped = self._aperture.shaped
+        aperture_shaped = aperture_shaped.data if isinstance(aperture_shaped, NewStyleField) else aperture_shaped
+
+        T = xp.matmul(xp.matrix_transpose(Xp), xp.matmul(xp.matrix_transpose(xp.abs(aperture_shaped)**2), Yp))
 
         # Triangular mode indices (j, k) with x^j y^k of total degree j + k < p.
-        triangular = [(j, i - j) for i in range(self._p) for j in range(i + 1)]
-        mode_j, mode_k = zip(*triangular)
+        j = xp.asarray([j for i in range(self._p) for j in range(i + 1)])
+        k = xp.asarray([i - j for i in range(self._p) for j in range(i + 1)])
 
         # G[a, b] = <mode_a, mode_b> = T[j_a + j_b, k_a + k_b].
-        j = xp.asarray(mode_j)
-        k = xp.asarray(mode_k)
         G = T[j[:, xp.newaxis] + j[xp.newaxis, :], k[:, xp.newaxis] + k[xp.newaxis, :]]
 
         # Compute the lower Cholesky factor L with G = L L^H.
@@ -122,11 +118,9 @@ class PerfectCoronagraph(OpticalElement):
 
         # Embed the triangular correction into a full p^2 x p^2 matrix acting on the flattened
         # p x p coefficient matrix.
-        flat = xp.asarray([a * self._p + b for a, b in zip(mode_j, mode_k)])
-        identity = xp.eye(self._p**2, dtype=self._K.dtype)
-        selection = xp.take(identity, flat, axis=0)
-        selection_transpose = xp.take(identity, flat, axis=1)
-        self._K_full = xp.matmul(selection_transpose, xp.matmul(self._K, selection))
+        flat = j * self._p + k
+        selection = xp.take(xp.eye(self._p**2, dtype=self._K.dtype), flat, axis=0)
+        self._K_full = xp.matmul(xp.matrix_transpose(selection), xp.matmul(self._K, selection))
 
         self._X = X
         self._Y = Y
@@ -134,7 +128,7 @@ class PerfectCoronagraph(OpticalElement):
     def _make_modes(self):
         '''Construct the explicit pupil modes :math:`x^j y^k` of total degree less than ``p``.'''
         return [
-            self._aperture * self.pupil_grid.x ** j * self.pupil_grid.y ** (i - j)
+            self._aperture * self.pupil_grid.x**j * self.pupil_grid.y**(i - j)
             for i in range(self._p)
             for j in range(i + 1)
         ]
@@ -145,17 +139,6 @@ class PerfectCoronagraph(OpticalElement):
 
         self._transformation = mode_basis.transformation_matrix
         self._transformation_inverse = inverse_truncated(self._transformation, 1e-6)
-
-    def _explicit_mode_matrix(self):
-        '''Construct the explicit (non-orthogonalized) mode matrix.
-
-        This is only used for the rarely-called transformation matrix methods, so it is built
-        on demand rather than stored.
-        '''
-        xp = self.pupil_grid.xp
-        modes = self._make_modes()
-        modes = [mode.data if isinstance(mode, NewStyleField) else xp.asarray(mode) for mode in modes]
-        return xp.stack([xp.reshape(xp.asarray(mode), (-1,)) for mode in modes], axis=-1)
 
     def forward(self, wavefront):
         '''Propagate the wavefront through the perfect coronagraph.
@@ -185,8 +168,7 @@ class PerfectCoronagraph(OpticalElement):
             weighted = xp.conj(aperture) * xp.reshape(electric_field, leading_shape + aperture.shape)
             coefficients = einsum('...li,ij,lk->...jk', weighted, self._X, self._Y)
 
-            # Correct the coefficients with the pre-calculated inverse Gram matrix to get the
-            # actual coefficients. _K_full is symmetric, so we right-multiply the coefficients.
+            # Attenuate the coefficients.
             coefficients = xp.reshape(coefficients, (-1, self._p**2))
             coefficients = xp.matmul(coefficients, self._K_full)
             coefficient_matrix = xp.reshape(coefficients, leading_shape + (self._p, self._p))
@@ -244,7 +226,10 @@ class PerfectCoronagraph(OpticalElement):
         xp = self.pupil_grid.xp
 
         if self._use_separated_path:
-            mode_matrix = self._explicit_mode_matrix()
+            # Build the explicit (non-orthogonalized) mode matrix on demand.
+            modes = [mode.data if isinstance(mode, NewStyleField) else xp.asarray(mode) for mode in self._make_modes()]
+            mode_matrix = xp.stack([xp.reshape(xp.asarray(mode), (-1,)) for mode in modes], axis=-1)
+
             k = self._K
             return xp.eye(self.pupil_grid.size, dtype=k.dtype) - xp.matmul(mode_matrix, xp.matmul(k, xp.matrix_transpose(xp.conj(mode_matrix))))
 

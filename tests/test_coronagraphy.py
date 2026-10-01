@@ -269,6 +269,83 @@ def test_perfect_coronagraph():
         beta = ((x * y).sum() - x.sum() * y.sum() / n) / ((x * x).sum() - x.sum()**2 / n)
         assert np.abs(beta - order) / order < 1e-3
 
+def _reference_coronagraph_operator(aperture, order, coeffs):
+    '''Compute the explicit (non-separable) projection operator for reference.'''
+    pupil_grid = aperture.grid
+    p = order // 2
+
+    modes = [aperture * pupil_grid.x**j * pupil_grid.y**(i - j) for i in range(p) for j in range(i + 1)]
+    mode_matrix = np.stack([np.asarray(mode) for mode in modes], axis=-1)
+
+    q, r = np.linalg.qr(mode_matrix)
+    r = r * np.sign(np.diag(r))[:, np.newaxis]
+    r_inverse = np.linalg.inv(r)
+
+    k = r_inverse.dot(np.diag(coeffs)).dot(r_inverse.conj().T)
+
+    return mode_matrix, k
+
+def _check_coronagraph_against_reference(aperture, order, coeffs, field_shape, check_transformation=True):
+    rng = np.random.default_rng(0)
+    pupil_grid = aperture.grid
+
+    coro = PerfectCoronagraph(aperture, order, coeffs=coeffs)
+    mode_matrix, k = _reference_coronagraph_operator(aperture, order, coro.coeffs)
+
+    electric_field = rng.standard_normal(field_shape + (pupil_grid.size,)) + 1j * rng.standard_normal(field_shape + (pupil_grid.size,))
+    flattened = electric_field.reshape(-1, pupil_grid.size)
+    correction = (mode_matrix.dot(k.dot(mode_matrix.conj().T.dot(flattened.T)))).T.reshape(electric_field.shape)
+
+    if len(field_shape) == 2:
+        wavefront = Wavefront(Field(electric_field, pupil_grid), input_stokes_vector=[1, 0, 0, 0])
+    else:
+        wavefront = Wavefront(Field(electric_field, pupil_grid))
+
+    result = coro(wavefront).electric_field
+
+    assert np.allclose(electric_field - np.asarray(result), correction, rtol=1e-8, atol=1e-10)
+
+    if check_transformation:
+        expected_transformation = np.eye(pupil_grid.size) - mode_matrix.dot(k.dot(mode_matrix.conj().T))
+        assert np.allclose(coro.get_transformation_matrix_forward(), expected_transformation, rtol=1e-8, atol=1e-10)
+
+def test_perfect_coronagraph_separable():
+    rng = np.random.default_rng(0)
+    pupil_grid = make_pupil_grid((48, 64))
+
+    # An asymmetric aperture catches any mixing up of the x- and y-axes.
+    aperture = make_circular_aperture(0.9)(pupil_grid) * (1 + 0.3 * np.tanh(pupil_grid.x)) * np.exp(0.2j * pupil_grid.y)
+
+    # Order 2 deliberately uses the explicit path, so only the separable orders are tested here.
+    for order in [4, 6, 8]:
+        num_modes = int(order * (order / 2 + 1) / 4)
+        for coeffs in [None, rng.random(num_modes)]:
+            for field_shape in [(), (2,), (2, 2)]:
+                check_transformation = field_shape == () and coeffs is None
+                _check_coronagraph_against_reference(aperture, order, coeffs, field_shape, check_transformation)
+
+def test_perfect_coronagraph_separated_coords_grid():
+    # Separated grids also have shape (ny, nx); both non-square and square grids must work.
+    for nx, ny in [(48, 64), (64, 48), (64, 64)]:
+        pupil_grid = CartesianGrid(SeparatedCoords([np.linspace(-1, 1, nx), np.linspace(-1, 1, ny)]))
+        aperture = make_circular_aperture(0.9)(pupil_grid)
+
+        for order in [2, 4, 6]:
+            num_modes = int(order * (order / 2 + 1) / 4)
+            _check_coronagraph_against_reference(aperture, order, None, (), check_transformation=(order == 2))
+            _check_coronagraph_against_reference(aperture, order, np.linspace(0.5, 1, num_modes), (2,), check_transformation=False)
+
+def test_perfect_coronagraph_non_separated_grid():
+    pupil_grid = make_pupil_grid(64)
+    aperture = make_circular_aperture(0.9)(pupil_grid)
+    subset_grid = pupil_grid.subset(np.asarray(aperture) > 0.5)
+    subset_aperture = make_circular_aperture(0.9)(subset_grid)
+
+    assert not subset_grid.is_separated
+
+    for order in [2, 4, 6]:
+        _check_coronagraph_against_reference(subset_aperture, order, None, (), check_transformation=(order == 2))
+
 def test_lyot_coronagraph():
     pupil_grid = make_pupil_grid(128, 1.1)
     aperture = evaluate_supersampled(make_circular_aperture(1.0), pupil_grid, 8)

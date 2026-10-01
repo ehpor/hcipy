@@ -150,6 +150,36 @@ class OpticalElement(object):
         '''
         return self
 
+    def get_output_spec(self, input_spec):
+        '''Get the wavefront specification after a call to `forward()`.
+
+        Parameters
+        ----------
+        input_spec : WavefrontSpec
+            The wavefront specification at the input side of the optical element.
+
+        Returns
+        -------
+        WavefrontSpec
+            The resulting wavefront specification at the output side of the optical element.
+        '''
+        raise NotImplementedError
+
+    def get_input_spec(self, output_spec):
+        '''Get the wavefront specification after a call to `backward()`.
+
+        Parameters
+        ----------
+        output_spec : WavefrontSpec
+            The wavefront specification at the output side of the optical element.
+
+        Returns
+        -------
+        WavefrontSpec
+            The resulting wavefront specification at the input side of the optical element.
+        '''
+        raise NotImplementedError
+
 class EmptyOpticalElement(OpticalElement):
     '''An empty optical element.
 

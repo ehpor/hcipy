@@ -132,6 +132,16 @@ class Wavefront(object):
         return self.electric_field.grid
 
     @property
+    def spec(self):
+        '''The wavefront specification of this wavefront.
+
+        This bundles the grid and wavelength of the wavefront, without the
+        electric-field data itself. It can be used to trace a propagation
+        through an optical system without doing any computation.
+        '''
+        return WavefrontSpec(self.grid, self.wavelength)
+
+    @property
     def I(self):  # noqa: N802
         '''The I-component of the Stokes vector as function of 2D position
         in the plane.

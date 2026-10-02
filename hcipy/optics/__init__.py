@@ -60,6 +60,7 @@ __all__ = [
     'TipTiltMirror',
     'SimpleVibration',
     'Wavefront',
+    'WavefrontSpec',
     'ThinLens',
     'Prism',
     'ThinPrism',

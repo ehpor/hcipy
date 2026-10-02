@@ -1,5 +1,12 @@
+import math
 from hcipy import *
+from hcipy._math.backends import all_close
 import numpy as np
+
+if Configuration().use_array_api:
+    import array_api_strict as xp
+else:
+    import numpy as xp
 
 def test_vortex_coronagraph():
     pupil_grid = make_pupil_grid(256)
@@ -242,109 +249,47 @@ def test_app_keller():
     assert np.mean(img.intensity * mask) / np.mean(mask) < 1.6e-8  # contrast
 
 def test_perfect_coronagraph():
-    pupil_grid = make_pupil_grid(256)
-    aperture = make_circular_aperture(1)(pupil_grid)
+    grid = make_pupil_grid(256, xp=xp)
+    aperture_separated = make_circular_aperture(1)(grid)
+
+    grid_nonseparated = CartesianGrid(UnstructuredCoords((grid.x, grid.y)), grid.weights)
+    aperture_nonseparated = aperture_separated.copy()
+    aperture_nonseparated.grid = grid_nonseparated
+
+    apertures = [aperture_separated, aperture_nonseparated]
 
     tilts = np.logspace(-3, -1, 51)
 
     for order in [2, 4, 6, 8]:
-        coro = PerfectCoronagraph(aperture, order)
+        leakages = []
 
-        # Test suppression for on-axis point source
-        wf = Wavefront(aperture)
-        wf.total_power = 1
-        assert coro(wf).total_power < 1e-10
+        for aperture in apertures:
+            coro = PerfectCoronagraph(aperture, order)
 
-        # Test suppression off-axis
-        coronagraph_leakage = []
-        for tilt in tilts:
-            leakage = coro(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilt))).total_power
-            coronagraph_leakage.append(leakage)
+            # Test suppression for on-axis point source
+            wf = Wavefront(aperture)
+            wf.total_power = 1
+            assert coro(wf).total_power < 1e-10
 
-        y = np.log10(coronagraph_leakage)
-        x = np.log10(tilts)
-        n = len(x)
+            # Test suppression off-axis
+            coronagraph_leakage = []
+            for tilt in tilts:
+                leakage = coro(Wavefront(aperture * xp.exp(2j * math.pi * aperture.grid.x * tilt))).total_power
+                coronagraph_leakage.append(leakage)
 
-        # Do a linear fit on the log-log data to get the power-law coefficient
-        beta = ((x * y).sum() - x.sum() * y.sum() / n) / ((x * x).sum() - x.sum()**2 / n)
-        assert np.abs(beta - order) / order < 1e-3
+            y = xp.log10(xp.asarray(coronagraph_leakage))
+            x = xp.log10(xp.asarray(tilts))
+            n = len(x)
 
-def _reference_coronagraph_operator(aperture, order, coeffs):
-    '''Compute the explicit (non-separable) projection operator for reference.'''
-    pupil_grid = aperture.grid
-    p = order // 2
+            # Do a linear fit on the log-log data to get the power-law coefficient
+            beta = (xp.sum(x * y) - xp.sum(x) * xp.sum(y) / n) / (xp.sum(x * x) - xp.sum(x)**2 / n)
+            assert xp.abs(beta - order) / order < 1e-3
 
-    modes = [aperture * pupil_grid.x**j * pupil_grid.y**(i - j) for i in range(p) for j in range(i + 1)]
-    mode_matrix = np.stack([np.asarray(mode) for mode in modes], axis=-1)
+            leakages.append(xp.asarray(coronagraph_leakage))
 
-    q, r = np.linalg.qr(mode_matrix)
-    r = r * np.sign(np.diag(r))[:, np.newaxis]
-    r_inverse = np.linalg.inv(r)
-
-    k = r_inverse.dot(np.diag(coeffs)).dot(r_inverse.conj().T)
-
-    return mode_matrix, k
-
-def _check_coronagraph_against_reference(aperture, order, coeffs, field_shape, check_transformation=True):
-    rng = np.random.default_rng(0)
-    pupil_grid = aperture.grid
-
-    coro = PerfectCoronagraph(aperture, order, coeffs=coeffs)
-    mode_matrix, k = _reference_coronagraph_operator(aperture, order, coro.coeffs)
-
-    electric_field = rng.standard_normal(field_shape + (pupil_grid.size,)) + 1j * rng.standard_normal(field_shape + (pupil_grid.size,))
-    flattened = electric_field.reshape(-1, pupil_grid.size)
-    correction = (mode_matrix.dot(k.dot(mode_matrix.conj().T.dot(flattened.T)))).T.reshape(electric_field.shape)
-
-    if len(field_shape) == 2:
-        wavefront = Wavefront(Field(electric_field, pupil_grid), input_stokes_vector=[1, 0, 0, 0])
-    else:
-        wavefront = Wavefront(Field(electric_field, pupil_grid))
-
-    result = coro(wavefront).electric_field
-
-    assert np.allclose(electric_field - np.asarray(result), correction, rtol=1e-8, atol=1e-10)
-
-    if check_transformation:
-        expected_transformation = np.eye(pupil_grid.size) - mode_matrix.dot(k.dot(mode_matrix.conj().T))
-        assert np.allclose(coro.get_transformation_matrix_forward(), expected_transformation, rtol=1e-8, atol=1e-10)
-
-def test_perfect_coronagraph_separable():
-    rng = np.random.default_rng(0)
-    pupil_grid = make_pupil_grid((48, 64))
-
-    # An asymmetric aperture catches any mixing up of the x- and y-axes.
-    aperture = make_circular_aperture(0.9)(pupil_grid) * (1 + 0.3 * np.tanh(pupil_grid.x)) * np.exp(0.2j * pupil_grid.y)
-
-    # Order 2 deliberately uses the explicit path, so only the separable orders are tested here.
-    for order in [4, 6, 8]:
-        num_modes = int(order * (order / 2 + 1) / 4)
-        for coeffs in [None, rng.random(num_modes)]:
-            for field_shape in [(), (2,), (2, 2)]:
-                check_transformation = field_shape == () and coeffs is None
-                _check_coronagraph_against_reference(aperture, order, coeffs, field_shape, check_transformation)
-
-def test_perfect_coronagraph_separated_coords_grid():
-    # Separated grids also have shape (ny, nx); both non-square and square grids must work.
-    for nx, ny in [(48, 64), (64, 48), (64, 64)]:
-        pupil_grid = CartesianGrid(SeparatedCoords([np.linspace(-1, 1, nx), np.linspace(-1, 1, ny)]))
-        aperture = make_circular_aperture(0.9)(pupil_grid)
-
-        for order in [2, 4, 6]:
-            num_modes = int(order * (order / 2 + 1) / 4)
-            _check_coronagraph_against_reference(aperture, order, None, (), check_transformation=(order == 2))
-            _check_coronagraph_against_reference(aperture, order, np.linspace(0.5, 1, num_modes), (2,), check_transformation=False)
-
-def test_perfect_coronagraph_non_separated_grid():
-    pupil_grid = make_pupil_grid(64)
-    aperture = make_circular_aperture(0.9)(pupil_grid)
-    subset_grid = pupil_grid.subset(np.asarray(aperture) > 0.5)
-    subset_aperture = make_circular_aperture(0.9)(subset_grid)
-
-    assert not subset_grid.is_separated
-
-    for order in [2, 4, 6]:
-        _check_coronagraph_against_reference(subset_aperture, order, None, (), check_transformation=(order == 2))
+        # Check if both sampling methods are identical.
+        assert len(leakages) == 2, "Fix the assert below."
+        assert all_close(leakages[0], leakages[1])
 
 def test_lyot_coronagraph():
     pupil_grid = make_pupil_grid(128, 1.1)

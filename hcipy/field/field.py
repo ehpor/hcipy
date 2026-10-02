@@ -687,6 +687,46 @@ class NewStyleField(FieldBase):
     trace = None
     transpose = None
 
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        '''Dispatch Numpy ufuncs to the field namespace.
+
+        This makes elementwise Numpy operations on a Field (for example
+        ``np.exp(field)`` or ``np.add(field, field)``) return a Field by
+        routing them to the equivalent Array API function in the field
+        namespace. Only ufuncs that correspond to an Array API function are
+        supported; all other ufuncs return NotImplemented. This behavior can be
+        disabled with the ``use_numpy_dispatch`` configuration option.
+        '''
+        if not Configuration().use_numpy_dispatch:
+            return NotImplemented
+
+        name = _numpy_ufunc_name(ufunc)
+
+        if name is None:
+            return NotImplemented
+
+        xp = self.__array_namespace__()
+        namespace_func = getattr(xp, name, None)
+
+        if namespace_func is None:
+            return NotImplemented
+
+        return namespace_func(*inputs, **kwargs)
+
+    def __array_function__(self, func, types, args, kwargs):
+        '''Dispatch Numpy functions to the field namespace.
+
+        This makes Numpy functions that correspond to an Array API function
+        (for example ``np.sum(field)``) return a Field. All other Numpy
+        functions return NotImplemented, so accidental execution of
+        non-Array-API Numpy functions on a Field is prevented. This behavior
+        can be disabled with the ``use_numpy_dispatch`` configuration option.
+        '''
+        if not Configuration().use_numpy_dispatch:
+            return NotImplemented
+
+        return _numpy_function_dispatch(self, func, args, kwargs)
+
     def __array__(self, dtype=None, copy=None):
         raise NotImplementedError("This Field cannot be used directly with Numpy. Use the Array API namespace instead.")
 
@@ -956,6 +996,83 @@ LINALG_MISC_FUNCS = (
     'slogdet',
     'svd',
 )
+
+_TOP_LEVEL_NAMES = (
+    frozenset(ONE_ARG_FUNCS)
+    | frozenset(TWO_ARG_FUNCS)
+    | frozenset(THREE_ARG_FUNCS)
+    | frozenset(MISC_FUNCS)
+)
+_LINALG_NAMES = (
+    frozenset(LINALG_ONE_ARG_FUNCS)
+    | frozenset(LINALG_TWO_ARG_FUNCS)
+    | frozenset(LINALG_MISC_FUNCS)
+)
+_FFT_NAMES = frozenset(FFT_FUNCS) | frozenset(FFT_FREQ_FUNCS)
+
+# Weirdly enough, matmul and vecdot are ufuncs in Numpy, so we need to include them in this set.
+_UFUNC_NAMES = frozenset(UNARY_OPS) | frozenset(BINARY_OPS) | frozenset({'matmul', 'vecdot'})
+
+def _numpy_ufunc_name(ufunc):
+    '''Return the Array API name for a Numpy ufunc, or None if unsupported.
+    '''
+    if ufunc.__name__ in _UFUNC_NAMES:
+        return ufunc.__name__
+
+    return None
+
+def _clean_numpy_kwargs(kwargs):
+    '''Remove Numpy-only keyword arguments that the Array API does not accept.
+
+    Numpy passes sentinel values for unset arguments (for example ``out=None``
+    and ``keepdims=np._NoValue``). These are dropped so that the call can be
+    forwarded to the Array API function. Any other argument that the Array API
+    function does not accept is left untouched, so that the call fails rather
+    than silently changing behavior.
+    '''
+    cleaned = {}
+
+    for key, value in kwargs.items():
+        if key == 'out' and value is None:
+            continue
+
+        if value is np._NoValue:
+            continue
+
+        cleaned[key] = value
+
+    return cleaned
+
+def _numpy_function_dispatch(field, func, args, kwargs):
+    '''Route a Numpy function to the corresponding Array API namespace function.
+    '''
+    xp = field.__array_namespace__()
+
+    module = getattr(func, '__module__', '')
+
+    if module.startswith('numpy.linalg'):
+        namespace, allowed_names = xp.linalg, _LINALG_NAMES
+    elif module.startswith('numpy.fft'):
+        namespace, allowed_names = xp.fft, _FFT_NAMES
+    elif module == 'numpy' or module.startswith('numpy.'):
+        namespace, allowed_names = xp, _TOP_LEVEL_NAMES
+    else:
+        return NotImplemented
+
+    name = func.__name__
+
+    if name not in allowed_names:
+        return NotImplemented
+
+    namespace_func = getattr(namespace, name, None)
+
+    if namespace_func is None:
+        return NotImplemented
+
+    try:
+        return namespace_func(*args, **_clean_numpy_kwargs(kwargs))
+    except TypeError:
+        return NotImplemented
 
 def _make_namespace(slots):
     class Namespace:

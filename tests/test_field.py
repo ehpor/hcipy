@@ -4,6 +4,7 @@ import numpy as np
 import copy
 import pytest
 import pickle
+from hcipy._math.backends import to_numpy
 
 def test_field_dot():
     grid = make_pupil_grid(2)
@@ -324,3 +325,60 @@ def test_field_pickle(Field):
     assert allclose(a, b)
     assert a.grid == b.grid
 
+
+@pytest.mark.parametrize('xp', ['numpy', 'array_api_strict', 'cupy'], indirect=True)
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
+@pytest.mark.parametrize('tensor_shape', [(), (2,), (2, 3)])
+def test_new_style_field_dict_serialization(xp, dtype, tensor_shape):
+    coords = RegularCoords(delta=(0.25, 0.5), dims=(4, 3), zero=(-0.75, 1), xp=xp)
+    weights = np.arange(1, 13, dtype=np.float64) / 8
+    grid = CartesianGrid(coords, weights=xp.asarray(weights))
+
+    shape = tensor_shape + (grid.size,)
+    expected = np.arange(np.prod(shape)).reshape(shape).astype(dtype)
+    if np.issubdtype(expected.dtype, np.complexfloating):
+        expected += 1j * (expected.real + 1)
+    data = xp.asarray(expected)
+    field = hcipy.field.NewStyleField(data, grid)
+
+    tree = field.to_dict()
+
+    assert type(tree['values']) is np.ndarray
+    assert tree['values'].dtype == expected.dtype
+    np.testing.assert_array_equal(tree['values'], expected)
+    assert tree['grid']['coordinate_system'] == 'cartesian'
+    assert tree['grid']['coords'] == {'type': 'regular', 'delta': [0.25, 0.5], 'dims': (4, 3), 'zero': [-0.75, 1.0], 'xp_name': xp.__name__}
+
+    restored = hcipy.field.NewStyleField.from_dict(tree)
+
+    assert type(restored.data) is np.ndarray
+    assert restored.data.dtype == expected.dtype
+    np.testing.assert_array_equal(restored.data, expected)
+    assert restored.tensor_shape == tensor_shape
+    assert restored.grid == grid
+    assert restored.grid.shape == (3, 4)
+    assert restored.grid.coords._xp is xp
+    np.testing.assert_array_equal(to_numpy(restored.grid.weights), weights)
+
+    # Export is explicit and does not enable implicit conversion of the Field.
+    assert field.data is data
+    assert field.grid is grid
+    with pytest.raises(NotImplementedError):
+        np.asarray(field)
+
+
+def test_default_field_dict_serialization():
+    grid = make_pupil_grid([4, 3])
+    values = np.arange(grid.size, dtype=np.complex128) * (1 + 2j)
+    field = Field(values, grid)
+
+    assert isinstance(field, hcipy.field.OldStyleField)
+    tree = field.to_dict()
+    restored = Field.from_dict(tree)
+
+    assert isinstance(restored, hcipy.field.OldStyleField)
+    assert tree['values'].dtype == values.dtype
+    assert restored.dtype == values.dtype
+    np.testing.assert_array_equal(tree['values'], values)
+    np.testing.assert_array_equal(restored, values)
+    assert restored.grid == grid

@@ -1,3 +1,5 @@
+import importlib
+
 import numpy as np
 from ..config import Configuration
 from .._math import fft as hcipy_fft
@@ -658,25 +660,29 @@ class NewStyleField(FieldBase):
 
         Field values are exported as a NumPy array with their original shape
         and dtype. For device-backed values, this explicitly transfers them
-        to host memory. Grid serialization is unchanged.
+        to host memory. The original array namespace is recorded by module
+        name so :meth:`from_dict` can restore the backend.
 
         Returns
         -------
         dict
             The created dict.
         '''
+        xp = array_namespace(self.data)
         return {
             "values": to_numpy(self.data),
-            "grid": self.grid.to_dict()
+            "grid": self.grid.to_dict(),
+            "xp_name": xp.__name__,
         }
 
     @classmethod
     def from_dict(cls, val):
         '''Create a Field from a dict.
 
-        Dictionaries produced by `to_dict()` contain NumPy field values.
-        The grid may restore its recorded array namespace; the original
-        backend of the field values is not restored.
+        Dictionaries produced by `to_dict()` contain host NumPy values plus
+        the original array namespace name. The values are reconstructed on that
+        backend's default device. Older dictionaries without backend metadata
+        restore as NumPy for backwards compatibility.
 
         Parameters
         ----------
@@ -690,7 +696,8 @@ class NewStyleField(FieldBase):
         '''
         from .grid import Grid
 
-        return cls(val['values'], Grid.from_dict(val['grid']))
+        xp = importlib.import_module(val.get("xp_name", "numpy"))
+        return cls(xp.asarray(val['values']), Grid.from_dict(val['grid']))
 
     trace = None
     transpose = None

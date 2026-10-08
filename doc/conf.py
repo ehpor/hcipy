@@ -46,15 +46,18 @@ intersphinx_mapping = {
     'matplotlib': ('https://matplotlib.org/stable', None),
 }
 
+# nbsphinx configuration
+nbsphinx_execute = 'always'
+nbsphinx_timeout = 600  # 10 minutes timeout per notebook
+nbsphinx_kernel_name = 'python3'
+
 numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
+# Note: nbsphinx automatically adds support for .ipynb files, so do not include them here.
 source_suffix = '.rst'
 
 # The master toctree document.

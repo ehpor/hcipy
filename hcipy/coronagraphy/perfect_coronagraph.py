@@ -28,16 +28,16 @@ class PerfectCoronagraph(OpticalElement):
     ----------
     aperture : Field
         The reference aperture. The perfect coronagraph is designed for this aperture.
-    order : integer
-        The order of the perfect coronagraph. This must be even.
+    order : scalar
+        The order of the perfect coronagraph. This can be any non-negative value; non-integer
+        values are used for fractional orders, which are implemented by partially suppressing the
+        highest-order modes [Guyon2006]_.
     coeffs : list or ndarray or None
         The coefficients that are used for subtraction. This allows for partial suppression of certain
         modes, which can be used to design perfect coronagraphs that are insensitive to stellar
         radius [Guyon2006]_. If it is None, all modes are completely suppressed.
     '''
     def __init__(self, aperture, order=2, coeffs=None):
-        assert order % 2 == 0, "The coronagraph order has to be even."
-
         self.pupil_grid = aperture.grid
         modes = []
 
@@ -45,7 +45,18 @@ class PerfectCoronagraph(OpticalElement):
             order = int(2 * np.ceil(0.5 * (np.sqrt(8 * len(coeffs) + 1) - 1)))
             self.coeffs = coeffs
         else:
-            self.coeffs = np.ones(int(order * (order / 2 + 1) / 4))
+            N = int(order // 2)
+            d = order / 2 - N
+
+            if abs(d) < 1e-6:
+                order = int(2 * N)
+                self.coeffs = np.ones(int(order * (order / 2 + 1) / 4))
+            else:
+                T = (d**2 + (2 * N + 1) * d) / (2 * (N + 1))
+
+                order = int(2 * N + 2)
+                self.coeffs = np.ones(int(order * (order / 2 + 1) / 4))
+                self.coeffs[-(order // 2):] = T
 
         for i in range(order // 2):
             for j in range(i + 1):

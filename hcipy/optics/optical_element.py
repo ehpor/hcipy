@@ -3,6 +3,8 @@ import inspect
 import collections
 import itertools
 
+from .wavefront import WavefrontSpec
+
 class OpticalElement(object):
     '''Base class for all optical elements.
 
@@ -149,6 +151,92 @@ class OpticalElement(object):
             An optical element that can handle wavefront with the specified input grid and wavelength.
         '''
         return self
+
+    def get_output_spec(self, input_spec):
+        '''Get the wavefront specification after a call to `forward()`.
+
+        Parameters
+        ----------
+        input_spec : WavefrontSpec
+            The wavefront specification at the input side of the optical element.
+
+        Returns
+        -------
+        WavefrontSpec
+            The resulting wavefront specification at the output side of the optical element.
+        '''
+        raise NotImplementedError
+
+    def get_input_spec(self, output_spec):
+        '''Get the wavefront specification after a call to `backward()`.
+
+        Parameters
+        ----------
+        output_spec : WavefrontSpec
+            The wavefront specification at the output side of the optical element.
+
+        Returns
+        -------
+        WavefrontSpec
+            The resulting wavefront specification at the input side of the optical element.
+        '''
+        raise NotImplementedError
+
+    def get_output_grid(self, input_grid, wavelength):
+        '''Calculate the output grid given an input grid and wavelength.
+
+        This is a projection of :meth:`get_output_spec` onto grids. It is kept as
+        a backwards-compatible convenience; new code should prefer
+        :meth:`get_output_spec` directly.
+
+        Parameters
+        ----------
+        input_grid : Grid
+            The input grid.
+        wavelength : scalar
+            The wavelength.
+
+        Returns
+        -------
+        Grid or None
+            The output grid, or `None` if the input is not accepted by this
+            optical element. Raises `NotImplementedError` if this optical element
+            does not declare an output mapping.
+        '''
+        output_spec = self.get_output_spec(WavefrontSpec(input_grid, wavelength))
+
+        if output_spec is None:
+            return None
+
+        return output_spec.grid
+
+    def get_input_grid(self, output_grid, wavelength):
+        '''Calculate the input grid given an output grid and wavelength.
+
+        This is a projection of :meth:`get_input_spec` onto grids. It is kept as
+        a backwards-compatible convenience; new code should prefer
+        :meth:`get_input_spec` directly.
+
+        Parameters
+        ----------
+        output_grid : Grid
+            The output grid.
+        wavelength : scalar
+            The wavelength.
+
+        Returns
+        -------
+        Grid or None
+            The input grid, or `None` if the output is not accepted by this
+            optical element. Raises `NotImplementedError` if this optical element
+            does not declare an input mapping.
+        '''
+        input_spec = self.get_input_spec(WavefrontSpec(output_grid, wavelength))
+
+        if input_spec is None:
+            return None
+
+        return input_spec.grid
 
 class EmptyOpticalElement(OpticalElement):
     '''An empty optical element.
@@ -702,6 +790,56 @@ class AgnosticOpticalElement(OpticalElement):
 
         return None
 
+    def get_output_spec(self, input_spec):
+        '''Get the wavefront specification after a call to `forward()`.
+
+        This bridges the wavefront-specification API to the legacy grid API, so
+        that all agnostic optical elements support wavefront specifications
+        without requiring changes to their implementations.
+
+        Parameters
+        ----------
+        input_spec : WavefrontSpec
+            The wavefront specification at the input side of the optical element.
+
+        Returns
+        -------
+        WavefrontSpec or None
+            The resulting wavefront specification at the output side of the
+            optical element, or `None` if the input is not accepted.
+        '''
+        output_grid = self.get_output_grid(input_spec.grid, input_spec.wavelength)
+
+        if output_grid is None:
+            return None
+
+        return input_spec.replace(grid=output_grid)
+
+    def get_input_spec(self, output_spec):
+        '''Get the wavefront specification after a call to `backward()`.
+
+        This bridges the wavefront-specification API to the legacy grid API, so
+        that all agnostic optical elements support wavefront specifications
+        without requiring changes to their implementations.
+
+        Parameters
+        ----------
+        output_spec : WavefrontSpec
+            The wavefront specification at the output side of the optical element.
+
+        Returns
+        -------
+        WavefrontSpec or None
+            The resulting wavefront specification at the input side of the
+            optical element, or `None` if the output is not accepted.
+        '''
+        input_grid = self.get_input_grid(output_spec.grid, output_spec.wavelength)
+
+        if input_grid is None:
+            return None
+
+        return output_spec.replace(grid=input_grid)
+
     def __getattr__(self, name):
         '''A redirect for instance data.
 
@@ -816,7 +954,7 @@ def _get_optical_element_input_grid(optical_element):
         grid = optical_element.get_input_grid(None, None)
         if grid is not None and not callable(grid):
             return grid
-    except (AttributeError, TypeError, ValueError):
+    except (AttributeError, TypeError, ValueError, NotImplementedError):
         pass
 
     for attribute_name in [

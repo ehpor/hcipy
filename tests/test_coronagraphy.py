@@ -1,5 +1,12 @@
+import math
 from hcipy import *
+from hcipy._math.backends import all_close
 import numpy as np
+
+if Configuration().use_array_api:
+    import array_api_strict as xp
+else:
+    import numpy as xp
 
 def test_vortex_coronagraph():
     pupil_grid = make_pupil_grid(256)
@@ -242,32 +249,47 @@ def test_app_keller():
     assert np.mean(img.intensity * mask) / np.mean(mask) < 1.6e-8  # contrast
 
 def test_perfect_coronagraph():
-    pupil_grid = make_pupil_grid(256)
-    aperture = make_circular_aperture(1)(pupil_grid)
+    grid = make_pupil_grid(256, xp=xp)
+    aperture_separated = make_circular_aperture(1)(grid)
+
+    grid_nonseparated = CartesianGrid(UnstructuredCoords((grid.x, grid.y)), grid.weights)
+    aperture_nonseparated = aperture_separated.copy()
+    aperture_nonseparated.grid = grid_nonseparated
+
+    apertures = [aperture_separated, aperture_nonseparated]
 
     tilts = np.logspace(-3, -1, 51)
 
     for order in [2, 4, 6, 8]:
-        coro = PerfectCoronagraph(aperture, order)
+        leakages = []
 
-        # Test suppression for on-axis point source
-        wf = Wavefront(aperture)
-        wf.total_power = 1
-        assert coro(wf).total_power < 1e-10
+        for aperture in apertures:
+            coro = PerfectCoronagraph(aperture, order)
 
-        # Test suppression off-axis
-        coronagraph_leakage = []
-        for tilt in tilts:
-            leakage = coro(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilt))).total_power
-            coronagraph_leakage.append(leakage)
+            # Test suppression for on-axis point source
+            wf = Wavefront(aperture)
+            wf.total_power = 1
+            assert coro(wf).total_power < 1e-10
 
-        y = np.log10(coronagraph_leakage)
-        x = np.log10(tilts)
-        n = len(x)
+            # Test suppression off-axis
+            coronagraph_leakage = []
+            for tilt in tilts:
+                leakage = coro(Wavefront(aperture * xp.exp(2j * math.pi * aperture.grid.x * tilt))).total_power
+                coronagraph_leakage.append(leakage)
 
-        # Do a linear fit on the log-log data to get the power-law coefficient
-        beta = ((x * y).sum() - x.sum() * y.sum() / n) / ((x * x).sum() - x.sum()**2 / n)
-        assert np.abs(beta - order) / order < 1e-3
+            y = xp.log10(xp.asarray(coronagraph_leakage))
+            x = xp.log10(xp.asarray(tilts))
+            n = len(x)
+
+            # Do a linear fit on the log-log data to get the power-law coefficient
+            beta = (xp.sum(x * y) - xp.sum(x) * xp.sum(y) / n) / (xp.sum(x * x) - xp.sum(x)**2 / n)
+            assert xp.abs(beta - order) / order < 1e-3
+
+            leakages.append(xp.asarray(coronagraph_leakage))
+
+        # Check if both sampling methods are identical.
+        assert len(leakages) == 2, "Fix the assert below."
+        assert all_close(leakages[0], leakages[1])
 
 def test_lyot_coronagraph():
     pupil_grid = make_pupil_grid(128, 1.1)

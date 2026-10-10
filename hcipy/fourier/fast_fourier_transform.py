@@ -5,10 +5,31 @@ import numpy as np
 from .fourier_transform import FourierTransform, ComputationalComplexity, _get_float_and_complex_dtype
 from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration
-import numexpr as ne
 import math
 
+from .._math.separable_filter import make_separable_filter
 from .._math import fft as _fft_module
+
+
+def _make_shift_filter(slopes, grid, internal_grid, cutout, f_shift, piston=0.0, scale=1):
+    '''Build a separable filter for one side of the FFT.
+
+    The filter is `exp(1j * (slope * x + const))` per axis, where `slope`
+    and `const` include the FFTshift-emulation phase: the emulation phase
+    `exp(1j * f_shift * x_internal)`, restricted to the cutout region of the
+    internal grid, is a phase ramp on `grid` with slope
+    `f_shift * delta_internal / delta` plus a constant phase. The constant
+    phase is folded into the factors; the piston phase is removed and
+    `scale` multiplies the first factor.
+    '''
+    ratio = internal_grid.delta / grid.delta
+    slopes = slopes + f_shift * ratio
+    starts = np.array([cutout[grid.ndim - 1 - a].start if cutout is not None else 0 for a in range(grid.ndim)])
+    consts = f_shift * (internal_grid.zero + starts * internal_grid.delta - ratio * grid.zero)
+
+    factors = [np.exp(1j * (slopes[a] * x + consts[a])) for a, x in enumerate(grid.separated_coords)]
+    factors[-1] = factors[-1] * np.exp(1j * piston) * scale
+    return make_separable_filter(tuple(reversed(factors)))
 
 def _allclose(a, b, rtol=1e-5, atol=1e-8):
     if len(a) != len(b):
@@ -153,38 +174,6 @@ def is_fft_grid(grid, input_grid):
         return False
     return True
 
-def _numexpr_grid_shift(shift, grid, out=None):
-    '''Fast evaluation of np.exp(1j * np.dot(shift, grid.coords)) using NumExpr.
-
-    Parameters
-    ----------
-    shift : array_like
-        The coordinates of the shift.
-    grid : Grid
-        The grid on which to calculate the shift.
-    out : array_like
-        An existing array where the outcome is going to be stored. This must
-        have the correct shape and dtype. No checking will be performed. If
-        this is None, a new array will be allocated and returned.
-
-    Returns
-    -------
-    array_like
-        The calculated complex shift array.
-    '''
-    variables = {}
-    command = []
-    coords = grid.coords
-
-    for i in range(grid.ndim):
-        variables[f'a{i}'] = shift[i]
-        variables[f'b{i}'] = coords[i]
-
-        command.append(f'a{i} * b{i}')
-
-    command = 'exp(1j * (' + '+'.join(command) + '))'
-    return ne.evaluate(command, local_dict=variables, out=out)
-
 class FastFourierTransform(FourierTransform):
     '''A Fast Fourier Transform (FFT) object.
 
@@ -239,7 +228,6 @@ class FastFourierTransform(FourierTransform):
         self.input_grid = input_grid
 
         self.shape_in = input_grid.shape
-        self.weights = input_grid.weights
         self.size = input_grid.size
         self.ndim = input_grid.ndim
 
@@ -274,51 +262,29 @@ class FastFourierTransform(FourierTransform):
             cutout_end = tuple(start + output_dim for start, output_dim in zip(cutout_start, self.shape_out))
             self.cutout_output = tuple([slice(start, end) for start, end in zip(cutout_start, cutout_end)])
 
-        # Calculate the shift array when the input grid was shifted compared to the native shift
-        # expected by the numpy FFT implementation.
+        # Emulate the FFTshifts by a phase multiplication in the opposite domain.
         xp = input_grid.xp
+        f_shift = input_grid.delta * (xp.asarray(self.internal_grid.dims) // 2) if emulate_fftshifts else 0
+        weights = xp.prod(input_grid.delta)
+
+        # Build the output-side filter, when the input grid was shifted compared
+        # to the native shift expected by the numpy FFT implementation. Remove
+        # the piston shift (remove central shift phase).
         center = input_grid.zero + input_grid.delta * (xp.asarray(input_grid.dims) // 2)
-        self.shift_input = _numexpr_grid_shift(-center, self.output_grid)
+        origins = [x_a[x_a.shape[0] // 2] for x_a in self.output_grid.separated_coords]
+        self.shift_input_filter = _make_shift_filter(
+            -center, self.output_grid, self.internal_grid, self.cutout_output, f_shift,
+            piston=np.dot(center, origins), scale=weights)
 
-        # Remove piston shift (remove central shift phase)
-        self.shift_input /= np.fft.ifftshift(self.shift_input.reshape(self.shape_out)).ravel()[0]
-
-        # Calculate the multiplication for emulating the FFTshift (if requested).
-        if emulate_fftshifts:
-            f_shift = input_grid.delta * (xp.asarray(self.internal_shape[::-1]) // 2)
-            fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
-
-            if self.cutout_output:
-                self.shift_input *= fftshift.reshape(self.internal_shape)[self.cutout_output].ravel()
-            else:
-                self.shift_input *= fftshift
-
-        # Apply weights for Fourier normalization.
-        self.shift_input *= self.weights
-
-        # Calculate the shift array when the output grid was shifted compared to the native shift
-        # expcted by the numpy FFT implementation.
+        # Build the input-side filter, when the output grid was shifted compared
+        # to the native shift expected by the numpy FFT implementation.
         shift = np.ones(self.input_grid.ndim) * shift
-        if np.allclose(shift, 0):
-            self.shift_output = 1
+        if emulate_fftshifts or not np.allclose(shift, 0):
+            piston = -np.dot(f_shift, self.internal_grid.zero) if emulate_fftshifts else 0.0
+            self.shift_output_filter = _make_shift_filter(
+                -shift, self.input_grid, self.internal_grid, self.cutout_input, f_shift, piston=piston)
         else:
-            self.shift_output = _numexpr_grid_shift(-shift, self.input_grid)
-
-        # Calculate the multiplication for emulating the FFTshift (if requested).
-        if emulate_fftshifts:
-            f_shift = self.input_grid.delta * (xp.asarray(self.internal_shape[::-1]) // 2)
-            fftshift = _numexpr_grid_shift(f_shift, self.internal_grid)
-
-            fftshift *= np.exp(-1j * np.dot(f_shift, self.internal_grid.zero))
-
-            if self.cutout_input:
-                self.shift_output *= fftshift.reshape(self.internal_shape)[self.cutout_input].ravel()
-            else:
-                self.shift_output *= fftshift
-
-        # Detect if we don't need to shift in the output plane (to avoid a multiplication in the operation).
-        if np.isscalar(self.shift_output) and np.allclose(self.shift_output, 1):
-            self.shift_output = None
+            self.shift_output_filter = None
 
     def _compute_internal_array(self, field):
         '''(Re)allocate the internal array for the given field if necessary.
@@ -358,16 +324,16 @@ class FastFourierTransform(FourierTransform):
         axes = tuple(range(-self.ndim, 0))
 
         if self.cutout_input is None:
-            self.internal_array[:] = field.reshape(tensor_shape + self.shape_in)
-
-            if self.shift_output is not None:
-                self.internal_array *= self.shift_output.reshape(self.shape_in)
+            if self.shift_output_filter is None:
+                self.internal_array[:] = field.reshape(tensor_shape + self.shape_in)
+            else:
+                self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=self.internal_array)
         else:
             self.internal_array[:] = 0
-            self.internal_array[c + self.cutout_input] = field.reshape(tensor_shape + self.shape_in)
-
-            if self.shift_output is not None:
-                self.internal_array[c + self.cutout_input] *= self.shift_output.reshape(self.shape_in)
+            if self.shift_output_filter is None:
+                self.internal_array[c + self.cutout_input] = field.reshape(tensor_shape + self.shape_in)
+            else:
+                self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=self.internal_array[c + self.cutout_input])
 
         if not self.emulate_fftshifts:
             self.internal_array = np.fft.ifftshift(self.internal_array, axes=axes)
@@ -378,11 +344,13 @@ class FastFourierTransform(FourierTransform):
             fft_array = np.fft.fftshift(fft_array, axes=axes)
 
         if self.cutout_output is None:
-            res = fft_array.reshape(tensor_shape + (-1,))
+            res = fft_array
         else:
-            res = fft_array[c + self.cutout_output].reshape(tensor_shape + (-1,))
+            res = fft_array[c + self.cutout_output]
 
-        res *= self.shift_input
+        res = self.shift_input_filter.apply_numpy(res, out=res)
+
+        res = res.reshape(tensor_shape + (-1,))
 
         float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
         return Field(res, self.output_grid).astype(complex_dtype, copy=False)
@@ -407,12 +375,10 @@ class FastFourierTransform(FourierTransform):
         axes = tuple(range(-self.ndim, 0))
 
         if self.cutout_output is None:
-            self.internal_array[:] = field.reshape(tensor_shape + self.shape_out)
-            self.internal_array /= self.shift_input.reshape(self.shape_out)
+            self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=self.internal_array, inverse=True)
         else:
             self.internal_array[:] = 0
-            self.internal_array[c + self.cutout_output] = field.reshape(tensor_shape + self.shape_out)
-            self.internal_array[c + self.cutout_output] /= self.shift_input.reshape(self.shape_out)
+            self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=self.internal_array[c + self.cutout_output], inverse=True)
 
         if not self.emulate_fftshifts:
             self.internal_array = np.fft.ifftshift(self.internal_array, axes=axes)
@@ -423,12 +389,14 @@ class FastFourierTransform(FourierTransform):
             fft_array = np.fft.fftshift(fft_array, axes=axes)
 
         if self.cutout_input is None:
-            res = fft_array.reshape(tensor_shape + (-1,))
+            res = fft_array
         else:
-            res = fft_array[c + self.cutout_input].reshape(tensor_shape + (-1,))
+            res = fft_array[c + self.cutout_input]
 
-        if self.shift_output is not None:
-                res /= self.shift_output
+        if self.shift_output_filter is not None:
+            res = self.shift_output_filter.apply_numpy(res, out=res, inverse=True)
+
+        res = res.reshape(tensor_shape + (-1,))
 
         float_dtype, complex_dtype = _get_float_and_complex_dtype(field.dtype)
         return Field(res, self.input_grid).astype(complex_dtype, copy=False)

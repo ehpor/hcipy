@@ -1,9 +1,12 @@
 import numpy as np
 from scipy.linalg import blas
 from .fourier_transform import FourierTransform, ComputationalComplexity, multiplex_for_tensor_fields, _get_float_and_complex_dtype
-from ..field import Field
+from ..field import Field, NewStyleField
 from ..config import Configuration
+from .._math.backends import array_namespace
 from .._math.fourier import dft_matrix_regular, dft_matrix_separated
+from array_api_compat import device
+
 
 class MatrixFourierTransform(FourierTransform):
     '''A Matrix Fourier Transform (MFT) object.
@@ -31,7 +34,18 @@ class MatrixFourierTransform(FourierTransform):
     allocate_intermediate : boolean or None
         Whether to reserve memory for the intermediate result for the MFT. This provides a 5-10%
         speedup in exchange for higher memory usage. If this is None, the choice will be determined
-        by the configuration file.
+        by the configuration file. This option applies to the legacy NumPy Field path. Array API
+        backends use portable matrix multiplication, whose intermediate allocation is controlled
+        by the backend.
+
+    Notes
+    -----
+    Explicit scalar :class:`~hcipy.field.NewStyleField` inputs keep matrix products on their
+    array backend. Grid geometry and matrix construction remain CPU setup operations; matrices
+    and quadrature weights are uploaded and cached by namespace, device and precision when
+    `precompute_matrices` is enabled. The legacy :class:`~hcipy.field.Field` path retains its
+    existing SciPy BLAS implementation. Backend tensor batching is deferred to the native
+    Fourier batching work.
 
     Raises
     ------
@@ -39,6 +53,7 @@ class MatrixFourierTransform(FourierTransform):
         If the input grid is not separated in Cartesian coordinates, if it's not one- or two-
         dimensional, or if the output grid has a different dimension than the input grid.
     '''
+
     def __init__(self, input_grid, output_grid, precompute_matrices=None, allocate_intermediate=None):
         self.check_if_supported(input_grid, output_grid)
 
@@ -62,15 +77,24 @@ class MatrixFourierTransform(FourierTransform):
 
         self.matrices_dtype = None
         self.intermediate_dtype = None
+        self._array_api_key = None
+        self._array_api_M = None
+        self._array_api_M1 = None
+        self._array_api_M2 = None
+        self._array_api_weights_input = None
+        self._array_api_weights_output = None
         self._remove_matrices()
 
-    def _compute_matrices(self, dtype):
+    def _compute_matrices(self, dtype, allocate_intermediate=True):
         '''Compute the matrices for the MFT using the specified data type.
 
         Parameters
         ---
         dtype : numpy data type
             The data type for which to calculate the matrices.
+        allocate_intermediate : boolean
+            Whether to allocate the legacy NumPy BLAS intermediate. Array API
+            operations leave intermediate allocation to the backend matmul.
         '''
         # Set the correct complex and real data type, based on the input data type.
         float_dtype, complex_dtype = _get_float_and_complex_dtype(dtype)
@@ -78,7 +102,7 @@ class MatrixFourierTransform(FourierTransform):
         # Check if the matrices need to be (re)calculated.
         if self.matrices_dtype != complex_dtype:
             self.weights_input = (self.input_grid.weights).astype(float_dtype, copy=False)
-            self.weights_output = (self.output_grid.weights / (2 * np.pi)**self.ndim).astype(float_dtype, copy=False)
+            self.weights_output = (self.output_grid.weights / (2 * np.pi) ** self.ndim).astype(float_dtype, copy=False)
 
             # If all input weights are all the same, use a scalar instead.
             if not np.isscalar(self.weights_input) and np.all(self.weights_input == self.weights_input[0]):
@@ -91,10 +115,16 @@ class MatrixFourierTransform(FourierTransform):
             if self.ndim == 1:
                 if self.input_grid.is_regular and self.output_grid.is_regular:
                     self.M = dft_matrix_regular(
-                        self.output_grid.zero[0], self.input_grid.zero[0],
-                        self.output_grid.delta[0], self.input_grid.delta[0],
-                        self.output_grid.size, self.input_grid.size,
-                        np, np.dtype(complex_dtype), conjugate=True)
+                        self.output_grid.zero[0],
+                        self.input_grid.zero[0],
+                        self.output_grid.delta[0],
+                        self.input_grid.delta[0],
+                        self.output_grid.size,
+                        self.input_grid.size,
+                        np,
+                        np.dtype(complex_dtype),
+                        conjugate=True,
+                    )
                 else:
                     self.M = dft_matrix_separated(self.output_grid.x, self.input_grid.x, conjugate=True).astype(complex_dtype, copy=False)
             elif self.ndim == 2:
@@ -103,11 +133,11 @@ class MatrixFourierTransform(FourierTransform):
                     delta_out, dims_out, zero_out = self.output_grid.regular_coords
 
                     self.M1 = dft_matrix_regular(
-                        zero_out[1], zero_in[1], delta_out[1], delta_in[1],
-                        dims_out[1], dims_in[1], np, np.dtype(complex_dtype), conjugate=True)
+                        zero_out[1], zero_in[1], delta_out[1], delta_in[1], dims_out[1], dims_in[1], np, np.dtype(complex_dtype), conjugate=True
+                    )
                     self.M2 = dft_matrix_regular(
-                        zero_in[0], zero_out[0], delta_in[0], delta_out[0],
-                        dims_in[0], dims_out[0], np, np.dtype(complex_dtype), conjugate=True)
+                        zero_in[0], zero_out[0], delta_in[0], delta_out[0], dims_in[0], dims_out[0], np, np.dtype(complex_dtype), conjugate=True
+                    )
                 else:
                     x, y = self.input_grid.coords.separated_coords
                     u, v = self.output_grid.coords.separated_coords
@@ -117,8 +147,8 @@ class MatrixFourierTransform(FourierTransform):
 
             self.matrices_dtype = complex_dtype
 
-        # Checki if the intermediate array needs to be (re)allocated.
-        if self.intermediate_dtype != complex_dtype:
+        # Check if the intermediate array needs to be (re)allocated.
+        if allocate_intermediate and self.intermediate_dtype != complex_dtype:
             if self.ndim == 2:
                 self.intermediate_array = np.empty((self.input_grid.shape[0], self.M2.shape[1]), dtype=complex_dtype)
 
@@ -137,11 +167,80 @@ class MatrixFourierTransform(FourierTransform):
                 self.M2 = None
 
             self.matrices_dtype = None
+            self._array_api_key = None
+            self._array_api_M = None
+            self._array_api_M1 = None
+            self._array_api_M2 = None
+            self._array_api_weights_input = None
+            self._array_api_weights_output = None
 
         if not self.allocate_intermediate:
             if self.ndim == 2:
                 self.intermediate_array = None
                 self.intermediate_dtype = None
+
+    def _compute_array_api_matrices(self, data):
+        '''Upload and cache matrices and weights for an Array API field.
+
+        Matrix geometry remains a CPU setup boundary. Cached arrays are keyed by
+        namespace name, device and precision so that an MFT can safely alternate
+        between supported backends and dtypes.
+        '''
+        xp = array_namespace(data)
+        complex_dtype = xp.complex64 if data.dtype in (xp.float32, xp.complex64) else xp.complex128
+        key = (xp.__name__, device(data), complex_dtype)
+        if self._array_api_key == key:
+            return xp, complex_dtype
+
+        target_device = device(data)
+        self._array_api_weights_input = xp.asarray(
+            self.weights_input, dtype=xp.float32 if complex_dtype == xp.complex64 else xp.float64, device=target_device
+        )
+        self._array_api_weights_output = xp.asarray(
+            self.weights_output, dtype=xp.float32 if complex_dtype == xp.complex64 else xp.float64, device=target_device
+        )
+        if self.ndim == 1:
+            self._array_api_M = xp.asarray(self.M, dtype=complex_dtype, device=target_device)
+            self._array_api_M1 = None
+            self._array_api_M2 = None
+        else:
+            self._array_api_M = None
+            self._array_api_M1 = xp.asarray(self.M1, dtype=complex_dtype, device=target_device)
+            self._array_api_M2 = xp.asarray(self.M2, dtype=complex_dtype, device=target_device)
+        self._array_api_key = key
+        return xp, complex_dtype
+
+    def _operation_array_api(self, field, inverse):
+        '''Transform a backend field using cached resident matrices.'''
+        data = field.data
+        xp = array_namespace(data)
+        cpu_dtype = np.dtype('complex64') if data.dtype in (xp.float32, xp.complex64) else np.dtype('complex128')
+        self._compute_matrices(cpu_dtype, allocate_intermediate=False)
+        xp, complex_dtype = self._compute_array_api_matrices(data)
+        data = xp.astype(data, complex_dtype, copy=False)
+        weights = self._array_api_weights_output if inverse else self._array_api_weights_input
+        data = data * weights
+
+        if self.ndim == 1:
+            matrix = self._array_api_M
+            if inverse:
+                result = xp.conj(xp.matmul(xp.permute_dims(matrix, (1, 0)), xp.conj(data)))
+            else:
+                result = xp.matmul(matrix, data)
+        else:
+            data = xp.reshape(data, self.shape_output if inverse else self.shape_input)
+            M1 = self._array_api_M1
+            M2 = self._array_api_M2
+            if inverse:
+                M1 = xp.permute_dims(M1, (1, 0))
+                M2 = xp.permute_dims(M2, (1, 0))
+                result = xp.conj(xp.matmul(M1, xp.matmul(xp.conj(data), M2)))
+            else:
+                result = xp.matmul(M1, xp.matmul(data, M2))
+            result = xp.reshape(result, (-1,))
+
+        self._remove_matrices()
+        return NewStyleField(result, self.input_grid if inverse else self.output_grid)
 
     @multiplex_for_tensor_fields
     def forward(self, field):
@@ -157,6 +256,9 @@ class MatrixFourierTransform(FourierTransform):
         Field
             The Fourier transform of the field.
         '''
+        if isinstance(field, NewStyleField):
+            return self._operation_array_api(field, inverse=False)
+
         self._compute_matrices(field.dtype)
         field = field.astype(self.matrices_dtype, copy=False)
 
@@ -203,6 +305,9 @@ class MatrixFourierTransform(FourierTransform):
         Field
             The inverse Fourier transform of the field.
         '''
+        if isinstance(field, NewStyleField):
+            return self._operation_array_api(field, inverse=True)
+
         self._compute_matrices(field.dtype)
         field = field.astype(self.matrices_dtype, copy=False)
 
@@ -318,7 +423,5 @@ class MatrixFourierTransform(FourierTransform):
         expected_execution_time = FourierTransform._predict_execution_time(num_operations, prediction_coefficients)
 
         return ComputationalComplexity(
-            num_multiplications=num_multiplications,
-            num_additions=num_additions,
-            expected_execution_time=expected_execution_time
+            num_multiplications=num_multiplications, num_additions=num_additions, expected_execution_time=expected_execution_time
         )

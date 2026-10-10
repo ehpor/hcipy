@@ -324,3 +324,80 @@ def test_field_pickle(Field):
     assert allclose(a, b)
     assert a.grid == b.grid
 
+def test_field_use_numpy_dispatch():
+    grid = make_pupil_grid(16)
+
+    a_data = np.arange(grid.size, dtype=float) / grid.size
+    a = hcipy.field.NewStyleField(a_data, grid)
+    B = hcipy.field.NewStyleField(np.eye(4), grid)
+
+    # Conversion to Numpy is intentionally disallowed.
+    with pytest.raises(NotImplementedError):
+        np.asarray(a)
+
+    # Elementwise Numpy functions return a Field with the same grid.
+    for result in [np.exp(a), np.sin(a), np.tanh(a), np.negative(a), np.square(a), np.real(a), np.imag(a), np.round(a)]:
+        assert is_field(result)
+        assert result.grid == grid
+
+    assert is_field(np.ones(grid.size) + a)
+    assert is_field(a + np.ones(grid.size))
+
+    # Reductions return a Field and match the underlying data.
+    for result in [np.sum(a), np.mean(a), np.std(a), np.max(a), np.argmax(a)]:
+        assert is_field(result)
+        assert result.grid == grid
+
+    assert allclose(np.sum(a), a_data.sum())
+    assert allclose(np.mean(a), a_data.mean())
+    assert allclose(np.sum(a, axis=0), a_data.sum(axis=0))
+
+    # Functions routed through the field namespace.
+    assert is_field(np.reshape(a, (2, grid.size // 2)))
+    assert is_field(np.stack([a, a]))
+    assert is_field(np.cumulative_sum(a))
+    assert is_field(np.fft.fft(a))
+    assert is_field(np.astype(a, np.float64))
+
+    svd = np.linalg.svd(B)
+    assert is_field(svd.U) and is_field(svd.S) and is_field(svd.Vh)
+
+    # Numpy functions that are not part of the Array API are rejected.
+    with pytest.raises(TypeError):
+        np.median(a)
+    with pytest.raises(TypeError):
+        np.isclose(a, a)
+    with pytest.raises(TypeError):
+        np.linalg.norm(a)
+
+    # Numpy names that differ from the Array API name are not aliased.
+    with pytest.raises(TypeError):
+        np.abs(a)
+    with pytest.raises(TypeError):
+        np.conj(a)
+    with pytest.raises(TypeError):
+        np.concatenate([a, a])
+    with pytest.raises(TypeError):
+        np.transpose(a)
+
+def test_field_use_numpy_dispatch_strict():
+    old_value = Configuration().use_numpy_dispatch
+
+    try:
+        Configuration().use_numpy_dispatch = False
+
+        grid = make_pupil_grid(16)
+        a = hcipy.field.NewStyleField(np.arange(grid.size, dtype=float), grid)
+
+        with pytest.raises(TypeError):
+            np.sum(a)
+
+        with pytest.raises(TypeError):
+            np.exp(a)
+
+        # The Array API namespace and the Field methods still work.
+        assert is_field(a.sum())
+        assert is_field(a.__array_namespace__().sum(a))
+    finally:
+        Configuration().use_numpy_dispatch = old_value
+

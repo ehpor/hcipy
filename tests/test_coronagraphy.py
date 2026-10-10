@@ -247,7 +247,7 @@ def test_perfect_coronagraph():
 
     tilts = np.logspace(-3, -1, 51)
 
-    for order in [2, 4, 6, 8]:
+    for order in [2, 2.5, 3.5, 4, 6, 6.5, 8]:
         coro = PerfectCoronagraph(aperture, order)
 
         # Test suppression for on-axis point source
@@ -267,7 +267,22 @@ def test_perfect_coronagraph():
 
         # Do a linear fit on the log-log data to get the power-law coefficient
         beta = ((x * y).sum() - x.sum() * y.sum() / n) / ((x * x).sum() - x.sum()**2 / n)
-        assert np.abs(beta - order) / order < 1e-3
+
+        # Fractional orders only partially suppress the highest-order modes, so the
+        # power-law coefficient is that of the previous even order, while the
+        # leakage amplitude is reduced.
+        even_order = 2 * (order // 2)
+        assert np.abs(beta - even_order) / even_order < 1e-2
+
+        # For fractional orders, the leakage amplitude should be between those of
+        # the neighbouring even orders.
+        if order % 2 != 0:
+            coro_even = PerfectCoronagraph(aperture, even_order)
+            coro_next = PerfectCoronagraph(aperture, even_order + 2)
+            leak = coro(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilts[-1]))).total_power
+            leak_even = coro_even(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilts[-1]))).total_power
+            leak_next = coro_next(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilts[-1]))).total_power
+            assert leak_even > leak > leak_next
 
 def test_lyot_coronagraph():
     pupil_grid = make_pupil_grid(128, 1.1)

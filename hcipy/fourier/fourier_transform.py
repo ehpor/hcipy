@@ -1,5 +1,6 @@
 import numpy as np
 from ..field import Field
+from ..dev import deprecated
 
 from dataclasses import dataclass
 import math
@@ -54,6 +55,7 @@ class FourierTransform(object):
         '''
         raise NotImplementedError()
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_forward(self):
         '''Returns the transformation matrix corresonding to the
         Fourier transform.
@@ -71,6 +73,7 @@ class FourierTransform(object):
 
         return A
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_backward(self):
         '''Returns the transformation matrix corresonding to the
         Fourier transform.

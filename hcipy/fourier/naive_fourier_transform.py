@@ -59,10 +59,10 @@ class NaiveFourierTransform(FourierTransform):
         '''The cached forward propagation matrix.
         '''
         if not self.precompute_matrices:
-            return self.get_transformation_matrix_forward()
+            return self._get_transformation_matrix_forward()
 
         if self._matrix_forward is None:
-            self._matrix_forward = self.get_transformation_matrix_forward()
+            self._matrix_forward = self._get_transformation_matrix_forward()
 
         return self._matrix_forward
 
@@ -71,12 +71,47 @@ class NaiveFourierTransform(FourierTransform):
         '''The cached backward propagation matrix.
         '''
         if not self.precompute_matrices:
-            return self.get_transformation_matrix_backward()
+            return self._get_transformation_matrix_backward()
 
         if self._matrix_backward is None:
-            self._matrix_backward = self.get_transformation_matrix_backward()
+            self._matrix_backward = self._get_transformation_matrix_backward()
 
         return self._matrix_backward
+
+    def _get_transformation_matrix_forward(self):
+        '''Returns the transformation matrix corresponding to the
+        Fourier transform.
+
+        Returns
+        -------
+        ndarray
+            A matrix representing the Fourier transform.
+        '''
+        coords_in = self.input_grid.as_('cartesian').coords
+        coords_out = self.output_grid.as_('cartesian').coords
+
+        A = np.exp(-1j * np.dot(np.array(coords_out).T, coords_in))
+        A *= self.input_grid.weights
+
+        return A
+
+    def _get_transformation_matrix_backward(self):
+        '''Returns the transformation matrix corresponding to the
+        Fourier transform.
+
+        Returns
+        -------
+        ndarray
+            A matrix representing the Fourier transform.
+        '''
+        coords_in = self.input_grid.as_('cartesian').coords
+        coords_out = self.output_grid.as_('cartesian').coords
+
+        A = np.exp(1j * np.dot(np.array(coords_in).T, coords_out))
+        A *= self.output_grid.weights
+        A /= (2 * np.pi)**self.input_grid.ndim
+
+        return A
 
     @multiplex_for_tensor_fields
     def forward(self, field):

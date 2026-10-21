@@ -71,6 +71,7 @@ class Configuration(BaseSettings):
 
     # Core
     use_array_api: bool = False
+    use_numpy_dispatch: bool = True
 
     # Internal class management
     _instance: ClassVar[Configuration | None] = None

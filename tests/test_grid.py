@@ -250,6 +250,19 @@ def test_cartesian_grid_transformations():
     assert all_close(rgrid.y, grid3d.x)
     assert all_close(rgrid.z, grid3d.z)
 
+def test_cartesian_grid_scale_validation():
+    grid = CartesianGrid(RegularCoords((1.0, 1.0), (3, 3), (0, 0), xp=xp))
+
+    with pytest.raises(ValueError, match='Scale'):
+        grid.scale(xp.asarray([2.0]))
+
+    grid.scale(xp.asarray([2.0, 3.0]))
+    assert all_close(grid.delta, xp.asarray([2.0, 3.0]))
+
+    grid1d = CartesianGrid(RegularCoords((1.0,), (8,), (0.0,), xp=xp))
+    grid1d.scale(xp.asarray([2.0]))
+    assert all_close(grid1d.delta, xp.asarray([2.0]))
+
 def test_polar_grid_transformations():
     grid = PolarGrid(UnstructuredCoords([[1.0, 2.0], [xp.pi / 4, xp.pi / 2]], xp=xp))
 

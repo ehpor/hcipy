@@ -339,6 +339,27 @@ def test_fourier_chained_zero_padding(dims, q, fov, shift_input):
     assert np.allclose(f_out, f_out_ref, atol=1e-10)
     assert np.allclose(f_in_roundtrip, f_in_ref, atol=1e-10)
 
+@pytest.mark.parametrize('dims', [[16, 16, 16], [15, 16, 17]])
+@pytest.mark.parametrize('q', [2, 3])
+@pytest.mark.parametrize('fov', [0.4, 0.8])
+def test_fourier_compact_multipass_3d(dims, q, fov):
+    # The compact multi-pass path only zeroes the bands its per-axis passes
+    # read. Check repeated 3-D calls against the single-pass path, including
+    # an output cutout that extends beyond the input cutout (fov=0.8, q=3).
+    np.random.seed(0)
+
+    input_grid = make_uniform_grid(dims, 1, has_center=True)
+    fft = FastFourierTransform(input_grid, q=q, fov=fov)
+    fft_ref = FastFourierTransform(input_grid, q=q, fov=fov)
+    fft_ref._use_multipass = False
+
+    for _ in range(2):
+        f_in = Field(np.random.randn(input_grid.size) + 1j * np.random.randn(input_grid.size), input_grid).astype(np.complex128)
+        f_out_ref = fft_ref.forward(f_in)
+
+        assert np.allclose(fft.forward(f_in), f_out_ref, atol=1e-10)
+        assert np.allclose(fft.backward(f_out_ref), fft_ref.backward(f_out_ref), atol=1e-10)
+
 def test_fourier_filter():
     for n in [16, 17, [16, 17]]:
         for q in [1, 2, 3]:

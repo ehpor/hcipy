@@ -7,7 +7,7 @@ import pickle
 from hcipy._math.random import make_random_generator
 from hcipy._math.backends import all_close
 
-if Configuration().core.use_new_style_fields:
+if Configuration().use_array_api:
     import array_api_strict as xp
 else:
     import numpy as xp

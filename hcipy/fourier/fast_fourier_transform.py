@@ -327,6 +327,47 @@ class FastFourierTransform(FourierTransform):
         # Avoid aliasing with the reused internal array.
         return arr.copy()
 
+    def _fft_multipass_compact(self, arr, forward=True):
+        '''Like `_fft_multipass`, but the final axis pass writes directly into
+        a freshly allocated array holding only the retained output cutout.
+
+        This avoids the full-size `arr.copy()` that `_fft_multipass` performs to
+        break the aliasing with the reused internal array. Only valid when the
+        retained output cutout is present.
+        '''
+        tensor_order = arr.ndim - self.ndim
+        cutin = self.cutout_input if forward else self.cutout_output
+        cout = self.cutout_output if forward else self.cutout_input
+
+        in_slices = tuple(cutin[j] if cutin is not None else slice(None) for j in range(self.ndim))
+        out_slices = tuple(cout[j] if cout is not None else slice(None) for j in range(self.ndim))
+
+        # All axes but the last, in place on the internal array.
+        for axis in range(self.ndim - 1):
+            idx = [slice(None)] * arr.ndim
+            for j in range(axis):
+                idx[tensor_order + j] = out_slices[j]
+            for j in range(axis + 1, self.ndim):
+                idx[tensor_order + j] = in_slices[j]
+            self._fft_inplace(arr[tuple(idx)], tensor_order + axis, forward)
+
+        # Last axis: transform the output-row block (full length along the last
+        # axis), then select the retained output cutout. The result is a new
+        # array, free of aliasing with the reused internal array.
+        last = self.ndim - 1
+        idx = [slice(None)] * arr.ndim
+        for j in range(last):
+            idx[tensor_order + j] = out_slices[j]
+        idx[tensor_order + last] = slice(None)
+        view = arr[tuple(idx)]
+
+        fft_func = _fft_module.fft if forward else _fft_module.ifft
+        transformed = fft_func(view, axis=tensor_order + last, overwrite_x=False)
+
+        crop = [slice(None)] * arr.ndim
+        crop[tensor_order + last] = out_slices[last]
+        return np.ascontiguousarray(transformed[tuple(crop)])
+
     def forward(self, field):
         '''Returns the forward Fourier transform of the :class:`Field` field.
 
@@ -353,15 +394,22 @@ class FastFourierTransform(FourierTransform):
                 internal_array[:] = 0
                 self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array[c + self.cutout_input])
 
-            if self._use_multipass:
-                fft_array = self._fft_multipass(internal_array, forward=True)
+            # The compact path returns the already-cropped output cutout and
+            # writes into a fresh array, so no crop is needed and no full
+            # internal array is copied.
+            compact = self._use_multipass and self.cutout_output is not None
+            if compact:
+                res = self._fft_multipass_compact(internal_array, forward=True)
             else:
-                fft_array = _fft_module.fftn(internal_array, axes=axes)
+                if self._use_multipass:
+                    fft_array = self._fft_multipass(internal_array, forward=True)
+                else:
+                    fft_array = _fft_module.fftn(internal_array, axes=axes)
 
-        if self.cutout_output is None:
-            res = fft_array
-        else:
-            res = fft_array[c + self.cutout_output]
+                if self.cutout_output is None:
+                    res = fft_array
+                else:
+                    res = fft_array[c + self.cutout_output]
 
         res = self.shift_input_filter.apply_numpy(res, out=res)
 
@@ -396,15 +444,22 @@ class FastFourierTransform(FourierTransform):
                 internal_array[:] = 0
                 self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=internal_array[c + self.cutout_output], inverse=True)
 
-            if self._use_multipass:
-                fft_array = self._fft_multipass(internal_array, forward=False)
+            # The compact path returns the already-cropped input cutout and
+            # writes into a fresh array, so no crop is needed and no full
+            # internal array is copied.
+            compact = self._use_multipass and self.cutout_input is not None
+            if compact:
+                res = self._fft_multipass_compact(internal_array, forward=False)
             else:
-                fft_array = _fft_module.ifftn(internal_array, axes=axes)
+                if self._use_multipass:
+                    fft_array = self._fft_multipass(internal_array, forward=False)
+                else:
+                    fft_array = _fft_module.ifftn(internal_array, axes=axes)
 
-        if self.cutout_input is None:
-            res = fft_array
-        else:
-            res = fft_array[c + self.cutout_input]
+                if self.cutout_input is None:
+                    res = fft_array
+                else:
+                    res = fft_array[c + self.cutout_input]
 
         res = self.shift_output_filter.apply_numpy(res, out=res, inverse=True)
 

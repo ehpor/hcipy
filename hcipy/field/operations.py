@@ -1,6 +1,7 @@
 from .field import Field, NewStyleField, is_field
 import numpy as np
 import string
+import warnings
 from .._math.einsum import einsum
 from .._math.backends import array_namespace, is_scalar
 
@@ -14,6 +15,80 @@ def _normalize_field(a):
         return a.data
     else:
         return a
+
+def _pop_deprecated_einsum_kwargs(kwargs):
+    _MISSING = object()
+
+    out = kwargs.pop('out', _MISSING)
+    dtype = kwargs.pop('dtype', _MISSING)
+    order = kwargs.pop('order', _MISSING)
+    casting = kwargs.pop('casting', _MISSING)
+
+    if out is _MISSING:
+        out = None
+    else:
+        warnings.warn(
+            "The 'out' keyword for field_einsum is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
+    if dtype is _MISSING:
+        dtype = None
+    else:
+        warnings.warn(
+            "The 'dtype' keyword for field_einsum is deprecated and will be removed in a future version. "
+            'The requested dtype is applied to the result.',
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
+    if order is not _MISSING:
+        warnings.warn(
+            "The 'order' keyword for field_einsum is deprecated and will be removed in a future version. "
+            'It is currently ignored.',
+            DeprecationWarning,
+            stacklevel=3,
+        )
+    if casting is not _MISSING:
+        warnings.warn(
+            "The 'casting' keyword for field_einsum is deprecated and will be removed in a future version. "
+            'It is currently ignored.',
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
+    return out, dtype
+
+def _apply_dtype(result, dtype):
+    if dtype is None:
+        return result
+
+    xp = array_namespace(result)
+    return xp.astype(result, dtype)
+
+def _assign_out(result, out):
+    data = _normalize_field(out)
+    result = _normalize_field(result)
+
+    try:
+        data[...] = result
+    except Exception as e:
+        raise TypeError("Could not write the result into the provided 'out' array.") from e
+
+    return data
+
+def _assign_out_field(result, out, grid):
+    data = _assign_out(result, out)
+
+    if isinstance(out, NewStyleField):
+        return Field(data, out.grid)
+    if is_field(out):
+        return data
+    if is_field(result):
+        return Field(data, grid)
+
+    return data
 
 def field_einsum(subscripts, *operands, **kwargs):
     '''Evaluates the Einstein summation convention on the operand fields.
@@ -36,35 +111,18 @@ def field_einsum(subscripts, *operands, **kwargs):
     operands : list of array_like or `Field`
         These are the arrays or fields for the operation.
     out : {ndarray, None}, optional
-        If provided, the calculation is done into this array.
+        Deprecated. If provided, the calculation is done into this array.
     dtype : {data-type, None}, optional
-        If provided, forces the calculation to use the data type specified.
-        Note that you may have to also give a more liberal `casting`
-        parameter to allow the conversions. Default is None.
+        Deprecated. If provided, forces the calculation to use the data type specified.
     order : {'C', 'F', 'A', 'K'}, optional
-        Controls the memory layout of the output. 'C' means it should
-        be C contiguous. 'F' means it should be Fortran contiguous,
-        'A' means it should be 'F' if the inputs are all 'F', 'C' otherwise.
-        'K' means it should be as close to the layout as the inputs as
-        is possible, including arbitrarily permuted axes.
-        Default is 'K'.
+        Deprecated and ignored. This keyword will be removed in a future version.
     casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
-        Controls what kind of data casting may occur.  Setting this to
-        'unsafe' is not recommended, as it can adversely affect accumulations.
-
-            * 'no' means the data types should not be cast at all.
-            * 'equiv' means only byte-order changes are allowed.
-            * 'safe' means only casts which can preserve values are allowed.
-            * 'same_kind' means only safe casts or casts within a kind,
-                like float64 to float32, are allowed.
-            * 'unsafe' means any data conversions may be done.
-
-        Default is 'safe'.
+        Deprecated and ignored. This keyword will be removed in a future version.
     optimize : {False, True, 'greedy', 'optimal'}, optional
         Controls if intermediate optimization should occur. No optimization
         will occur if False and True will default to the 'greedy' algorithm.
         Also accepts an explicit contraction list from the ``np.einsum_path``
-        function. See ``np.einsum_path`` for more details. Default is False.
+        function. See ``np.einsum_path`` for more details. Default is True.
 
     Returns
     -------
@@ -77,9 +135,19 @@ def field_einsum(subscripts, *operands, **kwargs):
         If all of the fields don't have    the same grid size. If the number of
         operands is not equal to the number of subscripts specified.
     '''
+    out, dtype = _pop_deprecated_einsum_kwargs(kwargs)
+
     operand_is_field = [is_field(o) for o in operands]
     if not any(operand_is_field):
-        return einsum(subscripts, *operands, **kwargs)
+        res = _apply_dtype(einsum(subscripts, *operands, **kwargs), dtype)
+
+        if out is not None:
+            res = _assign_out(res, out)
+
+            if isinstance(out, NewStyleField):
+                return Field(res, out.grid)
+
+        return res
 
     field_sizes = [o.grid.size for i, o in enumerate(operands) if operand_is_field[i]]
     element_sizes = [o.shape[-1] for i, o in enumerate(operands) if operand_is_field[i]]
@@ -114,10 +182,7 @@ def field_einsum(subscripts, *operands, **kwargs):
 
     unwrapped = [_normalize_field(o) if operand_is_field[i] else o for i, o in enumerate(operands)]
 
-    if 'out' in kwargs:
-        kwargs['out'] = _normalize_field(kwargs['out'])
-
-    res = einsum(subscripts_new, *unwrapped, **kwargs)
+    res = _apply_dtype(einsum(subscripts_new, *unwrapped, **kwargs), dtype)
 
     grid = None
     for o in operands:
@@ -125,8 +190,9 @@ def field_einsum(subscripts, *operands, **kwargs):
             grid = o.grid
             break
 
-    if 'out' in kwargs:
-        kwargs['out'] = Field(res, grid)
+    if out is not None:
+        res = _assign_out(res, out)
+
     return Field(res, grid)
 
 def field_dot(a, b, out=None):
@@ -139,7 +205,7 @@ def field_dot(a, b, out=None):
     b : Field or array_like
         Right argument of the dot product.
     out : Field or array_like
-        If provided, the calculation is done into this array.
+        Deprecated. If provided, the calculation is done into this array.
 
     Returns
     -------
@@ -153,8 +219,14 @@ def field_dot(a, b, out=None):
         if out is None:
             return a * b
         else:
-            xp = array_namespace(a, b)
-            return xp.multiply(a, b, out=out)
+            warnings.warn(
+                "The 'out' keyword for field_dot is deprecated and will be removed in a future version.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            res = _assign_out(a * b, out)
+
+            return Field(res, out.grid) if isinstance(out, NewStyleField) else res
     else:
         amat = a.ndim > 1
 
@@ -164,8 +236,14 @@ def field_dot(a, b, out=None):
         if out is None:
             return a * b
         else:
-            xp = array_namespace(a, b)
-            return xp.multiply(a, b, out=out)
+            warnings.warn(
+                "The 'out' keyword for field_dot is deprecated and will be removed in a future version.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            res = _assign_out(a * b, out)
+
+            return Field(res, out.grid) if isinstance(out, NewStyleField) else res
     else:
         bmat = b.ndim > 1
 
@@ -183,7 +261,14 @@ def field_dot(a, b, out=None):
     if out is None:
         return field_einsum(subscripts, a, b)
     else:
-        return field_einsum(subscripts, a, b, out=out)
+        warnings.warn(
+            "The 'out' keyword for field_dot is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        res = field_einsum(subscripts, a, b)
+
+        return _assign_out_field(res, out, getattr(res, 'grid', None))
 
 def field_trace(a, out=None):
     '''Take the trace of a tensor field.
@@ -193,7 +278,7 @@ def field_trace(a, out=None):
     a : Field
         The field of which to take the trace.
     out : Field or None
-        If given, a location where the output is stored. This must have the correct shape.
+        Deprecated. If given, a location where the output is stored. This must have the correct shape.
 
     Returns
     -------
@@ -203,7 +288,14 @@ def field_trace(a, out=None):
     if out is None:
         return field_einsum('ii', a)
     else:
-        return field_einsum('ii', a, out=out)
+        warnings.warn(
+            "The 'out' keyword for field_trace is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        res = field_einsum('ii', a)
+
+        return _assign_out_field(res, out, getattr(res, 'grid', None))
 
 def field_inverse_tikhonov(f, rcond=1e-15):
     '''Invert a tensor field of order 2 using Tikhonov regularization.

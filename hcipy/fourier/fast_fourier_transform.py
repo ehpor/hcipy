@@ -286,6 +286,47 @@ class FastFourierTransform(FourierTransform):
         self.shift_output_filter = _make_shift_filter(
             -shift, self.input_grid, self.internal_grid, self.cutout_input, f_shift, piston=piston)
 
+        # Use the multi-pass FFT: one 1D FFT per axis over the views of the
+        # internal array that hold nonzero data. The single-pass FFT is kept
+        # for comparison and performance tuning.
+        self._use_multipass = True
+
+    @staticmethod
+    def _fft_inplace(view, axis, forward):
+        '''Transform `view` along `axis` in place.
+        '''
+        fft_func = _fft_module.fft if forward else _fft_module.ifft
+
+        fft_array = fft_func(view, axis=axis, overwrite_x=True)
+
+        if not np.shares_memory(fft_array, view):
+            view[...] = fft_array
+
+    def _fft_multipass(self, arr, forward=True):
+        '''An N-D FFT over the last `self.ndim` axes, as one 1D FFT per axis in place.
+
+        Because FFTshifts are emulated, the retained input and output regions
+        are single contiguous blocks, so each axis transform can be applied to
+        a single view.
+        '''
+        tensor_order = arr.ndim - self.ndim
+        cutin = self.cutout_input if forward else self.cutout_output
+        cout = self.cutout_output if forward else self.cutout_input
+
+        in_slices = tuple(cutin[j] if cutin is not None else slice(None) for j in range(self.ndim))
+        out_slices = tuple(cout[j] if cout is not None else slice(None) for j in range(self.ndim))
+
+        for axis in range(self.ndim):
+            idx = [slice(None)] * arr.ndim
+            for j in range(axis):
+                idx[tensor_order + j] = out_slices[j]
+            for j in range(axis + 1, self.ndim):
+                idx[tensor_order + j] = in_slices[j]
+            self._fft_inplace(arr[tuple(idx)], tensor_order + axis, forward)
+
+        # Avoid aliasing with the reused internal array.
+        return arr.copy()
+
     def forward(self, field):
         '''Returns the forward Fourier transform of the :class:`Field` field.
 
@@ -312,7 +353,10 @@ class FastFourierTransform(FourierTransform):
                 internal_array[:] = 0
                 self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array[c + self.cutout_input])
 
-            fft_array = _fft_module.fftn(internal_array, axes=axes)
+            if self._use_multipass:
+                fft_array = self._fft_multipass(internal_array, forward=True)
+            else:
+                fft_array = _fft_module.fftn(internal_array, axes=axes)
 
         if self.cutout_output is None:
             res = fft_array
@@ -352,7 +396,10 @@ class FastFourierTransform(FourierTransform):
                 internal_array[:] = 0
                 self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=internal_array[c + self.cutout_output], inverse=True)
 
-            fft_array = _fft_module.ifftn(internal_array, axes=axes)
+            if self._use_multipass:
+                fft_array = self._fft_multipass(internal_array, forward=False)
+            else:
+                fft_array = _fft_module.ifftn(internal_array, axes=axes)
 
         if self.cutout_input is None:
             res = fft_array

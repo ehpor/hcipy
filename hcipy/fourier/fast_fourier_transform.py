@@ -386,6 +386,39 @@ class FastFourierTransform(FourierTransform):
         crop[tensor_order + last] = out_slices[last]
         return np.ascontiguousarray(transformed[tuple(crop)])
 
+    def _zero_multipass_bands(self, arr, cutin, cout):
+        '''Zero only the regions the compact multi-pass FFT reads but that are
+        not filled with input data.
+
+        For axis `a`, the pass reads the output range of the axes before `a`,
+        all of axis `a`, and the input range of the axes after `a`. Only the
+        part of axis `a` outside `cutin[a]` needs to be zero; the part inside
+        holds input data (or data written by a previous pass).
+        '''
+        d = self.ndim
+        tensor_order = arr.ndim - d
+
+        for a in range(d):
+            idx = [slice(None)] * arr.ndim
+            for j in range(a):
+                idx[tensor_order + j] = cout[j]
+            for j in range(a + 1, d):
+                idx[tensor_order + j] = cutin[j]
+
+            start = cutin[a].start
+            stop = cutin[a].stop
+            axis = tensor_order + a
+
+            if start > 0:
+                left = list(idx)
+                left[axis] = slice(0, start)
+                arr[tuple(left)] = 0
+
+            if stop < arr.shape[axis]:
+                right = list(idx)
+                right[axis] = slice(stop, None)
+                arr[tuple(right)] = 0
+
     def _chain_available(self):
         '''Whether the chained zero-padding FFT path may be used.
 
@@ -497,17 +530,21 @@ class FastFourierTransform(FourierTransform):
             res = self._fft_chain_forward(field, tensor_shape)
             return Field(res, self.output_grid).astype(complex_dtype, copy=False)
 
+        # The compact path returns the already-cropped output cutout and
+        # writes into a fresh array, so no crop is needed and no full
+        # internal array is copied.
+        compact = self._use_multipass and self.cutout_output is not None
+
         with buffer_pool.empty(tensor_shape + self.internal_shape, complex_dtype) as internal_array:
             if self.cutout_input is None:
                 self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array)
             else:
-                internal_array[:] = 0
+                if not compact:
+                    internal_array[:] = 0
                 self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array[c + self.cutout_input])
+                if compact:
+                    self._zero_multipass_bands(internal_array, self.cutout_input, self.cutout_output)
 
-            # The compact path returns the already-cropped output cutout and
-            # writes into a fresh array, so no crop is needed and no full
-            # internal array is copied.
-            compact = self._use_multipass and self.cutout_output is not None
             if compact:
                 res = self._fft_multipass_compact(internal_array, forward=True)
             else:
@@ -551,17 +588,21 @@ class FastFourierTransform(FourierTransform):
             res = self._fft_chain_backward(field, tensor_shape)
             return Field(res, self.input_grid).astype(complex_dtype, copy=False)
 
+        # The compact path returns the already-cropped input cutout and
+        # writes into a fresh array, so no crop is needed and no full
+        # internal array is copied.
+        compact = self._use_multipass and self.cutout_input is not None
+
         with buffer_pool.empty(tensor_shape + self.internal_shape, complex_dtype) as internal_array:
             if self.cutout_output is None:
                 self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=internal_array, inverse=True)
             else:
-                internal_array[:] = 0
+                if not compact:
+                    internal_array[:] = 0
                 self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=internal_array[c + self.cutout_output], inverse=True)
+                if compact:
+                    self._zero_multipass_bands(internal_array, self.cutout_output, self.cutout_input)
 
-            # The compact path returns the already-cropped input cutout and
-            # writes into a fresh array, so no crop is needed and no full
-            # internal array is copied.
-            compact = self._use_multipass and self.cutout_input is not None
             if compact:
                 res = self._fft_multipass_compact(internal_array, forward=False)
             else:

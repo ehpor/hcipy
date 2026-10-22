@@ -98,11 +98,10 @@ def is_scalar(element):
     '''
     ndim = getattr(element, 'ndim', None)
     if ndim is None:
-        # Plain Python scalar, no array structure
-        return True
+        # Plain Python scalar, no array structure.
+        return np.isscalar(element)
 
-    shape = getattr(element, 'shape', ())
-    return all(n == 1 for n in shape)
+    return ndim == 0
 
 def all_close(a, b, *, rtol=1e-5, atol=1e-8):
     '''Whether the two arrays are elementwise equal within tolerance.

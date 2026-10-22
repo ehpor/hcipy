@@ -78,6 +78,15 @@ def test_field_trace():
 
     assert all_close(B, BB)
 
+def test_field_dot_singleton_array():
+    grid = make_pupil_grid(2, xp=xp)
+    b = Field(xp.ones((1, grid.size)), grid)
+    a = xp.asarray([2.0])
+
+    result = field_dot(a, b)
+
+    assert result.shape == (grid.size,)
+
 def test_field_inv():
     grid = make_pupil_grid(2, xp=xp)
 

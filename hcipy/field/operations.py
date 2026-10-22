@@ -326,9 +326,11 @@ def field_inverse_tikhonov(f, rcond=1e-15):
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
         xp = array_namespace(_normalize_field(f))
-        res = xp.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
-        for i in range(f.grid.size):
-            res[..., i] = xp.asarray(inverse_tikhonov(_normalize_field(f[..., i]), rcond))
+        inverses = [
+            xp.asarray(inverse_tikhonov(_normalize_field(f[..., i]), rcond))
+            for i in range(f.grid.size)
+        ]
+        res = xp.stack(inverses, axis=-1)
         return Field(res, f.grid)
     else:
         return inverse_tikhonov(f, rcond)
@@ -363,9 +365,11 @@ def field_inverse_truncated(f, rcond=1e-15):
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
         xp = array_namespace(_normalize_field(f))
-        res = xp.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
-        for i in range(f.grid.size):
-            res[..., i] = xp.asarray(inverse_truncated(_normalize_field(f[..., i]), rcond))
+        inverses = [
+            xp.asarray(inverse_truncated(_normalize_field(f[..., i]), rcond))
+            for i in range(f.grid.size)
+        ]
+        res = xp.stack(inverses, axis=-1)
         return Field(res, f.grid)
     else:
         return inverse_truncated(f, rcond)
@@ -400,9 +404,11 @@ def field_inverse_truncated_modal(f, num_modes):
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
         xp = array_namespace(_normalize_field(f))
-        res = xp.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
-        for i in range(f.grid.size):
-            res[..., i] = xp.asarray(inverse_truncated_modal(_normalize_field(f[..., i]), num_modes))
+        inverses = [
+            xp.asarray(inverse_truncated_modal(_normalize_field(f[..., i]), num_modes))
+            for i in range(f.grid.size)
+        ]
+        res = xp.stack(inverses, axis=-1)
         return Field(res, f.grid)
     else:
         return inverse_truncated_modal(f, num_modes)

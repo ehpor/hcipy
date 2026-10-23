@@ -305,6 +305,61 @@ def test_fourier_transform_tensor_fields(tensor_shape, dims):
         assert f_in_roundtrip.grid == f_in_roundtrip_ref.grid
         assert np.allclose(f_in_roundtrip, f_in_roundtrip_ref)
 
+@pytest.mark.parametrize('dims', [32, 33, [32, 48], [33, 49]])
+@pytest.mark.parametrize('q', [2, 4])
+@pytest.mark.parametrize('fov', [0.125, 0.0625])
+@pytest.mark.parametrize('shift_input', [0, 0.1])
+def test_fourier_chained_zero_padding(dims, q, fov, shift_input):
+    # Heavily cropped FFTs use the chained zero-padding path. Check that it
+    # agrees with the compact multi-pass path, both forward and backward.
+    np.random.seed(0)
+
+    input_grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input)
+    f_in = Field(np.random.randn(input_grid.size) + 1j * np.random.randn(input_grid.size), input_grid).astype(np.complex128)
+
+    fft = FastFourierTransform(input_grid, q=q, fov=fov)
+
+    # By default the chain is used for 1-D grids, and for 2-D grids only with
+    # strong zero-padding and heavy cropping.
+    if fft.ndim == 1 or q >= 4:
+        assert fft._chain_available()
+
+    # Reference via the compact multi-pass path.
+    fft._use_chain = False
+    f_out_ref = fft.forward(f_in)
+    f_in_ref = fft.backward(f_out_ref)
+
+    # Chained zero-padding path.
+    fft._use_chain = True
+    fft._chain_fov_threshold = 1.0
+    fft._chain_input_size_threshold = 1.0
+    f_out = fft.forward(f_in)
+    f_in_roundtrip = fft.backward(f_out)
+
+    assert np.allclose(f_out, f_out_ref, atol=1e-10)
+    assert np.allclose(f_in_roundtrip, f_in_ref, atol=1e-10)
+
+@pytest.mark.parametrize('dims', [[16, 16, 16], [15, 16, 17]])
+@pytest.mark.parametrize('q', [2, 3])
+@pytest.mark.parametrize('fov', [0.4, 0.8])
+def test_fourier_compact_multipass_3d(dims, q, fov):
+    # The compact multi-pass path only zeroes the bands its per-axis passes
+    # read. Check repeated 3-D calls against the single-pass path, including
+    # an output cutout that extends beyond the input cutout (fov=0.8, q=3).
+    np.random.seed(0)
+
+    input_grid = make_uniform_grid(dims, 1, has_center=True)
+    fft = FastFourierTransform(input_grid, q=q, fov=fov)
+    fft_ref = FastFourierTransform(input_grid, q=q, fov=fov)
+    fft_ref._use_multipass = False
+
+    for _ in range(2):
+        f_in = Field(np.random.randn(input_grid.size) + 1j * np.random.randn(input_grid.size), input_grid).astype(np.complex128)
+        f_out_ref = fft_ref.forward(f_in)
+
+        assert np.allclose(fft.forward(f_in), f_out_ref, atol=1e-10)
+        assert np.allclose(fft.backward(f_out_ref), fft_ref.backward(f_out_ref), atol=1e-10)
+
 def test_fourier_filter():
     for n in [16, 17, [16, 17]]:
         for q in [1, 2, 3]:

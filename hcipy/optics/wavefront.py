@@ -2,13 +2,35 @@ import copy
 import numpy as np
 import numexpr as ne
 
-from ..field import Field, field_dot, field_kron
+import dataclasses
+from typing import Optional
+
+from ..field import Field, field_dot, field_kron, Grid
 
 _U_matrix = 1 / np.sqrt(2) * np.array([
     [1, 0, 0, 1],
     [1, 0, 0, -1],
     [0, 1, 1, 0],
     [0, 1j, -1j, 0]])
+
+@dataclasses.dataclass(frozen=True)
+class WavefrontSpec:
+    '''The specification of a Wavefront.
+    '''
+    grid: Optional[Grid]
+    wavelength: Optional[float]
+
+    def replace(self, **changes):
+        '''Get a new wavefront specification with certain attributes changed.
+
+        TODO: Look at how to specify kwargs in docstring.
+
+        Returns
+        -------
+        WavefrontSpec
+            The new wavefront specification.
+        '''
+        return dataclasses.replace(self, **changes)
 
 # TODO Should add a pilot Gaussian beam with each Wavefront
 
@@ -108,6 +130,16 @@ class Wavefront(object):
         '''The grid on which the electric field is defined.
         '''
         return self.electric_field.grid
+
+    @property
+    def spec(self):
+        '''The wavefront specification of this wavefront.
+
+        This bundles the grid and wavelength of the wavefront, without the
+        electric-field data itself. It can be used to trace a propagation
+        through an optical system without doing any computation.
+        '''
+        return WavefrontSpec(self.grid, self.wavelength)
 
     @property
     def I(self):  # noqa: N802

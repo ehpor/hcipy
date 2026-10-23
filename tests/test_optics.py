@@ -555,6 +555,44 @@ def test_magnifier():
         assert np.abs(wf_forward.total_power - 1) < 1e-12
         assert hash(wf_forward.electric_field.grid) == hash(magnifier.get_output_grid(wf.electric_field.grid, 1))
 
+def test_wavefront_spec():
+    grid = make_pupil_grid(16)
+    wf = Wavefront(grid.ones(), wavelength=0.5)
+
+    spec = wf.spec
+    assert isinstance(spec, WavefrontSpec)
+    assert spec.grid is wf.grid
+    assert spec.wavelength == 0.5
+
+    replaced = spec.replace(wavelength=1.0)
+    assert replaced.wavelength == 1.0
+    assert replaced.grid is spec.grid
+
+def test_spec_grid_projection():
+    grid = make_pupil_grid(16)
+    spec = WavefrontSpec(grid, 1.0)
+
+    magnifier = Magnifier(2.0)
+    assert magnifier.get_output_grid(grid, 1.0) == magnifier.get_output_spec(spec).grid
+    assert magnifier.get_input_grid(grid, 1.0) == magnifier.get_input_spec(spec).grid
+
+def test_agnostic_bridge_to_spec():
+    pupil_grid = make_pupil_grid(16)
+    focal_grid = make_focal_grid(2, 8)
+
+    propagator = FraunhoferPropagator(pupil_grid, focal_grid)
+
+    output_spec = propagator.get_output_spec(WavefrontSpec(pupil_grid, 1.0))
+    assert output_spec.grid is focal_grid
+    assert output_spec.wavelength == 1.0
+
+    input_spec = propagator.get_input_spec(WavefrontSpec(focal_grid, 1.0))
+    assert input_spec.grid is pupil_grid
+
+def test_undeclared_spec_raises():
+    with pytest.raises(NotImplementedError):
+        OpticalElement().get_output_spec(WavefrontSpec(make_pupil_grid(16), 1.0))
+
 @pytest.mark.xfail(reason='known difficult bug; fix in progress')
 def test_pickle_optical_element():
     import dill as pickle

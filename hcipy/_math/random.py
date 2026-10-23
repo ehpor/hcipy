@@ -4,12 +4,12 @@ import math
 
 
 def make_random_generator(xp, seed=None):
-    '''Create a RandomGenerator instance for the given array API namespace.
+    '''Create a RandomGenerator instance for the given array namespace.
 
     Parameters
     ----------
-    xp : object
-        The array API namespace (e.g., numpy, torch, jax, cupy).
+    xp : module
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
     seed : int, optional
         The seed for the random number generator, by default None.
 

@@ -272,7 +272,7 @@ def test_perfect_coronagraph():
             wf.total_power = 1
 
             if order == 0:
-                assert abs(coro(wf).total_power / 1) < 1e-6
+                assert abs(coro(wf).total_power - 1) < 1e-6
             elif order < 2:
                 assert 0 < coro(wf).total_power < 1
             else:

@@ -1046,11 +1046,33 @@ def test_gaussian_beam_evaluate():
     grid = CartesianGrid(UnstructuredCoords(([0], [0])))
     wf = beam(grid)
     w, R, psi, k = beam.w, beam.R, beam.psi, beam.k
-    expected = (w0 / w) * np.exp(-1j * (k * z + k * 0 / (2 * R) - psi))
+    expected = (w0 / w) * np.exp(1j * (k * z + k * 0 / (2 * R) - psi))
     assert np.isclose(wf.electric_field[0], expected)
 
     grid2 = make_pupil_grid(64, 4e-3)
     assert np.allclose(beam.evaluate(grid2).electric_field, beam(grid2).electric_field)
+
+def test_gaussian_beam_matches_fresnel_propagator():
+    w0 = 1e-3
+    z = 0.5
+    wavelength = 500e-9
+    grid = make_pupil_grid(256, 8e-3)
+
+    beam = GaussianBeam(1j * np.pi * w0**2 / wavelength, wavelength)
+    initial_wavefront = beam.evaluate(grid)
+    propagated_wavefront = FresnelPropagator(grid, z).forward(initial_wavefront)
+
+    beam_propagated = beam.propagate(make_abcd_free_space(z))
+    expected_wavefront = beam_propagated.evaluate(grid)
+
+    expected = expected_wavefront.electric_field
+    propagated = propagated_wavefront.electric_field
+
+    # Remove the global phase between the Fresnel and analytic fields.
+    overlap = np.vecdot(expected, propagated)
+    phase = overlap / abs(overlap)
+
+    assert np.allclose(propagated, phase * expected, rtol=1e-4, atol=1e-6)
 
 class _TrackingDynamicOpticalSystem(DynamicOpticalSystem):
     def __init__(self):

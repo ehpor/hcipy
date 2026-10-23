@@ -215,7 +215,7 @@ class GaussianBeam(object):
         # but we can optimize when/if needed.
         K1 = self.w0 / self.w
         K2 = xp.exp(-r2 / self.w**2)
-        K3 = xp.exp(-1j * (self.k * self.z + self.k * r2 / (2 * self.R) - self.psi))
+        K3 = xp.exp(1j * (self.k * self.z + self.k * r2 / (2 * self.R) - self.psi))
 
         return Wavefront(Field(K1 * K2 * K3, grid), self.wavelength)
 

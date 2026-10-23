@@ -291,6 +291,13 @@ def test_perfect_coronagraph():
             leak_next = coro_next(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilts[-1]))).total_power
             assert leak_even > leak > leak_next
 
+def test_perfect_coronagraph_negative_order():
+    pupil_grid = make_pupil_grid(32)
+    aperture = make_circular_aperture(1)(pupil_grid)
+
+    with pytest.raises(ValueError):
+        PerfectCoronagraph(aperture, -1)
+
 def test_lyot_coronagraph():
     pupil_grid = make_pupil_grid(128, 1.1)
     aperture = evaluate_supersampled(make_circular_aperture(1.0), pupil_grid, 8)

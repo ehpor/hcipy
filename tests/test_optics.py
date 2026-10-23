@@ -7,7 +7,7 @@ import os
 import warnings
 import math
 
-if Configuration().core.use_new_style_fields:
+if Configuration().use_array_api:
     import array_api_strict as xp
 else:
     import numpy as xp

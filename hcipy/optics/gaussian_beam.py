@@ -52,18 +52,18 @@ class GaussianBeam(object):
     complex_beam_parameter = q
 
     @property
+    def wavelength(self):
+        '''The vacuum wavelength of the light.
+        '''
+        return self._wavelength
+
+    @property
     def n(self):
         '''The refractive index of the medium in which the beam propagates.
         '''
         return self._n
 
     refractive_index = n
-
-    @property
-    def wavelength(self):
-        '''The vacuum wavelength of the light.
-        '''
-        return self._wavelength
 
     @property
     def z(self):
@@ -96,6 +96,22 @@ class GaussianBeam(object):
     beam_divergence = theta
 
     @property
+    def w(self):
+        '''The current beam radius of the Gaussian beam.
+        '''
+        return self.w0 * self._xp.sqrt(1 + (self.z / self.zR)**2)
+
+    beam_radius = w
+
+    @property
+    def FWHM(self):  # noqa: N802
+        '''The current FWHM of the Gaussian beam.
+        '''
+        return self.w * self._xp.sqrt(2 * self._xp.log(2.0))
+
+    full_width_half_maximum = FWHM
+
+    @property
     def R(self):  # noqa: N802
         '''The current radius of curvature of the Gaussian beam.
         '''
@@ -114,22 +130,6 @@ class GaussianBeam(object):
         return self._xp.atan(self.z / self.zR)
 
     gouy_phase = psi
-
-    @property
-    def w(self):
-        '''The current beam radius of the Gaussian beam.
-        '''
-        return self.w0 * self._xp.sqrt(1 + (self.z / self.zR)**2)
-
-    beam_radius = w
-
-    @property
-    def FWHM(self):  # noqa: N802
-        '''The current FWHM of the Gaussian beam.
-        '''
-        return self.w * self._xp.sqrt(2 * self._xp.log(2.0))
-
-    full_width_half_maximum = FWHM
 
     @property
     def k(self):

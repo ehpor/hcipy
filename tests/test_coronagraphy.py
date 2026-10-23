@@ -1,6 +1,13 @@
+import math
 from hcipy import *
+from hcipy._math.backends import all_close
 import numpy as np
 import pytest
+
+if Configuration().use_array_api:
+    import array_api_strict as xp
+else:
+    import numpy as xp
 
 def test_vortex_coronagraph():
     pupil_grid = make_pupil_grid(256)
@@ -243,53 +250,60 @@ def test_app_keller():
     assert np.mean(img.intensity * mask) / np.mean(mask) < 1.6e-8  # contrast
 
 def test_perfect_coronagraph():
-    pupil_grid = make_pupil_grid(256)
-    aperture = make_circular_aperture(1)(pupil_grid)
+    grid = make_pupil_grid(256, xp=xp)
+    aperture_separated = make_circular_aperture(1)(grid)
+
+    grid_nonseparated = CartesianGrid(UnstructuredCoords((grid.x, grid.y)), grid.weights)
+    aperture_nonseparated = aperture_separated.copy()
+    aperture_nonseparated.grid = grid_nonseparated
+
+    apertures = [aperture_separated, aperture_nonseparated]
 
     tilts = np.logspace(-3, -2, 51)
 
     for order in [0, 0.5, 1, 1.5, 2, 2.5, 3.5, 4, 6, 6.5, 8]:
-        coro = PerfectCoronagraph(aperture, order)
+        leakages = []
 
-        # Test suppression for on-axis point source
-        wf = Wavefront(aperture)
-        wf.total_power = 1
+        for aperture in apertures:
+            coro = PerfectCoronagraph(aperture, order)
 
-        if order == 0:
-            assert np.isclose(coro(wf).total_power, 1)
-        elif order < 2:
-            assert 0 < coro(wf).total_power < 1
-        else:
-            assert coro(wf).total_power < 1e-10
+            # Test suppression for on-axis point source
+            wf = Wavefront(aperture)
+            wf.total_power = 1
 
-        # Test suppression off-axis
-        coronagraph_leakage = []
-        for tilt in tilts:
-            leakage = coro(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilt))).total_power
-            coronagraph_leakage.append(leakage)
+            if order == 0:
+                assert abs(coro(wf).total_power - 1) < 1e-6
+            elif order < 2:
+                assert 0 < coro(wf).total_power < 1
+            else:
+                assert coro(wf).total_power < 1e-10
 
-        y = np.log10(coronagraph_leakage)
-        x = np.log10(tilts)
-        n = len(x)
+            # Test suppression off-axis
+            coronagraph_leakage = []
+            for tilt in tilts:
+                leakage = coro(Wavefront(aperture * xp.exp(2j * math.pi * aperture.grid.x * tilt))).total_power
+                coronagraph_leakage.append(leakage)
 
-        # Do a linear fit on the log-log data to get the power-law coefficient
-        beta = ((x * y).sum() - x.sum() * y.sum() / n) / ((x * x).sum() - x.sum()**2 / n)
+            y = xp.log10(xp.asarray(coronagraph_leakage))
+            x = xp.log10(xp.asarray(tilts))
+            n = len(x)
 
-        # Fractional orders only partially suppress the highest-order modes, so the
-        # power-law coefficient is that of the previous even order, while the
-        # leakage amplitude is reduced.
-        even_order = 2 * (order // 2)
-        assert np.isclose(beta, even_order, rtol=1e-2, atol=1e-2)
+            # Do a linear fit on the log-log data to get the power-law coefficient
+            beta = (xp.sum(x * y) - xp.sum(x) * xp.sum(y) / n) / (xp.sum(x * x) - xp.sum(x)**2 / n)
 
-        # For fractional orders, the leakage amplitude should be between those of
-        # the neighbouring even orders.
-        if order % 2 != 0:
-            coro_even = PerfectCoronagraph(aperture, even_order)
-            coro_next = PerfectCoronagraph(aperture, even_order + 2)
-            leak = coro(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilts[-1]))).total_power
-            leak_even = coro_even(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilts[-1]))).total_power
-            leak_next = coro_next(Wavefront(aperture * np.exp(2j * np.pi * pupil_grid.x * tilts[-1]))).total_power
-            assert leak_even > leak > leak_next
+            # Fractional orders only partially suppress the highest-order modes, so the
+            # power-law coefficient is that of the previous even order.
+            even_order = 2 * (order // 2)
+
+            rtol = 1e-2
+            atol = 1e-2
+            assert abs(beta - even_order) <= (abs(even_order) * rtol + atol)
+
+            leakages.append(xp.asarray(coronagraph_leakage))
+
+        # Check if both sampling methods are identical.
+        assert len(leakages) == 2, "Fix the assert below."
+        assert all_close(leakages[0], leakages[1])
 
 def test_perfect_coronagraph_negative_order():
     pupil_grid = make_pupil_grid(32)

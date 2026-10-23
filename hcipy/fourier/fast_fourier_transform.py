@@ -6,6 +6,7 @@ from .fourier_transform import FourierTransform, ComputationalComplexity, _get_f
 from ..field import Field, CartesianGrid, RegularCoords
 from ..config import Configuration
 import math
+import warnings
 
 from .._math.separable_filter import make_separable_filter
 from .._math import fft as _fft_module
@@ -197,11 +198,11 @@ class FastFourierTransform(FourierTransform):
     shift : array_like or scalar
         The amount by which to shift the output grid. If this is a scalar, the same shift will
         be used for all dimensions.
-    emulate_fftshifts : boolean or None
-        Whether to emulate FFTshifts normally used in the FFT by multiplications in the
-        opposite domain. Enabling this increases performance by 3x, but degrades accuracy of
-        the FFT by 10x. If this is None, the choice will be determined by the configuration
-        file.
+    emulate_fftshifts : boolean, optional
+        Deprecated. FFTshifts are always emulated by multiplications in the
+        opposite domain. Passing any value other than None raises a
+        `DeprecationWarning`; this argument will be removed in a future
+        version.
 
     Raises
     ------
@@ -232,10 +233,12 @@ class FastFourierTransform(FourierTransform):
         self.size = input_grid.size
         self.ndim = input_grid.ndim
 
-        # Get the value from the configuration file if left at the default.
-        if emulate_fftshifts is None:
-            emulate_fftshifts = Configuration().fft_emulate_fftshifts
-        self.emulate_fftshifts = emulate_fftshifts
+        # FFTshifts are always emulated. The option to disable this is deprecated.
+        if emulate_fftshifts is not None:
+            warnings.warn(
+                'The emulate_fftshifts argument is deprecated and will be removed in a '
+                'future version. FFT shifts are always emulated.',
+                DeprecationWarning, stacklevel=2)
 
         self.output_grid = make_fft_grid(input_grid, q, fov, shift)
         self.internal_grid = make_fft_grid(input_grid, q, 1)
@@ -264,7 +267,7 @@ class FastFourierTransform(FourierTransform):
 
         # Emulate the FFTshifts by a phase multiplication in the opposite domain.
         xp = input_grid.xp
-        f_shift = input_grid.delta * (xp.asarray(self.internal_grid.dims) // 2) if emulate_fftshifts else 0
+        f_shift = input_grid.delta * (xp.asarray(self.internal_grid.dims) // 2)
         weights = xp.prod(input_grid.delta)
 
         # Build the output-side filter, when the input grid was shifted compared
@@ -279,12 +282,9 @@ class FastFourierTransform(FourierTransform):
         # Build the input-side filter, when the output grid was shifted compared
         # to the native shift expected by the numpy FFT implementation.
         shift = np.ones(self.input_grid.ndim) * shift
-        if emulate_fftshifts or not np.allclose(shift, 0):
-            piston = -np.dot(f_shift, self.internal_grid.zero) if emulate_fftshifts else 0.0
-            self.shift_output_filter = _make_shift_filter(
-                -shift, self.input_grid, self.internal_grid, self.cutout_input, f_shift, piston=piston)
-        else:
-            self.shift_output_filter = None
+        piston = -np.dot(f_shift, self.internal_grid.zero)
+        self.shift_output_filter = _make_shift_filter(
+            -shift, self.input_grid, self.internal_grid, self.cutout_input, f_shift, piston=piston)
 
     def forward(self, field):
         '''Returns the forward Fourier transform of the :class:`Field` field.
@@ -307,24 +307,12 @@ class FastFourierTransform(FourierTransform):
 
         with buffer_pool.empty(tensor_shape + self.internal_shape, complex_dtype) as internal_array:
             if self.cutout_input is None:
-                if self.shift_output_filter is None:
-                    internal_array[:] = field.reshape(tensor_shape + self.shape_in)
-                else:
-                    self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array)
+                self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array)
             else:
                 internal_array[:] = 0
-                if self.shift_output_filter is None:
-                    internal_array[c + self.cutout_input] = field.reshape(tensor_shape + self.shape_in)
-                else:
-                    self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array[c + self.cutout_input])
-
-            if not self.emulate_fftshifts:
-                internal_array = np.fft.ifftshift(internal_array, axes=axes)
+                self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array[c + self.cutout_input])
 
             fft_array = _fft_module.fftn(internal_array, axes=axes)
-
-            if not self.emulate_fftshifts:
-                fft_array = np.fft.fftshift(fft_array, axes=axes)
 
         if self.cutout_output is None:
             res = fft_array
@@ -364,21 +352,14 @@ class FastFourierTransform(FourierTransform):
                 internal_array[:] = 0
                 self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=internal_array[c + self.cutout_output], inverse=True)
 
-            if not self.emulate_fftshifts:
-                internal_array = np.fft.ifftshift(internal_array, axes=axes)
-
             fft_array = _fft_module.ifftn(internal_array, axes=axes)
-
-            if not self.emulate_fftshifts:
-                fft_array = np.fft.fftshift(fft_array, axes=axes)
 
         if self.cutout_input is None:
             res = fft_array
         else:
             res = fft_array[c + self.cutout_input]
 
-        if self.shift_output_filter is not None:
-            res = self.shift_output_filter.apply_numpy(res, out=res, inverse=True)
+        res = self.shift_output_filter.apply_numpy(res, out=res, inverse=True)
 
         res = res.reshape(tensor_shape + (-1,))
 

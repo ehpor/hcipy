@@ -59,6 +59,12 @@ class PerfectCoronagraph(OpticalElement):
                 self.coeffs = np.ones(int(order * (order / 2 + 1) / 4))
                 self.coeffs[-(order // 2):] = T
 
+        if len(self.coeffs) == 0:
+            self.mode_basis = None
+            self.transformation = None
+            self.transformation_inverse = None
+            return
+
         for i in range(order // 2):
             for j in range(i + 1):
                 modes.append(aperture * self.pupil_grid.x**j * self.pupil_grid.y**(i - j))
@@ -82,6 +88,9 @@ class PerfectCoronagraph(OpticalElement):
             The post-coronagraphic wavefront (in the pupil plane).
         '''
         wf = wavefront.copy()
+
+        if self.mode_basis is None:
+            return wf
 
         # Project the wavefront onto the pupil modes and attenuate by coeffs, then transform back to the pupil.
         # This is done for each polarization separately.
@@ -130,6 +139,9 @@ class PerfectCoronagraph(OpticalElement):
         ndarray
             The forward transformation_matrix.
         '''
+        if self.transformation is None:
+            return np.eye(self.pupil_grid.size)
+
         return np.eye(self.pupil_grid.size) - self.transformation.dot(np.expand_dims(self.coeffs, axis=1) * self.transformation_inverse)
 
     @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')

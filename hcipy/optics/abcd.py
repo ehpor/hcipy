@@ -11,7 +11,7 @@ __all__ = [
 ]
 
 class RayTransferMatrix:
-    '''A 2x2 ray-transfer (ABCD) matrix, optionally dispersive.
+    r'''A 2x2 ray-transfer (ABCD) matrix, optionally dispersive.
 
     Wraps either a fixed 2x2 array or a function of the wavelength (in
     meters) that returns one.
@@ -20,6 +20,25 @@ class RayTransferMatrix:
     ----------
     matrix : Array or callable
         The 2x2 matrix, or a callable ``matrix(wavelength)`` returning one.
+
+    Notes
+    -----
+    A ray is represented by the column vector ``[x, theta]``, where ``x`` is
+    the transverse displacement from the optical axis and ``theta`` is the
+    physical angle with respect to that axis (``theta = dx/dz`` for propagation
+    along ``z``). A ray-transfer matrix acts on this vector as
+
+    .. math::
+
+        \begin{bmatrix} x_\mathrm{out} \\ \theta_\mathrm{out} \end{bmatrix}
+        = \begin{bmatrix} A & B \\ C & D \end{bmatrix}
+        \begin{bmatrix} x_\mathrm{in} \\ \theta_\mathrm{in} \end{bmatrix}.
+
+    ``theta`` is the physical angle rather than the reduced angle ``n * theta``.
+    Consequently, the determinant is not restricted to unity; for a refractive
+    interface it equals the ratio of the refractive indices. This convention
+    lets a Gaussian beam track the refractive index through the matrix
+    transformation.
 
     Examples
     --------
@@ -166,6 +185,9 @@ class RayTransferMatrix:
 def make_abcd_free_space(distance, xp=None):
     '''The ABCD (ray-transfer) matrix for free-space propagation.
 
+    The matrix acts on the ``[x, theta]`` ray vector; see
+    :class:`RayTransferMatrix` for the convention.
+
     Parameters
     ----------
     distance : scalar
@@ -188,6 +210,9 @@ def make_abcd_free_space(distance, xp=None):
 def make_abcd_thin_lens(focal_length, xp=None):
     '''The ABCD (ray-transfer) matrix for a thin refractive lens in air.
 
+    The matrix acts on the ``[x, theta]`` ray vector; see
+    :class:`RayTransferMatrix` for the convention.
+
     Parameters
     ----------
     focal_length : scalar
@@ -209,6 +234,9 @@ def make_abcd_thin_lens(focal_length, xp=None):
 
 def make_abcd_mirror(radius=None, xp=None):
     '''The ABCD (ray-transfer) matrix for a spherical mirror.
+
+    The matrix acts on the ``[x, theta]`` ray vector; see
+    :class:`RayTransferMatrix` for the convention.
 
     A radius of curvature of None (the default) corresponds to a plane
     mirror.
@@ -240,6 +268,9 @@ def make_abcd_mirror(radius=None, xp=None):
 def make_abcd_fraunhofer(focal_length, xp=None):
     '''The ABCD (ray-transfer) matrix for an ideal Fraunhofer (Fourier) transform.
 
+    The matrix acts on the ``[x, theta]`` ray vector; see
+    :class:`RayTransferMatrix` for the convention.
+
     This matrix describes the propagation between two conjugate planes, giving
     the classic 'pupil-focal plane' Fourier relationship.
 
@@ -265,6 +296,9 @@ def make_abcd_fraunhofer(focal_length, xp=None):
 def make_abcd_magnifier(magnification, xp=None):
     '''The ABCD (ray-transfer) matrix for an ideal magnifier (afocal telescope).
 
+    The matrix acts on the ``[x, theta]`` ray vector; see
+    :class:`RayTransferMatrix` for the convention.
+
     Parameters
     ----------
     magnification : scalar
@@ -286,6 +320,9 @@ def make_abcd_magnifier(magnification, xp=None):
 
 def make_abcd_refractive_interface(refractive_index_in, refractive_index_out, radius=None, xp=None):
     '''The ABCD (ray-transfer) matrix for refraction at a dielectric interface.
+
+    The matrix acts on the ``[x, theta]`` ray vector; see
+    :class:`RayTransferMatrix` for the convention.
 
     A positive radius corresponds to a surface whose center of curvature lies
     to the right of the interface. A radius of None (the default) corresponds

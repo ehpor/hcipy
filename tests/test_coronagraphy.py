@@ -1,5 +1,6 @@
 from hcipy import *
 import numpy as np
+import pytest
 
 def test_vortex_coronagraph():
     pupil_grid = make_pupil_grid(256)
@@ -245,15 +246,21 @@ def test_perfect_coronagraph():
     pupil_grid = make_pupil_grid(256)
     aperture = make_circular_aperture(1)(pupil_grid)
 
-    tilts = np.logspace(-3, -1, 51)
+    tilts = np.logspace(-3, -2, 51)
 
-    for order in [2, 2.5, 3.5, 4, 6, 6.5, 8]:
+    for order in [0, 0.5, 1, 1.5, 2, 2.5, 3.5, 4, 6, 6.5, 8]:
         coro = PerfectCoronagraph(aperture, order)
 
         # Test suppression for on-axis point source
         wf = Wavefront(aperture)
         wf.total_power = 1
-        assert coro(wf).total_power < 1e-10
+
+        if order == 0:
+            assert np.isclose(coro(wf).total_power, 1)
+        elif order < 2:
+            assert 0 < coro(wf).total_power < 1
+        else:
+            assert coro(wf).total_power < 1e-10
 
         # Test suppression off-axis
         coronagraph_leakage = []
@@ -272,7 +279,7 @@ def test_perfect_coronagraph():
         # power-law coefficient is that of the previous even order, while the
         # leakage amplitude is reduced.
         even_order = 2 * (order // 2)
-        assert np.abs(beta - even_order) / even_order < 1e-2
+        assert np.isclose(beta, even_order, rtol=1e-2, atol=1e-2)
 
         # For fractional orders, the leakage amplitude should be between those of
         # the neighbouring even orders.

@@ -1,7 +1,7 @@
 import pytest
 import hcipy
 import numpy as np
-from hcipy._math.backends import to_numpy, array_namespace
+from hcipy._math.backends import to_numpy, array_namespace, is_scalar
 from hcipy._math.einsum import einsum
 from hcipy._math.fourier import dft_matrix_regular, dft_matrix_separated
 from hcipy._math.random import make_random_generator
@@ -713,3 +713,11 @@ def test_einsum_int_input(xp):
 def test_einsum_result_is_scalar(xp):
     result = einsum("i,i->", xp.asarray([1.0, 2.0]), xp.asarray([3.0, 4.0]))
     assert result.ndim == 0
+
+def test_is_scalar():
+    assert is_scalar(1.0)
+    assert is_scalar(np.array(1.0))
+    assert not is_scalar([1.0])
+    assert not is_scalar((1.0,))
+    assert not is_scalar(np.array([1.0]))
+    assert not is_scalar(np.array([[1.0]]))

@@ -69,10 +69,8 @@ class PerfectCoronagraph(OpticalElement):
                 self.coeffs = self.pupil_grid.xp.ones(int(order * (order / 2 + 1) / 4))
                 self.coeffs[-(order // 2):] = T
 
+        # Fast exit for order 0 coronagraph.
         if len(self.coeffs) == 0:
-            self.mode_basis = None
-            self.transformation = None
-            self.transformation_inverse = None
             return
 
         self._p = order // 2
@@ -181,7 +179,8 @@ class PerfectCoronagraph(OpticalElement):
         '''
         wf = wavefront.copy()
 
-        if self.mode_basis is None:
+        # Fast exit for order 0 coronagraph.
+        if len(self.coeffs) == 0:
             return wf
 
         if self._use_separated_path:
@@ -255,7 +254,8 @@ class PerfectCoronagraph(OpticalElement):
         '''
         xp = self.pupil_grid.xp
 
-        if self.transformation is None:
+        # Fast exit for order 0 coronagraph.
+        if len(self.coeffs) == 0:
             return xp.eye(self.pupil_grid.size)
 
         if self._use_separated_path:

@@ -81,9 +81,9 @@ def make_uniform_grid(dims, extent, center=0, has_center=False, xp=None):
         Does the grid has to have the center as one of its points. If this is
         False, this does not mean that the grid will not have the center.
     xp : module, optional
-        The array namespace to use. If you're using old-style Fields, this must be
-        Numpy. If you're using new-style Fields and don't provide this, it will
-        be attempted to be inferred from extent/center.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------
@@ -138,9 +138,9 @@ def make_pupil_grid(dims, diameter=1, xp=None):
     diameter : scalar or array_like
         The diameter of the grid in each dimension.
     xp : module, optional
-        The array namespace to use. If you're using old-style Fields, this must be
-        Numpy. If you're using new-style Fields and don't provide this, it will
-        be attempted to be inferred from diameter.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------
@@ -254,9 +254,9 @@ def make_focal_grid(q, num_airy, spatial_resolution=None, pupil_diameter=None, f
     reference_wavelength : scalar
         The reference wavelength used for calculating the spatial resolution at the focal plane.
     xp : module, optional
-        The array namespace to use. If you're using old-style Fields, this must be
-        Numpy. If you're using new-style Fields and don't provide this, it will
-        be attempted to be inferred from input arrays.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------
@@ -331,9 +331,9 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
     center : array_like
         The center of the grid in cartesian coordinates.
     xp : module, optional
-        The array namespace to use. If you're using old-style Fields, this must be
-        Numpy. If you're using new-style Fields and don't provide this, it will
-        be attempted to be inferred from inputs.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------
@@ -409,9 +409,9 @@ def make_chebyshev_grid(dims, minimum=None, maximum=None, xp=None):
         The maximum value in each dimension.
         The default is 1.
     xp : module, optional
-        The array namespace to use. If you're using old-style Fields, this must be
-        Numpy. If you're using new-style Fields and don't provide this, it will
-        be attempted to be inferred from inputs.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------

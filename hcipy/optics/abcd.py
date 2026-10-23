@@ -171,8 +171,9 @@ def make_abcd_free_space(distance, xp=None):
     distance : scalar
         The propagation distance.
     xp : module, optional
-        The Array API namespace to use. If not given, it will be inferred from
-        the other parameters.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------
@@ -192,8 +193,9 @@ def make_abcd_thin_lens(focal_length, xp=None):
     focal_length : scalar
         The focal length of the lens.
     xp : module, optional
-        The Array API namespace to use. If not given, it will be inferred from
-        the other parameters.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------
@@ -218,8 +220,9 @@ def make_abcd_mirror(radius=None, xp=None):
         to a concave (focusing) mirror. If None (default), the mirror is
         plane.
     xp : module, optional
-        The Array API namespace to use. If not given, it will be inferred from
-        the other parameters.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------
@@ -245,8 +248,9 @@ def make_abcd_fraunhofer(focal_length, xp=None):
     focal_length : scalar
         The effective focal length that defines the conjugate-plane transform.
     xp : module, optional
-        The Array API namespace to use. If not given, it will be inferred from
-        the other parameters.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------
@@ -266,8 +270,9 @@ def make_abcd_magnifier(magnification, xp=None):
     magnification : scalar
         The transverse geometric magnification of the system.
     xp : module, optional
-        The Array API namespace to use. If not given, it will be inferred from
-        the other parameters.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------
@@ -303,8 +308,9 @@ def make_abcd_refractive_interface(refractive_index_in, refractive_index_out, ra
         The radius of curvature of the interface. If None (default), the
         interface is flat.
     xp : module, optional
-        The Array API namespace to use. If not given, it will be inferred from
-        the other parameters.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Returns
     -------

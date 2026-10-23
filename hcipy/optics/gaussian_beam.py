@@ -5,7 +5,7 @@ from ..field import Field
 from .wavefront import Wavefront
 
 class _ScalarNamespace:
-    '''Array API-style namespace backed by the math module, used when all beam
+    '''A minimal array namespace backed by the math module, used when all beam
     parameters are plain Python scalars. Its functions return Python floats.
     '''
     real = staticmethod(lambda x: x.real)

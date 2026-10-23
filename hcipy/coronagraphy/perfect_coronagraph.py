@@ -37,8 +37,16 @@ class PerfectCoronagraph(OpticalElement):
         The coefficients that are used for subtraction. This allows for partial suppression of certain
         modes, which can be used to design perfect coronagraphs that are insensitive to stellar
         radius [Guyon2006]_. If it is None, all modes are completely suppressed.
+
+    Raises
+    ------
+    ValueError
+        If the order is negative.
     '''
     def __init__(self, aperture, order=2, coeffs=None):
+        if order < 0:
+            raise ValueError('The coronagraph order must be non-negative.')
+
         self.pupil_grid = aperture.grid
         modes = []
 

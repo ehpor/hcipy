@@ -273,6 +273,80 @@ def test_lp_modes():
             product = np.real(np.sum(m1 * m2.conj() * grid.weights))
             assert np.abs(product - 1 if i == j else 0) <= 1e-2
 
+def test_kirchhoff_love_basis():
+    grid = make_pupil_grid(48)
+    stiffness = make_circular_aperture(1)(grid)
+
+    num_modes = 5
+    modes, frequencies = make_kirchhoff_love_basis(stiffness, num_modes, return_frequencies=True)
+
+    # The modes are orthonormal w.r.t. the mass-weighted inner product,
+    # which is the area-weighted inner product for a uniform mass density.
+    T = modes.transformation_matrix
+    active = np.asarray(stiffness).ravel() > 0
+    gram = (T[active] * np.sqrt(grid.weights)).T @ (T[active] * np.sqrt(grid.weights))
+
+    assert np.allclose(gram, np.eye(num_modes), atol=1e-6)
+
+    # The frequencies are positive, and sorted in ascending order.
+    assert len(frequencies) == num_modes
+    assert np.all(frequencies > 0)
+    assert np.all(np.diff(frequencies) > 0)
+
+def test_kirchhoff_love_basis_units():
+    grid = make_pupil_grid(48)
+    stiffness = make_circular_aperture(1)(grid)
+
+    _, f = make_kirchhoff_love_basis(stiffness, 2, return_frequencies=True)
+
+    # The frequency scales as sqrt(D / (rho h a^4)). Check the scaling
+    # behavior of the returned frequencies, which are in Hz when the inputs
+    # are in SI units.
+    _, f_stiff = make_kirchhoff_love_basis(stiffness * 4, 2, return_frequencies=True)
+    assert np.allclose(f_stiff / f, 2, rtol=1e-3)
+
+    mass = Field(np.full(grid.size, 4.0), grid)
+    _, f_mass = make_kirchhoff_love_basis(stiffness, 2, mass_density=mass, return_frequencies=True)
+    assert np.allclose(f_mass / f, 0.5, rtol=1e-3)
+
+    grid_small = make_pupil_grid(48, 0.5)
+    stiffness_small = make_circular_aperture(0.5)(grid_small)
+    _, f_small = make_kirchhoff_love_basis(stiffness_small, 2, return_frequencies=True)
+    assert np.allclose(f_small / f, 4, rtol=1e-2)
+
+def test_kirchhoff_love_basis_fixed_points():
+    grid = make_pupil_grid(48)
+    stiffness = make_circular_aperture(1)(grid)
+
+    # Clamp the membrane at four points around the center.
+    fp = np.zeros(grid.size)
+    for p in [(-0.25, -0.25), (0.25, -0.25), (-0.25, 0.25), (0.25, 0.25)]:
+        fp[grid.closest_to(p)] = 1
+    fixed_points = Field(fp, grid)
+
+    modes, frequencies = make_kirchhoff_love_basis(stiffness, 5, fixed_points=fixed_points, return_frequencies=True)
+
+    # The modes are zero at the clamping points.
+    for mode in modes:
+        assert np.all(np.abs(np.asarray(mode)[fp > 0.5]) < 1e-10)
+
+    # The clamping points kill the rigid-body modes, so all frequencies are
+    # strictly positive.
+    assert np.all(frequencies > 1e-8)
+
+def test_kirchhoff_love_basis_errors():
+    grid = make_pupil_grid(32)
+    stiffness = make_circular_aperture(1)(grid)
+
+    with pytest.raises(ValueError):
+        make_kirchhoff_love_basis(stiffness.grid, 5)
+
+    with pytest.raises(ValueError):
+        make_kirchhoff_love_basis(stiffness, 5000)
+
+    with pytest.raises(ValueError):
+        make_kirchhoff_love_basis(stiffness, 5, mass_density=Field(np.zeros(grid.size), grid))
+
 def test_sparse_mode_basis():
     transformation_matrix = np.empty((100 * 100, 100))
     for i in range(100):

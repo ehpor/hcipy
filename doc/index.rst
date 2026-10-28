@@ -30,6 +30,7 @@ The banner above shows a number of simulations done with HCIPy. From left to rig
    modules/field
    modules/fourier
    modules/interpolation
+   modules/materials
    modules/metrics
    modules/mode_basis
    modules/optics

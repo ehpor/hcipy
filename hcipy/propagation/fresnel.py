@@ -44,10 +44,12 @@ class FresnelPropagator(AgnosticOpticalElement):
         if not input_grid.is_regular or not input_grid.is_('cartesian'):
             raise ValueError('The input grid must be a regular, Cartesian grid.')
 
-        k = 2 * np.pi / wavelength * self.evaluate_parameter(self.refractive_index, input_grid, output_grid, wavelength)
+        wavelength_in_medium = wavelength / self.evaluate_parameter(self.refractive_index, input_grid, output_grid, wavelength)
+        k = 2 * np.pi / wavelength_in_medium
         L_max = max(n * delta for n, delta in zip(input_grid.dims, input_grid.delta))
 
-        if any(delta < wavelength * abs(self.distance) / L_max for delta in input_grid.delta):
+        # The transfer-function phase curvature depends on the real part of 1 / k.
+        if any(delta < abs(wavelength_in_medium.real * self.distance) / L_max for delta in input_grid.delta):
             def transfer_function(fourier_grid):
                 enlarged_grid = make_fft_grid(fourier_grid)
                 fft_upscale = FastFourierTransform(enlarged_grid)
@@ -55,7 +57,7 @@ class FresnelPropagator(AgnosticOpticalElement):
                 def impulse_response(grid):
                     x = grid.x
                     y = grid.y
-                    phase_factor = np.exp(1j * k * self.distance) / (1j * wavelength * self.distance)
+                    phase_factor = np.exp(1j * k * self.distance) / (1j * wavelength_in_medium * self.distance)
 
                     variables = {'alpha': 0.5j * k / self.distance, 'x': x, 'y': y, 'phase_factor': phase_factor}
                     ir = ne.evaluate('phase_factor * exp(alpha * (x * x + y * y))', local_dict=variables)

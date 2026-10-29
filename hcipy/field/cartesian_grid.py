@@ -97,6 +97,11 @@ class CartesianGrid(Grid):
             dtype = default_dtype(self.xp, 'real floating')
             self.weights *= self.xp.abs(self.xp.asarray(scale, dtype=dtype))**self.ndim
         else:
+            scale = self.xp.asarray(scale)
+
+            if scale.size != self.ndim:
+                raise ValueError(f'Scale must be a scalar or have one value per dimension (expected {self.ndim}, got {scale.size}).')
+
             self.weights *= self.xp.prod(self.xp.abs(scale))
 
         self.coords *= scale

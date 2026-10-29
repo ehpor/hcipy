@@ -3,6 +3,17 @@ import array_api_compat
 from ..config import Configuration
 import sys
 from typing import Any
+from contextlib import nullcontext
+
+def device_context(array):
+    '''Select an array's device for backends with a process-local current device.
+
+    The previous device is restored when leaving the context. Backends whose
+    operations already follow their input arrays require no context change.
+    '''
+    if array_api_compat.is_cupy_array(array):
+        return array.device
+    return nullcontext()
 
 def infer_xp(*arrays):
     """Infer xp from input arrays.
@@ -98,11 +109,10 @@ def is_scalar(element):
     '''
     ndim = getattr(element, 'ndim', None)
     if ndim is None:
-        # Plain Python scalar, no array structure
-        return True
+        # Plain Python scalar, no array structure.
+        return np.isscalar(element)
 
-    shape = getattr(element, 'shape', ())
-    return all(n == 1 for n in shape)
+    return ndim == 0
 
 def all_close(a, b, *, rtol=1e-5, atol=1e-8):
     '''Whether the two arrays are elementwise equal within tolerance.

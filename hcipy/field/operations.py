@@ -1,6 +1,94 @@
-from .field import Field
+from .field import Field, NewStyleField, is_field
 import numpy as np
 import string
+import warnings
+from .._math.einsum import einsum
+from .._math.backends import array_namespace, is_scalar
+
+def _normalize_field(a):
+    """Extract the underlying array from a field for numpy compatibility.
+
+    OldStyleField subclasses np.ndarray and can be used directly.
+    NewStyleField stores its data in ``.data`` and is not ndarray-compatible.
+    """
+    if isinstance(a, NewStyleField):
+        return a.data
+    else:
+        return a
+
+def _pop_deprecated_einsum_kwargs(kwargs):
+    _MISSING = object()
+
+    out = kwargs.pop('out', _MISSING)
+    dtype = kwargs.pop('dtype', _MISSING)
+    order = kwargs.pop('order', _MISSING)
+    casting = kwargs.pop('casting', _MISSING)
+
+    if out is _MISSING:
+        out = None
+    else:
+        warnings.warn(
+            "The 'out' keyword for field_einsum is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
+    if dtype is _MISSING:
+        dtype = None
+    else:
+        warnings.warn(
+            "The 'dtype' keyword for field_einsum is deprecated and will be removed in a future version. "
+            'The requested dtype is applied to the result.',
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
+    if order is not _MISSING:
+        warnings.warn(
+            "The 'order' keyword for field_einsum is deprecated and will be removed in a future version. "
+            'It is currently ignored.',
+            DeprecationWarning,
+            stacklevel=3,
+        )
+    if casting is not _MISSING:
+        warnings.warn(
+            "The 'casting' keyword for field_einsum is deprecated and will be removed in a future version. "
+            'It is currently ignored.',
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
+    return out, dtype
+
+def _apply_dtype(result, dtype):
+    if dtype is None:
+        return result
+
+    xp = array_namespace(result)
+    return xp.astype(result, dtype)
+
+def _assign_out(result, out):
+    data = _normalize_field(out)
+    result = _normalize_field(result)
+
+    try:
+        data[...] = result
+    except Exception as e:
+        raise TypeError("Could not write the result into the provided 'out' array.") from e
+
+    return data
+
+def _assign_out_field(result, out, grid):
+    data = _assign_out(result, out)
+
+    if isinstance(out, NewStyleField):
+        return Field(data, out.grid)
+    if is_field(out):
+        return data
+    if is_field(result):
+        return Field(data, grid)
+
+    return data
 
 def field_einsum(subscripts, *operands, **kwargs):
     '''Evaluates the Einstein summation convention on the operand fields.
@@ -23,35 +111,18 @@ def field_einsum(subscripts, *operands, **kwargs):
     operands : list of array_like or `Field`
         These are the arrays or fields for the operation.
     out : {ndarray, None}, optional
-        If provided, the calculation is done into this array.
+        Deprecated. If provided, the calculation is done into this array.
     dtype : {data-type, None}, optional
-        If provided, forces the calculation to use the data type specified.
-        Note that you may have to also give a more liberal `casting`
-        parameter to allow the conversions. Default is None.
+        Deprecated. If provided, forces the calculation to use the data type specified.
     order : {'C', 'F', 'A', 'K'}, optional
-        Controls the memory layout of the output. 'C' means it should
-        be C contiguous. 'F' means it should be Fortran contiguous,
-        'A' means it should be 'F' if the inputs are all 'F', 'C' otherwise.
-        'K' means it should be as close to the layout as the inputs as
-        is possible, including arbitrarily permuted axes.
-        Default is 'K'.
+        Deprecated and ignored. This keyword will be removed in a future version.
     casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
-        Controls what kind of data casting may occur.  Setting this to
-        'unsafe' is not recommended, as it can adversely affect accumulations.
-
-            * 'no' means the data types should not be cast at all.
-            * 'equiv' means only byte-order changes are allowed.
-            * 'safe' means only casts which can preserve values are allowed.
-            * 'same_kind' means only safe casts or casts within a kind,
-                like float64 to float32, are allowed.
-            * 'unsafe' means any data conversions may be done.
-
-        Default is 'safe'.
+        Deprecated and ignored. This keyword will be removed in a future version.
     optimize : {False, True, 'greedy', 'optimal'}, optional
         Controls if intermediate optimization should occur. No optimization
         will occur if False and True will default to the 'greedy' algorithm.
         Also accepts an explicit contraction list from the ``np.einsum_path``
-        function. See ``np.einsum_path`` for more details. Default is False.
+        function. See ``np.einsum_path`` for more details. Default is True.
 
     Returns
     -------
@@ -64,12 +135,22 @@ def field_einsum(subscripts, *operands, **kwargs):
         If all of the fields don't have    the same grid size. If the number of
         operands is not equal to the number of subscripts specified.
     '''
-    is_field = [isinstance(o, Field) for o in operands]
-    if not np.count_nonzero(is_field):
-        return np.einsum(subscripts, *operands, **kwargs)
+    out, dtype = _pop_deprecated_einsum_kwargs(kwargs)
 
-    field_sizes = [o.grid.size for i, o in enumerate(operands) if is_field[i]]
-    element_sizes = [o.shape[-1] for i, o in enumerate(operands) if is_field[i]]
+    operand_is_field = [is_field(o) for o in operands]
+    if not any(operand_is_field):
+        res = _apply_dtype(einsum(subscripts, *operands, **kwargs), dtype)
+
+        if out is not None:
+            res = _assign_out(res, out)
+
+            if isinstance(out, NewStyleField):
+                return Field(res, out.grid)
+
+        return res
+
+    field_sizes = [o.grid.size for i, o in enumerate(operands) if operand_is_field[i]]
+    element_sizes = [o.shape[-1] for i, o in enumerate(operands) if operand_is_field[i]]
 
     if not np.allclose(field_sizes, field_sizes[0]) or not np.allclose(element_sizes, element_sizes[0]):
         raise ValueError('All fields must be the same size for a field_einsum().')
@@ -91,7 +172,7 @@ def field_einsum(subscripts, *operands, **kwargs):
     unused_index = [a for a in string.ascii_lowercase if a not in subscripts][0]
 
     # Add the field dimension to the input field operands.
-    ss = [s + unused_index if is_field[i] else s for i, s in enumerate(ss)]
+    ss = [s + unused_index if operand_is_field[i] else s for i, s in enumerate(ss)]
 
     # Recombine all operands into the final subscripts
     if len(splitted_string) == 2:
@@ -99,11 +180,19 @@ def field_einsum(subscripts, *operands, **kwargs):
     else:
         subscripts_new = ','.join(ss)
 
-    res = np.einsum(subscripts_new, *operands, **kwargs)
-    grid = operands[np.flatnonzero(np.array(is_field))[0]].grid
+    unwrapped = [_normalize_field(o) if operand_is_field[i] else o for i, o in enumerate(operands)]
 
-    if 'out' in kwargs:
-        kwargs['out'] = Field(res, grid)
+    res = _apply_dtype(einsum(subscripts_new, *unwrapped, **kwargs), dtype)
+
+    grid = None
+    for o in operands:
+        if hasattr(o, 'grid'):
+            grid = o.grid
+            break
+
+    if out is not None:
+        res = _assign_out(res, out)
+
     return Field(res, grid)
 
 def field_dot(a, b, out=None):
@@ -116,7 +205,7 @@ def field_dot(a, b, out=None):
     b : Field or array_like
         Right argument of the dot product.
     out : Field or array_like
-        If provided, the calculation is done into this array.
+        Deprecated. If provided, the calculation is done into this array.
 
     Returns
     -------
@@ -126,21 +215,35 @@ def field_dot(a, b, out=None):
     # Find out if a or b are vectors or higher dimensional tensors
     if hasattr(a, 'tensor_order'):
         amat = a.tensor_order > 1
-    elif np.isscalar(a):
+    elif is_scalar(a):
         if out is None:
             return a * b
         else:
-            return np.multiply(a, b, out)
+            warnings.warn(
+                "The 'out' keyword for field_dot is deprecated and will be removed in a future version.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            res = _assign_out(a * b, out)
+
+            return Field(res, out.grid) if isinstance(out, NewStyleField) else res
     else:
         amat = a.ndim > 1
 
     if hasattr(b, 'tensor_order'):
         bmat = b.tensor_order > 1
-    elif np.isscalar(b):
+    elif is_scalar(b):
         if out is None:
             return a * b
         else:
-            return np.multiply(a, b, out)
+            warnings.warn(
+                "The 'out' keyword for field_dot is deprecated and will be removed in a future version.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            res = _assign_out(a * b, out)
+
+            return Field(res, out.grid) if isinstance(out, NewStyleField) else res
     else:
         bmat = b.ndim > 1
 
@@ -158,7 +261,14 @@ def field_dot(a, b, out=None):
     if out is None:
         return field_einsum(subscripts, a, b)
     else:
-        return field_einsum(subscripts, a, b, out=out)
+        warnings.warn(
+            "The 'out' keyword for field_dot is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        res = field_einsum(subscripts, a, b)
+
+        return _assign_out_field(res, out, getattr(res, 'grid', None))
 
 def field_trace(a, out=None):
     '''Take the trace of a tensor field.
@@ -168,7 +278,7 @@ def field_trace(a, out=None):
     a : Field
         The field of which to take the trace.
     out : Field or None
-        If given, a location where the output is stored. This must have the correct shape.
+        Deprecated. If given, a location where the output is stored. This must have the correct shape.
 
     Returns
     -------
@@ -178,7 +288,14 @@ def field_trace(a, out=None):
     if out is None:
         return field_einsum('ii', a)
     else:
-        return field_einsum('ii', a, out=out)
+        warnings.warn(
+            "The 'out' keyword for field_trace is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        res = field_einsum('ii', a)
+
+        return _assign_out_field(res, out, getattr(res, 'grid', None))
 
 def field_inverse_tikhonov(f, rcond=1e-15):
     '''Invert a tensor field of order 2 using Tikhonov regularization.
@@ -208,9 +325,12 @@ def field_inverse_tikhonov(f, rcond=1e-15):
         if f.tensor_order != 2:
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
-        res = np.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
-        for i in range(f.grid.size):
-            res[..., i] = inverse_tikhonov(f[..., i], rcond)
+        xp = array_namespace(_normalize_field(f))
+        inverses = [
+            xp.asarray(inverse_tikhonov(_normalize_field(f[..., i]), rcond))
+            for i in range(f.grid.size)
+        ]
+        res = xp.stack(inverses, axis=-1)
         return Field(res, f.grid)
     else:
         return inverse_tikhonov(f, rcond)
@@ -244,9 +364,12 @@ def field_inverse_truncated(f, rcond=1e-15):
         if f.tensor_order != 2:
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
-        res = np.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
-        for i in range(f.grid.size):
-            res[..., i] = inverse_truncated(f[..., i], rcond)
+        xp = array_namespace(_normalize_field(f))
+        inverses = [
+            xp.asarray(inverse_truncated(_normalize_field(f[..., i]), rcond))
+            for i in range(f.grid.size)
+        ]
+        res = xp.stack(inverses, axis=-1)
         return Field(res, f.grid)
     else:
         return inverse_truncated(f, rcond)
@@ -280,9 +403,12 @@ def field_inverse_truncated_modal(f, num_modes):
         if f.tensor_order != 2:
             raise ValueError("Field must be a tensor field of order 2 to be able to calculate inverses.")
 
-        res = np.empty((f.tensor_shape[1], f.tensor_shape[0], f.grid.size))
-        for i in range(f.grid.size):
-            res[..., i] = inverse_truncated_modal(np.asarray(f[..., i]), num_modes)
+        xp = array_namespace(_normalize_field(f))
+        inverses = [
+            xp.asarray(inverse_truncated_modal(_normalize_field(f[..., i]), num_modes))
+            for i in range(f.grid.size)
+        ]
+        res = xp.stack(inverses, axis=-1)
         return Field(res, f.grid)
     else:
         return inverse_truncated_modal(f, num_modes)
@@ -310,10 +436,13 @@ def field_inv(f):
         if f.tensor_order != 2:
             raise ValueError('Field must be a tensor field of order 2 to be able to compute inverses.')
 
-        res = np.moveaxis(np.linalg.inv(np.moveaxis(f, -1, 0)), 0, -1)
-        return Field(res, f.grid)
+        data = _normalize_field(f)
+        xp = array_namespace(data)
+        res = xp.linalg.inv(xp.moveaxis(data, -1, 0))
+        return Field(xp.moveaxis(res, 0, -1), f.grid)
     else:
-        return np.linalg.inv(f)
+        xp = array_namespace(f)
+        return xp.linalg.inv(f)
 
 def field_svd(f, full_matrices=True, compute_uv=True):
     '''Calculate the singular value decomposition for a tensor field of order 2.
@@ -338,20 +467,20 @@ def field_svd(f, full_matrices=True, compute_uv=True):
         The unitary matrices. Only returned if `compute_uv` is True.
     '''
 
-    res = np.linalg.svd(np.moveaxis(f, -1, 0), full_matrices, compute_uv)
+    data = _normalize_field(f)
+    xp = array_namespace(data)
 
     if compute_uv:
-        U, S, Vh = res
-        U = Field(np.moveaxis(U, 0, -1), f.grid)
-        Vh = Field(np.moveaxis(Vh, 0, -1), f.grid)
-    else:
-        S = res
+        U, S, Vh = xp.linalg.svd(xp.moveaxis(data, -1, 0), full_matrices=full_matrices)
+        U = Field(xp.moveaxis(U, 0, -1), f.grid)
+        Vh = Field(xp.moveaxis(Vh, 0, -1), f.grid)
+        S = Field(xp.moveaxis(S, 0, -1), f.grid)
 
-    S = Field(np.moveaxis(S, 0, -1), f.grid)
-
-    if compute_uv:
         return U, S, Vh
     else:
+        S = xp.linalg.svdvals(xp.moveaxis(data, -1, 0))
+        S = Field(xp.moveaxis(S, 0, -1), f.grid)
+
         return S
 
 def field_conjugate_transpose(a):
@@ -374,13 +503,17 @@ def field_conjugate_transpose(a):
         if a.tensor_order != 2:
             raise ValueError('Need a tensor field of rank 2.')
 
-        return Field(np.swapaxes(a.conj(), 0, 1), a.grid)
+        data = _normalize_field(a)
+        xp = array_namespace(data)
+        res = xp.permute_dims(xp.conj(data), (1, 0, 2))
+        return Field(res, a.grid)
     else:
         # if its an array, it must be two dimensional
         if len(a.shape) != 2:
             raise ValueError('Need a two dimensional array.')
 
-        return np.swapaxes(a.conj(), 0, 1)
+        xp = array_namespace(a)
+        return xp.permute_dims(xp.conj(a), (1, 0))
 
 def field_transpose(a):
     '''Performs the transpose of a rank 2 tensor field or two dimensional array.
@@ -401,13 +534,17 @@ def field_transpose(a):
         if a.tensor_order != 2:
             raise ValueError('Need a tensor field of rank 2.')
 
-        return Field(np.swapaxes(a, 0, 1), a.grid)
+        data = _normalize_field(a)
+        xp = array_namespace(data)
+        res = xp.permute_dims(data, (1, 0, 2))
+        return Field(res, a.grid)
     else:
         # if its an array, it must be two dimensional
         if len(a.shape) != 2:
             raise ValueError('Need a two dimensional array.')
 
-        return np.swapaxes(a, 0, 1)
+        xp = array_namespace(a)
+        return xp.permute_dims(a, (1, 0))
 
 def field_determinant(a):
     '''Calculates the determinant of a tensor field.
@@ -431,10 +568,12 @@ def field_determinant(a):
     if not all(n == a.tensor_shape[0] for n in a.tensor_shape):
         raise ValueError('Need square matrix for determinant.')
 
-    # First we need to swap the axes in order to use np.linalg.det
-    Temp = np.swapaxes(a, 0, 2)
+    # First we need to swap the axes in order to use xp.linalg.det
+    data = _normalize_field(a)
+    xp = array_namespace(data)
+    Temp = xp.permute_dims(data, (2, 0, 1))
 
-    return Field(np.linalg.det(Temp), a.grid)
+    return Field(xp.linalg.det(Temp), a.grid)
 
 def field_adjoint(a):
     '''Calculates the adjoint of a tensor field.
@@ -455,10 +594,14 @@ def field_adjoint(a):
     # Calculating the determinant.
     determinant = field_determinant(a)
 
-    if np.any(np.isclose(determinant, 0)):
+    det_data = _normalize_field(determinant)
+    xp = array_namespace(det_data)
+
+    if xp.any(xp.abs(det_data) <= 1e-8):
         raise ValueError('Matrix is non-invertible due to zero determinant.')
 
-    return Field(determinant[np.newaxis, np.newaxis, :] * field_inv(a), a.grid)
+    res = xp.reshape(det_data, (1, 1, -1)) * _normalize_field(field_inv(a))
+    return Field(res, a.grid)
 
 def field_cross(a, b):
     '''Calculates the cross product of two vector fields.
@@ -481,7 +624,11 @@ def field_cross(a, b):
     if a.shape[0] != 3 or b.shape[0] != 3:
         raise ValueError('Vector needs to be of length 3 for cross product.')
 
-    return Field(np.cross(a, b, axis=0), a.grid)
+    a_data = _normalize_field(a)
+    b_data = _normalize_field(b)
+    xp = array_namespace(a_data, b_data)
+
+    return Field(xp.linalg.cross(a_data, b_data, axis=-2), a.grid)
 
 def field_kron(a, b):
     '''Calculate the Kronecker product of two fields.

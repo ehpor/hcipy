@@ -1,13 +1,16 @@
 import functools
 import warnings
 
-def deprecated(reason):  # pragma: no cover
+def deprecated(reason, version=None):  # pragma: no cover
     '''Decorator for deprecating functions.
 
     Parameters
     ----------
     reason : str
         The reason for deprecation. This will be printed with the warning.
+    version : str or None
+        The version in which the function will be removed. If not None, this will be
+        printed with the warning.
 
     Returns
     -------
@@ -17,7 +20,12 @@ def deprecated(reason):  # pragma: no cover
     def decorator(func):
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
-            warnings.warn(f'{func.__name__} is deprecated. {reason}', DeprecationWarning, stacklevel=2)
+            message = f'{func.__name__} is deprecated.'
+            if version is not None:
+                message += f' Will be removed in hcipy {version}.'
+            if reason:
+                message += ' ' + reason
+            warnings.warn(message, DeprecationWarning, stacklevel=2)
             return func(*args, **kwargs)
 
         return wrapped

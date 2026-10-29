@@ -2,6 +2,7 @@ import numpy as np
 from ..optics import OpticalElement
 from ..mode_basis import ModeBasis
 from ..util import inverse_truncated
+from ..dev import deprecated
 
 class PerfectCoronagraph(OpticalElement):
     r'''A perfect coronagraph for a certain aperture and order.
@@ -28,15 +29,23 @@ class PerfectCoronagraph(OpticalElement):
     ----------
     aperture : Field
         The reference aperture. The perfect coronagraph is designed for this aperture.
-    order : integer
-        The order of the perfect coronagraph. This must be even.
+    order : scalar
+        The order of the perfect coronagraph. This can be any non-negative value; non-integer
+        values are used for fractional orders, which are implemented by partially suppressing the
+        highest-order modes [Guyon2006]_.
     coeffs : list or ndarray or None
         The coefficients that are used for subtraction. This allows for partial suppression of certain
         modes, which can be used to design perfect coronagraphs that are insensitive to stellar
         radius [Guyon2006]_. If it is None, all modes are completely suppressed.
+
+    Raises
+    ------
+    ValueError
+        If the order is negative.
     '''
     def __init__(self, aperture, order=2, coeffs=None):
-        assert order % 2 == 0, "The coronagraph order has to be even."
+        if order < 0:
+            raise ValueError('The coronagraph order must be non-negative.')
 
         self.pupil_grid = aperture.grid
         modes = []
@@ -45,7 +54,24 @@ class PerfectCoronagraph(OpticalElement):
             order = int(2 * np.ceil(0.5 * (np.sqrt(8 * len(coeffs) + 1) - 1)))
             self.coeffs = coeffs
         else:
-            self.coeffs = np.ones(int(order * (order / 2 + 1) / 4))
+            N = int(order // 2)
+            d = order / 2 - N
+
+            if abs(d) < 1e-6:
+                order = int(2 * N)
+                self.coeffs = np.ones(int(order * (order / 2 + 1) / 4))
+            else:
+                T = (d**2 + (2 * N + 1) * d) / (2 * (N + 1))
+
+                order = int(2 * N + 2)
+                self.coeffs = np.ones(int(order * (order / 2 + 1) / 4))
+                self.coeffs[-(order // 2):] = T
+
+        if len(self.coeffs) == 0:
+            self.mode_basis = None
+            self.transformation = None
+            self.transformation_inverse = None
+            return
 
         for i in range(order // 2):
             for j in range(i + 1):
@@ -70,6 +96,9 @@ class PerfectCoronagraph(OpticalElement):
             The post-coronagraphic wavefront (in the pupil plane).
         '''
         wf = wavefront.copy()
+
+        if self.mode_basis is None:
+            return wf
 
         # Project the wavefront onto the pupil modes and attenuate by coeffs, then transform back to the pupil.
         # This is done for each polarization separately.
@@ -104,6 +133,7 @@ class PerfectCoronagraph(OpticalElement):
         '''
         return self.forward(wavefront)
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_forward(self, wavelength=1):
         '''Get the forward propagation transformation matrix.
 
@@ -117,8 +147,12 @@ class PerfectCoronagraph(OpticalElement):
         ndarray
             The forward transformation_matrix.
         '''
+        if self.transformation is None:
+            return np.eye(self.pupil_grid.size)
+
         return np.eye(self.pupil_grid.size) - self.transformation.dot(np.expand_dims(self.coeffs, axis=1) * self.transformation_inverse)
 
+    @deprecated('This method is too memory-intensive for practical use.', version='0.9.0')
     def get_transformation_matrix_backward(self, wavelength=1):
         '''Get the backwards propagation transformation matrix.
 

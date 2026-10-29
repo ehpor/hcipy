@@ -191,3 +191,63 @@ def test_nearfield_propagation_rectangular(propagator, number_of_pixels, wavelen
 
     absolute_error_backward = np.abs(img_backward - reference_image).max()
     assert absolute_error_backward < error_threshold
+
+
+@pytest.mark.parametrize('refractive_index', [1, 1.5, 2])
+@pytest.mark.parametrize('relative_distance', [0.2, 1.2, 5])
+@pytest.mark.parametrize('direction', ['forward', 'backward'])
+@pytest.mark.parametrize('sign', [-1, 1])
+def test_fresnel_propagation_refractive_index(refractive_index, relative_distance, direction, sign):
+    grid = make_pupil_grid(64, 0.004)
+    wavelength = 1e-6
+    field = np.exp(-(grid.x**2 + grid.y**2) / (0.0002**2))
+    threshold_distance = grid.delta[0] * 0.004 / wavelength
+    distance = sign * relative_distance * threshold_distance
+
+    # A homogeneous medium has the same propagation kernel as vacuum at lambda / n.
+    medium = FresnelPropagator(grid, distance, refractive_index=refractive_index)
+    vacuum = FresnelPropagator(grid, distance)
+    actual = getattr(medium, direction)(Wavefront(field, wavelength))
+    expected = getattr(vacuum, direction)(Wavefront(field, wavelength / refractive_index))
+
+    np.testing.assert_allclose(actual.electric_field, expected.electric_field, rtol=1e-8, atol=1e-12)
+    assert actual.wavelength == wavelength
+
+
+def test_fresnel_propagation_dispersive_refractive_index():
+    grid = make_pupil_grid(64, 0.004)
+    wavelength = 1e-6
+    field = np.exp(-(grid.x**2 + grid.y**2) / (0.0002**2))
+    evaluated_wavelengths = []
+
+    def refractive_index(wavelength):
+        evaluated_wavelengths.append(wavelength)
+        return 1 + 5e5 * wavelength
+
+    medium = FresnelPropagator(grid, 1, refractive_index=refractive_index)
+    actual = medium(Wavefront(field, wavelength))
+    expected = FresnelPropagator(grid, 1)(Wavefront(field, wavelength / 1.5))
+
+    np.testing.assert_allclose(actual.electric_field, expected.electric_field, rtol=1e-8, atol=1e-12)
+    assert evaluated_wavelengths == [wavelength]
+    assert actual.wavelength == wavelength
+
+
+@pytest.mark.parametrize('distance', [0.05, 1])
+@pytest.mark.parametrize('refractive_index', [1.5, 1.5 + 1e-8j])
+def test_fresnel_propagation_gaussian_in_medium(distance, refractive_index):
+    grid = make_pupil_grid(64, 0.004)
+    wavelength = 1e-6
+    waist = 0.0004
+    r_squared = grid.x**2 + grid.y**2
+    field = np.exp(-r_squared / waist**2)
+    actual = FresnelPropagator(grid, distance, refractive_index=refractive_index)(Wavefront(field, wavelength))
+
+    # Analytic paraxial propagation of a Gaussian waist on the infinite plane.
+    wavenumber = 2 * np.pi / (wavelength / refractive_index)
+    width_squared = waist**2 + 2j * distance / wavenumber
+    expected = waist**2 / width_squared * np.exp(1j * wavenumber * distance - r_squared / width_squared)
+    relative_error = np.linalg.norm(actual.electric_field - expected) / np.linalg.norm(expected)
+
+    # Allow for the finite grid and the default averaging of the propagation kernel.
+    assert relative_error < 0.003

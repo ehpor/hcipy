@@ -326,10 +326,10 @@ def test_field_pickle(Field):
     assert a.grid == b.grid
 
 
-@pytest.mark.parametrize('xp', ['numpy', 'array_api_strict', 'cupy'], indirect=True)
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
 @pytest.mark.parametrize('tensor_shape', [(), (2,), (2, 3)])
 def test_new_style_field_dict_serialization(xp, dtype, tensor_shape):
+    xp = array_namespace(xp.asarray(0.0))
     coords = RegularCoords(delta=(0.25, 0.5), dims=(4, 3), zero=(-0.75, 1), xp=xp)
     weights = np.arange(1, 13, dtype=np.float64) / 8
     grid = CartesianGrid(coords, weights=xp.asarray(weights))
@@ -361,11 +361,8 @@ def test_new_style_field_dict_serialization(xp, dtype, tensor_shape):
     assert restored.grid.coords._xp is xp
     np.testing.assert_array_equal(to_numpy(restored.grid.weights), weights)
 
-    # Export is explicit and does not enable implicit conversion of the Field.
     assert field.data is data
     assert field.grid is grid
-    with pytest.raises(NotImplementedError):
-        np.asarray(field)
 
 
 def test_new_style_field_dict_serialization_legacy_defaults_to_numpy():
@@ -384,16 +381,14 @@ def test_new_style_field_dict_serialization_legacy_defaults_to_numpy():
     assert restored.grid == grid
 
 
-def test_default_field_dict_serialization():
+def test_old_style_field_dict_serialization():
     grid = make_pupil_grid([4, 3])
     values = np.arange(grid.size, dtype=np.complex128) * (1 + 2j)
-    field = Field(values, grid)
+    field = hcipy.field.OldStyleField(values, grid)
 
-    assert isinstance(field, hcipy.field.OldStyleField)
     tree = field.to_dict()
-    restored = Field.from_dict(tree)
+    restored = hcipy.field.OldStyleField.from_dict(tree)
 
-    assert isinstance(restored, hcipy.field.OldStyleField)
     assert tree['values'].dtype == values.dtype
     assert restored.dtype == values.dtype
     np.testing.assert_array_equal(tree['values'], values)

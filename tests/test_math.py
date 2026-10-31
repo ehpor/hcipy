@@ -585,6 +585,12 @@ def test_dft_matrix_separated(xp, Nx, Nu, dtype, conjugate, transpose):
     assert result_np.shape == ref.shape
     assert np.allclose(result_np, ref, atol=atol)
 
+def test_dft_matrix_regular_integer_origin(xp):
+    result = dft_matrix_regular(0, 0, 0.1, 0.2, 3, 4, xp, xp.complex64)
+    expected = np.exp(1j * (np.arange(3) * 0.1)[:, None] * (np.arange(4) * 0.2)[None, :])
+    np.testing.assert_allclose(to_numpy(result), expected, rtol=2e-6, atol=2e-6)
+    assert result.dtype == xp.complex64
+
 def test_dft_matrix_regular_out():
     x0, u0, dx, du = -0.3, 1.7, 0.2, -0.05
     Nx, Nu = 16, 8

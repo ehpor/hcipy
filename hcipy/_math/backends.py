@@ -3,6 +3,17 @@ import array_api_compat
 from ..config import Configuration
 import sys
 from typing import Any
+from contextlib import nullcontext
+
+def device_context(array):
+    '''Select an array's device for backends with a process-local current device.
+
+    The previous device is restored when leaving the context. Backends whose
+    operations already follow their input arrays require no context change.
+    '''
+    if array_api_compat.is_cupy_array(array):
+        return array.device
+    return nullcontext()
 
 def infer_xp(*arrays):
     """Infer xp from input arrays.

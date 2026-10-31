@@ -4,7 +4,7 @@ import cmath
 import numpy as np
 
 from .backends import array_namespace
-from array_api_compat import is_numpy_array, is_numpy_namespace
+from array_api_compat import is_numpy_array, is_numpy_namespace, is_cupy_namespace
 
 @numba.njit(parallel=True, fastmath=True, cache=True)
 def _dft_matrix_regular_numpy(x0, u0, dx, du, Nx, Nu, dtype, out=None):
@@ -74,14 +74,14 @@ def _dft_matrix_regular_numpy(x0, u0, dx, du, Nx, Nu, dtype, out=None):
 
     return out
 
-def _dft_matrix_regular_fallback(x0, u0, dx, du, Nx, Nu, xp, dtype):
+def _dft_matrix_regular_fallback(x0, u0, dx, du, Nx, Nu, xp, dtype, device=None):
     """Compute a DFT matrix for equally spaced grids, using any Array API namespace.
 
     This is a fallback implementation of :func:`dft_matrix_regular` for
     non-NumPy backends. The grids ``x`` and ``u`` are reconstructed from their
-    starting coordinates and spacings using the real dtype matching `dtype`,
-    after which the matrix is evaluated directly as
-    ``exp(1j * x[i] * u[k])``.
+    starting coordinates and spacings without reducing their precision, after
+    which the matrix is evaluated directly as ``exp(1j * x[i] * u[k])`` and
+    cast to `dtype`.
 
     Parameters
     ----------
@@ -101,20 +101,27 @@ def _dft_matrix_regular_fallback(x0, u0, dx, du, Nx, Nu, xp, dtype):
         The Array API namespace to use for the computation.
     dtype : dtype
         The complex dtype of the output matrix.
+    device : Device or None, optional
+        The device on which to construct the matrix.
 
     Returns
     -------
     Array
         The DFT matrix of shape ``(Nx, Nu)`` and dtype ``dtype``.
     """
-    float_dtype = xp.float32 if dtype == xp.complex64 else xp.float64
+    if is_cupy_namespace(xp):
+        import array_api_compat.cupy as xp
 
-    x = xp.arange(Nx, dtype=float_dtype) * dx + x0
-    u = xp.arange(Nu, dtype=float_dtype) * du + u0
+    parameters = [xp.asarray(v, device=device) for v in (x0, u0, dx, du)]
+    parameters = [xp.astype(v, xp.float64) if xp.isdtype(v.dtype, 'integral') else v for v in parameters]
+    float_dtype = xp.result_type(xp.float32 if dtype == xp.complex64 else xp.float64, *parameters)
+    x0, u0, dx, du = [xp.astype(v, float_dtype, copy=False) for v in parameters]
+    x = xp.arange(Nx, dtype=float_dtype, device=device) * dx + x0
+    u = xp.arange(Nu, dtype=float_dtype, device=device) * du + u0
 
-    return xp.exp(1j * x[:, xp.newaxis] * u[xp.newaxis, :])
+    return xp.astype(xp.exp(1j * x[:, xp.newaxis] * u[xp.newaxis, :]), dtype, copy=False)
 
-def dft_matrix_regular(x0, u0, dx, du, Nx, Nu, xp, dtype, conjugate=False, transpose=False, out=None):
+def dft_matrix_regular(x0, u0, dx, du, Nx, Nu, xp, dtype, conjugate=False, transpose=False, out=None, device=None):
     """Compute a DFT matrix for equally spaced grids.
 
     The DFT matrix is defined as ``out[i, k] = exp(1j * u[k] * x[i])`` with
@@ -149,6 +156,9 @@ def dft_matrix_regular(x0, u0, dx, du, Nx, Nu, xp, dtype, conjugate=False, trans
     out : Array, optional
         An array of the right shape in which the result is stored. Only
         used on the NumPy backend; if not given, a new array is allocated.
+    device : Device or None, optional
+        The device on which to construct the matrix. If not given, the backend's
+        default device is used.
 
     Returns
     -------
@@ -168,7 +178,7 @@ def dft_matrix_regular(x0, u0, dx, du, Nx, Nu, xp, dtype, conjugate=False, trans
     if is_numpy_namespace(xp):
         return _dft_matrix_regular_numpy(x0, u0, dx, du, Nx, Nu, dtype, out=out)
     else:
-        return _dft_matrix_regular_fallback(x0, u0, dx, du, Nx, Nu, xp, dtype)
+        return _dft_matrix_regular_fallback(x0, u0, dx, du, Nx, Nu, xp, dtype, device=device)
 
 def _dft_matrix_separated_numpy(x, u, out=None):
     """Compute a DFT matrix for separated grids, using numexpr.

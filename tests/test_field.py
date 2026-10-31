@@ -5,7 +5,7 @@ import copy
 import pytest
 import pickle
 from hcipy._math.random import make_random_generator
-from hcipy._math.backends import all_close
+from hcipy._math.backends import all_close, array_namespace, to_numpy
 
 if Configuration().use_array_api:
     import array_api_strict as xp
@@ -333,3 +333,73 @@ def test_field_pickle(Field):
 
     assert allclose(a, b)
     assert a.grid == b.grid
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
+@pytest.mark.parametrize('tensor_shape', [(), (2,), (2, 3)])
+def test_new_style_field_dict_serialization(xp, dtype, tensor_shape):
+    xp = array_namespace(xp.asarray(0.0))
+    coords = RegularCoords(delta=(0.25, 0.5), dims=(4, 3), zero=(-0.75, 1), xp=xp)
+    weights = np.arange(1, 13, dtype=np.float64) / 8
+    grid = CartesianGrid(coords, weights=xp.asarray(weights))
+
+    shape = tensor_shape + (grid.size,)
+    expected = np.arange(np.prod(shape)).reshape(shape).astype(dtype)
+    if np.issubdtype(expected.dtype, np.complexfloating):
+        expected += 1j * (expected.real + 1)
+    data = xp.asarray(expected)
+    field = hcipy.field.NewStyleField(data, grid)
+
+    tree = field.to_dict()
+
+    assert type(tree['values']) is np.ndarray
+    assert tree['values'].dtype == expected.dtype
+    assert tree['xp_name'] == xp.__name__
+    np.testing.assert_array_equal(tree['values'], expected)
+    assert tree['grid']['coordinate_system'] == 'cartesian'
+    assert tree['grid']['coords'] == {'type': 'regular', 'delta': [0.25, 0.5], 'dims': (4, 3), 'zero': [-0.75, 1.0], 'xp_name': xp.__name__}
+
+    restored = hcipy.field.NewStyleField.from_dict(tree)
+
+    assert array_namespace(restored.data).__name__ == xp.__name__
+    assert restored.data.dtype == data.dtype
+    np.testing.assert_array_equal(to_numpy(restored.data), expected)
+    assert restored.tensor_shape == tensor_shape
+    assert restored.grid == grid
+    assert restored.grid.shape == (3, 4)
+    assert restored.grid.coords._xp is xp
+    np.testing.assert_array_equal(to_numpy(restored.grid.weights), weights)
+
+    assert field.data is data
+    assert field.grid is grid
+
+
+def test_new_style_field_dict_serialization_legacy_defaults_to_numpy():
+    grid = make_pupil_grid([4, 3])
+    values = np.arange(grid.size, dtype=np.complex128) * (1 + 2j)
+    tree = {
+        'values': values,
+        'grid': grid.to_dict(),
+    }
+
+    restored = hcipy.field.NewStyleField.from_dict(tree)
+
+    assert type(restored.data) is np.ndarray
+    assert restored.data.dtype == values.dtype
+    np.testing.assert_array_equal(restored.data, values)
+    assert restored.grid == grid
+
+
+def test_old_style_field_dict_serialization():
+    grid = make_pupil_grid([4, 3])
+    values = np.arange(grid.size, dtype=np.complex128) * (1 + 2j)
+    field = hcipy.field.OldStyleField(values, grid)
+
+    tree = field.to_dict()
+    restored = hcipy.field.OldStyleField.from_dict(tree)
+
+    assert tree['values'].dtype == values.dtype
+    assert restored.dtype == values.dtype
+    np.testing.assert_array_equal(tree['values'], values)
+    np.testing.assert_array_equal(restored, values)
+    assert restored.grid == grid

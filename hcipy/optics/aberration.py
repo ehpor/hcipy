@@ -35,7 +35,7 @@ def make_power_law_error(pupil_grid, ptv, diameter, exponent=-2.5, aperture=None
         The surface error calculated on `pupil_grid`.
     '''
     def psd(grid):
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide='ignore', invalid='ignore'):
             res = Field(grid.as_('polar').r**exponent, grid)
         res[grid.as_('polar').r == 0] = 0
         return res
@@ -178,3 +178,111 @@ class SurfaceAberrationAtDistance(OpticalElement):
         wf = self.fresnel.forward(wavefront)
         wf = self.surface_aberration.backward(wf)
         return self.fresnel.backward(wf)
+
+class DynamicSurfaceAberration(OpticalElement):
+    """A dynamic surface aberration using state space dynamics.
+
+    This class models time-varying surface aberrations using a continuous-time
+    state space model. It wraps a :class:`StateSpaceDynamics` object and applies
+    phase modulation to wavefronts based on the current state.
+
+    Parameters
+    ----------
+    modes : ModeBasis
+        Spatial modes defining the surface aberration pattern. These represent
+        surface height in meters.
+    dynamics : StateSpaceDynamics
+        The state space dynamics object that provides time-varying coefficients.
+    refractive_index : float or callable
+        Refractive index of the medium. Can be a constant (float) or a callable
+        that takes wavelength and returns refractive index.
+
+    Attributes
+    ----------
+    modes : ModeBasis
+        Spatial modes defining the surface aberration pattern.
+    dynamics : StateSpaceDynamics
+        The underlying state space dynamics object.
+    """
+    def __init__(self, modes, dynamics, refractive_index):
+        if len(modes) != dynamics.num_outputs:
+            raise ValueError(f"Number of modes ({len(modes)}) must match number of dynamics outputs ({dynamics.num_outputs})")
+
+        self.modes = modes
+        self.dynamics = dynamics
+
+        surface = modes.linear_combination(dynamics.coefficients)
+        self._apodizer = SurfaceApodizer(surface, refractive_index)
+
+    @property
+    def state(self):
+        """Current internal state vector.
+        """
+        return self.dynamics.state
+
+    @property
+    def coefficients(self):
+        """Current mode coefficients (y = C @ x).
+        """
+        return self.dynamics.coefficients
+
+    @property
+    def t(self):
+        """Current simulation time.
+        """
+        return self.dynamics.t
+
+    @t.setter
+    def t(self, t):
+        self.evolve_until(t)
+
+    def evolve_until(self, t):
+        """Evolve the state from current time to time t.
+
+        Parameters
+        ----------
+        t : float
+            Target time to evolve to.
+        """
+        self.dynamics.evolve_until(t)
+        self._apodizer.surface_sag = self.modes.linear_combination(self.coefficients)
+
+    @property
+    def surface_sag(self):
+        """The current surface sag in meters.
+        """
+        return self._apodizer.surface_sag
+
+    def forward(self, wavefront):
+        """Propagate wavefront forward through the aberration.
+
+        Applies phase modulation based on the current state and modes.
+
+        Parameters
+        ----------
+        wavefront : Wavefront
+            Input wavefront.
+
+        Returns
+        -------
+        Wavefront
+            Modulated wavefront with applied phase.
+        """
+        return self._apodizer.forward(wavefront)
+
+    def backward(self, wavefront):
+        """Propagate wavefront backward through the aberration.
+
+        Applies inverse phase modulation based on the current state and modes.
+
+        Parameters
+        ----------
+        wavefront : Wavefront
+            Input wavefront.
+
+        Returns
+        -------
+        Wavefront
+            Modulated wavefront with inverse phase.
+        """
+        return self._apodizer.backward(wavefront)

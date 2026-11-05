@@ -1,4 +1,5 @@
 import heapq
+import math
 
 class DynamicOpticalSystem(object):
     '''A dynamically varying optical system.
@@ -21,8 +22,23 @@ class DynamicOpticalSystem(object):
         ----------
         t : scalar
             The point in time to which to simulate this optical system. Callbacks and integrations
-            are handled along the way.
+            are handled along the way, including callbacks at time `t`.
+
+        Raises
+        ------
+        ValueError
+            If `t` is nonfinite or earlier than the current time.
+
+        Notes
+        -----
+        Every positive interval is integrated, including intervals below one microsecond.
+        Callbacks at the same time run in insertion order without intervening integration.
+        If integration raises, the pending callback and scheduler time are retained.
+        Side effects of a failed integration must be handled by the derived class.
+        A callback that raises has already been removed and is not retried automatically.
         '''
+        if not math.isfinite(t):
+            raise ValueError('Evolution time must be finite.')
         if t < self.t:
             raise ValueError('Backwards evolution is not allowed.')
 
@@ -37,18 +53,18 @@ class DynamicOpticalSystem(object):
 
             if t_next <= t:
                 integration_time = t_next - self.t
-                heapq.heappop(self.callbacks)
             else:
                 integration_time = t - self.t
                 end = True
 
             # Avoid multiple expensive integrations if we have multiple callbacks
             # at the same time.
-            if integration_time > 1e-6:
+            if integration_time > 0:
                 self.integrate(integration_time)
-                self.t += integration_time
+            self.t = t if end else t_next
 
             if not end:
+                heapq.heappop(self.callbacks)
                 callback()
 
     def integrate(self, integration_time):
@@ -60,6 +76,9 @@ class DynamicOpticalSystem(object):
         ----------
         integration_time : scalar
             The integration time with which to integrate the optical system.
+            The current time is the start of this interval; the scheduler advances it
+            after this method returns successfully. Schedule events in callbacks,
+            rather than in this method.
         '''
         pass
 
@@ -73,10 +92,24 @@ class DynamicOpticalSystem(object):
         Parameters
         ----------
         t : scalar
-            The time at which to call the callback.
+            The finite time at which to call the callback, at or after the current time.
         callback : function
             The function to call at time `t`. This function should have no arguments.
+
+        Raises
+        ------
+        ValueError
+            If `t` is nonfinite or earlier than the current time.
+        TypeError
+            If `callback` is not callable.
         '''
+        if not math.isfinite(t):
+            raise ValueError('Callback time must be finite.')
+        if t < self.t:
+            raise ValueError('Callbacks cannot be scheduled in the past.')
+        if not callable(callback):
+            raise TypeError('The callback must be callable.')
+
         # Callback counter is to avoid comparison of callback functions
         # if the times are equal, as comparison of functions is not allowed.
         heapq.heappush(self.callbacks, (t, self.callback_counter, callback))

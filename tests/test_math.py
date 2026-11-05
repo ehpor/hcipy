@@ -140,13 +140,13 @@ def test_random_generator_choice(xp, replace):
     a = xp.asarray([5, 10, 15, 20])
     samples = rng.choice(a, size=(n,), replace=replace)
     assert samples.shape == (n,)
-    assert all(s in [5, 10, 15, 20] for s in np.asarray(samples))
+    assert all(s in [5, 10, 15, 20] for s in to_numpy(samples))
 
     # Sample with weights (always with replacement)
     p = xp.asarray([0.1, 0.2, 0.3, 0.4])
     samples = rng.choice(a, size=(100,), replace=True, p=p)
     assert samples.shape == (100,)
-    assert all(s in [5, 10, 15, 20] for s in np.asarray(samples))
+    assert all(s in [5, 10, 15, 20] for s in to_numpy(samples))
 
 
 @pytest.mark.parametrize('distribution, args', [
@@ -167,7 +167,7 @@ def test_random_generator_reproducible(xp, distribution, args):
     samples2 = getattr(rng2, distribution)(size=(100,), **args[0])
 
     # Check that samples are identical
-    assert np.allclose(samples1, samples2)
+    assert np.allclose(to_numpy(samples1), to_numpy(samples2))
 
 
 @pytest.mark.parametrize('distribution, args', [
@@ -188,7 +188,7 @@ def test_random_generator_copy(xp, distribution, args):
     samples2 = getattr(rng2, distribution)(size=(10,), **args[0])
 
     # Should be identical
-    assert np.allclose(samples1, samples2)
+    assert np.allclose(to_numpy(samples1), to_numpy(samples2))
 
 
 @pytest.mark.parametrize('distribution, args', [
@@ -223,6 +223,41 @@ def test_random_generator_different_sizes(xp, distribution, args):
     arr_3d = generation_func(size=(2, 3, 4), **args[0])
     assert arr_3d.shape == (2, 3, 4)
 
+def test_random_generator_copy_after_mixed_draws(xp):
+    rng = make_random_generator(xp, seed=873)
+    rng.normal(size=7)
+    rng.poisson(3, size=4)
+    clone = rng.copy()
+    for distribution, kwargs in [
+        ('uniform', {}),
+        ('gamma', {'shape_param': 2}),
+        ('choice', {'a': 20}),
+        ('normal', {}),
+    ]:
+        first = getattr(rng, distribution)(size=(3, 4), **kwargs)
+        second = getattr(clone, distribution)(size=(3, 4), **kwargs)
+        assert array_namespace(first) == array_namespace(xp.asarray(0))
+        np.testing.assert_array_equal(to_numpy(first), to_numpy(second))
+    # Advancing one copy must not advance another copy's stream.
+    control = clone.copy()
+    rng.normal(size=13)
+    np.testing.assert_array_equal(to_numpy(clone.normal(size=11)), to_numpy(control.normal(size=11)))
+
+def test_random_generator_cupy_preserves_global_state():
+    cupy = pytest.importorskip('cupy')
+    original = cupy.random.get_random_state()
+    try:
+        cupy.random.set_random_state(cupy.random.RandomState(43))
+        expected = cupy.random.normal(size=8)
+        cupy.random.set_random_state(cupy.random.RandomState(43))
+        rng = make_random_generator(cupy, seed=43)
+        samples = rng.normal(size=8)
+        assert isinstance(samples, cupy.ndarray)
+        assert samples.device.id == cupy.cuda.Device().id
+        np.testing.assert_array_equal(to_numpy(cupy.random.normal(size=8)), to_numpy(expected))
+    finally:
+        cupy.random.set_random_state(original)
+
 _MEDIAN_PARAMS = [
     ((7,), None, False),
     ((6,), None, False),
@@ -253,7 +288,7 @@ def _check_median(xp, shape, axis, keepdims, *, inject_nans=False):
         result = median(x, axis=axis, keepdims=keepdims)
         expected = np.median(x_np, axis=axis, keepdims=keepdims)
 
-    result_np = np.asarray(result)
+    result_np = to_numpy(result)
     assert result_np.shape == expected.shape
     assert np.allclose(result_np, expected, equal_nan=inject_nans)
 
@@ -269,7 +304,7 @@ def test_median_0d(xp):
     x_np = np.array(5.0)
     x = xp.asarray(x_np)
     result = median(x)
-    assert np.allclose(np.asarray(result), x_np)
+    assert np.allclose(to_numpy(result), x_np)
 
 def test_median_int_dtype(xp):
     rng = np.random.default_rng(seed=1)
@@ -279,14 +314,14 @@ def test_median_int_dtype(xp):
     result = median(x)
     expected = np.median(x_np)
 
-    assert np.allclose(np.asarray(result), expected)
+    assert np.allclose(to_numpy(result), expected)
 
 def test_median_even_uses_mean(xp):
     """Regression test: even N must return the mean of the two middles."""
     x_np = np.array([1.0, 2.0, 3.0, 4.0])
     x = xp.asarray(x_np)
     result = median(x)
-    assert np.allclose(np.asarray(result), 2.5)
+    assert np.allclose(to_numpy(result), 2.5)
 
 def test_median_axis_empty_tuple(xp):
     """axis=() is a no-op; result should equal input."""
@@ -294,7 +329,7 @@ def test_median_axis_empty_tuple(xp):
     x_np = rng.standard_normal((3, 4))
     x = xp.asarray(x_np)
     result = median(x, axis=())
-    assert np.allclose(np.asarray(result), x_np)
+    assert np.allclose(to_numpy(result), x_np)
 
 def test_nanmedian_all_nan_slice(xp):
     """A row/column that is all-NaN should return NaN, not error."""
@@ -306,7 +341,7 @@ def test_nanmedian_all_nan_slice(xp):
     result = nanmedian(x, axis=0)
     expected = np.nanmedian(x_np, axis=0)
 
-    result_np = np.asarray(result)
+    result_np = to_numpy(result)
     assert result_np.shape == expected.shape
     assert np.allclose(result_np, expected, equal_nan=True)
 
@@ -381,10 +416,10 @@ def test_separable_convolve(xp, H, W, radius):
     kx = _random_kernel(rng, radius)
     ky = _random_kernel(rng, radius)
 
-    ref = _naive_separable_convolve(np.asarray(img), np.asarray(kx), np.asarray(ky))
+    ref = _naive_separable_convolve(to_numpy(img), to_numpy(kx), to_numpy(ky))
 
     result = separable_convolve(img, kx, ky)
-    result_np = np.asarray(result)
+    result_np = to_numpy(result)
 
     tol = 1e-4 if result_np.dtype == np.float32 else 1e-12
     assert np.allclose(result_np, ref, atol=tol, rtol=tol), f"max diff: {np.abs(result_np - ref).max()}"
@@ -403,10 +438,10 @@ def test_subpixel_shift(xp, order, row_shift, col_shift):
 
     img = rng.normal(size=(64, 64))
 
-    result = np.asarray(subpixel_shift(img, row_shift, col_shift, order=order))
+    result = to_numpy(subpixel_shift(img, row_shift, col_shift, order=order))
 
     expected = affine_transform(
-        np.asarray(img),
+        to_numpy(img),
         np.eye(2),
         offset=np.array([row_shift, col_shift]),
         order=order,
@@ -424,7 +459,7 @@ def test_zero_kernel(xp):
 
     result = separable_convolve(img, k, k)
 
-    assert np.allclose(np.asarray(result), np.asarray(img))
+    assert np.allclose(to_numpy(result), to_numpy(img))
 
 
 def test_row_col_pass_compiled():
@@ -549,7 +584,7 @@ def test_dft_matrix_regular(xp, Nx, Nu, dtype, conjugate, transpose):
         ref = ref.T
 
     result = dft_matrix_regular(x0, u0, dx, du, Nx, Nu, xp, dtype, conjugate=conjugate, transpose=transpose)
-    result_np = np.asarray(result)
+    result_np = to_numpy(result)
 
     atol = 1e-12 if dtype == xp.complex128 else 1e-6
 
@@ -577,7 +612,7 @@ def test_dft_matrix_separated(xp, Nx, Nu, dtype, conjugate, transpose):
         ref = ref.T
 
     result = dft_matrix_separated(x, u, conjugate=conjugate, transpose=transpose)
-    result_np = np.asarray(result)
+    result_np = to_numpy(result)
 
     atol = 1e-12 if dtype == xp.complex128 else 1e-6
 
@@ -675,12 +710,12 @@ def test_einsum(xp, subscripts, shapes, optimize):
     rng = make_random_generator(xp, seed=42)
     arrays = [xp.astype(rng.normal(size=s), xp.float64) for s in shapes]
 
-    arrays_numpy = [np.asarray(arr) for arr in arrays]
+    arrays_numpy = [to_numpy(arr) for arr in arrays]
     expected = np.einsum(subscripts, *arrays_numpy)
 
     got = einsum(subscripts, *arrays, optimize=optimize)
 
-    np.testing.assert_allclose(np.asarray(got), expected, atol=1e-14)
+    np.testing.assert_allclose(to_numpy(got), expected, atol=1e-14)
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
 def test_einsum_dtype(xp, dtype):
@@ -696,19 +731,19 @@ def test_einsum_dtype(xp, dtype):
 
     tol = 1e-6 if xp.finfo(dtype_xp).bits <= 32 else 1e-14
 
-    expected = np.einsum("ij,jk->ik", np.asarray(a), np.asarray(b))
+    expected = np.einsum("ij,jk->ik", to_numpy(a), to_numpy(b))
     got = einsum("ij,jk->ik", a, b)
 
     assert got.dtype == dtype_xp
-    np.testing.assert_allclose(np.asarray(got), expected, atol=tol, rtol=tol)
+    np.testing.assert_allclose(to_numpy(got), expected, atol=tol, rtol=tol)
 
 def test_einsum_int_input(xp):
     a = xp.asarray([[1, 2], [3, 4]])
     b = xp.asarray([[5, 6], [7, 8]])
 
-    expected = np.einsum("ij,jk->ik", np.asarray(a), np.asarray(b))
+    expected = np.einsum("ij,jk->ik", to_numpy(a), to_numpy(b))
     got = einsum("ij,jk->ik", a, b)
-    np.testing.assert_array_equal(np.asarray(got), expected)
+    np.testing.assert_array_equal(to_numpy(got), expected)
 
 def test_einsum_result_is_scalar(xp):
     result = einsum("i,i->", xp.asarray([1.0, 2.0]), xp.asarray([3.0, 4.0]))

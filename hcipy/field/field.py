@@ -2,7 +2,7 @@ import numpy as np
 from ..config import Configuration
 from .._math import fft as hcipy_fft
 from typing import Any
-from .._math.backends import array_namespace
+from .._math.backends import array_namespace, to_numpy
 
 class FieldBase:
     '''The value of some physical quantity for each point in some coordinate system.
@@ -656,19 +656,27 @@ class NewStyleField(FieldBase):
     def to_dict(self):
         '''Convert the Field to a dict.
 
+        Field values are exported as a NumPy array with their original shape
+        and dtype. For device-backed values, this explicitly transfers them
+        to host memory. Grid serialization is unchanged.
+
         Returns
         -------
         dict
             The created dict.
         '''
         return {
-            "values": self.__array__(),
+            "values": to_numpy(self.data),
             "grid": self.grid.to_dict()
         }
 
     @classmethod
     def from_dict(cls, val):
         '''Create a Field from a dict.
+
+        Dictionaries produced by `to_dict()` contain NumPy field values.
+        The grid may restore its recorded array namespace; the original
+        backend of the field values is not restored.
 
         Parameters
         ----------

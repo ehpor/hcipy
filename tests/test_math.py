@@ -585,6 +585,23 @@ def test_dft_matrix_separated(xp, Nx, Nu, dtype, conjugate, transpose):
     assert result_np.shape == ref.shape
     assert np.allclose(result_np, ref, atol=atol)
 
+@pytest.mark.parametrize('dtype', ['complex64', 'complex128'])
+def test_dft_matrix_regular_python_float_precision(xp, dtype):
+    x0, u0, dx, du = 1 + 1e-8, 1e4, 1e-8, 2.0
+    x = x0 + np.arange(3) * dx
+    u = u0 + np.arange(4) * du
+    expected = np.exp(1j * x[:, None] * u[None, :])
+    result = dft_matrix_regular(x0, u0, dx, du, 3, 4, xp, getattr(xp, dtype))
+    tolerance = 3e-6 if dtype == 'complex64' else 3e-12
+    np.testing.assert_allclose(to_numpy(result), expected, rtol=tolerance, atol=tolerance)
+
+
+def test_dft_matrix_regular_integer_origin(xp):
+    result = dft_matrix_regular(0, 0, 0.1, 0.2, 3, 4, xp, xp.complex64)
+    expected = np.exp(1j * (np.arange(3) * 0.1)[:, None] * (np.arange(4) * 0.2)[None, :])
+    np.testing.assert_allclose(to_numpy(result), expected, rtol=2e-6, atol=2e-6)
+    assert result.dtype == xp.complex64
+
 def test_dft_matrix_regular_out():
     x0, u0, dx, du = -0.3, 1.7, 0.2, -0.05
     Nx, Nu = 16, 8

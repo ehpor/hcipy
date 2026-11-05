@@ -354,16 +354,16 @@ def test_new_style_field_dict_serialization(xp, dtype, tensor_shape):
 
     assert type(tree['values']) is np.ndarray
     assert tree['values'].dtype == expected.dtype
-    assert tree['xp_name'] == xp.__name__
+    assert 'xp_name' not in tree
     np.testing.assert_array_equal(tree['values'], expected)
     assert tree['grid']['coordinate_system'] == 'cartesian'
     assert tree['grid']['coords'] == {'type': 'regular', 'delta': [0.25, 0.5], 'dims': (4, 3), 'zero': [-0.75, 1.0], 'xp_name': xp.__name__}
 
     restored = hcipy.field.NewStyleField.from_dict(tree)
 
-    assert array_namespace(restored.data).__name__ == xp.__name__
-    assert restored.data.dtype == data.dtype
-    np.testing.assert_array_equal(to_numpy(restored.data), expected)
+    assert type(restored.data) is np.ndarray
+    assert restored.data.dtype == expected.dtype
+    np.testing.assert_array_equal(restored.data, expected)
     assert restored.tensor_shape == tensor_shape
     assert restored.grid == grid
     assert restored.grid.shape == (3, 4)
@@ -374,12 +374,13 @@ def test_new_style_field_dict_serialization(xp, dtype, tensor_shape):
     assert field.grid is grid
 
 
-def test_new_style_field_dict_serialization_legacy_defaults_to_numpy():
+def test_new_style_field_dict_serialization_ignores_value_backend():
     grid = make_pupil_grid([4, 3])
     values = np.arange(grid.size, dtype=np.complex128) * (1 + 2j)
     tree = {
         'values': values,
         'grid': grid.to_dict(),
+        'xp_name': 'unavailable_array_backend',
     }
 
     restored = hcipy.field.NewStyleField.from_dict(tree)

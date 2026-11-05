@@ -3,7 +3,7 @@ from array_api_compat import device
 from .fourier_transform import FourierTransform, ComputationalComplexity
 from ..field import NewStyleField
 from ..config import Configuration
-from .._math.backends import array_namespace, device_context
+from .._math.backends import array_namespace, device_context, asarray
 from .._math.fourier import dft_matrix_regular, dft_matrix_separated
 from .._math.linalg import matmul
 
@@ -88,8 +88,8 @@ class MatrixFourierTransform(FourierTransform):
 
         # Check if the matrices need to be (re)calculated.
         if self._matrix_key != key:
-            self.weights_input = xp.asarray(self.input_grid.weights, dtype=float_dtype, device=target_device)
-            self.weights_output = xp.asarray(self.output_grid.weights, dtype=float_dtype, device=target_device) / (2 * np.pi)**self.ndim
+            self.weights_input = asarray(self.input_grid.weights, xp, dtype=float_dtype, device=target_device)
+            self.weights_output = asarray(self.output_grid.weights, xp, dtype=float_dtype, device=target_device) / (2 * np.pi)**self.ndim
 
             if self.ndim == 1:
                 if self.input_grid.is_regular and self.output_grid.is_regular:
@@ -99,8 +99,8 @@ class MatrixFourierTransform(FourierTransform):
                         self.shape_output[0], self.shape_input[0],
                         xp, complex_dtype, conjugate=True, device=target_device)
                 else:
-                    x = xp.asarray(self.input_grid.coords.separated_coords[0], device=target_device)
-                    u = xp.asarray(self.output_grid.coords.separated_coords[0], device=target_device)
+                    x = asarray(self.input_grid.coords.separated_coords[0], xp, device=target_device)
+                    u = asarray(self.output_grid.coords.separated_coords[0], xp, device=target_device)
                     self.M = xp.astype(dft_matrix_separated(u, x, conjugate=True), complex_dtype, copy=False)
             elif self.ndim == 2:
                 if self.input_grid.is_regular and self.output_grid.is_regular:
@@ -114,8 +114,8 @@ class MatrixFourierTransform(FourierTransform):
                         zero_in[0], zero_out[0], delta_in[0], delta_out[0],
                         dims_in[0], dims_out[0], xp, complex_dtype, conjugate=True, device=target_device)
                 else:
-                    x, y = [xp.asarray(c, device=target_device) for c in self.input_grid.coords.separated_coords]
-                    u, v = [xp.asarray(c, device=target_device) for c in self.output_grid.coords.separated_coords]
+                    x, y = [asarray(c, xp, device=target_device) for c in self.input_grid.coords.separated_coords]
+                    u, v = [asarray(c, xp, device=target_device) for c in self.output_grid.coords.separated_coords]
 
                     self.M1 = xp.astype(dft_matrix_separated(v, y, conjugate=True), complex_dtype, copy=False)
                     self.M2 = xp.astype(dft_matrix_separated(x, u, conjugate=True), complex_dtype, copy=False)
@@ -166,7 +166,7 @@ class MatrixFourierTransform(FourierTransform):
         with device_context(data):
             xp = array_namespace(data)
             self._compute_matrices(data)
-            data = xp.astype(xp.asarray(data), self.matrices_dtype, copy=False)
+            data = xp.astype(asarray(data, xp), self.matrices_dtype, copy=False)
 
             if self.weights_input.ndim == 0:
                 alpha = self.weights_input
@@ -204,7 +204,7 @@ class MatrixFourierTransform(FourierTransform):
         with device_context(data):
             xp = array_namespace(data)
             self._compute_matrices(data)
-            data = xp.astype(xp.asarray(data), self.matrices_dtype, copy=False)
+            data = xp.astype(asarray(data, xp), self.matrices_dtype, copy=False)
 
             if self.weights_output.ndim == 0:
                 alpha = self.weights_output

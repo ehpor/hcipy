@@ -15,6 +15,20 @@ def device_context(array):
         return array.device
     return nullcontext()
 
+def asarray(array, xp, *, dtype=None, device=None, copy=None):
+    '''Convert an array without discarding its automatic differentiation graph.
+
+    The dtype, device and copy arguments follow the backend's ``asarray``.
+    For native PyTorch tensors, explicitly retain ``requires_grad`` because
+    older PyTorch versions otherwise detach the tensor during conversion.
+    '''
+    kwargs = {}
+    if device is not None:
+        kwargs['device'] = device
+    if array_api_compat.is_torch_namespace(xp) and array_api_compat.is_torch_array(array):
+        kwargs['requires_grad'] = array.requires_grad
+    return xp.asarray(array, dtype=dtype, copy=copy, **kwargs)
+
 def infer_xp(*arrays):
     """Infer xp from input arrays.
 

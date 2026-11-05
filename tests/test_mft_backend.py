@@ -264,3 +264,49 @@ def test_mft_jax_coordinate_derivative(regular):
     for step in [1e-3, 3e-4, 1e-4]:
         finite_difference = (transform(1 + step) - transform(1 - step)) / (2 * step)
         np.testing.assert_allclose(to_numpy(derivative), to_numpy(finite_difference), rtol=2e-6, atol=1e-9)
+
+
+@pytest.mark.parametrize('ndim', [1, 2])
+@pytest.mark.parametrize('backward', [False, True])
+def test_mft_field_derivative(ndim, backward):
+    torch = pytest.importorskip('torch')
+    input_grid = hp.make_uniform_grid([4] * ndim, 0.7)
+    output_grid = hp.make_uniform_grid([3] * ndim, 5)
+    mft = hp.MatrixFourierTransform(input_grid, output_grid)
+    source_grid = output_grid if backward else input_grid
+    values = torch.arange(source_grid.size, dtype=torch.float64).requires_grad_()
+    field = NewStyleField(values, source_grid)
+    result = mft.backward(field) if backward else mft.forward(field)
+    (derivative,) = torch.autograd.grad(result.data.real.sum(), values)
+
+    kernel = np.cos(output_grid.points @ input_grid.points.T)
+    expected = (kernel.sum(axis=1) * output_grid.weights / (2 * np.pi)**ndim if backward
+                else kernel.sum(axis=0) * input_grid.weights)
+    np.testing.assert_allclose(to_numpy(derivative), expected, rtol=3e-12, atol=3e-12)
+    assert values.requires_grad
+
+
+@pytest.mark.parametrize('ndim', [1, 2])
+@pytest.mark.parametrize('regular_input', [False, True])
+def test_mft_torch_cuda_mixed_grids(ndim, regular_input):
+    torch = pytest.importorskip('torch')
+    if not torch.cuda.is_available():
+        pytest.skip('CUDA is not available for Torch')
+    backend = get_backend('torch')
+    with torch.device('cuda'):
+        regular = hp.CartesianGrid(hp.RegularCoords([0.2] * ndim, [4] * ndim, [-0.3] * ndim, xp=backend), weights=0.2**ndim)
+        separated = hp.CartesianGrid(hp.SeparatedCoords([[-2.0, -0.5, 1.0]] * ndim, xp=backend), weights=1.5**ndim)
+        input_grid, output_grid = (regular, separated) if regular_input else (separated, regular)
+        # Compute the independent quadrature while CUDA is the default device.
+        kernel = np.exp(-1j * to_numpy(output_grid.points) @ to_numpy(input_grid.points).T)
+        values = torch.arange(input_grid.size, dtype=torch.float32)
+
+    # The transform must follow the arrays, even with the default back on CPU.
+    mft = hp.MatrixFourierTransform(input_grid, output_grid)
+    result = mft.forward(NewStyleField(values, input_grid))
+    expected = kernel @ to_numpy(values) * input_grid.weights
+    np.testing.assert_allclose(to_numpy(result.data), expected, rtol=3e-6, atol=3e-6)
+    recovered = mft.backward(result)
+    expected_back = kernel.conj().T @ expected * output_grid.weights / (2 * np.pi)**ndim
+    np.testing.assert_allclose(to_numpy(recovered.data), expected_back, rtol=3e-6, atol=3e-6)
+    assert result.data.device == recovered.data.device == values.device

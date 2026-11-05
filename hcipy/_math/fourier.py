@@ -3,7 +3,7 @@ import numexpr
 import cmath
 import numpy as np
 
-from .backends import array_namespace
+from .backends import array_namespace, asarray
 from array_api_compat import is_numpy_array, is_numpy_namespace, is_cupy_namespace
 
 @numba.njit(parallel=True, fastmath=True, cache=True)
@@ -112,7 +112,9 @@ def _dft_matrix_regular_fallback(x0, u0, dx, du, Nx, Nu, xp, dtype, device=None)
     if is_cupy_namespace(xp):
         import array_api_compat.cupy as xp
 
-    parameters = [xp.asarray(v, device=device) for v in (x0, u0, dx, du)]
+    # Python scalars must not round through the backend's default float32.
+    parameters = [asarray(v, xp, dtype=None if hasattr(v, 'dtype') else xp.float64, device=device)
+                  for v in (x0, u0, dx, du)]
     parameters = [xp.astype(v, xp.float64) if xp.isdtype(v.dtype, 'integral') else v for v in parameters]
     float_dtype = xp.result_type(xp.float32 if dtype == xp.complex64 else xp.float64, *parameters)
     x0, u0, dx, du = [xp.astype(v, float_dtype, copy=False) for v in parameters]

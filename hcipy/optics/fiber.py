@@ -226,16 +226,12 @@ class SingleModeFiberInjection(OpticalElement):
         Returns
         -------
         Wavefront
-            The complex amplitude of the single-mode fiber.
+            The complex amplitude of the single-mode fiber. Each amplitude is the
+            weighted inner product of the mode with the incoming electric field.
+            Polarization components are projected independently.
         '''
-        output = np.dot(wavefront.electric_field.conj() * self.input_grid.weights, self.mode)
-
-        if not np.isscalar(output):
-            output = np.array(output)
-        else:
-            # The incoming wavefront was polarized, so we need to add a dimension to
-            # make it a valid Field.
-            output = output[..., np.newaxis]
+        output = np.sum(wavefront.electric_field * self.mode.conj() * self.input_grid.weights,
+                        axis=-1, keepdims=True)
 
         output = Field(output, self.output_grid)
 
@@ -299,10 +295,15 @@ class SingleModeFiberArray(OpticalElement):
         Returns
         -------
         Wavefront
-            The complex amplitudes of each fiber.
+            The complex amplitudes of each fiber. Each amplitude is the
+            weighted inner product of the mode with the incoming electric field.
+            Polarization components are projected independently.
         '''
-        res = self.projection_matrix.T.dot(wavefront.electric_field.conj() * self.input_grid.weights)
-        return Wavefront(Field(res, self.fiber_grid), wavefront.wavelength)
+        electric_field = wavefront.electric_field
+        weighted_field = (electric_field * self.input_grid.weights).reshape((-1, self.input_grid.size))
+        res = self.projection_matrix.T.dot(weighted_field.conj().T).T.conj()
+        res = res.reshape(electric_field.shape[:-1] + (self.fiber_grid.size,))
+        return Wavefront(Field(res, self.fiber_grid), wavefront.wavelength, wavefront.input_stokes_vector)
 
     def backward(self, wavefront):
         '''Backwards propagate the light through the fiber array.
@@ -317,5 +318,8 @@ class SingleModeFiberArray(OpticalElement):
         Wavefront
             The outgoing wavefront.
         '''
-        res = self.projection_matrix.dot(wavefront.electric_field)
-        return Wavefront(Field(res, self.input_grid), wavefront.wavelength)
+        electric_field = wavefront.electric_field
+        coefficients = electric_field.reshape((-1, self.fiber_grid.size))
+        res = self.projection_matrix.dot(coefficients.T).T
+        res = res.reshape(electric_field.shape[:-1] + (self.input_grid.size,))
+        return Wavefront(Field(res, self.input_grid), wavefront.wavelength, wavefront.input_stokes_vector)

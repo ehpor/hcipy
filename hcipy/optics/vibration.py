@@ -70,7 +70,7 @@ class SimpleVibration(OpticalElement):
         '''
         wf = wavefront.copy()
 
-        wf.electric_field *= np.exp(1j * (self.mode * self.amplitude / wf.wavelength * np.sin(self.phase)))
+        wf.electric_field *= np.exp(1j * wf.wavenumber * self.mode * self.amplitude * np.sin(self.phase))
         return wf
 
     def backward(self, wavefront):
@@ -89,7 +89,7 @@ class SimpleVibration(OpticalElement):
         '''
         wf = wavefront.copy()
 
-        wf.electric_field *= np.exp(-1j * (self.mode * self.amplitude / wf.wavelength * np.sin(self.phase)))
+        wf.electric_field *= np.exp(-1j * wf.wavenumber * self.mode * self.amplitude * np.sin(self.phase))
         return wf
 
 class DampedHarmonicVibration(DynamicSurfaceAberration):

@@ -1283,6 +1283,23 @@ def test_simple_vibration_phase_matching():
     # Check that the phase varies contiguously with time and is not affected by changing the frequency.
     assert np.isclose(phase_before, phase_after)
 
+def test_simple_vibration_phase():
+    pupil_grid = make_pupil_grid(32)
+    mode = pupil_grid.ones()
+
+    vib = SimpleVibration(mode, amplitude=0.1, frequency=10, phase_0=np.pi / 2)
+
+    wf = Wavefront(mode, wavelength=1.0)
+    wf_out = vib.forward(wf)
+    wf_back = vib.backward(wf_out)
+
+    # At t=0, sin(phase) = 1, so the applied phase is 2*pi * mode * amplitude / wavelength.
+    expected_phase = 2 * np.pi * mode * 0.1 / 1.0
+    applied_phase = np.angle(wf_out.electric_field / wf.electric_field)
+
+    assert np.allclose(applied_phase, expected_phase)
+    assert np.allclose(wf.electric_field, wf_back.electric_field)
+
 def test_damped_oscillator_vibration():
     pupil_grid = make_pupil_grid(32)
     mode = pupil_grid.x

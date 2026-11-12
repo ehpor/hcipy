@@ -357,7 +357,7 @@ class Wavefront(object):
 
     @total_power.setter
     def total_power(self, p):
-        self.electric_field *= np.sqrt(p / self.total_power)
+        self.electric_field = self.electric_field * np.sqrt(p / self.total_power)
 
 def jones_to_mueller(jones_matrix):
     '''Convert a Jones matrix to a Mueller matrix.

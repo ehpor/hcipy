@@ -1283,13 +1283,50 @@ def test_simple_vibration_phase_matching():
     # Check that the phase varies contiguously with time and is not affected by changing the frequency.
     assert np.isclose(phase_before, phase_after)
 
+def test_simple_vibration_phase():
+    pupil_grid = make_pupil_grid(32)
+    mode = pupil_grid.ones()
+
+    vib = SimpleVibration(mode, amplitude=0.1, frequency=10, phase_0=np.pi / 2)
+
+    wf = Wavefront(mode, wavelength=1.0)
+    wf_out = vib.forward(wf)
+    wf_back = vib.backward(wf_out)
+
+    # At t=0, sin(phase) = 1, so the applied phase is 2*pi * mode * amplitude / wavelength.
+    expected_phase = 2 * np.pi * mode * 0.1 / 1.0
+    applied_phase = np.angle(wf_out.electric_field / wf.electric_field)
+
+    assert np.allclose(applied_phase, expected_phase)
+    assert np.allclose(wf.electric_field, wf_back.electric_field)
+
+def test_damped_oscillator_vibration_phase():
+    pupil_grid = make_pupil_grid(32)
+    mode = pupil_grid.x
+
+    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=1e-12, refractive_index=2.0, seed=0)
+    vib.evolve_until(0.5)
+
+    assert vib.displacement != 0
+
+    wf = Wavefront(pupil_grid.ones(), wavelength=1e-6)
+    wf_out = vib.forward(wf)
+
+    # The element should not be an identity.
+    assert not np.allclose(wf_out.electric_field, wf.electric_field)
+
+    # With n = 2.0 the applied phase equals
+    # (n - 1) * wavenumber * mode * displacement = 2*pi * mode * displacement / wavelength.
+    expected_phase = (2.0 - 1) * wf.wavenumber * mode * vib.displacement
+    assert np.allclose(wf_out.electric_field, wf.electric_field * np.exp(1j * expected_phase))
+
 def test_damped_oscillator_vibration():
     pupil_grid = make_pupil_grid(32)
     mode = pupil_grid.x
 
     # Test white noise driven oscillator with driving PSD of 1e-12 m^2/Hz
     driving_psd = 1e-12  # m^2/Hz
-    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd, seed=0)
+    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd, refractive_index=2.0, seed=0)
 
     # Store initial displacement
     disp0 = vib.displacement
@@ -1313,11 +1350,11 @@ def test_damped_oscillator_vibration():
 
     # Test that invalid driving_psd raises ValueError
     with pytest.raises(ValueError, match="driving_psd must be"):
-        DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=-1e-12)
+        DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=-1e-12, refractive_index=2.0)
 
     # Test that invalid damping ratio raises ValueError
     with pytest.raises(ValueError, match="damping ratio"):
-        DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0, driving_psd=driving_psd)
+        DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0, driving_psd=driving_psd, refractive_index=2.0)
 
 def test_damped_oscillator_vibration_stationary_distribution():
     pupil_grid = make_pupil_grid(32)
@@ -1325,7 +1362,7 @@ def test_damped_oscillator_vibration_stationary_distribution():
 
     # Test that stationary distribution matches theoretical RMS
     driving_psd = 1e-12  # m^2/Hz
-    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd, seed=0)
+    vib = DampedHarmonicVibration(mode, natural_frequency=10.0, damping_ratio=0.1, driving_psd=driving_psd, refractive_index=2.0, seed=0)
 
     # Evolve for 5000 timesteps to reach stationary distribution
     positions = []

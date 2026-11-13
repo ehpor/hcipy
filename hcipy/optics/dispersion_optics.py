@@ -60,20 +60,19 @@ def snells_law(incidence_angle, relative_refractive_index):
     incidence_angle : array like
         The incidence angles of the incoming field in radians.
     relative_refractive_index : scalar
-        The relative refractive index between two media.
+        The relative refractive index between the two media, defined as
+        the refractive index of the transmitted medium divided by that of
+        the incident medium.
 
     Returns
     -------
     Array like
-        The transmitted angles of the outgoing field in radians.
+        The transmitted angles of the outgoing field in radians. Rays that
+        undergo total internal reflection are returned as NaN.
     '''
-    if np.all(relative_refractive_index > 1):
-        return np.arcsin(relative_refractive_index * np.sin(incidence_angle))
-    else:
-        if np.all(incidence_angle < np.arcsin(relative_refractive_index)):
-            return np.arcsin(relative_refractive_index * np.sin(incidence_angle))
-        else:
-            raise ValueError("Total internal reflection is occuring.")
+    sin_transmitted_angle = np.sin(incidence_angle) / relative_refractive_index
+
+    return np.arcsin(sin_transmitted_angle)
 
 def _tilt_sag(orientation, angle):
     '''Calculate the sag profile for a tilt element.
@@ -272,9 +271,9 @@ class Prism(OpticalElement):
     def _deviation(self, n):
         '''Calculate the deviation angle for a given refractive index.
         '''
-        transmitted_angle_surface_1 = snells_law(self.angle_of_incidence, 1 / n)
+        transmitted_angle_surface_1 = snells_law(self.angle_of_incidence, n)
         incident_angle_surface_2 = self.prism_angle - transmitted_angle_surface_1
-        transmitted_angle = snells_law(incident_angle_surface_2, n)
+        transmitted_angle = snells_law(incident_angle_surface_2, 1 / n)
 
         return self.angle_of_incidence + transmitted_angle - self.prism_angle
 

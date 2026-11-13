@@ -388,7 +388,9 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
     x = (-q_arr + r_arr) * circum_diameter / 2 + center[0]
     y = (q_arr + r_arr) * apothem * 2 + center[1]
 
-    weight = 2 * apothem**2 * math.sqrt(3)
+    # Each point represents one lattice cell, whose area is sqrt(3) / 2 times
+    # the square of the nearest-neighbour spacing.
+    weight = circum_diameter**2 * math.sqrt(3) / 2
 
     if pointy_top:
         return CartesianGrid(UnstructuredCoords((x, y), xp=xp), weight)

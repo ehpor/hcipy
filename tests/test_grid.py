@@ -443,6 +443,14 @@ def test_make_hexagonal_grid_weight():
         total_weight = xp.sum(grid.ones().data * grid.weights)
         assert all_close(total_weight, grid.size * expected_cell_area)
 
+def test_make_hexagonal_grid_center():
+    center = xp.asarray([1.0, -0.5])
+
+    for pointy_top in [True, False]:
+        grid = make_hexagonal_grid(circum_diameter=1.0, n_rings=2, pointy_top=pointy_top, center=center, xp=xp)
+
+        assert all_close(xp.mean(grid.points, axis=0), center)
+
 def test_make_chebyshev_grid():
     grid = make_chebyshev_grid(dims=[10, 20], xp=xp)
 

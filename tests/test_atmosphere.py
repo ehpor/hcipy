@@ -180,6 +180,34 @@ def test_atmospheric_layer_reset(layer_cls):
     assert not np.allclose(phase_5, phase_6)
     assert np.allclose(phase_6, phase_7)
 
+def test_finite_atmospheric_layer_time_roundtrip():
+    grid = make_pupil_grid(32)
+    cn_squared = Cn_squared_from_fried_parameter(1)
+
+    layer = FiniteAtmosphericLayer(grid, cn_squared, 10, 1)
+
+    assert layer.t == 0
+
+    layer.evolve_until(3)
+    assert layer.t == 3
+
+    layer.t = 5
+    assert layer.t == 5
+
+def test_finite_atmospheric_layer_reset_resets_time_and_center():
+    grid = make_pupil_grid(32)
+    cn_squared = Cn_squared_from_fried_parameter(1)
+
+    layer = FiniteAtmosphericLayer(grid, cn_squared, 10, 1)
+
+    layer.evolve_until(3)
+    assert layer.t == 3
+    assert not np.allclose(layer.center, 0)
+
+    layer.reset()
+    assert layer.t == 0
+    assert np.allclose(layer.center, 0)
+
 def make_modal_ao_layer(framerate):
     grid = make_pupil_grid(32)
     cn_squared = Cn_squared_from_fried_parameter(1)

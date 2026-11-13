@@ -146,8 +146,23 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
 
     @Cn_squared.setter
     def Cn_squared(self, Cn_squared):  # noqa: N802
+        old_Cn_squared = getattr(self, '_Cn_squared', None)
         self._Cn_squared = Cn_squared
-        self._noise = None
+
+        if old_Cn_squared is None or old_Cn_squared == 0:
+            # Scaling is undefined from zero (or unknown) Cn^2; rebuild instead.
+            self._noise = None
+            self._achromatic_screen = None
+            return
+
+        scale = np.sqrt(Cn_squared / old_Cn_squared)
+
+        if self._noise is not None:
+            self._noise.C_1 *= scale
+            self._noise.C_2 *= scale
+
+        if self._achromatic_screen is not None:
+            self._achromatic_screen = self._achromatic_screen * scale
 
     @property
     def outer_scale(self):

@@ -311,3 +311,19 @@ def test_phase_covariance_phase_structure_function_von_karman(r0, L0):
     phase_structure_function_from_covariance = 2 * (phase_covariance.max() - phase_covariance)
 
     assert np.allclose(phase_structure_function_from_covariance, phase_structure_function)
+
+def test_finite_atmospheric_layer_wind_direction():
+    pupil_grid = make_pupil_grid((15, 11), (1.5, 1.1))
+    Cn_squared = Cn_squared_from_fried_parameter(0.1)
+    layer = FiniteAtmosphericLayer(pupil_grid, Cn_squared, 10, velocity=[1, 0], oversampling=1, seed=0)
+
+    phase_0 = layer.phase_for(500e-9)
+
+    shift_x = np.array([pupil_grid.delta[0], 0])
+    shift_y = np.array([0, pupil_grid.delta[1]])
+
+    layer.evolve_until(shift_x[0])
+    phase_x = layer.phase_for(500e-9)
+
+    assert np.allclose(phase_x, FourierShift(pupil_grid, shift_x).forward(phase_0), rtol=1e-10, atol=1e-10)
+    assert not np.allclose(phase_x, FourierShift(pupil_grid, shift_y).forward(phase_0), rtol=1e-10, atol=1e-10)

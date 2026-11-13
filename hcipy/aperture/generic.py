@@ -266,7 +266,7 @@ def make_regular_polygon_aperture(num_sides, circum_diameter, angle=0, center=No
                 f_sub *= (np.cos(theta) * x + np.sin(theta) * y)**2 <= apothem**2
         else:
             for theta in thetas:
-                f_sub *= (np.abs(np.sin(theta) * x) + -np.cos(theta) * y) <= apothem
+                f_sub *= (np.sin(theta) * x - np.cos(theta) * y) <= apothem
 
         if return_with_mask:
             return f_sub, m

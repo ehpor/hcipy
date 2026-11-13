@@ -68,6 +68,12 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
             will be generated. This is useful for Monte-Carlo-style computations.
             The default is False.
         '''
+        self._compute_noise(make_independent_realization)
+
+        self.center = np.zeros(2)
+        self._t = 0
+
+    def _compute_noise(self, make_independent_realization=False):
         if make_independent_realization:
             # Reset the original random generator to the current one. This
             # will essentially reset the randomness.
@@ -91,7 +97,7 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
         This property is not intended to be used by the user.
         '''
         if self._noise is None:
-            self.reset()
+            self._compute_noise()
 
         return self._noise
 

@@ -170,6 +170,8 @@ def test_atmospheric_layer_reset(layer_cls):
     layer.evolve_until(1)
     phase_6 = layer.phase_for(wavelength)
     layer.reset(make_independent_realization=False)
+    assert layer.t == 0
+    assert np.allclose(layer.center, 0)
     layer.evolve_until(1)
     phase_7 = layer.phase_for(wavelength)
 

@@ -1,4 +1,5 @@
 from hcipy import *
+from hcipy.aperture import make_wedge_annular_aperture
 import numpy as np
 import os
 import warnings
@@ -51,6 +52,36 @@ def test_regular_polygon_aperture(num_sides, angle):
         make_regular_polygon_aperture, pupil_diameter, name,
         circum_diameter=pupil_diameter, num_sides=num_sides, angle=angle
     )
+
+@pytest.mark.parametrize('rotate', [0.0, 0.37])
+def test_wedge_annular_aperture_with_mask(rotate):
+    grid = make_uniform_grid(256, [2, 2])
+    if rotate != 0:
+        grid = grid.rotated(rotate)
+
+    segment_shape = make_regular_polygon_aperture(5, 0.6)
+
+    def segment_shape_without_mask(grid):
+        return segment_shape(grid)
+
+    segment_positions = CartesianGrid(UnstructuredCoords((
+        np.array([0.5, -0.5, 0.0]),
+        np.array([0.0, 0.0, 0.5]),
+    )))
+    segment_transmissions = np.array([1.0, 0.5, 0.25])
+
+    aperture_with_mask = make_wedge_annular_aperture(
+        segment_shape, segment_positions, segment_transmissions=segment_transmissions
+    )
+    aperture_without_mask = make_wedge_annular_aperture(
+        segment_shape_without_mask, segment_positions, segment_transmissions=segment_transmissions
+    )
+
+    result_with_mask = aperture_with_mask(grid)
+    result_without_mask = aperture_without_mask(grid)
+
+    assert np.any(result_with_mask > 0)
+    assert np.allclose(result_with_mask, result_without_mask)
 
 @pytest.mark.parametrize('diameter', [1, 0.5])
 def test_circular_aperture(diameter):

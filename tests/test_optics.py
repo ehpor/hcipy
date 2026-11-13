@@ -790,6 +790,35 @@ def test_prism():
 
         assert np.max(abs(wf_deviated.power - wf_foc.power) / wf_foc.power.max()) < 1e-8
 
+def test_snells_law_tir():
+    from hcipy.optics.dispersion_optics import snells_law
+
+    # Dense to rare: refraction below the critical angle.
+    incidence = np.deg2rad(30)
+    assert np.allclose(snells_law(incidence, 1 / 1.5), np.arcsin(1.5 * np.sin(incidence)))
+
+    # Dense to rare: total internal reflection above the critical angle.
+    critical_angle = np.arcsin(1 / 1.5)
+    assert np.allclose(snells_law(critical_angle, 1 / 1.5), np.pi / 2)
+
+    assert np.isnan(snells_law(np.deg2rad(60), 1 / 1.5))
+
+    # Rare to dense: no total internal reflection, even at large angles.
+    incidence = np.deg2rad(60)
+    assert np.allclose(snells_law(incidence, 1.5), np.arcsin(np.sin(incidence) / 1.5))
+
+    # Reciprocity below the critical angle.
+    assert np.allclose(snells_law(snells_law(incidence, 1.5), 1 / 1.5), incidence)
+
+    # Array input: only rays undergoing total internal reflection are NaN.
+    incidence = np.deg2rad([10, 20, 60])
+    transmitted_angle = snells_law(incidence, 1 / 1.5)
+    assert np.allclose(transmitted_angle[:2], np.arcsin(1.5 * np.sin(incidence[:2])))
+    assert np.isnan(transmitted_angle[2])
+
+    incidence = np.deg2rad([10, 20])
+    assert np.allclose(snells_law(incidence, 1.5), np.arcsin(np.sin(incidence) / 1.5))
+
 def test_fresnel_coefficients():
     n2 = 1.5
     n1 = 1.0

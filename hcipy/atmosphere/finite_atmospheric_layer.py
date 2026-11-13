@@ -174,3 +174,4 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
     def outer_scale(self, L0):  # noqa: N802
         self._L0 = L0
         self._noise = None
+        self._achromatic_screen = None

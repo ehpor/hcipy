@@ -698,9 +698,13 @@ def make_wedge_annular_aperture(segment_shape, segment_positions, segment_transm
                 segment_sub, mask = segment_shape(grid.rotated(-alpha), return_with_mask=True)
 
                 if isinstance(mask, tuple):
-                    res.shaped[mask][segment_sub > 0.5] = t
+                    sub_res = res.shaped[mask]
+                    sub_res[segment_sub > 0.5] = t
+                    res.shaped[mask] = sub_res
                 else:
-                    res[mask][segment_sub] = t
+                    sub_res = res[mask]
+                    sub_res[segment_sub > 0.5] = t
+                    res[mask] = sub_res
             else:
                 segment = segment_shape(grid.rotated(-alpha))
                 res[segment > 0.5] = t

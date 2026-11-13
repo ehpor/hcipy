@@ -385,15 +385,19 @@ def make_hexagonal_grid(circum_diameter, n_rings, pointy_top=False, center=None,
 
     q_arr = xp.asarray(q, dtype=dtype)
     r_arr = xp.asarray(r, dtype=dtype)
-    x = (-q_arr + r_arr) * circum_diameter / 2 + center[0]
-    y = (q_arr + r_arr) * apothem * 2 + center[1]
+    x = (-q_arr + r_arr) * circum_diameter / 2
+    y = (q_arr + r_arr) * apothem * 2
 
-    weight = 2 * apothem**2 * math.sqrt(3)
+    # Each point represents one lattice cell, whose area is sqrt(3) / 2 times
+    # the square of the nearest-neighbour spacing.
+    weight = circum_diameter**2 * math.sqrt(3) / 2
 
     if pointy_top:
-        return CartesianGrid(UnstructuredCoords((x, y), xp=xp), weight)
+        coords = (x + center[0], y + center[1])
     else:
-        return CartesianGrid(UnstructuredCoords((y, x), xp=xp), weight)
+        coords = (y + center[0], x + center[1])
+
+    return CartesianGrid(UnstructuredCoords(coords, xp=xp), weight)
 
 def make_chebyshev_grid(dims, minimum=None, maximum=None, xp=None):
     '''Make a Chebyshev grid.

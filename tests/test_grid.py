@@ -419,6 +419,38 @@ def test_make_hexagonal_grid():
 
     assert grid.size == 37
 
+def test_make_hexagonal_grid_nearest_neighbour_spacing():
+    circum_diameter = 1.0
+
+    for pointy_top in [True, False]:
+        grid = make_hexagonal_grid(circum_diameter=circum_diameter, n_rings=2, pointy_top=pointy_top, xp=xp)
+
+        central_point = grid.points[0]
+        first_ring = grid.points[1:7]
+        distances = xp.sqrt(xp.sum((first_ring - central_point)**2, axis=-1))
+
+        assert all_close(distances, xp.asarray([circum_diameter] * 6))
+
+def test_make_hexagonal_grid_weight():
+    circum_diameter = 2.0
+    expected_cell_area = math.sqrt(3) / 2 * circum_diameter**2
+
+    for pointy_top in [True, False]:
+        grid = make_hexagonal_grid(circum_diameter=circum_diameter, n_rings=3, pointy_top=pointy_top, xp=xp)
+
+        assert all_close(grid.weights, expected_cell_area)
+
+        total_weight = xp.sum(grid.ones().data * grid.weights)
+        assert all_close(total_weight, grid.size * expected_cell_area)
+
+def test_make_hexagonal_grid_center():
+    center = xp.asarray([1.0, -0.5])
+
+    for pointy_top in [True, False]:
+        grid = make_hexagonal_grid(circum_diameter=1.0, n_rings=2, pointy_top=pointy_top, center=center, xp=xp)
+
+        assert all_close(xp.mean(grid.points, axis=0), center)
+
 def test_make_chebyshev_grid():
     grid = make_chebyshev_grid(dims=[10, 20], xp=xp)
 

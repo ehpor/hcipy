@@ -8,6 +8,11 @@ import os
 import pytest
 import shutil
 
+if Configuration().use_array_api:
+    import array_api_strict as xp
+else:
+    import numpy as xp
+
 def is_ffmpeg_installed():
     ffmpeg_path = Configuration().ffmpeg_path
 
@@ -73,8 +78,8 @@ def test_ffmpeg_writer(style, tmpdir):
     assert os.path.isfile(fname)
 
 grids = [
-    pytest.param(make_pupil_grid(256), id='regularly_spaced_grid'),
-    pytest.param(CartesianGrid(SeparatedCoords((np.linspace(-0.5, 0.5, 257), np.linspace(-0.5, 0.5, 257)))), id='separated_grid')
+    pytest.param(make_pupil_grid(256, xp=xp), id='regularly_spaced_grid'),
+    pytest.param(CartesianGrid(SeparatedCoords((xp.linspace(-0.5, 0.5, 257), xp.linspace(-0.5, 0.5, 257)))), id='separated_grid')
 ]
 
 @pytest.mark.parametrize('grid', grids)

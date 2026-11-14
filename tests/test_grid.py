@@ -360,6 +360,46 @@ def test_grid_weights():
         grid = CartesianGrid(UnstructuredCoords([[0, 1], [0, 1]], xp=xp))
         assert all_close(grid.weights, xp.asarray(1.0))
 
+def test_polar_grid_weights_disc():
+    radius = 1.0
+    num_r = 40
+    num_theta = 120
+
+    dr = radius / num_r
+    dtheta = 2 * math.pi / num_theta
+
+    r = xp.linspace(0.5 * dr, radius - 0.5 * dr, num_r)
+    theta = xp.linspace(0.5 * dtheta, 2 * math.pi - 0.5 * dtheta, num_theta)
+
+    grid = PolarGrid(SeparatedCoords((r, theta), xp=xp))
+
+    assert all_close(xp.sum(grid.weights), math.pi * radius**2)
+
+def test_polar_grid_weights_annular_sector():
+    inner_radius = 1.0
+    outer_radius = 1.2
+    start_angle = 0.1
+    end_angle = 0.2
+    num_r = 8
+    num_theta = 5
+
+    dr = (outer_radius - inner_radius) / num_r
+    dtheta = (end_angle - start_angle) / num_theta
+
+    r = xp.linspace(inner_radius + 0.5 * dr, outer_radius - 0.5 * dr, num_r)
+    theta = xp.linspace(start_angle + 0.5 * dtheta, end_angle - 0.5 * dtheta, num_theta)
+
+    grid = PolarGrid(SeparatedCoords((r, theta), xp=xp))
+
+    expected_area = 0.5 * (outer_radius**2 - inner_radius**2) * (end_angle - start_angle)
+
+    assert all_close(xp.sum(grid.weights), expected_area)
+
+def test_polar_grid_weights_unstructured_fallback():
+    with pytest.warns(UserWarning):
+        grid = PolarGrid(UnstructuredCoords([xp.asarray([1.0, 2.0]), xp.asarray([0.0, 1.0])], xp=xp))
+        assert all_close(grid.weights, xp.asarray(1.0))
+
 def test_grid_serialization():
     grid = CartesianGrid(RegularCoords((1, 1), (10, 10), (0, 0), xp=xp))
     d = grid.to_dict()

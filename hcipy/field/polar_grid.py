@@ -5,6 +5,15 @@ from .grid import Grid
 from .coordinates import UnstructuredCoords
 from .._math.backends import array_namespace
 
+def _trapezoid_weights(x, xp):
+    w = (x[2:] - x[:-2]) / 2
+
+    return xp.concat([
+        xp.reshape(x[1] - x[0], (1,)),
+        w,
+        xp.reshape(x[-1] - x[-2], (1,)),
+    ])
+
 class PolarGrid(Grid):
     '''A grid representing a two-dimensional Polar coordinate system.
     '''
@@ -101,7 +110,29 @@ class PolarGrid(Grid):
 
     @staticmethod
     def _get_automatic_weights(coords):
-        return None
+        '''Calculate automatic area weights for a polar grid.
+
+        Each point is weighted by the polar area element :math:`r\\,dr\\,d\\theta`.
+        The cell width along each coordinate is half the distance to the previous
+        sample plus half the distance to the next sample. The first and last samples
+        only have one neighbour, so they use the full distance to that neighbour.
+        '''
+        # Unstructured or non-2D polar grids have no unambiguous area element.
+        if not coords.is_separated or coords.ndim != 2:
+            return None
+
+        xp = coords.xp
+        r, theta = coords.separated_coords
+
+        if r.shape[0] < 2 or theta.shape[0] < 2:
+            return None
+
+        radial_widths = _trapezoid_weights(r, xp)
+        angular_widths = _trapezoid_weights(theta, xp)
+
+        weights = xp.reshape(r * xp.abs(radial_widths), (1, -1)) * xp.reshape(xp.abs(angular_widths), (-1, 1))
+
+        return xp.reshape(weights, (-1,))
 
 def _cartesian_to_polar(self):
     from .coordinates import UnstructuredCoords

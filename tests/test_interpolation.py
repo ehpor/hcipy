@@ -2,33 +2,38 @@ import numpy as np
 import pytest
 import hcipy
 
-def make_separated_field():
-    grid = hcipy.make_uniform_grid([4, 4], [1, 1])
-    values = np.arange(grid.size)
+if hcipy.Configuration().use_array_api:
+    import array_api_strict as xp
+else:
+    import numpy as xp
+
+def make_separated_field(xp):
+    grid = hcipy.make_uniform_grid([4, 4], [1, 1], xp=xp)
+    values = xp.arange(grid.size)
 
     return hcipy.Field(values, grid)
 
-def make_unstructured_field():
-    field = make_separated_field()
+def make_unstructured_field(xp):
+    field = make_separated_field(xp)
     grid = hcipy.CartesianGrid(hcipy.UnstructuredCoords((field.grid.x, field.grid.y)))
 
     return hcipy.Field(field, grid)
 
-def make_separated_grid():
-    return hcipy.make_uniform_grid([2, 2], [0.8, 0.8])
+def make_separated_grid(xp):
+    return hcipy.make_uniform_grid([2, 2], [0.8, 0.8], xp=xp)
 
-def make_unstructured_grid():
-    grid = make_separated_grid()
+def make_unstructured_grid(xp):
+    grid = make_separated_grid(xp)
     return hcipy.CartesianGrid(hcipy.UnstructuredCoords((grid.x, grid.y)))
 
 fields = [
-    pytest.param(make_separated_field(), id='separated_in'),
-    pytest.param(make_unstructured_field(), id='unstructured_in'),
+    pytest.param(make_separated_field(xp), id='separated_in'),
+    pytest.param(make_unstructured_field(xp), id='unstructured_in'),
 ]
 
 grids = [
-    pytest.param(make_separated_grid(), id='separated_out'),
-    pytest.param(make_unstructured_grid(), id='unstructured_out'),
+    pytest.param(make_separated_grid(xp), id='separated_out'),
+    pytest.param(make_unstructured_grid(xp), id='unstructured_out'),
 ]
 
 @pytest.mark.parametrize('grid_out', grids)

@@ -408,6 +408,37 @@ def test_fourier_correlation(n, q):
     assert np.allclose(ref, op_direct.forward(f_in))
     assert np.allclose(ref, op_callable.forward(f_in))
 
+@pytest.mark.parametrize('field_dtype', ['float64', 'complex128'])
+@pytest.mark.parametrize('kernel_dtype', ['float64', 'complex128'])
+@pytest.mark.parametrize('tensor_shape', [(), (2, 3)])
+@pytest.mark.parametrize('q', [1, 2])
+def test_fourier_convolution_dtypes(field_dtype, kernel_dtype, tensor_shape, q):
+    input_grid = make_pupil_grid(8, 1)
+    kernel_grid = make_pupil_grid(tuple(d * q for d in input_grid.dims), q)
+
+    # An asymmetric kernel, so its transfer function has a non-zero imaginary part.
+    kernel_data = np.zeros(kernel_grid.size, dtype=kernel_dtype)
+    kernel_data[0] = 1
+    kernel_data[1] = 0.5
+    kernel_data[3] = -0.25
+    if kernel_dtype == 'complex128':
+        kernel_data[2] = 0.3j
+        kernel_data[4] = -0.2 + 0.1j
+    kernel = Field(kernel_data, kernel_grid)
+
+    rng = make_random_generator(np, seed=0)
+    shape = tensor_shape + (input_grid.size,)
+    if field_dtype == 'float64':
+        data = rng.normal(size=shape)
+    else:
+        data = rng.normal(size=shape) + 1j * rng.normal(size=shape)
+    f_in = Field(data, input_grid).astype(field_dtype)
+
+    op = make_fourier_convolution(input_grid, kernel, q)
+    ref = _reference_convolution_or_correlation(f_in, kernel, q, conjugate=False)
+
+    assert np.allclose(op.forward(f_in), ref)
+
 def test_fourier_convolution_correlation_errors():
     input_grid = make_pupil_grid(8)
 

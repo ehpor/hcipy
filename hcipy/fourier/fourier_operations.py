@@ -292,8 +292,10 @@ class FourierShift:
         shift = np.array(shift)
         self._shift = shift
 
-        # Find out which axes to Fourier transform.
-        self._ft_axes = tuple(np.flatnonzero(shift) - 1)
+        # Find out which axes to Fourier transform. The shift is given in
+        # coordinate order (x, y, z, ...), while the array axes are reversed,
+        # so coordinate axis i corresponds to array axis -(i + 1).
+        self._ft_axes = tuple(-(int(i) + 1) for i in np.flatnonzero(shift))
 
         if not self._ft_axes:
             # All shifts are zero. We can exit out early.

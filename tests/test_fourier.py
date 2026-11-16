@@ -493,17 +493,25 @@ def test_chirp_z_transform(dtype):
 
         check_czt_vs_scipy(x, m, w, a, dtype)
 
-def test_fourier_shift():
-    input_grid = make_uniform_grid([32, 32], 1)
+@pytest.mark.parametrize('dims, shift', [
+    ([32, 32], [10, 0]),
+    ([8, 8, 8], [2, 0, 0]),
+    ([8, 8, 8], [0, 2, 0]),
+    ([8, 8, 8], [0, 0, 2]),
+    ([8, 8, 8], [1, 2, 3]),
+])
+def test_fourier_shift(dims, shift):
+    input_grid = make_uniform_grid(dims, 1)
     field = Field(np.random.randn(input_grid.size), input_grid)
 
-    shift = np.array([10, 0])
+    shift = np.array(shift)
 
     shifter = FourierShift(input_grid, shift * input_grid.delta)
     shifter_reverse = FourierShift(input_grid, -shift * input_grid.delta)
 
     shifted = shifter.forward(field)
-    ref = np.roll(field.shaped, shift, axis=(1, 0)).ravel()
+    axes = tuple(range(input_grid.ndim - 1, -1, -1))
+    ref = np.roll(field.shaped, shift, axis=axes).ravel()
     assert np.allclose(shifted, ref)
 
     back = shifter.backward(shifted)

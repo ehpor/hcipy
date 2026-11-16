@@ -268,15 +268,28 @@ class DeformableMirror(OpticalElement):
         '''
         return 2 * self.surface
 
-    def random(self, rms):
-        '''Set the dm actuators with random white noise of a certain rms.
+    def random(self, rms, seed=None):
+        '''Set the DM actuators to independent, zero-mean Gaussian noise.
 
         Parameters
         ----------
-        rms : scalar
-            The dm surface rms.
+        rms : scalar or array_like
+            The standard deviation of the actuator amplitudes. If this is a
+            scalar, the same value is used for all actuators. Otherwise, supply
+            one value per actuator. This does not specify the RMS of the
+            resulting mirror surface.
+        seed : None, int, array of ints, SeedSequence, BitGenerator, Generator
+            A seed for the random noise. If a Generator or BitGenerator is
+            supplied, its state is advanced by the draw. If None (the default),
+            use NumPy's global random state for compatibility with
+            ``numpy.random.seed()``. An explicit seed does not affect that
+            global state.
         '''
-        self._actuators = np.random.randn(self._actuators.size) * rms
+        if seed is None:
+            self._actuators = np.random.randn(self._actuators.size) * rms
+        else:
+            rng = np.random.default_rng(seed)
+            self._actuators = rng.standard_normal(self._actuators.size) * rms
 
     def phase_for(self, wavelength):
         '''Get the phase in radians that is added to a wavefront with a specified wavelength.

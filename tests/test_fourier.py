@@ -196,12 +196,16 @@ def test_fft_grid_reconstruction():
     for shift_input in [[0, 0], [0.1, 0.1]]:
             for scale in [1, 2]:
                 for shift_output in [[0, 0], [0.1, 0.1]]:
-                    for q in [1, 1.234, 3, 4]:
+                    for q in [1, 1.1, 1.2, 1.234, 1.3, 1.4, 1.7, 3, 4]:
                         for fov in [1, 0.5, 0.8, [0.3, 0.23]]:
-                            for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
+                            for dims in [[8, 8], [8, 16], [9, 9], [9, 18], [11, 11], [13, 13]]:
                                 input_grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
 
                                 fft_grid = make_fft_grid(input_grid, q, fov, shift_output)
+
+                                if np.isscalar(fov) and fov == 1:
+                                    expected_dims = tuple(round(q * d_in) for d_in in input_grid.dims)
+                                    assert fft_grid.dims == expected_dims
 
                                 assert is_fft_grid(fft_grid, input_grid)
 

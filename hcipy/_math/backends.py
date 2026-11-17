@@ -210,3 +210,26 @@ def default_dtype(xp, kind, device=None):
         The default dtype.
     '''
     return xp.__array_namespace_info__().default_dtypes(device=device)[kind]
+
+def complex_dtype(xp, dtype):
+    '''Find the complex dtype matching the precision of a dtype.
+
+    Single-precision real and complex inputs are mapped to complex64. All
+    other inputs are mapped to complex128.
+
+    Parameters
+    ----------
+    xp : module
+        The Array API backend.
+    dtype : dtype
+        The input dtype.
+
+    Returns
+    -------
+    dtype
+        The matching complex dtype.
+    '''
+    if dtype == xp.float32 or dtype == xp.complex64:
+        return xp.complex64
+
+    return xp.complex128

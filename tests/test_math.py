@@ -1,7 +1,7 @@
 import pytest
 import hcipy
 import numpy as np
-from hcipy._math.backends import to_numpy, array_namespace, is_scalar
+from hcipy._math.backends import to_numpy, array_namespace, is_scalar, complex_dtype
 from hcipy._math.einsum import einsum
 from hcipy._math.fourier import dft_matrix_regular, dft_matrix_separated
 from hcipy._math.separable_filter import make_phase_ramp, make_separable_filter, _kernel
@@ -868,3 +868,11 @@ def test_separable_filter_batched(ndim, N):
 
     result_inv = filt.apply(B, inverse=True)
     assert np.allclose(result_inv, B / (ref / A), rtol=1e-4, atol=1e-5)
+
+
+def test_complex_dtype(xp):
+    # Check the mapping from real/complex precision to complex dtype.
+    assert complex_dtype(xp, xp.float32) == xp.complex64
+    assert complex_dtype(xp, xp.complex64) == xp.complex64
+    assert complex_dtype(xp, xp.float64) == xp.complex128
+    assert complex_dtype(xp, xp.complex128) == xp.complex128

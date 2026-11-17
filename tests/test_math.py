@@ -1,7 +1,8 @@
 import pytest
 import hcipy
 import numpy as np
-from hcipy._math.backends import to_numpy, array_namespace, is_scalar, complex_dtype
+from hcipy._math.backends import to_numpy, array_namespace, is_scalar, all_close, complex_dtype
+from hcipy._math import optics
 from hcipy._math.einsum import einsum
 from hcipy._math.fourier import dft_matrix_regular, dft_matrix_separated
 from hcipy._math.separable_filter import make_phase_ramp, make_separable_filter, _kernel
@@ -876,3 +877,204 @@ def test_complex_dtype(xp):
     assert complex_dtype(xp, xp.complex64) == xp.complex64
     assert complex_dtype(xp, xp.float64) == xp.complex128
     assert complex_dtype(xp, xp.complex128) == xp.complex128
+
+
+def _assert_matches_fallback(reference_result, fallback_result):
+    assert all_close(to_numpy(reference_result), to_numpy(fallback_result))
+
+def test_optics_scalar_field(xp):
+    # Set up a scalar complex electric field and per-pixel weights.
+    values = np.array([1 + 2j, -0.5 + 0.25j, 2 - 3j, 0.1 + 0j])
+    data = xp.asarray(values)
+    weights = xp.asarray(np.linspace(0.5, 2.0, values.size))
+
+    # Calculate the expected Stokes components.
+    expected_intensity = xp.abs(data)**2
+    zeros = xp.zeros_like(expected_intensity)
+
+    # Check the Stokes components.
+    assert all_close(optics.stokes_i(data), expected_intensity)
+    assert all_close(optics.stokes_q(data), zeros)
+    assert all_close(optics.stokes_u(data), zeros)
+    assert all_close(optics.stokes_v(data), zeros)
+
+    # Check the power calculation.
+    expected_power = expected_intensity * weights
+    assert all_close(optics.power(data, weights), expected_power)
+
+    # Check the phase calculation.
+    expected_phase = xp.atan2(xp.imag(data), xp.real(data))
+    assert all_close(optics.phase(data), expected_phase)
+
+    # Check that the NumExpr implementations match the fallback implementations.
+    reference_data = to_numpy(data)
+    reference_weights = to_numpy(weights)
+
+    for numpy_func, fallback_func in [
+        (optics.stokes_i_numpy, optics.stokes_i_fallback),
+        (optics.stokes_q_numpy, optics.stokes_q_fallback),
+        (optics.stokes_u_numpy, optics.stokes_u_fallback),
+        (optics.stokes_v_numpy, optics.stokes_v_fallback),
+    ]:
+        reference_result = numpy_func(reference_data, None)
+        fallback_result = fallback_func(data, None)
+        _assert_matches_fallback(reference_result, fallback_result)
+
+    # Check power and phase against the fallback implementations.
+    reference_result = optics.power_numpy(reference_data, reference_weights, None)
+    fallback_result = optics.power_fallback(data, weights, None)
+    _assert_matches_fallback(reference_result, fallback_result)
+
+    reference_result = optics.phase_numpy(reference_data)
+    fallback_result = optics.phase_fallback(data)
+    _assert_matches_fallback(reference_result, fallback_result)
+
+
+def test_optics_vector_field(xp):
+    # Set up a vector electric field and per-pixel weights.
+    values = np.array([
+        [1 + 1j, 0.5 - 0.2j, -1 + 0.5j],
+        [0.2 + 0.3j, -0.7 + 0.1j, 0.4 - 0.6j],
+    ])
+    data = xp.asarray(values)
+    weights = xp.asarray(np.array([0.5, 1.0, 2.0]))
+
+    # Calculate the expected Stokes components.
+    expected_intensity = xp.sum(xp.abs(data)**2, axis=0)
+    expected_q = xp.abs(data[0, :])**2 - xp.abs(data[1, :])**2
+    expected_u = 2 * xp.real(data[0, :] * xp.conj(data[1, :]))
+    expected_v = -2 * xp.imag(data[0, :] * xp.conj(data[1, :]))
+
+    # Check the Stokes components.
+    assert all_close(optics.stokes_i(data), expected_intensity)
+    assert all_close(optics.stokes_q(data), expected_q)
+    assert all_close(optics.stokes_u(data), expected_u)
+    assert all_close(optics.stokes_v(data), expected_v)
+
+    # Check the power calculation.
+    expected_power = expected_intensity * weights
+    assert all_close(optics.power(data, weights), expected_power)
+
+    # Check that the NumExpr implementations match the fallback implementations.
+    reference_data = to_numpy(data)
+    reference_weights = to_numpy(weights)
+
+    for numpy_func, fallback_func in [
+        (optics.stokes_i_numpy, optics.stokes_i_fallback),
+        (optics.stokes_q_numpy, optics.stokes_q_fallback),
+        (optics.stokes_u_numpy, optics.stokes_u_fallback),
+        (optics.stokes_v_numpy, optics.stokes_v_fallback),
+    ]:
+        reference_result = numpy_func(reference_data, None)
+        fallback_result = fallback_func(data, None)
+        _assert_matches_fallback(reference_result, fallback_result)
+
+    # Check the power calculation against the fallback implementation.
+    reference_result = optics.power_numpy(reference_data, reference_weights, None)
+    fallback_result = optics.power_fallback(data, weights, None)
+    _assert_matches_fallback(reference_result, fallback_result)
+
+
+def test_optics_tensor_field(xp):
+    # Set up a linear polarizer Jones matrix and an input Stokes vector.
+    n = 4
+    jones_matrix = np.zeros((2, 2, n), dtype='complex128')
+    jones_matrix[0, 0, :] = 1
+
+    data = xp.asarray(jones_matrix)
+    input_stokes_vector = xp.asarray([2.0, np.sqrt(2), 0.0, np.sqrt(2)])
+    weights = xp.asarray(np.linspace(0.5, 2.0, n))
+
+    # Calculate the expected Mueller matrix for a linear polarizer.
+    expected_mueller = np.zeros((4, 4, n))
+    expected_mueller[0, 0, :] = 0.5
+    expected_mueller[0, 1, :] = 0.5
+    expected_mueller[1, 0, :] = 0.5
+    expected_mueller[1, 1, :] = 0.5
+
+    # Calculate the expected Stokes vector from the Mueller matrix.
+    expected_stokes = np.einsum('ij...,j->i...', expected_mueller, to_numpy(input_stokes_vector))
+
+    intensity = xp.asarray(expected_stokes[0])
+    q = xp.asarray(expected_stokes[1])
+    u = xp.asarray(expected_stokes[2])
+    v = xp.asarray(expected_stokes[3])
+
+    # Check the Stokes components.
+    assert all_close(optics.stokes_i(data, input_stokes_vector), intensity)
+    assert all_close(optics.stokes_q(data, input_stokes_vector), q)
+    assert all_close(optics.stokes_u(data, input_stokes_vector), u)
+    assert all_close(optics.stokes_v(data, input_stokes_vector), v)
+
+    # Check the derived polarization quantities.
+    expected_degree = xp.sqrt(q**2 + u**2 + v**2) / intensity
+    assert all_close(optics.polarization_degree(intensity, q, u, v), expected_degree)
+
+    expected_linear_degree = xp.sqrt(q**2 + u**2) / intensity
+    assert all_close(optics.linear_polarization_degree(intensity, q, u), expected_linear_degree)
+
+    expected_angle = 0.5 * xp.atan2(u, q)
+    assert all_close(optics.linear_polarization_angle(q, u), expected_angle)
+
+    expected_ellipticity = v / (intensity + xp.sqrt(q**2 + u**2))
+    assert all_close(optics.ellipticity(intensity, q, u, v), expected_ellipticity)
+
+    # Check that the NumExpr implementations match the fallback implementations.
+    reference_data = to_numpy(data)
+    reference_input_stokes_vector = to_numpy(input_stokes_vector)
+    reference_weights = to_numpy(weights)
+
+    for numpy_func, fallback_func in [
+        (optics.stokes_i_numpy, optics.stokes_i_fallback),
+        (optics.stokes_q_numpy, optics.stokes_q_fallback),
+        (optics.stokes_u_numpy, optics.stokes_u_fallback),
+        (optics.stokes_v_numpy, optics.stokes_v_fallback),
+    ]:
+        reference_result = numpy_func(reference_data, reference_input_stokes_vector)
+        fallback_result = fallback_func(data, input_stokes_vector)
+        _assert_matches_fallback(reference_result, fallback_result)
+
+    # Check the power calculation.
+    reference_result = optics.power_numpy(reference_data, reference_weights, reference_input_stokes_vector)
+    fallback_result = optics.power_fallback(data, weights, input_stokes_vector)
+    _assert_matches_fallback(reference_result, fallback_result)
+
+    # Check the derived polarization quantities against the fallback implementations.
+    reference_intensity = to_numpy(intensity)
+    reference_q = to_numpy(q)
+    reference_u = to_numpy(u)
+    reference_v = to_numpy(v)
+
+    reference_result = optics.polarization_degree_numpy(reference_intensity, reference_q, reference_u, reference_v)
+    fallback_result = optics.polarization_degree_fallback(intensity, q, u, v)
+    _assert_matches_fallback(reference_result, fallback_result)
+
+    reference_result = optics.linear_polarization_degree_numpy(reference_intensity, reference_q, reference_u)
+    fallback_result = optics.linear_polarization_degree_fallback(intensity, q, u)
+    _assert_matches_fallback(reference_result, fallback_result)
+
+    reference_result = optics.linear_polarization_angle_numpy(reference_q, reference_u)
+    fallback_result = optics.linear_polarization_angle_fallback(q, u)
+    _assert_matches_fallback(reference_result, fallback_result)
+
+    reference_result = optics.ellipticity_numpy(reference_intensity, reference_q, reference_u, reference_v)
+    fallback_result = optics.ellipticity_fallback(intensity, q, u, v)
+    _assert_matches_fallback(reference_result, fallback_result)
+
+
+def test_jones_to_mueller_array_api():
+    import array_api_strict as xp
+
+    from hcipy.optics import jones_to_mueller
+
+    # Set up an identity Jones matrix as a tensor Field.
+    grid = hcipy.make_pupil_grid(1, xp=xp)
+    jones_matrix = hcipy.NewStyleField(xp.asarray(np.eye(2, dtype='complex128')[:, :, None]), grid)
+
+    # Check that the identity Jones matrix produces an identity Mueller matrix.
+    mueller_matrix = jones_to_mueller(jones_matrix)
+    expected = hcipy.NewStyleField(xp.asarray(np.eye(4)[:, :, None]), grid)
+
+    assert isinstance(mueller_matrix, hcipy.NewStyleField)
+    assert mueller_matrix.grid is grid
+    assert all_close(mueller_matrix, expected)

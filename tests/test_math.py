@@ -1073,8 +1073,8 @@ def test_jones_to_mueller_array_api():
 
     # Check that the identity Jones matrix produces an identity Mueller matrix.
     mueller_matrix = jones_to_mueller(jones_matrix)
-    expected = hcipy.NewStyleField(xp.asarray(np.eye(4)[:, :, None]), grid)
+    expected = hcipy.Field(xp.asarray(np.eye(4)[:, :, None]), grid)
 
-    assert isinstance(mueller_matrix, hcipy.NewStyleField)
+    assert isinstance(mueller_matrix, hcipy.Field)
     assert mueller_matrix.grid is grid
     assert all_close(mueller_matrix, expected)

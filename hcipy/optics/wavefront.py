@@ -1,9 +1,10 @@
 import copy
 import math
 
-from ..field import Field, NewStyleField, field_dot, is_field
+from ..field import Field, NewStyleField, field_dot, field_kron, is_field
 from .._math import optics as optics_math
 from .._math.backends import array_namespace, complex_dtype
+from .._math.einsum import einsum
 
 _U_MATRIX = tuple(
     tuple(1 / math.sqrt(2) * value for value in row)
@@ -15,7 +16,7 @@ _U_MATRIX = tuple(
     )
 )
 
-_U_MATRIX_CONJUGATE_TRANSPOSE = tuple(
+_U_H = tuple(
     tuple(value.conjugate() for value in column)
     for column in zip(*_U_MATRIX)
 )
@@ -325,39 +326,19 @@ def jones_to_mueller(jones_matrix):
     ndarray or tensor Field
         The Mueller matrix/matrices.
     '''
-    xp = array_namespace(jones_matrix)
+    field = is_field(jones_matrix)
+    xp_field = array_namespace(jones_matrix)
+    xp = array_namespace(_field_data(jones_matrix)) if field else xp_field
 
-    data = xp.asarray(jones_matrix)
-    data_conjugate = xp.conj(data)
+    # Build J kron J*.
+    kron = field_kron(jones_matrix, xp_field.conj(jones_matrix))
+    if field:
+        kron = _field_data(kron)
 
-    transformation_matrix = xp.asarray(_U_MATRIX)
-    transformation_matrix_conjugate = xp.asarray(_U_MATRIX_CONJUGATE_TRANSPOSE)
+    # Apply U and U_H to obtain the Mueller matrix.
+    U = xp.asarray(_U_MATRIX)
+    U_H = xp.asarray(_U_H)
+    result = xp.real(einsum('ab,bc...,cd->ad...', U, kron, U_H))
 
-    if is_field(jones_matrix):
-        # Kronecker product of the Jones matrix with its conjugate.
-        n = data.shape[-1]
-        kron = data[:, None, :, None, :] * data_conjugate[None, :, None, :, :]
-        kron = xp.reshape(kron, (4, 4, n))
-        kron = xp.permute_dims(kron, (2, 0, 1))
-
-        # Transform the Kronecker product into Mueller matrices.
-        mueller_matrix = xp.matmul(xp.matmul(transformation_matrix, kron), transformation_matrix_conjugate)
-        mueller_matrix = xp.permute_dims(mueller_matrix, (1, 2, 0))
-        mueller_matrix = xp.real(mueller_matrix)
-
-        # Restore the grid on the resulting Field.
-        if hasattr(mueller_matrix, 'grid'):
-            mueller_matrix.grid = jones_matrix.grid
-            return mueller_matrix
-
-        return Field(mueller_matrix, jones_matrix.grid)
-    else:
-        # Kronecker product of the Jones matrix with its conjugate.
-        kron = data[:, None, :, None] * data_conjugate[None, :, None, :]
-        kron = xp.reshape(kron, (4, 4))
-
-        # Transform the Kronecker product into a Mueller matrix.
-        mueller_matrix = xp.matmul(xp.matmul(transformation_matrix, kron), transformation_matrix_conjugate)
-        mueller_matrix = xp.real(mueller_matrix)
-
-        return mueller_matrix
+    # Restore the Field wrapper.
+    return Field(result, jones_matrix.grid) if field else result

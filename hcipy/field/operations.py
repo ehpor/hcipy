@@ -651,7 +651,18 @@ def field_kron(a, b):
     is_output_field = is_a_field or is_b_field
 
     if not is_output_field:
-        return np.kron(a, b)
+        xp = array_namespace(a, b)
+        ndim = max(a.ndim, b.ndim)
+
+        a = xp.reshape(a, (1,) * (ndim - a.ndim) + a.shape)
+        b = xp.reshape(b, (1,) * (ndim - b.ndim) + b.shape)
+
+        output_shape = tuple(a_size * b_size for a_size, b_size in zip(a.shape, b.shape))
+
+        a = xp.reshape(a, tuple(value for size in a.shape for value in (size, 1)))
+        b = xp.reshape(b, tuple(value for size in b.shape for value in (1, size)))
+
+        return xp.reshape(a * b, output_shape)
 
     if is_a_field and is_b_field:
         if a.grid.size != b.grid.size:

@@ -5,12 +5,27 @@ import copy
 import pytest
 import pickle
 from hcipy._math.random import make_random_generator
-from hcipy._math.backends import all_close
+from hcipy._math.backends import all_close, to_numpy
 
 if Configuration().use_array_api:
     import array_api_strict as xp
 else:
     import numpy as xp
+
+@pytest.mark.parametrize('shape_a, shape_b', [
+    ((2, 2), (2, 2)),
+    ((2, 3, 4), (5, 6)),
+    ((2,), (3,)),
+    ((2, 3), (4,)),
+])
+def test_field_kron_arrays(xp, shape_a, shape_b):
+    rng = np.random.default_rng(seed=0)
+    a = rng.normal(size=shape_a)
+    b = rng.normal(size=shape_b)
+
+    result = field_kron(xp.asarray(a), xp.asarray(b))
+
+    assert np.allclose(to_numpy(result), np.kron(a, b))
 
 def test_field_dot():
     grid = make_pupil_grid(2, xp=xp)

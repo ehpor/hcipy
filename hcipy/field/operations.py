@@ -673,9 +673,9 @@ def field_kron(a, b):
     else:
         bb = b[..., np.newaxis]
 
-    output_tensor_shape = np.array(aa.shape[:-1]) * np.array(bb.shape[:-1])
-    output_shape = np.concatenate((output_tensor_shape, [grid.size]))
+    output_tensor_shape = tuple(a * b for a, b in zip(aa.shape[:-1], bb.shape[:-1]))
+    output_shape = output_tensor_shape + (grid.size,)
 
-    res = (aa[:, np.newaxis, :, np.newaxis, :] * bb[np.newaxis, :, np.newaxis, :, :]).reshape(output_shape)
+    res = (aa[:, None, :, None, :] * bb[None, :, None, :, :]).reshape(output_shape)
 
     return Field(res, grid)

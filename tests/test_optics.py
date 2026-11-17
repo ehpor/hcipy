@@ -328,6 +328,40 @@ def test_degree_and_angle_of_polarization():
     assert np.allclose(wf.degree_of_linear_polarization, 1 / np.sqrt(2))
     assert np.allclose(wf.degree_of_circular_polarization, 1 / np.sqrt(2))
 
+def test_wavefront_power_vector_field():
+    grid = make_pupil_grid(8)
+    x = np.asarray(grid.x)
+
+    data = np.array([np.exp(1j * x), 0.5 * np.exp(-1j * x)])
+    wavefront = Wavefront(Field(data, grid))
+
+    expected_power = np.sum(np.abs(data)**2, axis=0) * grid.weights
+
+    assert isinstance(wavefront.power, Field)
+    assert wavefront.power.shape == (grid.size,)
+    assert np.allclose(wavefront.power, expected_power)
+    assert np.isclose(wavefront.total_power, np.sum(expected_power))
+
+def test_wavefront_total_power_does_not_mutate_input():
+    grid = make_pupil_grid(8)
+    x = np.asarray(grid.x)
+
+    fields = [
+        np.exp(1j * x),
+        np.array([np.exp(1j * x), 0.5 * np.exp(-1j * x)]),
+    ]
+
+    for data in fields:
+        electric_field = Field(data, grid)
+        original = np.array(electric_field)
+
+        wavefront = Wavefront(electric_field)
+        initial_power = wavefront.total_power
+        wavefront.total_power = 2 * initial_power
+
+        assert np.allclose(electric_field, original)
+        assert np.isclose(wavefront.total_power, 2 * initial_power)
+
 def mueller_matrix_for_general_linear_retarder(theta, delta):
     '''Analytic expression Mueller matrix linear retarder.
 

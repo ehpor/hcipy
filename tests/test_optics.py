@@ -1083,6 +1083,113 @@ def test_dynamic_optical_system_callback_adds_callback_during_evolution():
     system.evolve_until(5.0)
     assert events == ['first', 'second']
 
+@pytest.mark.parametrize('dt', [1e-9, 1e-6])
+def test_dynamic_optical_system_short_exposures(dt):
+    system = _TrackingDynamicOpticalSystem()
+    events = []
+    system.add_callback(dt, lambda: events.append(system.t))
+    system.add_callback(dt, lambda: events.append(system.t))
+    system.evolve_until(2 * dt)
+    assert events == [dt, dt]
+    assert system.integrate_calls == [dt, dt]
+    assert system.t == 2 * dt
+
+def test_dynamic_optical_system_rejects_past_callback():
+    system = _TrackingDynamicOpticalSystem()
+    system.evolve_until(2)
+    with pytest.raises(ValueError, match='past'):
+        system.add_callback(1, lambda: None)
+    assert system.callbacks == []
+    assert system.callback_counter == 0
+    events = []
+    system.add_callback(2, lambda: events.append(system.t))
+    system.evolve_until(2)
+    assert events == [2]
+    assert system.integrate_calls == [2]
+
+@pytest.mark.parametrize('t', [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize('operation', ['schedule', 'evolve'])
+def test_dynamic_optical_system_rejects_nonfinite_time(t, operation):
+    system = _TrackingDynamicOpticalSystem()
+    system.add_callback(1, lambda: None)
+    pending = list(system.callbacks)
+    with pytest.raises(ValueError, match='finite'):
+        if operation == 'schedule':
+            system.add_callback(t, lambda: None)
+        else:
+            system.evolve_until(t)
+    assert system.t == 0
+    assert system.callbacks == pending
+    assert system.callback_counter == 1
+    assert system.integrate_calls == []
+
+@pytest.mark.parametrize('callback', [None, 1, 'callback'])
+def test_dynamic_optical_system_rejects_noncallable(callback):
+    system = _TrackingDynamicOpticalSystem()
+    events = []
+    system.add_callback(1, lambda: events.append(system.t))
+    with pytest.raises(TypeError, match='callable'):
+        system.add_callback(0.5, callback)
+    assert system.callback_counter == 1
+    system.evolve_until(1)
+    assert events == [1]
+    assert system.integrate_calls == [1]
+
+def test_dynamic_optical_system_preserves_event_on_integration_error():
+    class FailingSystem(_TrackingDynamicOpticalSystem):
+        fail = True
+
+        def integrate(self, dt):
+            if self.fail:
+                raise RuntimeError('integration failed')
+            super().integrate(dt)
+
+    system = FailingSystem()
+    events = []
+    system.add_callback(1, lambda: events.append(system.t))
+    pending = list(system.callbacks)
+    with pytest.raises(RuntimeError, match='integration failed'):
+        system.evolve_until(2)
+    assert system.t == 0
+    assert system.callbacks == pending
+    assert events == []
+    system.fail = False
+    system.evolve_until(2)
+    assert events == [1]
+    assert system.integrate_calls == [1, 1]
+    assert system.t == 2
+
+def test_dynamic_optical_system_same_time_insertion():
+    system = _TrackingDynamicOpticalSystem()
+    events = []
+
+    def first():
+        events.append('first')
+        system.add_callback(system.t, lambda: events.append('third'))
+
+    system.add_callback(1, first)
+    system.add_callback(1, lambda: events.append('second'))
+    system.evolve_until(1)
+    assert events == ['first', 'second', 'third']
+    assert system.integrate_calls == [1]
+
+def test_dynamic_optical_system_callback_error_is_not_replayed():
+    system = _TrackingDynamicOpticalSystem()
+    events = []
+
+    def fail():
+        events.append('failed')
+        raise RuntimeError('callback failed')
+
+    system.add_callback(1, fail)
+    system.add_callback(1, lambda: events.append('second'))
+    with pytest.raises(RuntimeError, match='callback failed'):
+        system.evolve_until(2)
+    assert system.t == 1
+    system.evolve_until(2)
+    assert events == ['failed', 'second']
+    assert system.integrate_calls == [1, 1]
+
 def test_apodizer_roundtrip():
     grid = make_pupil_grid(64)
     wf = Wavefront(grid.ones(), 1e-6)

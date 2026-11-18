@@ -22,7 +22,7 @@ class DynamicOpticalSystem(object):
         ----------
         t : scalar
             The point in time to which to simulate this optical system. Callbacks and integrations
-            are handled along the way, including callbacks at time `t`.
+            are handled along the way.
 
         Raises
         ------
@@ -31,7 +31,6 @@ class DynamicOpticalSystem(object):
 
         Notes
         -----
-        Every positive interval is integrated, including intervals below one microsecond.
         Callbacks at the same time run in insertion order without intervening integration.
         If integration raises, the pending callback and scheduler time are retained.
         Side effects of a failed integration must be handled by the derived class.
@@ -76,9 +75,6 @@ class DynamicOpticalSystem(object):
         ----------
         integration_time : scalar
             The integration time with which to integrate the optical system.
-            The current time is the start of this interval; the scheduler advances it
-            after this method returns successfully. Schedule events in callbacks,
-            rather than in this method.
         '''
         pass
 

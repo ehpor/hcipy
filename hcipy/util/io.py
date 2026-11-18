@@ -250,15 +250,12 @@ def read_field(filename, fmt=None):
         with fits.open(filename, memmap=False) as f:
             af = _bintable_to_asdf(f['ASDF'])
             tree = af.tree['field']
-            if f[0].data is not None:
-                tree['values'] = f[0].data
-
-            if 'grid' in tree:
+            values = f[0].data
+            if values is not None:
                 grid = Grid.from_dict(tree['grid'])
-                new_shape = np.concatenate((tree['values'].shape[:-grid.ndim], [grid.size])).astype('int')
-                tree['values'] = tree['values'].reshape(new_shape)
+                tree['values'] = values.reshape(values.shape[:-grid.ndim] + (grid.size,))
 
-            return Field.from_dict(tree).reshape(new_shape)
+            return Field.from_dict(tree)
     elif fmt == 'pickle':
         with open(filename, 'rb') as f:
             return pickle.load(f)
@@ -290,6 +287,11 @@ def write_field(field, filename, fmt=None, overwrite=True):
         if fmt is None:
             raise ValueError('Format not given and could not be guessed based on the file extension.')
 
+    if fmt == 'pickle':
+        with open(filename, 'wb') as f:
+            pickle.dump(field, f)
+        return
+
     tree = _make_metadata('field')
     tree['field'] = field.to_dict()
 
@@ -300,8 +302,9 @@ def write_field(field, filename, fmt=None, overwrite=True):
         hdulist = fits.HDUList()
 
         if field.grid.is_separated:
-            hdulist.append(fits.ImageHDU(np.ascontiguousarray(field.shaped)))
-            del tree['field']['values']
+            values = tree['field'].pop('values')
+            shaped = values.reshape(values.shape[:-1] + field.grid.shape)
+            hdulist.append(fits.ImageHDU(np.ascontiguousarray(shaped)))
 
         if field.grid.is_regular:
             w = wcs.WCS(naxis=field.grid.ndim)
@@ -314,9 +317,6 @@ def write_field(field, filename, fmt=None, overwrite=True):
 
         hdulist.append(_asdf_to_bintable(asdf.AsdfFile(tree), all_array_compression='zlib'))
         hdulist.writeto(filename, overwrite=overwrite)
-    elif fmt == 'pickle':
-        with open(filename, 'wb') as f:
-            pickle.dump(field, f)
     else:
         raise NotImplementedError('The "%s" file format has not been implemented.' % fmt)
 

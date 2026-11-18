@@ -283,9 +283,22 @@ class RandomGeneratorNumpy(RandomGenerator):
 class RandomGeneratorCupy(RandomGeneratorNumpy):
     def __init__(self, seed=None):
         import cupy
-        super().__init__(cupy)
+        import numpy
 
-        self._rng = self._xp.random.default_rng(seed)
+        RandomGenerator.__init__(self, cupy)
+        self._seed_rng = numpy.random.default_rng(seed)
+
+    @property
+    def _rng(self):
+        import numpy
+
+        seed = int(self._seed_rng.integers(0, 2**64, dtype=numpy.uint64))
+        return self._xp.random.RandomState(seed)
+
+    def copy(self):
+        res = RandomGenerator.copy(self)
+        res._seed_rng = copy.deepcopy(self._seed_rng)
+        return res
 
 
 class RandomGeneratorTorch(RandomGenerator):

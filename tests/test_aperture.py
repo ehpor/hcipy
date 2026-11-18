@@ -52,6 +52,23 @@ def test_regular_polygon_aperture(num_sides, angle):
         circum_diameter=pupil_diameter, num_sides=num_sides, angle=angle
     )
 
+@pytest.mark.parametrize('num_sides', [3, 5, 7])
+@pytest.mark.parametrize('angle', [0, np.pi / 2, 0.3])
+def test_regular_polygon_aperture_separated_matches_unstructured(num_sides, angle):
+    pupil_diameter = 1
+
+    grid = make_uniform_grid(32, [pupil_diameter, pupil_diameter])
+
+    points = grid.points.reshape(-1, 2)
+    unstructured_grid = CartesianGrid(UnstructuredCoords((points[:, 0], points[:, 1])))
+
+    aperture = make_regular_polygon_aperture(num_sides, pupil_diameter, angle=angle)
+
+    field_separated = aperture(grid)
+    field_unstructured = aperture(unstructured_grid)
+
+    np.testing.assert_array_equal(field_separated, field_unstructured)
+
 @pytest.mark.parametrize('diameter', [1, 0.5])
 def test_circular_aperture(diameter):
     pupil_diameter = 1

@@ -15,7 +15,7 @@ def infer_xp(*arrays):
     Returns
     -------
     xp : module
-        The inferred xp module, or numpy as fallback (in legacy mode)
+        The inferred array namespace, or NumPy as a fallback in legacy mode.
 
     Raises
     ------
@@ -197,7 +197,7 @@ def default_dtype(xp, kind, device=None):
     Parameters
     ----------
     xp : module
-        The Array API backend.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
     kind : {"real floating", "complex floating", "integral", "indexing"}
         The kind of dtype.
     device : Device or None

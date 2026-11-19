@@ -43,7 +43,7 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
         The integrated strength of the turbulence for this layer.
     L0 : scalar
         The outer scale for the atmospheric turbulence of this layer.
-        The default is infinity.
+        This parameter should be finite.
     velocity : scalar or array_like
         The wind speed for this atmospheric layer. If this is a scalar,
         the wind will be along x. If this is a 2D array, then the values
@@ -78,9 +78,14 @@ class InfiniteAtmosphericLayer(AtmosphericLayer):
     ------
     ValueError
         When the input grid is not cartesian, regularly spaced and two-dimensional.
+    ValueError
+        When the outer scale `L0` is not finite.
     '''
-    def __init__(self, input_grid, Cn_squared, L0=np.inf, velocity=0, height=0, stencil_length=2, use_interpolation=None, interpolation_order=5, seed=None):
+    def __init__(self, input_grid, Cn_squared, L0, velocity=0, height=0, stencil_length=2, use_interpolation=None, interpolation_order=5, seed=None):
         self._initialized = False
+
+        if not math.isfinite(L0):
+            raise ValueError('The outer scale L0 must be finite.')
 
         AtmosphericLayer.__init__(self, input_grid, Cn_squared, L0, velocity, height)
 

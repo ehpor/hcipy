@@ -8,7 +8,6 @@ from pathlib import Path
 __all__ = ['migrate_config_file']
 
 _LEGACY_TO_FLAT = {
-    'fourier.fft.emulate_fftshifts': 'fft_emulate_fftshifts',
     'fourier.fft.method': 'fft_method',
     'fourier.fft.execution_time_prediction_coefficients': 'fft_runtime_coeffs',
     'fourier.mft.precompute_matrices': 'mft_precompute_matrices',

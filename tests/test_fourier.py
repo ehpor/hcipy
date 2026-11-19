@@ -7,15 +7,15 @@ import os
 from hcipy._math.random import make_random_generator
 
 def make_all_fourier_transforms(input_grid, q, fov, shift):
-    fft1 = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift, emulate_fftshifts=True)
-    fft2 = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift, emulate_fftshifts=False)
-    mft1 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=True)
-    mft2 = MatrixFourierTransform(input_grid, fft1.output_grid, precompute_matrices=False)
-    nft1 = NaiveFourierTransform(input_grid, fft1.output_grid, precompute_matrices=True)
-    nft2 = NaiveFourierTransform(input_grid, fft1.output_grid, precompute_matrices=False)
-    zfft = ZoomFastFourierTransform(input_grid, fft1.output_grid)
+    fft = FastFourierTransform(input_grid, q=q, fov=fov, shift=shift)
+    mft1 = MatrixFourierTransform(input_grid, fft.output_grid, precompute_matrices=True)
+    mft2 = MatrixFourierTransform(input_grid, fft.output_grid, precompute_matrices=False)
+    nft1 = NaiveFourierTransform(input_grid, fft.output_grid, precompute_matrices=True)
+    nft2 = NaiveFourierTransform(input_grid, fft.output_grid, precompute_matrices=False)
+    zfft = ZoomFastFourierTransform(input_grid, fft.output_grid)
 
-    return [fft1, fft2, mft1, mft2, nft1, nft2, zfft]
+    return [fft, mft1, mft2, nft1, nft2, zfft]
+
 
 def check_energy_conservation(dtype, shift_input, scale, shift_output, q, fov, dims):
     grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)

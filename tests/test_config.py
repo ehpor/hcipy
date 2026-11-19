@@ -76,7 +76,6 @@ def test_migrate_config_file():
     legacy = {
         'fourier': {
             'fft': {
-                'emulate_fftshifts': True,
                 'method': ['scipy', 'numpy'],
                 'execution_time_prediction_coefficients': {'a': 1.0, 'b': 2.0, 'c': -3.0},
             },
@@ -89,7 +88,6 @@ def test_migrate_config_file():
     migrated = migrate_config_file(legacy)
 
     assert migrated == {
-        'fft_emulate_fftshifts': True,
         'fft_method': ['scipy', 'numpy'],
         'fft_runtime_coeffs': [1.0, 2.0, -3.0],
         'mft_precompute_matrices': False,

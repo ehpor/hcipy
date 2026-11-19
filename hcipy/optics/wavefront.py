@@ -341,13 +341,13 @@ class Wavefront(object):
     def power(self):
         '''The power of each pixel in the wavefront.
         '''
-        if self.electric_field.is_scalar_field or self.electric_field.is_vector_field:
+        if self.electric_field.is_scalar_field:
             variables = {'field': self.electric_field, 'weights': self.grid.weights}
             power = ne.evaluate('real(abs(field))**2 * weights', local_dict=variables)
 
             return Field(power, self.grid)
         else:
-            return self.intensity * self.grid.weights
+            return Field(self.intensity * self.grid.weights, self.grid)
 
     @property
     def total_power(self):
@@ -357,7 +357,7 @@ class Wavefront(object):
 
     @total_power.setter
     def total_power(self, p):
-        self.electric_field *= np.sqrt(p / self.total_power)
+        self.electric_field = self.electric_field * np.sqrt(p / self.total_power)
 
 def jones_to_mueller(jones_matrix):
     '''Convert a Jones matrix to a Mueller matrix.

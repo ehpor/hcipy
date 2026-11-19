@@ -228,3 +228,25 @@ def test_make_continuous_time_companion():
     assert np.allclose(eigenvalues_sorted, poles_sorted)
     assert C.shape == (1, 2)
     assert np.allclose(C, np.array([[1, 0]]))
+
+@pytest.mark.parametrize('factory_cls,kwargs', [
+    pytest.param(SpectralNoiseFactoryFFT, {}, id='fft'),
+    pytest.param(SpectralNoiseFactoryMultiscale, {'oversampling': 1}, id='multiscale'),
+])
+@pytest.mark.parametrize('shift', [
+    pytest.param([0.35, 0], id='x'),
+    pytest.param([0, 0.35], id='y'),
+])
+def test_spectral_noise_shift(factory_cls, kwargs, shift):
+    grid = make_uniform_grid((15, 11), (1.5, 1.1))
+    psd = power_spectral_density_von_karman(0.1, 10)
+
+    factory = factory_cls(psd, grid, **kwargs)
+    noise = factory.make_random(seed=0)
+
+    shift = np.array(shift) * grid.delta
+    unshifted = noise()
+    shifted = noise.shifted(shift)()
+    reference = FourierShift(grid, shift).forward(unshifted)
+
+    assert np.allclose(shifted, reference, rtol=1e-10, atol=1e-10)

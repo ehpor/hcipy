@@ -3,6 +3,7 @@ import copy
 
 from ..field import Field
 from ..fourier import FastFourierTransform, MatrixFourierTransform
+from .._math.separable_filter import make_phase_ramp
 
 class SpectralNoiseFactory(object):
     def __init__(self, psd, output_grid):
@@ -185,10 +186,8 @@ class SpectralNoiseFFT(SpectralNoise):
         shift : array_like
             The shift in the grid axes.
         '''
-        S = [shift[i] * self.coords[i] for i in range(len(self.coords))]
-        S = np.add.reduce(np.ix_(*S))
-
-        self.C *= np.exp(-1j * S.ravel())
+        ramp = make_phase_ramp(-shift, self.C.grid)
+        ramp.apply_numpy(self.C.shaped, out=self.C.shaped)
 
     def __call__(self):
         '''Evaluate the noise on the pre-specified grid.
@@ -297,14 +296,11 @@ class SpectralNoiseMultiscale(SpectralNoise):
         shift : array_like
             The shift in the grid axes.
         '''
-        S_1 = [shift[i] * self.coords_1[i] for i in range(len(self.coords_1))]
-        S_1 = sum(np.ix_(*S_1))
+        ramp_1 = make_phase_ramp(-shift, self.C_1.grid)
+        ramp_2 = make_phase_ramp(-shift, self.C_2.grid)
 
-        S_2 = [shift[i] * self.coords_2[i] for i in range(len(self.coords_2))]
-        S_2 = sum(np.ix_(*S_2))
-
-        self.C_1 *= np.exp(-1j * S_1.ravel())
-        self.C_2 *= np.exp(-1j * S_2.ravel())
+        ramp_1.apply_numpy(self.C_1.shaped, out=self.C_1.shaped)
+        ramp_2.apply_numpy(self.C_2.shaped, out=self.C_2.shaped)
 
     def __call__(self):
         '''Evaluate the noise on the pre-specified grid.

@@ -144,3 +144,39 @@ def test_even_asphere_micro_lens_array():
     wf_back = mla2.backward(wf_out)
     assert isinstance(wf_back, Wavefront)
     assert np.allclose(wf.electric_field, wf_back.electric_field)
+
+def _make_off_center_lenslet(mla_class, lenslet_kwargs):
+    input_grid = make_pupil_grid(64, 1)
+    lenslet_center = np.array([0.3, -0.2])
+    lenslet_grid = CartesianGrid(SeparatedCoords(([lenslet_center[0]], [lenslet_center[1]])))
+    lenslet_shape = make_circular_aperture(0.15)
+
+    mla = mla_class(input_grid, lenslet_grid, lenslet_shape=lenslet_shape, **lenslet_kwargs)
+
+    points = input_grid.as_('cartesian').points
+    inside = mla.mla_index >= 0
+    expected_inside = lenslet_shape(input_grid.shifted(-lenslet_center)) != 0
+
+    # The lenslet must be placed at the requested center, not its mirror image.
+    assert np.all(inside == expected_inside)
+    assert np.allclose(points[inside].mean(axis=0), lenslet_center, atol=1e-2)
+
+    return mla, input_grid, lenslet_center, points, inside
+
+def test_micro_lens_array_off_center_lenslet():
+    mla, _, lenslet_center, points, inside = _make_off_center_lenslet(MicroLensArray, {'focal_length': 1.0})
+
+    r_squared = np.sum((points[inside] - lenslet_center)**2, axis=1)
+    assert np.allclose(mla.mla_opd[inside], -r_squared / (2 * mla.focal_length))
+
+def test_spherical_micro_lens_array_off_center_lenslet():
+    mla, input_grid, lenslet_center, _, inside = _make_off_center_lenslet(SphericalMicroLensArray, {'radius_of_curvature': 0.5})
+
+    shifted_grid = input_grid.shifted(-lenslet_center)
+    assert np.allclose(mla.mla_opd[inside], mla.surface_sag(shifted_grid.subset(inside)))
+
+def test_even_asphere_micro_lens_array_off_center_lenslet():
+    mla, input_grid, lenslet_center, _, inside = _make_off_center_lenslet(EvenAsphereMicroLensArray, {'radius_of_curvature': 0.5})
+
+    shifted_grid = input_grid.shifted(-lenslet_center)
+    assert np.allclose(mla.mla_opd[inside], mla.surface_sag(shifted_grid.subset(inside)))

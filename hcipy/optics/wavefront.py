@@ -1,16 +1,30 @@
 import copy
-import numpy as np
-import numexpr as ne
+import math
 
-from ..field import Field, field_dot, field_kron
+from ..field import Field, NewStyleField, field_dot, field_kron, is_field
+from .._math import optics as optics_math
+from .._math.backends import array_namespace, complex_dtype
+from .._math.einsum import einsum
 
-_U_matrix = 1 / np.sqrt(2) * np.array([
-    [1, 0, 0, 1],
-    [1, 0, 0, -1],
-    [0, 1, 1, 0],
-    [0, 1j, -1j, 0]])
+_U_MATRIX = tuple(
+    tuple(1 / math.sqrt(2) * value for value in row)
+    for row in (
+        (1, 0, 0, 1),
+        (1, 0, 0, -1),
+        (0, 1, 1, 0),
+        (0, 1j, -1j, 0),
+    )
+)
+
+_U_H = tuple(
+    tuple(value.conjugate() for value in column)
+    for column in zip(*_U_MATRIX)
+)
 
 # TODO Should add a pilot Gaussian beam with each Wavefront
+
+def _field_data(field):
+    return field.data if isinstance(field, NewStyleField) else field
 
 class Wavefront(object):
     '''A physical wavefront in an optical system.
@@ -49,11 +63,14 @@ class Wavefront(object):
                 raise ValueError('When supplying a Stokes vector, the electric field must be either a scalar or 2-tensor field.')
 
             if electric_field.is_scalar_field:
-                self.electric_field = electric_field[np.newaxis, np.newaxis, :] * np.eye(2)[..., np.newaxis]
+                xp = array_namespace(electric_field)
+                dtype = complex_dtype(xp, electric_field.dtype)
+                expanded_field = electric_field[None, None, :] * xp.eye(2, dtype=dtype)[..., None]
+                self.electric_field = expanded_field
             else:
                 self.electric_field = electric_field
 
-            self._input_stokes_vector = np.array(input_stokes_vector)
+            self._input_stokes_vector = electric_field.grid.xp.asarray(input_stokes_vector)
         else:
             self.electric_field = electric_field
             self._input_stokes_vector = None
@@ -79,11 +96,8 @@ class Wavefront(object):
         if not hasattr(electric_field, 'grid'):
             raise ValueError('The electric field must be a Field.')
 
-        # Cast to complex with correct bit depth
-        if electric_field.dtype == 'float32' or electric_field.dtype == 'complex64':
-            dtype = 'complex64'
-        else:
-            dtype = 'complex128'
+        xp = array_namespace(electric_field)
+        dtype = complex_dtype(xp, electric_field.dtype)
 
         self._electric_field = electric_field.astype(dtype, copy=False)
 
@@ -97,11 +111,11 @@ class Wavefront(object):
     def wavenumber(self):
         '''The wavenumber of the light.
         '''
-        return 2 * np.pi / self.wavelength
+        return 2 * math.pi / self.wavelength
 
     @wavenumber.setter
     def wavenumber(self, wavenumber):
-        self.wavelength = 2 * np.pi / wavenumber
+        self.wavelength = 2 * math.pi / wavenumber
 
     @property
     def grid(self):
@@ -110,170 +124,91 @@ class Wavefront(object):
         return self.electric_field.grid
 
     @property
-    def I(self):  # noqa: N802
+    def I(self):  # noqa: N802, E743
         '''The I-component of the Stokes vector as function of 2D position
         in the plane.
         '''
-        if self.is_scalar:
-            # This is a scaler field.
-            intensity = ne.evaluate('real(abs(elec))**2', local_dict={'elec': self.electric_field})
-            return Field(intensity, self.electric_field.grid)
-        elif self.is_partially_polarized:
-            # This is a tensor field.
-            x = self._electric_field[0, 0, :]
-            y = self._electric_field[0, 1, :]
-            z = self._electric_field[1, 0, :]
-            w = self._electric_field[1, 1, :]
+        result = optics_math.stokes_i(_field_data(self.electric_field), self._input_stokes_vector)
 
-            a, b, c, d = self._input_stokes_vector
-
-            # NumExpr is not smart enough to have abs(x) be real, so we have to take the real
-            # part manually. This may change in later releases of NumExpr.
-            M11 = 'real(abs(x))**2 + real(abs(y))**2 + real(abs(z))**2 + real(abs(w))**2'
-            M12 = 'real(abs(x))**2 - real(abs(y))**2 + real(abs(z))**2 - real(abs(w))**2'
-            M13 = '2 * (real(x) * real(y) + imag(x) * imag(y) + real(z) * real(w) + imag(z) * imag(w))'
-            M14 = '2 * (-real(x) * imag(y) + imag(x) * real(y) - real(z) * imag(w) + imag(z) * real(w))'
-
-            res = '0.5 * ((' + M11 + ') * a + (' + M12 + ') * b + (' + M13 + ') * c +  (' + M14 + ') * d)'
-            local_dict = {'x': x, 'y': y, 'z': z, 'w': w, 'a': a, 'b': b, 'c': c, 'd': d}
-
-            return Field(ne.evaluate(res, local_dict=local_dict), self.electric_field.grid)
-        else:
-            # This is a vector field.
-            return np.sum(np.abs(self.electric_field)**2, axis=0)
+        return Field(result, self.grid)
 
     @property
     def Q(self):  # noqa: N802
         '''The Q-component of the Stokes vector as function of 2D position
         in the plane.
         '''
-        if self.is_scalar:
-            # This is a scaler field.
-            return self.grid.zeros()
-        elif self.is_partially_polarized:
-            # This is a tensor field.
-            x = self._electric_field[0, 0, :]
-            y = self._electric_field[0, 1, :]
-            z = self._electric_field[1, 0, :]
-            w = self._electric_field[1, 1, :]
+        result = optics_math.stokes_q(_field_data(self.electric_field), self._input_stokes_vector)
 
-            a, b, c, d = self._input_stokes_vector
-
-            M21 = 'real(abs(x))**2 + real(abs(y))**2 - real(abs(z))**2 - real(abs(w))**2'
-            M22 = 'real(abs(x))**2 - real(abs(y))**2 - real(abs(z))**2 + real(abs(w))**2'
-            M23 = '2 * (real(x) * real(y) + imag(x) * imag(y) - real(z) * real(w) - imag(z) * imag(w))'
-            M24 = '2 * (-real(x) * imag(y) + imag(x) * real(y) + real(z) * imag(w) - imag(z) * real(w))'
-
-            res = '0.5 * ((' + M21 + ') * a + (' + M22 + ') * b + (' + M23 + ') * c +  (' + M24 + ') * d)'
-            local_dict = {'x': x, 'y': y, 'z': z, 'w': w, 'a': a, 'b': b, 'c': c, 'd': d}
-
-            return Field(ne.evaluate(res, local_dict=local_dict), self.electric_field.grid)
-        else:
-            # This is a vector field.
-            return np.abs(self.electric_field[0, :])**2 - np.abs(self.electric_field[1, :])**2
+        return Field(result, self.grid)
 
     @property
     def U(self):  # noqa: N802
         '''The U-component of the Stokes vector as function of 2D position
         in the plane.
         '''
-        if self.is_scalar:
-            # This is a scaler field.
-            return self.grid.zeros()
-        elif self.is_partially_polarized:
-            # This is a tensor field.
-            x = self._electric_field[0, 0, :]
-            y = self._electric_field[0, 1, :]
-            z = self._electric_field[1, 0, :]
-            w = self._electric_field[1, 1, :]
+        result = optics_math.stokes_u(_field_data(self.electric_field), self._input_stokes_vector)
 
-            a, b, c, d = self._input_stokes_vector
-
-            M31 = '2 * (real(x) * real(z) + imag(x) * imag(z) + real(y) * real(w) + imag(y) * imag(w))'
-            M32 = '2 * (real(x) * real(z) + imag(x) * imag(z) - real(y) * real(w) - imag(y) * imag(w))'
-            M33 = '2 * (real(x) * real(w) + imag(x) * imag(w) + real(y) * real(z) + imag(y) * imag(z))'
-            M34 = '2 * (imag(x) * real(w) - real(x) * imag(w) + real(y) * imag(z) - imag(y) * real(z))'
-
-            res = '0.5 * ((' + M31 + ') * a + (' + M32 + ') * b + (' + M33 + ') * c +  (' + M34 + ') * d)'
-            local_dict = {'x': x, 'y': y, 'z': z, 'w': w, 'a': a, 'b': b, 'c': c, 'd': d}
-
-            return Field(ne.evaluate(res, local_dict=local_dict), self.electric_field.grid)
-        else:
-            # This is a vector field.
-            return 2 * np.real(self.electric_field[0, :] * self.electric_field[1, :].conj())
+        return Field(result, self.grid)
 
     @property
     def V(self):  # noqa: N802
         '''The V-component of the Stokes vector as function of 2D position
         in the plane.
         '''
-        if self.is_scalar:
-            # This is a scaler field.
-            return self.grid.zeros()
-        elif self.is_partially_polarized:
-            # This is a tensor field.
-            x = self._electric_field[0, 0, :]
-            y = self._electric_field[0, 1, :]
-            z = self._electric_field[1, 0, :]
-            w = self._electric_field[1, 1, :]
+        result = optics_math.stokes_v(_field_data(self.electric_field), self._input_stokes_vector)
 
-            a, b, c, d = self._input_stokes_vector
-
-            M41 = '2 * (real(x) * imag(z) - imag(x) * real(z) + real(y) * imag(w) - imag(y) * real(w))'
-            M42 = '2 * (real(x) * imag(z) - imag(x) * real(z) - real(y) * imag(w) + imag(y) * real(w))'
-            M43 = '2 * (real(x) * imag(w) - imag(x) * real(w) + real(y) * imag(z) - imag(y) * real(z))'
-            M44 = '2 * (real(x) * real(w) + imag(x) * imag(w) - real(y) * real(z) - imag(y) * imag(z))'
-
-            res = '0.5 * ((' + M41 + ') * a + (' + M42 + ') * b + (' + M43 + ') * c +  (' + M44 + ') * d)'
-            local_dict = {'x': x, 'y': y, 'z': z, 'w': w, 'a': a, 'b': b, 'c': c, 'd': d}
-            return Field(ne.evaluate(res, local_dict=local_dict), self.electric_field.grid)
-        else:
-            # This is a vector field.
-            return -2 * np.imag(self.electric_field[0, :] * self.electric_field[1, :].conj())
+        return Field(result, self.grid)
 
     @property
     def stokes_vector(self):
         '''The Stokes vector.
         '''
-        if self.is_scalar:
-            # This is a scalar field and thus we return an unpolarized Stokes vector.
-            stokes_vector = Field(np.zeros((4, self.grid.size)), self.grid)
-            stokes_vector[0, :] = np.abs(self.electric_field)**2
+        if self.is_partially_polarized:
+            return field_dot(jones_to_mueller(self.electric_field), self._input_stokes_vector)
 
-            return stokes_vector
-        elif self.is_partially_polarized:
-            # This is a tensor field.
-            mueller_matrix = jones_to_mueller(self.electric_field)
+        data = _field_data(self.electric_field)
+        xp = array_namespace(data)
+        result = xp.stack([
+            optics_math.stokes_i(data, self._input_stokes_vector),
+            optics_math.stokes_q(data, self._input_stokes_vector),
+            optics_math.stokes_u(data, self._input_stokes_vector),
+            optics_math.stokes_v(data, self._input_stokes_vector),
+        ], axis=0)
 
-            return field_dot(mueller_matrix, self._input_stokes_vector)
-        else:
-            # This is a vector field and thus we return a fully polarized Stokes vector.
-            stokes_vector = Field(np.zeros((4, self.grid.size)), self.grid)
-
-            stokes_vector[0, :] = self.I
-            stokes_vector[1, :] = self.Q
-            stokes_vector[2, :] = self.U
-            stokes_vector[3, :] = self.V
-
-            return stokes_vector
+        return Field(result, self.grid)
 
     @property
     def degree_of_polarization(self):
         '''The degree of polarization.
         '''
-        return np.sqrt(self.Q**2 + self.U**2 + self.V**2) / self.I
+        result = optics_math.polarization_degree(
+            _field_data(self.I),
+            _field_data(self.Q),
+            _field_data(self.U),
+            _field_data(self.V),
+        )
+
+        return Field(result, self.grid)
 
     @property
     def degree_of_linear_polarization(self):
         '''The degree of linear polarization.
         '''
-        return np.sqrt(self.Q**2 + self.U**2) / self.I
+        result = optics_math.linear_polarization_degree(
+            _field_data(self.I),
+            _field_data(self.Q),
+            _field_data(self.U),
+        )
+
+        return Field(result, self.grid)
 
     @property
     def angle_of_linear_polarization(self):
         '''The angle of linear polarization.
         '''
-        return 0.5 * np.arctan2(self.U, self.Q)
+        result = optics_math.linear_polarization_angle(_field_data(self.Q), _field_data(self.U))
+
+        return Field(result, self.grid)
 
     @property
     def degree_of_circular_polarization(self):
@@ -286,7 +221,14 @@ class Wavefront(object):
         '''The ratio of the minor to major axis of the electric
         field polarization ellipse.
         '''
-        return self.V / (self.I + np.sqrt(self.Q**2 + self.U**2))
+        result = optics_math.ellipticity(
+            _field_data(self.I),
+            _field_data(self.Q),
+            _field_data(self.U),
+            _field_data(self.V),
+        )
+
+        return Field(result, self.grid)
 
     @property
     def is_polarized(self):
@@ -316,48 +258,60 @@ class Wavefront(object):
     def amplitude(self):
         '''The amplitude of the wavefront as function of 2D position on the plane.
         '''
-        return np.abs(self.electric_field)
+        xp = array_namespace(self.electric_field)
+
+        return xp.abs(self.electric_field)
 
     @property
     def phase(self):
         '''The phase of the wavefront as function of 2D position on the plane.
         '''
-        phase = np.angle(self.electric_field)
-        return Field(phase, self.electric_field.grid)
+        result = optics_math.phase(_field_data(self.electric_field))
+
+        return Field(result, self.grid)
 
     @property
     def real(self):
         '''The real part of the wavefront as function of 2D position on the plane.
         '''
-        return np.real(self.electric_field)
+        xp = array_namespace(self.electric_field)
+
+        return xp.real(self.electric_field)
 
     @property
     def imag(self):
         '''The imaginary part of the wavefront as function of 2D position on the plane.
         '''
-        return np.imag(self.electric_field)
+        xp = array_namespace(self.electric_field)
+
+        return xp.imag(self.electric_field)
 
     @property
     def power(self):
         '''The power of each pixel in the wavefront.
         '''
-        if self.electric_field.is_scalar_field or self.electric_field.is_vector_field:
-            variables = {'field': self.electric_field, 'weights': self.grid.weights}
-            power = ne.evaluate('real(abs(field))**2 * weights', local_dict=variables)
+        result = optics_math.power(
+            _field_data(self.electric_field),
+            self.grid.weights,
+            self._input_stokes_vector,
+        )
 
-            return Field(power, self.grid)
-        else:
-            return self.intensity * self.grid.weights
+        return Field(result, self.grid)
 
     @property
     def total_power(self):
         '''The total power in this wavefront.
         '''
-        return np.sum(self.power)
+        xp = array_namespace(self.power)
+
+        return xp.sum(self.power)
 
     @total_power.setter
     def total_power(self, p):
-        self.electric_field *= np.sqrt(p / self.total_power)
+        xp = array_namespace(self.electric_field)
+
+        scale = xp.astype(xp.sqrt(p / self.total_power), self.electric_field.dtype)
+        self.electric_field = self.electric_field * scale
 
 def jones_to_mueller(jones_matrix):
     '''Convert a Jones matrix to a Mueller matrix.
@@ -372,4 +326,19 @@ def jones_to_mueller(jones_matrix):
     ndarray or tensor Field
         The Mueller matrix/matrices.
     '''
-    return np.real(field_dot(_U_matrix, field_dot(field_kron(jones_matrix, jones_matrix.conj()), _U_matrix.conj().T)))
+    field = is_field(jones_matrix)
+    xp_field = array_namespace(jones_matrix)
+    xp = array_namespace(_field_data(jones_matrix)) if field else xp_field
+
+    # Build J kron J*.
+    kron = field_kron(jones_matrix, xp_field.conj(jones_matrix))
+    if field:
+        kron = _field_data(kron)
+
+    # Apply U and U_H to obtain the Mueller matrix.
+    U = xp.asarray(_U_MATRIX)
+    U_H = xp.asarray(_U_H)
+    result = xp.real(einsum('ab,bc...,cd->ad...', U, kron, U_H))
+
+    # Restore the Field wrapper.
+    return Field(result, jones_matrix.grid) if field else result

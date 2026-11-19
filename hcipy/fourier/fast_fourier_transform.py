@@ -13,6 +13,18 @@ from .._math import fft as _fft_module
 from .._math import buffer_pool
 
 
+# Below this retained fraction of the internal array, the chained zero-padding
+# FFT path is faster than the compact multi-pass path. Above it, the compact
+# path wins because the chain's per-axis phase multiply scales with the
+# retained output.
+_CHAIN_FOV_THRESHOLD = 0.15
+
+# In two or more dimensions, the chain only wins when the input is strongly
+# zero-padded as well. This is the maximum retained input fraction for which
+# the chain is used (0.3 corresponds to q >= 4).
+_CHAIN_INPUT_SIZE_THRESHOLD = 0.3
+
+
 def _make_shift_filter(slopes, grid, internal_grid, cutout, f_shift, piston=0.0, scale=1):
     '''Build a separable filter for one side of the FFT.
 
@@ -286,6 +298,215 @@ class FastFourierTransform(FourierTransform):
         self.shift_output_filter = _make_shift_filter(
             -shift, self.input_grid, self.internal_grid, self.cutout_input, f_shift, piston=piston)
 
+        # Use the multi-pass FFT: one 1D FFT per axis over the views of the
+        # internal array that hold nonzero data. The single-pass FFT is kept
+        # for comparison and performance tuning.
+        self._use_multipass = True
+
+        # The chained zero-padding path is used for heavily cropped outputs.
+        self._use_chain = True
+        self._chain_fov_threshold = _CHAIN_FOV_THRESHOLD
+        self._chain_input_size_threshold = _CHAIN_INPUT_SIZE_THRESHOLD
+        self._fft_chain_phases = {}
+
+    @staticmethod
+    def _fft_inplace(view, axis, forward):
+        '''Transform `view` along `axis` in place.
+        '''
+        fft_func = _fft_module.fft if forward else _fft_module.ifft
+
+        fft_array = fft_func(view, axis=axis, overwrite_x=True)
+
+        if not np.shares_memory(fft_array, view):
+            view[...] = fft_array
+
+    def _fft_multipass(self, arr, forward=True):
+        '''An N-D FFT over the last `self.ndim` axes, as one 1D FFT per axis in place.
+
+        Because FFTshifts are emulated, the retained input and output regions
+        are single contiguous blocks, so each axis transform can be applied to
+        a single view.
+        '''
+        tensor_order = arr.ndim - self.ndim
+        cutin = self.cutout_input if forward else self.cutout_output
+        cout = self.cutout_output if forward else self.cutout_input
+
+        in_slices = tuple(cutin[j] if cutin is not None else slice(None) for j in range(self.ndim))
+        out_slices = tuple(cout[j] if cout is not None else slice(None) for j in range(self.ndim))
+
+        for axis in range(self.ndim):
+            idx = [slice(None)] * arr.ndim
+            for j in range(axis):
+                idx[tensor_order + j] = out_slices[j]
+            for j in range(axis + 1, self.ndim):
+                idx[tensor_order + j] = in_slices[j]
+            self._fft_inplace(arr[tuple(idx)], tensor_order + axis, forward)
+
+        # Avoid aliasing with the reused internal array.
+        return arr.copy()
+
+    def _fft_multipass_compact(self, arr, forward=True):
+        '''Like `_fft_multipass`, but the final axis pass writes directly into
+        a freshly allocated array holding only the retained output cutout.
+
+        This avoids the full-size `arr.copy()` that `_fft_multipass` performs to
+        break the aliasing with the reused internal array. Only valid when the
+        retained output cutout is present.
+        '''
+        tensor_order = arr.ndim - self.ndim
+        cutin = self.cutout_input if forward else self.cutout_output
+        cout = self.cutout_output if forward else self.cutout_input
+
+        in_slices = tuple(cutin[j] if cutin is not None else slice(None) for j in range(self.ndim))
+        out_slices = tuple(cout[j] if cout is not None else slice(None) for j in range(self.ndim))
+
+        # All axes but the last, in place on the internal array.
+        for axis in range(self.ndim - 1):
+            idx = [slice(None)] * arr.ndim
+            for j in range(axis):
+                idx[tensor_order + j] = out_slices[j]
+            for j in range(axis + 1, self.ndim):
+                idx[tensor_order + j] = in_slices[j]
+            self._fft_inplace(arr[tuple(idx)], tensor_order + axis, forward)
+
+        # Last axis: transform the output-row block (full length along the last
+        # axis), then select the retained output cutout. The result is a new
+        # array, free of aliasing with the reused internal array.
+        last = self.ndim - 1
+        idx = [slice(None)] * arr.ndim
+        for j in range(last):
+            idx[tensor_order + j] = out_slices[j]
+        idx[tensor_order + last] = slice(None)
+        view = arr[tuple(idx)]
+
+        fft_func = _fft_module.fft if forward else _fft_module.ifft
+        transformed = fft_func(view, axis=tensor_order + last, overwrite_x=False)
+
+        crop = [slice(None)] * arr.ndim
+        crop[tensor_order + last] = out_slices[last]
+        return np.ascontiguousarray(transformed[tuple(crop)])
+
+    def _zero_multipass_bands(self, arr, cutin, cout):
+        '''Zero only the regions the compact multi-pass FFT reads but that are
+        not filled with input data.
+
+        For axis `a`, the pass reads the output range of the axes before `a`,
+        all of axis `a`, and the input range of the axes after `a`. Only the
+        part of axis `a` outside `cutin[a]` needs to be zero; the part inside
+        holds input data (or data written by a previous pass).
+        '''
+        d = self.ndim
+        tensor_order = arr.ndim - d
+
+        for a in range(d):
+            idx = [slice(None)] * arr.ndim
+            for j in range(a):
+                idx[tensor_order + j] = cout[j]
+            for j in range(a + 1, d):
+                idx[tensor_order + j] = cutin[j]
+
+            start = cutin[a].start
+            stop = cutin[a].stop
+            axis = tensor_order + a
+
+            if start > 0:
+                left = list(idx)
+                left[axis] = slice(0, start)
+                arr[tuple(left)] = 0
+
+            if stop < arr.shape[axis]:
+                right = list(idx)
+                right[axis] = slice(stop, None)
+                arr[tuple(right)] = 0
+
+    def _chain_available(self):
+        '''Whether the chained zero-padding FFT path may be used.
+
+        The chain pays a phase multiply whose size scales with the retained
+        output, while the compact multi-pass path only pays a cropped-size
+        copy. The chain therefore only wins when the output is cropped enough.
+        '''
+        if not (self._use_chain and self.cutout_input is not None and self.cutout_output is not None):
+            return False
+
+        # In one dimension, the chain is faster for any amount of cropping.
+        if self.ndim == 1:
+            return True
+
+        input_size = self.shape_in[0] / self.internal_shape[0]
+        output_size = self.shape_out[0] / self.internal_shape[0]
+        return input_size <= self._chain_input_size_threshold and output_size <= self._chain_fov_threshold
+
+    def _fft_chain_forward(self, field, tensor_shape):
+        '''Full forward transform via the chained zero-padding path.'''
+        block = field.reshape(tensor_shape + self.shape_in)
+        if self.shift_output_filter is not None:
+            block = self.shift_output_filter.apply_numpy(block)
+        block = np.asarray(block)
+        res = self._fft_chain(block, forward=True)
+        res = self.shift_input_filter.apply_numpy(res, out=res)
+        return res.reshape(tensor_shape + (-1,))
+
+    def _fft_chain_backward(self, field, tensor_shape):
+        '''Full backward transform via the chained zero-padding path.'''
+        block = field.reshape(tensor_shape + self.shape_out)
+        block = self.shift_input_filter.apply_numpy(block, inverse=True)
+        block = np.asarray(block)
+        res = self._fft_chain(block, forward=False)
+        if self.shift_output_filter is not None:
+            res = self.shift_output_filter.apply_numpy(res, out=res, inverse=True)
+        return res.reshape(tensor_shape + (-1,))
+
+    def _fft_chain(self, block, forward=True):
+        '''Transform `block` by chaining per-axis FFTs that zero-pad internally.
+
+        Each axis transform uses the FFT's own zero-padding (`n=internal_dim`),
+        so no internal-sized padded array is ever materialized. The input block
+        is centered in the internal array by a phase ramp in the frequency
+        domain rather than by physically placing it, and the phase is only
+        applied to the retained output cutout.
+        '''
+        tensor_order = block.ndim - self.ndim
+        cout = self.cutout_output if forward else self.cutout_input
+
+        fft_func = _fft_module.fft if forward else _fft_module.ifft
+
+        for axis in range(self.ndim):
+            n = self.internal_shape[axis]
+            block = fft_func(block, n=n, axis=tensor_order + axis, overwrite_x=True)
+
+            # Select the retained output cutout along this axis and correct the
+            # phase that the FFT-based centering left behind.
+            phase = self._fft_chain_phase(axis, forward, block.dtype)
+            crop = [slice(None)] * block.ndim
+            crop[tensor_order + axis] = cout[axis]
+            block = block[tuple(crop)]
+
+            shape = [1] * block.ndim
+            shape[tensor_order + axis] = phase.shape[0]
+            np.multiply(block, phase.reshape(shape), out=block)
+
+        return block
+
+    def _fft_chain_phase(self, axis, forward, dtype):
+        '''The frequency-domain phase for one axis of the chained FFT path.'''
+        dtype = np.dtype(dtype)
+        key = (axis, forward, dtype.str)
+        cached = self._fft_chain_phases.get(key)
+        if cached is not None:
+            return cached
+
+        n = self.internal_shape[axis]
+        cutin = self.cutout_input if forward else self.cutout_output
+        cout = self.cutout_output if forward else self.cutout_input
+        offset = cutin[axis].start
+        indices = np.arange(cout[axis].start, cout[axis].stop)
+        sign = -2j * np.pi if forward else 2j * np.pi
+        phase = np.exp(sign * indices * offset / n).astype(dtype, copy=False)
+
+        self._fft_chain_phases[key] = phase
+        return phase
+
     def forward(self, field):
         '''Returns the forward Fourier transform of the :class:`Field` field.
 
@@ -305,19 +526,37 @@ class FastFourierTransform(FourierTransform):
 
         _, complex_dtype = _get_float_and_complex_dtype(field.dtype)
 
+        if self._chain_available():
+            res = self._fft_chain_forward(field, tensor_shape)
+            return Field(res, self.output_grid).astype(complex_dtype, copy=False)
+
+        # The compact path returns the already-cropped output cutout and
+        # writes into a fresh array, so no crop is needed and no full
+        # internal array is copied.
+        compact = self._use_multipass and self.cutout_output is not None
+
         with buffer_pool.empty(tensor_shape + self.internal_shape, complex_dtype) as internal_array:
             if self.cutout_input is None:
                 self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array)
             else:
-                internal_array[:] = 0
+                if not compact:
+                    internal_array[:] = 0
                 self.shift_output_filter.apply_numpy(field.reshape(tensor_shape + self.shape_in), out=internal_array[c + self.cutout_input])
+                if compact:
+                    self._zero_multipass_bands(internal_array, self.cutout_input, self.cutout_output)
 
-            fft_array = _fft_module.fftn(internal_array, axes=axes)
+            if compact:
+                res = self._fft_multipass_compact(internal_array, forward=True)
+            else:
+                if self._use_multipass:
+                    fft_array = self._fft_multipass(internal_array, forward=True)
+                else:
+                    fft_array = _fft_module.fftn(internal_array, axes=axes)
 
-        if self.cutout_output is None:
-            res = fft_array
-        else:
-            res = fft_array[c + self.cutout_output]
+                if self.cutout_output is None:
+                    res = fft_array
+                else:
+                    res = fft_array[c + self.cutout_output]
 
         res = self.shift_input_filter.apply_numpy(res, out=res)
 
@@ -345,19 +584,37 @@ class FastFourierTransform(FourierTransform):
 
         _, complex_dtype = _get_float_and_complex_dtype(field.dtype)
 
+        if self._chain_available():
+            res = self._fft_chain_backward(field, tensor_shape)
+            return Field(res, self.input_grid).astype(complex_dtype, copy=False)
+
+        # The compact path returns the already-cropped input cutout and
+        # writes into a fresh array, so no crop is needed and no full
+        # internal array is copied.
+        compact = self._use_multipass and self.cutout_input is not None
+
         with buffer_pool.empty(tensor_shape + self.internal_shape, complex_dtype) as internal_array:
             if self.cutout_output is None:
                 self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=internal_array, inverse=True)
             else:
-                internal_array[:] = 0
+                if not compact:
+                    internal_array[:] = 0
                 self.shift_input_filter.apply_numpy(field.reshape(tensor_shape + self.shape_out), out=internal_array[c + self.cutout_output], inverse=True)
+                if compact:
+                    self._zero_multipass_bands(internal_array, self.cutout_output, self.cutout_input)
 
-            fft_array = _fft_module.ifftn(internal_array, axes=axes)
+            if compact:
+                res = self._fft_multipass_compact(internal_array, forward=False)
+            else:
+                if self._use_multipass:
+                    fft_array = self._fft_multipass(internal_array, forward=False)
+                else:
+                    fft_array = _fft_module.ifftn(internal_array, axes=axes)
 
-        if self.cutout_input is None:
-            res = fft_array
-        else:
-            res = fft_array[c + self.cutout_input]
+                if self.cutout_input is None:
+                    res = fft_array
+                else:
+                    res = fft_array[c + self.cutout_input]
 
         res = self.shift_output_filter.apply_numpy(res, out=res, inverse=True)
 
@@ -409,14 +666,16 @@ class FastFourierTransform(FourierTransform):
         '''
         q, _, shift = get_fft_parameters(output_grid, input_grid)
 
-        shape = tuple(n * qq for n, qq in zip(input_grid.shape, q))
-
-        N_internal = math.prod(shape)
+        internal = tuple(n * qq for n, qq in zip(input_grid.shape, q))
         N_input = math.prod(input_grid.shape)
         N_output = math.prod(output_grid.shape)
 
-        num_complex_multiplications = 0.5 * N_internal * math.log2(N_internal)
-        num_complex_additions = N_internal * math.log2(N_internal)
+        fft_work = sum(
+            math.prod(output_grid.shape[:a]) * math.prod(input_grid.shape[a + 1:]) * internal[a] * math.log2(internal[a])
+            for a in range(input_grid.ndim))
+
+        num_complex_multiplications = 0.5 * fft_work
+        num_complex_additions = fft_work
 
         # Add complexity for initial multiplication by shift_output.
         # The multiplication happens on `field.reshape(self.shape_in)` which has N_input elements.

@@ -1,5 +1,6 @@
 from .atmospheric_model import AtmosphericLayer
 from ..util import inverse_tikhonov
+import math
 import warnings
 
 class ModalAdaptiveOpticsLayer(AtmosphericLayer):
@@ -60,7 +61,29 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         self._framerate = framerate
 
         if self.framerate is not None:
-            self._last_reconstruction_frame = int(self.layer.t * framerate)
+            self._last_reconstruction_frame = self._frame_from_time(self.layer.t)
+
+    def _frame_from_time(self, t):
+        """Determine the index of the last frame at or before a given time.
+
+        Parameters
+        ----------
+        t : scalar
+            The time for which to determine the frame index.
+
+        Returns
+        -------
+        int
+            The index of the last frame at or before time `t`.
+        """
+        frame = t * self.framerate
+        nearest = round(frame)
+
+        # Correct for floating-point round-off at exact frame boundaries.
+        if abs(frame - nearest) <= 8 * math.ulp(frame):
+            return nearest
+
+        return math.floor(frame)
 
     def phase_for(self, wavelength):
         """Calculates the phase screen for a given wavelength with AO correction.
@@ -102,13 +125,15 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
 
         # Evolve and reconstruct in steps, performing reconstruction along the way.
         while self.layer.t < t:
-            next_reconstruction_t = (self._last_reconstruction_frame + 1) * dt
+            next_reconstruction_frame = self._last_reconstruction_frame + 1
+            next_reconstruction_t = next_reconstruction_frame * dt
             next_t = min(next_reconstruction_t, t)
 
             self.layer.evolve_until(next_t)
 
             if next_reconstruction_t <= t:
                 self._reconstruct_wavefront()
+                self._last_reconstruction_frame = next_reconstruction_frame
 
         self._t = t
 
@@ -124,9 +149,6 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         if len(self.corrected_coeffs) > self.lag:
             self.corrected_coeffs.pop(0)
         self.corrected_coeffs.append(coeffs)
-
-        if self.framerate is not None:
-            self._last_reconstruction_frame = int(self.layer.t * self.framerate)
 
     @property
     def Cn_squared(self):  # noqa: N802
@@ -163,5 +185,8 @@ class ModalAdaptiveOpticsLayer(AtmosphericLayer):
         """
         self.corrected_coeffs = []
         self.layer.reset()
+
+        if self.framerate is not None:
+            self._last_reconstruction_frame = 0
 
         self._reconstruct_wavefront()

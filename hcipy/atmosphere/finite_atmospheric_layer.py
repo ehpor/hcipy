@@ -84,6 +84,9 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
 
         self._achromatic_screen = None
 
+        self.center = np.zeros(2)
+        self._t = 0
+
     @property
     def noise(self):
         '''The (unshifted) spectral noise of this layer.
@@ -131,6 +134,7 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
         '''
         self.center = self.velocity * t
         self._achromatic_screen = None
+        self._t = t
 
     @property
     def Cn_squared(self):  # noqa: N802

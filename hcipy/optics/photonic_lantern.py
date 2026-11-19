@@ -41,12 +41,17 @@ class PhotonicLantern(OpticalElement):
         Returns
         -------
         Wavefront
-            The complex amplitudes of each output port.
+            The complex amplitudes of each output port. Each amplitude is the
+            weighted inner product of the mode with the incoming electric field.
+            Polarization components are projected independently.
         '''
-        output = self.projection_matrix.T.dot(wavefront.electric_field.conj() * self.input_grid.weights)
+        electric_field = wavefront.electric_field
+        weighted_field = (electric_field * self.input_grid.weights).reshape((-1, self.input_grid.size))
+        output = self.projection_matrix.T.dot(weighted_field.conj().T).T.conj()
+        output = output.reshape(electric_field.shape[:-1] + (self.num_modes,))
         output = Field(output, self.output_grid)
 
-        return Wavefront(output, wavefront.wavelength)
+        return Wavefront(output, wavefront.wavelength, wavefront.input_stokes_vector)
 
     def backward(self, wavefront):
         '''Backwards propagate the light through the photonic lantern.
@@ -61,6 +66,9 @@ class PhotonicLantern(OpticalElement):
         Wavefront
             The outgoing wavefront.
         '''
-        res = self.projection_matrix.dot(wavefront.electric_field)
+        electric_field = wavefront.electric_field
+        coefficients = electric_field.reshape((-1, self.num_modes))
+        res = self.projection_matrix.dot(coefficients.T).T
+        res = res.reshape(electric_field.shape[:-1] + (self.input_grid.size,))
 
-        return Wavefront(Field(res, self.input_grid), wavefront.wavelength)
+        return Wavefront(Field(res, self.input_grid), wavefront.wavelength, wavefront.input_stokes_vector)

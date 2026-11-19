@@ -68,6 +68,12 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
             will be generated. This is useful for Monte-Carlo-style computations.
             The default is False.
         '''
+        self._compute_noise(make_independent_realization)
+
+        self.center = np.zeros(2)
+        self._t = 0
+
+    def _compute_noise(self, make_independent_realization=False):
         if make_independent_realization:
             # Reset the original random generator to the current one. This
             # will essentially reset the randomness.
@@ -91,7 +97,7 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
         This property is not intended to be used by the user.
         '''
         if self._noise is None:
-            self.reset()
+            self._compute_noise()
 
         return self._noise
 
@@ -140,8 +146,23 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
 
     @Cn_squared.setter
     def Cn_squared(self, Cn_squared):  # noqa: N802
+        old_Cn_squared = getattr(self, '_Cn_squared', None)
         self._Cn_squared = Cn_squared
-        self._noise = None
+
+        if old_Cn_squared is None or old_Cn_squared == 0:
+            # Scaling is undefined from zero (or unknown) Cn^2; rebuild instead.
+            self._noise = None
+            self._achromatic_screen = None
+            return
+
+        scale = np.sqrt(Cn_squared / old_Cn_squared)
+
+        if self._noise is not None:
+            self._noise.C_1 *= scale
+            self._noise.C_2 *= scale
+
+        if self._achromatic_screen is not None:
+            self._achromatic_screen = self._achromatic_screen * scale
 
     @property
     def outer_scale(self):
@@ -153,3 +174,4 @@ class FiniteAtmosphericLayer(AtmosphericLayer):
     def outer_scale(self, L0):  # noqa: N802
         self._L0 = L0
         self._noise = None
+        self._achromatic_screen = None

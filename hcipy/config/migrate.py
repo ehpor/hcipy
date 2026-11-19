@@ -12,7 +12,6 @@ _LEGACY_TO_FLAT = {
     'fourier.fft.method': 'fft_method',
     'fourier.fft.execution_time_prediction_coefficients': 'fft_runtime_coeffs',
     'fourier.mft.precompute_matrices': 'mft_precompute_matrices',
-    'fourier.mft.allocate_intermediate': 'mft_allocate_intermediate',
     'fourier.mft.execution_time_prediction_coefficients': 'mft_runtime_coeffs',
     'fourier.nft.precompute_matrices': 'nft_precompute_matrices',
     'fourier.zfft.execution_time_prediction_coefficients': 'zfft_runtime_coeffs',

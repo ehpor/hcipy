@@ -133,7 +133,7 @@ def make_xinetics_influence_functions(pupil_grid, num_actuators_across_pupil, ac
     actuator = make_linear_interpolator_separated(actuator.ravel(), actuator_grid, 0)
 
     def poke(p):
-        res = csr_matrix(actuator(evaluated_grid.shifted(-p))) / np.cos(x_tilt) * np.cos(y_tilt)
+        res = csr_matrix(actuator(evaluated_grid.shifted(-p))) / (np.cos(x_tilt) * np.cos(y_tilt))
         res.eliminate_zeros()
 
         return res

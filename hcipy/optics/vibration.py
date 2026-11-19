@@ -70,7 +70,7 @@ class SimpleVibration(OpticalElement):
         '''
         wf = wavefront.copy()
 
-        wf.electric_field *= np.exp(1j * (self.mode * self.amplitude / wf.wavelength * np.sin(self.phase)))
+        wf.electric_field *= np.exp(1j * wf.wavenumber * self.mode * self.amplitude * np.sin(self.phase))
         return wf
 
     def backward(self, wavefront):
@@ -89,7 +89,7 @@ class SimpleVibration(OpticalElement):
         '''
         wf = wavefront.copy()
 
-        wf.electric_field *= np.exp(-1j * (self.mode * self.amplitude / wf.wavelength * np.sin(self.phase)))
+        wf.electric_field *= np.exp(-1j * wf.wavenumber * self.mode * self.amplitude * np.sin(self.phase))
         return wf
 
 class DampedHarmonicVibration(DynamicSurfaceAberration):
@@ -112,13 +112,13 @@ class DampedHarmonicVibration(DynamicSurfaceAberration):
     driving_psd : scalar
         The power spectral density of the driving acceleration noise in m^2 s^-4 per rad/s.
         This represents the strength of the external disturbance. Must be non-negative.
-    refractive_index : float or callable, optional
+    refractive_index : float or callable
         Refractive index of the medium. Can be a constant (float) or a callable
-        that takes wavelength and returns refractive index. Default is 1.0.
+        that takes wavelength and returns refractive index.
     seed : int, optional
         Random seed for reproducibility. Default is None.
     '''
-    def __init__(self, mode, natural_frequency, damping_ratio, driving_psd, refractive_index=1.0, seed=None):
+    def __init__(self, mode, natural_frequency, damping_ratio, driving_psd, refractive_index, seed=None):
         if driving_psd < 0:
             raise ValueError(f"driving_psd must be non-negative, got {driving_psd}.")
 

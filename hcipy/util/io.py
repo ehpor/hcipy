@@ -114,13 +114,23 @@ def _guess_file_format(filename):
     -------
     string
         The file type. This is one of ["asdf", "fits"].
+
+    Raises
+    ------
+    ValueError
+        If the filename has a pickle extension. Pickle is not auto-detected for
+        security reasons; the format has to be given explicitly instead.
     '''
     if filename.endswith('asdf'):
         return 'asdf'
     elif filename.endswith('fits') or filename.endswith('fits.gz'):
         return 'fits'
     elif filename.endswith('pkl') or filename.endswith('pickle'):
-        return 'pickle'
+        raise ValueError(
+            'The pickle file format is not auto-detected for security reasons. '
+            'Pass fmt="pickle" explicitly to read or write pickle files. '
+            'Note that reading pickle files can execute arbitrary code.'
+        )
     else:
         return None
 

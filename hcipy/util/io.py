@@ -1,6 +1,7 @@
 import datetime
 import io
 import pickle
+import warnings
 import packaging
 
 import numpy as np
@@ -18,6 +19,24 @@ except ImportError:
 
 
 use_asdf_memmap = packaging.version.parse(asdf.__version__) >= packaging.version.parse('3.1.0')
+
+
+def _warn_pickle_read():
+    warnings.warn(
+        'Reading pickle files is deprecated and unsafe: pickle can execute arbitrary code. '
+        'Use the asdf or fits format instead.',
+        DeprecationWarning,
+        stacklevel=3,
+    )
+
+
+def _warn_pickle_write():
+    warnings.warn(
+        'Writing pickle files is deprecated and unsafe: reading the resulting file can execute arbitrary code. '
+        'Use the asdf or fits format instead.',
+        DeprecationWarning,
+        stacklevel=3,
+    )
 
 
 def _asdf_to_bintable(af, *args, **kwargs):
@@ -168,6 +187,7 @@ def read_grid(filename, fmt=None):
         with asdf.open(filename, **params) as f:
             return Grid.from_dict(f.tree['grid'])
     elif fmt == 'pickle':
+        _warn_pickle_read()
         with open(filename, 'rb') as f:
             return pickle.load(f)
     else:
@@ -209,6 +229,7 @@ def write_grid(grid, filename, fmt=None, overwrite=True):
         hdulist.append(_asdf_to_bintable(asdf.AsdfFile(tree), all_array_compression='zlib'))
         hdulist.writeto(filename, overwrite=overwrite)
     elif fmt == 'pickle':
+        _warn_pickle_write()
         with open(filename, 'wb') as f:
             pickle.dump(grid, f)
     else:
@@ -260,6 +281,7 @@ def read_field(filename, fmt=None):
 
             return Field.from_dict(tree).reshape(new_shape)
     elif fmt == 'pickle':
+        _warn_pickle_read()
         with open(filename, 'rb') as f:
             return pickle.load(f)
     else:
@@ -315,6 +337,7 @@ def write_field(field, filename, fmt=None, overwrite=True):
         hdulist.append(_asdf_to_bintable(asdf.AsdfFile(tree), all_array_compression='zlib'))
         hdulist.writeto(filename, overwrite=overwrite)
     elif fmt == 'pickle':
+        _warn_pickle_write()
         with open(filename, 'wb') as f:
             pickle.dump(field, f)
     else:
@@ -366,6 +389,7 @@ def read_mode_basis(filename, fmt=None):
 
             return ModeBasis.from_dict(tree)
     elif fmt == 'pickle':
+        _warn_pickle_read()
         with open(filename, 'rb') as f:
             return pickle.load(f)
     else:
@@ -424,6 +448,7 @@ def write_mode_basis(mode_basis, filename, fmt=None, overwrite=True):
         hdulist.append(_asdf_to_bintable(asdf.AsdfFile(tree), all_array_compression='zlib'))
         hdulist.writeto(filename, overwrite=overwrite)
     elif fmt == 'pickle':
+        _warn_pickle_write()
         with open(filename, 'wb') as f:
             pickle.dump(mode_basis, f)
     else:

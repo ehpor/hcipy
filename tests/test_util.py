@@ -1,7 +1,9 @@
+import importlib
 import numpy as np
 import os
 import pytest
 from hcipy import *
+from hcipy._math.backends import to_numpy
 
 def test_grid_io():
     grid1 = make_pupil_grid(128)
@@ -36,6 +38,45 @@ def test_field_io():
         assert hash(field.grid) == hash(new_field.grid)
 
         os.remove(fname)
+
+@pytest.mark.parametrize(('fmt', 'separated'), [('asdf', True), ('fits', True), ('fits', False)])
+def test_new_style_field_file_io(fmt, separated, tmp_path, monkeypatch):
+    import array_api_strict as xp
+
+    field_io = importlib.import_module('hcipy.util.io')
+    monkeypatch.setattr(field_io, 'Field', NewStyleField)
+    grid = make_pupil_grid([4, 3], xp=np)
+    if not separated:
+        grid = grid.subset(np.arange(grid.size))
+    values = np.arange(2 * 3 * grid.size, dtype=np.float32).reshape((2, 3, grid.size))
+    if fmt == 'asdf':
+        values = (values + 1j * (values + 1)).astype(np.complex64)
+    field = NewStyleField(xp.asarray(values), grid)
+
+    filename = str(tmp_path / f'field.{fmt}')
+    write_field(field, filename)
+    restored = read_field(filename)
+
+    assert isinstance(restored.data, np.ndarray)
+    assert restored.data.dtype.newbyteorder('=') == values.dtype
+    np.testing.assert_array_equal(restored.data, values)
+    assert restored.tensor_shape == (2, 3)
+    assert restored.grid == grid
+
+def test_new_style_field_pickle_io_preserves_backend(tmp_path):
+    import array_api_strict as xp
+
+    data = xp.asarray([1, 2, 3], dtype=xp.float32)
+    field = NewStyleField(data)
+    filename = str(tmp_path / 'field.pkl')
+    write_field(field, filename)
+    restored = read_field(filename)
+
+    assert isinstance(restored, NewStyleField)
+    assert restored.data.__array_namespace__() is xp
+    assert restored.data.dtype == data.dtype
+    np.testing.assert_array_equal(to_numpy(restored.data), to_numpy(data))
+    assert restored.grid is None
 
 def test_mode_basis_io():
     grid = make_pupil_grid(128)

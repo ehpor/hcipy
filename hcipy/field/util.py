@@ -817,7 +817,7 @@ def crop_grid(grid, crop_width):
             coords = grid.separated_coords[i]
             before = crop_width[2 * i]
             after = crop_width[2 * i + 1]
-            new_coords.append(coords[before:-after])
+            new_coords.append(coords[before:coords.shape[0] - after])
 
         return grid.__class__(SeparatedCoords(new_coords))
 

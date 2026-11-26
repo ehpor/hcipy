@@ -68,10 +68,16 @@ def gaussian_hermite(n, m, mode_field_diameter=1, grid=None):
     if grid.is_separated and grid.is_('cartesian'):
         x = grid.x
         y = grid.y
-        r2 = (x**2 + y**2) / (mode_field_diameter / 2)**2
+        x_separated, y_separated = grid.separated_coords
+        r2 = (x_separated[np.newaxis, :]**2 + y_separated[:, np.newaxis]**2).ravel()
+    elif grid.is_('polar'):
+        x, y = grid.as_('cartesian').coords
+        r2 = grid.r**2
     else:
         x, y = grid.as_('cartesian').coords
-        r2 = (2 * grid.r / mode_field_diameter)**2
+        r2 = x**2 + y**2
+
+    r2 = r2 / (mode_field_diameter / 2)**2
 
     # Calculate the mode.
     hg = np.exp(-r2) * eval_hermite(n, 2 * sqrt(2) * x / mode_field_diameter) * eval_hermite(m, 2 * sqrt(2) * y / mode_field_diameter)

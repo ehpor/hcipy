@@ -371,6 +371,45 @@ def test_gaussian_hermite_modes():
             product = np.sum((m1.conj() * m2) * grid.weights).real
             assert np.abs(product - np.eye(num_modes)[i, j]) < 1e-6
 
+def test_gaussian_hermite_separated_cartesian_grid():
+    grid = make_chebyshev_grid((7, 11))
+    x, y = grid.separated_coords
+
+    unstructured_grid = CartesianGrid(UnstructuredCoords([
+        np.tile(x, len(y)),
+        np.repeat(y, len(x)),
+    ]), grid.weights)
+
+    for n, m in [(0, 0), (1, 2), (3, 1)]:
+        separated_mode = gaussian_hermite(n, m, 1, grid)
+        unstructured_mode = gaussian_hermite(n, m, 1, unstructured_grid)
+
+        assert np.allclose(separated_mode, unstructured_mode)
+
+def test_gaussian_hermite_unstructured_cartesian_grid():
+    grid = make_focal_grid(16, 4)
+    x, y = grid.as_('cartesian').coords
+
+    unstructured_grid = CartesianGrid(UnstructuredCoords([x, y]), grid.weights)
+
+    for n, m in [(0, 0), (1, 2), (3, 1)]:
+        regular_mode = gaussian_hermite(n, m, 1, grid)
+        unstructured_mode = gaussian_hermite(n, m, 1, unstructured_grid)
+
+        assert np.allclose(regular_mode, unstructured_mode)
+
+def test_gaussian_hermite_polar_grid():
+    grid = make_focal_grid(16, 4)
+
+    polar_grid = grid.as_('polar')
+    polar_grid.weights = grid.weights
+
+    for n, m in [(0, 0), (1, 2), (3, 1)]:
+        cartesian_mode = gaussian_hermite(n, m, 1, grid)
+        polar_mode = gaussian_hermite(n, m, 1, polar_grid)
+
+        assert np.allclose(cartesian_mode, polar_mode)
+
 def test_fourier_modes():
     grid = make_pupil_grid(32)
     fourier_grid = make_fft_grid(grid, 1, 0.2)

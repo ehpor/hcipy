@@ -219,6 +219,33 @@ def test_ravc():
 
             assert abs(transmission - transmission_theoretical) < 0.01
 
+def test_ravc_zero_obscuration():
+    pupil_grid = make_pupil_grid(128)
+    radial_coords = np.asarray(pupil_grid.as_('polar').r)
+    clear_aperture = np.asarray(make_circular_aperture(1)(pupil_grid))
+
+    for charge in [2, 4]:
+        for central_obscuration in [0.0, 1e-12]:
+            pupil, lyot = make_ravc_masks(central_obscuration, charge)
+
+            pupil = np.asarray(pupil(pupil_grid))
+            lyot = np.asarray(lyot(pupil_grid))
+
+            assert np.all(np.isfinite(pupil))
+            assert np.all(np.isfinite(lyot))
+            np.testing.assert_allclose(pupil, clear_aperture)
+            np.testing.assert_allclose(lyot[(radial_coords > 0.04) & (radial_coords < 0.45)], 1)
+
+        assert np.isclose(get_ravc_planet_transmission(0.0, charge), 1)
+        assert np.isfinite(get_ravc_planet_transmission(1e-12, charge))
+
+        pupil, lyot = make_ravc_masks(0.0, charge, lyot_undersize=0.1)
+        lyot = np.asarray(lyot(pupil_grid))
+
+        np.testing.assert_allclose(lyot[radial_coords < 0.03], 0)
+        np.testing.assert_allclose(lyot[(radial_coords > 0.1) & (radial_coords < 0.4)], 1)
+        np.testing.assert_allclose(lyot[radial_coords > 0.5], 0)
+
 def test_app_keller():
     pupil_grid = make_pupil_grid(256)
     focal_grid = make_focal_grid(4, 32)

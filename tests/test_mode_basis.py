@@ -254,10 +254,32 @@ def test_disk_harmonic_modes(bc):
 
     modes = make_disk_harmonic_basis(grid, num_modes, bc=bc)
 
+    weights = grid.weights[aperture_mask] if np.ndim(grid.weights) > 0 else grid.weights
+    area = np.pi * (1 / 2)**2
+
     for i, m1 in enumerate(modes):
         for j, m2 in enumerate(modes):
-            product = np.sum((m1 * m2)[aperture_mask])
+            product = np.sum((m1 * m2)[aperture_mask] * weights) / area
             assert np.abs(product - np.eye(num_modes)[i, j]) < 1e-2
+
+@pytest.mark.parametrize('bc', ['dirichlet', 'neumann'])
+def test_disk_harmonic_normalization_resolution(bc):
+    rms_values = []
+
+    for num_pixels in [64, 256]:
+        grid = make_pupil_grid(num_pixels)
+        aperture_mask = make_circular_aperture(1)(grid) > 0
+
+        mode = disk_harmonic(1, 1, bc=bc, grid=grid)
+
+        weights = grid.weights[aperture_mask] if np.ndim(grid.weights) > 0 else grid.weights
+        area = np.pi * (1 / 2)**2
+        rms = np.sqrt(np.sum((mode**2)[aperture_mask] * weights) / area)
+
+        assert np.abs(rms - 1) < 1e-2
+        rms_values.append(rms)
+
+    assert np.abs(rms_values[0] - rms_values[1]) < 1e-2
 
 def test_lp_modes():
     grid = make_pupil_grid(128)

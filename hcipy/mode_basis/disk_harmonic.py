@@ -31,6 +31,12 @@ def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
     ------
     ValueError
         If the boundary condition is not recognized.
+
+    Notes
+    -----
+    The mode is normalized to unit RMS over the disk, that is,
+    :math:`\\frac{1}{\\pi (D/2)^2} \\int_{\\mathrm{disk}} z^2 \\, \\mathrm{d}A = 1`,
+    where the integral is approximated using the grid area weights.
     '''
     polar_grid = grid.as_('polar')
     r = 2 * polar_grid.r / D
@@ -41,23 +47,24 @@ def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
 
     if bc == 'dirichlet':
         lambda_mn = jn_zeros(m, n)[-1]
-        norm = 1
     elif bc == 'neumann':
         lambda_mn = jnp_zeros(m, n)[-1]
-        norm = 1
     else:
         raise ValueError('Boundary condition not recognized.')
 
     if m_negative:
-        z = norm * jv(m, lambda_mn * r) * np.sin(m * theta)
+        z = jv(m, lambda_mn * r) * np.sin(m * theta)
     else:
-        z = norm * jv(m, lambda_mn * r) * np.cos(m * theta)
+        z = jv(m, lambda_mn * r) * np.cos(m * theta)
 
-    # Do manual normalization for now...
-    mask = make_circular_aperture(D)(grid) > 0.5
-    norm = np.sqrt(np.sum(z[mask]**2))
+    mask = np.asarray(make_circular_aperture(D)(grid)) > 0.5
+    z = z * mask
 
-    return Field(z * mask / norm, grid)
+    # Normalize to unit RMS over the disk.
+    area = np.pi * (D / 2)**2
+    rms = np.sqrt(np.sum(z**2 * grid.weights) / area)
+
+    return Field(z / rms, grid)
 
 def disk_harmonic_energy(n, m, bc='dirichlet'):
     '''Get the energy of a disk harmonic function.

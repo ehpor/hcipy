@@ -123,7 +123,7 @@ class PhotonicLanternNuller(FiberNuller):
             core_radius = mode_field_diameter
 
         if core_radius is None:
-            raise TypeError('core_radius is required. The mode_field_diameter argument is deprecated; use core_radius instead.')
+            raise TypeError('The core_radius parameter is required.')
 
         self.core_radius = core_radius
         lp_modes = make_lp_modes(focal_grid, 1.5 * np.pi, core_radius)

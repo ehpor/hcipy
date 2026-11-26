@@ -154,11 +154,17 @@ def zernike_radial_chong(n, m, r, cache=None):
     array_like
         The radial component of the evaluated Zernike polynomial.
     '''
+    if cache is None:
+        cache = {}
+
+    if ('origin_mask',) not in cache:
+        cache[('origin_mask',)] = np.asarray(r) == 0
+
+    origin_mask = cache[('origin_mask',)]
     m = abs(m)
 
-    if cache is not None:
-        if ('rad', n, m) in cache:
-            return cache[('rad', n, m)]
+    if ('rad', n, m) in cache:
+        return cache[('rad', n, m)]
 
     if n == m:
         res = r**n
@@ -176,12 +182,28 @@ def zernike_radial_chong(n, m, r, cache=None):
         h1 = q * (q - 1) / 2.0 - q * h2 + h3 * (p + q + 2) * (p - q) / 8.0
 
         r2 = zernike_radial_chong(2, 2, r, cache)
-        res = h1 * zernike_radial_chong(p, q, r, cache) + (h2 + h3 / r2) * zernike_radial_chong(n, q - 2, r, cache)
 
-    if cache is not None:
-        cache[('rad', n, m)] = res
+        # The q-recursive relation contains a 1/r**2 term whose singular part
+        # cancels against R_n^{m+2}. Use a safe denominator here and overwrite
+        # the values at the origin with their analytic limit below.
+        safe_r2 = np.where(r2 == 0, 1, r2)
+        res = h1 * zernike_radial_chong(p, q, r, cache) \
+            + (h2 + h3 / safe_r2) * zernike_radial_chong(n, q - 2, r, cache)
+
+    if np.any(origin_mask):
+        res = np.array(res, copy=True)
+        res[origin_mask] = _zernike_origin_value(n, m)
+
+    cache[('rad', n, m)] = res
 
     return res
+
+def _zernike_origin_value(n, m):
+    '''Return the value of the radial Zernike polynomial at the origin.'''
+    if m == 0 and n % 2 == 0:
+        return (-1)**(n // 2)
+
+    return 0
 
 def zernike_radial_andersen(n, m, r, cache=None):
     """
@@ -376,7 +398,7 @@ def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_rel
 
     if grid.is_separated and grid.is_('polar'):
         R, Theta = grid.separated_coords
-        z_r = zernike_radial(n, m, 2 * R / D, cache)
+        z_r = zernike_radial(n, m, 2 * R / D, cache, recurrence_relationship)
         if radial_cutoff:
             z_r *= (2 * R) < D
         z = sqrt(n + 1) * np.outer(zernike_azimuthal(m, Theta, cache), z_r).flatten()

@@ -210,6 +210,20 @@ def test_zernike_cache():
 
     assert np.allclose(m1, m2)
 
+def test_zernike_separated_polar():
+    r = np.array([0, 0.25, 0.5, 1])
+    theta = np.array([0, 1, 2])
+    grid = PolarGrid(SeparatedCoords([r, theta]))
+
+    for recurrence in ['andersen', 'chong']:
+        for n, m in [(4, 0), (5, 1), (6, 0), (6, 2)]:
+            mode = zernike(n, m, grid=grid, recurrence_relationship=recurrence)
+
+            assert np.all(np.isfinite(mode))
+
+    with pytest.raises(NotImplementedError):
+        zernike(4, 0, grid=grid, recurrence_relationship='not_a_recurrence')
+
 def test_radial_zernike():
     grid = make_pupil_grid(32)
     R = grid.as_('polar').r
@@ -226,12 +240,8 @@ def test_radial_zernike():
         z_r_chong = zernike_radial(n, m, 2 * R, cache_chong, 'chong')
         assert np.allclose(z_r_andersen[mask], z_r_chong[mask])
 
-def test_radial_zernike_at_origin():
-    '''
-    This only tests the default recurrence relationship (andersen)
-    The other implemented version (chong) diverges at the origin and
-    is therefore not well defined there.
-    '''
+@pytest.mark.parametrize('recurrence_relationship', ['andersen', 'chong'])
+def test_radial_zernike_at_origin(recurrence_relationship):
     def zernike_at_origin(n, m):
         """Value of the standard Zernike radial polynomial R_n^m at rho=0."""
         if m != 0 or n % 2 != 0:
@@ -243,7 +253,7 @@ def test_radial_zernike_at_origin():
 
     for k in range(num_radial_max):
         n, m = indices[k]
-        z_r = zernike_radial(n, m, np.array([0, ]))
+        z_r = zernike_radial(n, m, np.array([0, ]), recurrence_relationship=recurrence_relationship)
         assert z_r == zernike_at_origin(n, m)
 
 @pytest.mark.parametrize('bc', ['dirichlet', 'neumann'])

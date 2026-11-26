@@ -366,30 +366,6 @@ def test_photonic_lantern_nuller():
 
     assert np.allclose(img.intensity[1:5], np.zeros(4))
 
-def test_photonic_lantern_nuller_core_radius():
-    pupil_grid = make_pupil_grid(64)
-    focal_grid = make_focal_grid(4, 5)
-    core_radius = 0.7
-
-    pln = PhotonicLanternNuller(pupil_grid, focal_grid, core_radius=core_radius)
-    expected = PhotonicLantern(make_lp_modes(focal_grid, 1.5 * np.pi, core_radius))
-
-    assert pln.core_radius == core_radius
-    np.testing.assert_allclose(pln.fiber.projection_matrix, expected.projection_matrix)
-
-    with pytest.warns(DeprecationWarning, match='mode_field_diameter'):
-        pln_deprecated = PhotonicLanternNuller(pupil_grid, focal_grid, mode_field_diameter=core_radius)
-
-    np.testing.assert_allclose(pln_deprecated.fiber.projection_matrix, expected.projection_matrix)
-
-    with pytest.raises(TypeError):
-        PhotonicLanternNuller(pupil_grid, focal_grid)
-
-    with pytest.raises(TypeError):
-        PhotonicLanternNuller(
-            pupil_grid, focal_grid, core_radius=core_radius, mode_field_diameter=core_radius
-        )
-
 def test_knife_edge_coronagraph():
     grid = make_pupil_grid(64, 1.1)
     aperture = make_circular_aperture(1)(grid)

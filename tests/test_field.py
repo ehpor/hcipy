@@ -333,3 +333,27 @@ def test_field_pickle(Field):
 
     assert allclose(a, b)
     assert a.grid == b.grid
+
+def test_field_einsum_implicit_output_keeps_grid():
+    grid = make_pupil_grid(4, xp=xp)
+
+    a_data = np.arange(2 * 2 * grid.size, dtype=float).reshape(2, 2, grid.size)
+    b_data = np.arange(2 * 4 * grid.size, dtype=float).reshape(2, 4, grid.size)
+
+    a = Field(a_data, grid)
+    b = Field(b_data, grid)
+
+    result = field_einsum('ij,jk', a, b)
+    expected = field_einsum('ij,jk->ik', a, b)
+
+    assert result.shape == (2, 4, grid.size)
+    assert result.is_valid_field
+    assert all_close(result, expected)
+
+    result = field_einsum('ij', a)
+    expected = field_einsum('ij->ij', a)
+
+    assert result.shape == (2, 2, grid.size)
+    assert result.is_valid_field
+    assert all_close(result, expected)
+

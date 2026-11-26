@@ -161,7 +161,7 @@ def field_einsum(subscripts, *operands, **kwargs):
         ss_input, ss_output = splitted_string
     else:
         ss_input = splitted_string[0]
-        ss_output = ''
+        ss_output = None
 
     # split the input operands in separate strings
     ss = ss_input.split(',')
@@ -171,14 +171,25 @@ def field_einsum(subscripts, *operands, **kwargs):
     # Find an indexing letter that can be used for field dimension.
     unused_index = [a for a in string.ascii_lowercase if a not in subscripts][0]
 
+    # Determine the implicit output before appending the field dimension. Following
+    # numpy's implicit-output rules, labels that occur exactly once are retained,
+    # sorted alphabetically, and the ellipsis is preserved. The field dimension is
+    # then always appended so that it is never summed away.
+    if ss_output is None:
+        labels = [c for s in ss_input.split(',') for c in s if c.isalpha()]
+        counts = {}
+        for label in labels:
+            counts[label] = counts.get(label, 0) + 1
+
+        ss_output = ''.join(sorted(label for label, count in counts.items() if count == 1))
+        if '...' in ss_input:
+            ss_output = '...' + ss_output
+
     # Add the field dimension to the input field operands.
     ss = [s + unused_index if operand_is_field[i] else s for i, s in enumerate(ss)]
 
     # Recombine all operands into the final subscripts
-    if len(splitted_string) == 2:
-        subscripts_new = ','.join(ss) + '->' + ss_output + unused_index
-    else:
-        subscripts_new = ','.join(ss)
+    subscripts_new = ','.join(ss) + '->' + ss_output + unused_index
 
     unwrapped = [_normalize_field(o) if operand_is_field[i] else o for i, o in enumerate(operands)]
 

@@ -10,9 +10,32 @@ from ..aperture import make_circular_aperture
 from ..fourier import FastFourierTransform, MatrixFourierTransform, FourierFilter
 
 class VortexCoronagraph(MultiScaleCoronagraph):
-    def __init__(self, input_grid, charge, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
+    '''A scalar vortex coronagraph.
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The grid on which the incoming wavefront is defined.
+    charge : integer
+        The charge of the vortex.
+    lyot_stop : Field or OpticalElement
+        The Lyot stop for the coronagraph. If it's a Field, it is converted to an
+        OpticalElement for convenience. If this is None (default), then no Lyot stop is used.
+    q : scalar
+        The minimum number of pixels per lambda/D. See :class:`MultiScaleCoronagraph`.
+    scaling_factor : scalar
+        The fractional increase in spatial frequency sampling per level. See
+        :class:`MultiScaleCoronagraph`.
+    window_size : integer
+        The size of the next level in the number of pixels on the current layer. See
+        :class:`MultiScaleCoronagraph`.
+    pupil_diameter : scalar
+        The diameter of the pupil. This is used to set the focal-plane sampling. If this is None
+        (default), the extent of the input grid is used as the pupil diameter.
+    '''
+    def __init__(self, input_grid, charge, lyot_stop=None, q=1024, scaling_factor=4, window_size=32, pupil_diameter=None):
         complex_mask = lambda grid: Field(np.exp(1j * charge * grid.as_('polar').theta), grid) * (1 - make_circular_aperture(1e-9)(grid))
-        super().__init__(input_grid, complex_mask, lyot_stop, q, scaling_factor, window_size)
+        super().__init__(input_grid, complex_mask, lyot_stop, q, scaling_factor, window_size, pupil_diameter)
 
 class VectorVortexCoronagraph(AgnosticOpticalElement):
     '''A vector vortex coronagraph.
@@ -48,8 +71,11 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
     window_size : integer
         The size of the next level in the number of pixels on the current layer. Lowering this
         increases performance in exchange for accuracy. Values smaller than 4-8 are not recommended.
+    pupil_diameter : scalar
+        The diameter of the pupil. This is used to set the focal-plane sampling. If this is None
+        (default), the extent of the input grid is used as the pupil diameter.
     '''
-    def __init__(self, charge, lyot_stop=None, phase_retardation=np.pi, q=1024, scaling_factor=4, window_size=32):
+    def __init__(self, charge, lyot_stop=None, phase_retardation=np.pi, q=1024, scaling_factor=4, window_size=32, pupil_diameter=None):
         self.charge = charge
 
         if hasattr(lyot_stop, 'forward') or lyot_stop is None:
@@ -62,12 +88,16 @@ class VectorVortexCoronagraph(AgnosticOpticalElement):
         self.q = q
         self.scaling_factor = scaling_factor
         self.window_size = window_size
+        self.pupil_diameter = pupil_diameter
 
         AgnosticOpticalElement.__init__(self)
 
     def make_instance(self, instance_data, input_grid, output_grid, wavelength):
         xp = input_grid.xp
-        pupil_diameter = xp.asarray(input_grid.dims) * input_grid.delta
+        if self.pupil_diameter is None:
+            pupil_diameter = xp.asarray(input_grid.dims) * input_grid.delta
+        else:
+            pupil_diameter = xp.asarray(self.pupil_diameter)
 
         levels = int(math.ceil(math.log(self.q / 2) / math.log(self.scaling_factor))) + 1
         qs = [2 * self.scaling_factor**i for i in range(levels)]

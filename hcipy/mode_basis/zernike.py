@@ -474,7 +474,7 @@ def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_r
     n, m = noll_to_zernike(i)
     return zernike(n, m, D, grid, radial_cutoff, cache, recurrence_relationship)
 
-def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_cutoff=True, use_cache=True, cache=None, recurrence_relationship='andersen'):
+def make_zernike_basis(num_modes, D, grid, starting_mode=None, ansi=False, radial_cutoff=True, use_cache=True, cache=None, recurrence_relationship='andersen'):
     '''Make a ModeBasis of Zernike polynomials.
 
     Parameters
@@ -486,8 +486,11 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
     grid : Grid or None
         The grid on which to evaluate the Zernike polynomials. If this is None,
         a list of Field generators will be returned.
-    starting_mode : int
-        The first mode to evaluate.
+    starting_mode : int or None
+        The first mode to evaluate. If this is None (the default), the first mode
+        (piston) is used. Otherwise, the value is interpreted using the selected
+        indexing convention: Noll indices are one-based, while ANSI indices are
+        zero-based.
     ansi : boolean
         If this is True, the modes will be indexed using ANSI indices. Otherwise, a Noll
         indexing scheme is used.
@@ -519,6 +522,9 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
             cache = {}
     else:
         cache = None
+
+    if starting_mode is None:
+        starting_mode = 0 if ansi else 1
 
     modes = [f(i, D, polar_grid, radial_cutoff, cache, recurrence_relationship) for i in range(starting_mode, starting_mode + num_modes)]
 

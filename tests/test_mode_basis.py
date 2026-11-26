@@ -25,8 +25,26 @@ def test_zernike_indices():
         n, m = noll_to_zernike(i)
         assert i == zernike_to_noll(n, m)
 
+    for i in range(500):
         n, m = ansi_to_zernike(i)
         assert i == zernike_to_ansi(n, m)
+
+def test_zernike_ansi_starting_mode():
+    grid = make_pupil_grid(32)
+    piston = zernike(0, 0, grid=grid)
+
+    assert ansi_to_zernike(0) == (0, 0)
+    assert zernike_to_ansi(0, 0) == 0
+
+    for ansi in [False, True]:
+        basis = make_zernike_basis(3, 1, grid, ansi=ansi)
+        assert np.allclose(basis[0], piston)
+
+    basis_without_piston = make_zernike_basis(3, 1, grid, starting_mode=2)
+    assert not np.allclose(basis_without_piston[0], piston)
+
+    basis_without_piston = make_zernike_basis(3, 1, grid, starting_mode=1, ansi=True)
+    assert not np.allclose(basis_without_piston[0], piston)
 
 def test_hexike_modes():
     grid = make_pupil_grid(128)

@@ -48,7 +48,11 @@ def disk_harmonic(n, m, D=1, bc='dirichlet', grid=None):
     if bc == 'dirichlet':
         lambda_mn = jn_zeros(m, n)[-1]
     elif bc == 'neumann':
-        lambda_mn = jnp_zeros(m, n)[-1]
+        if n == 0 and m == 0:
+            # The constant mode is the only Neumann mode with zero eigenvalue.
+            lambda_mn = 0
+        else:
+            lambda_mn = jnp_zeros(m, n)[-1]
     else:
         raise ValueError('Boundary condition not recognized.')
 
@@ -96,7 +100,10 @@ def disk_harmonic_energy(n, m, bc='dirichlet'):
     if bc == 'dirichlet':
         lambda_mn = jn_zeros(m, n)[-1]
     elif bc == 'neumann':
-        lambda_mn = jnp_zeros(m, n)[-1]
+        if n == 0 and m == 0:
+            lambda_mn = 0
+        else:
+            lambda_mn = jnp_zeros(m, n)[-1]
     else:
         raise ValueError('Boundary condition not recognized.')
 
@@ -118,8 +125,17 @@ def get_disk_harmonic_orders_sorted(num_modes, bc='dirichlet'):
     list of tuples
         A list of orders (n, m).
     '''
-    orders = [(1, 0)]
-    energies = [disk_harmonic_energy(1, 0, bc)]
+    if bc == 'dirichlet':
+        # For Dirichlet boundary conditions the piston mode is identically zero
+        # and therefore not part of the basis.
+        orders = [(1, 0)]
+    elif bc == 'neumann':
+        # For Neumann boundary conditions the constant mode is a valid mode.
+        orders = [(0, 0)]
+    else:
+        raise ValueError('Boundary condition not recognized.')
+
+    energies = [disk_harmonic_energy(order[0], order[1], bc) for order in orders]
 
     results = []
     while len(results) < num_modes:
@@ -134,7 +150,8 @@ def get_disk_harmonic_orders_sorted(num_modes, bc='dirichlet'):
         del energies[k]
 
         new_order = (order[0], order[1] + 1)
-        if new_order not in results and new_order not in orders:
+        # Radial order zero only exists for the constant Neumann mode.
+        if new_order[0] > 0 and new_order not in results and new_order not in orders:
             orders.append(new_order)
             energies.append(disk_harmonic_energy(new_order[0], new_order[1], bc))
         new_order = (order[0] + 1, order[1])

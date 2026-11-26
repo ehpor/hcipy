@@ -223,50 +223,53 @@ def field_dot(a, b, out=None):
     Field
         The result of the dot product.
     '''
-    # Find out if a or b are vectors or higher dimensional tensors
-    if hasattr(a, 'tensor_order'):
-        amat = a.tensor_order > 1
-    elif is_scalar(a):
-        if out is None:
-            return a * b
+    def tensor_order(x):
+        if hasattr(x, 'tensor_order'):
+            return x.tensor_order
+        return 0 if is_scalar(x) else x.ndim
+
+    # Multiplying by a plain scalar (including zero-dimensional arrays) is just
+    # scalar multiplication and does not involve any field contractions.
+    for x in (a, b):
+        if not hasattr(x, 'tensor_order') and is_scalar(x):
+            if out is None:
+                return a * b
+            else:
+                warnings.warn(
+                    "The 'out' keyword for field_dot is deprecated and will be removed in a future version.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                res = _assign_out(a * b, out)
+
+                return Field(res, out.grid) if isinstance(out, NewStyleField) else res
+
+    a_order = tensor_order(a)
+    b_order = tensor_order(b)
+
+    # Select correct multiplication behaviour. Orders higher than two are treated
+    # as matrix-like, with any leading axes acting as batch dimensions.
+    if a_order == 0:
+        if b_order == 0:
+            subscripts = '...,...->...'
+        elif b_order == 1:
+            subscripts = '...,...i->...i'
         else:
-            warnings.warn(
-                "The 'out' keyword for field_dot is deprecated and will be removed in a future version.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            res = _assign_out(a * b, out)
-
-            return Field(res, out.grid) if isinstance(out, NewStyleField) else res
-    else:
-        amat = a.ndim > 1
-
-    if hasattr(b, 'tensor_order'):
-        bmat = b.tensor_order > 1
-    elif is_scalar(b):
-        if out is None:
-            return a * b
+            subscripts = '...,...ij->...ij'
+    elif a_order == 1:
+        if b_order == 0:
+            subscripts = '...i,...->...i'
+        elif b_order == 1:
+            subscripts = '...i,...i->...'
         else:
-            warnings.warn(
-                "The 'out' keyword for field_dot is deprecated and will be removed in a future version.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            res = _assign_out(a * b, out)
-
-            return Field(res, out.grid) if isinstance(out, NewStyleField) else res
+            subscripts = '...i,...ij->...j'
     else:
-        bmat = b.ndim > 1
-
-    # Select correct multiplication behaviour.
-    if amat and bmat:
-        subscripts = '...ij,...jk->...ik'
-    elif amat and not bmat:
-        subscripts = '...i,...i->...'
-    elif not amat and bmat:
-        subscripts = '...i,...ij->...j'
-    elif not amat and not bmat:
-        subscripts = '...i,...i->...'
+        if b_order == 0:
+            subscripts = '...ij,...->...ij'
+        elif b_order == 1:
+            subscripts = '...ij,...j->...i'
+        else:
+            subscripts = '...ij,...jk->...ik'
 
     # Perform calculation and return.
     if out is None:

@@ -11,7 +11,7 @@ def noll_to_zernike(i):
     Parameters
     ----------
     i : int
-        The Noll index.
+        The Noll index. This is one-based, so the piston mode has index one.
 
     Returns
     -------
@@ -33,7 +33,7 @@ def ansi_to_zernike(i):
     Parameters
     ----------
     i : int
-        The ANSI index.
+        The ANSI index. This is zero-based, so the piston mode has index zero.
 
     Returns
     -------
@@ -59,7 +59,7 @@ def zernike_to_ansi(n, m):
     Returns
     -------
     int
-        The ANSI index.
+        The ANSI index. This is zero-based, so the piston mode has index zero.
     '''
     return (m + n * n) // 2 + n
 
@@ -76,7 +76,7 @@ def zernike_to_noll(n, m):
     Returns
     -------
     int
-        The Noll index.
+        The Noll index. This is one-based, so the piston mode has index one.
     '''
     i = int(((n + 0.5)**2 + 1) / 2) + 1
     Nn = (n + 1) * (n + 2) // 2 + 1
@@ -416,7 +416,7 @@ def zernike_ansi(i, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_r
     Parameters
     ----------
     i : int
-        The ANSI index.
+        The ANSI index. This is zero-based, so the piston mode has index zero.
     D : scalar
         The diameter of the Zernike polynomial.
     grid : Grid or None
@@ -448,7 +448,7 @@ def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_r
     Parameters
     ----------
     i : int
-        The Noll index.
+        The Noll index. This is one-based, so the piston mode has index one.
     D : scalar
         The diameter of the Zernike polynomial.
     grid : Grid or None
@@ -576,7 +576,7 @@ def hexike_ansi(i, circum_diameter, hexagon_angle=0, grid=None, cache=None):
     Parameters
     ----------
     i : int
-        The ANSI index.
+        The ANSI index. This is zero-based, so the piston mode has index zero.
     circum_diameter : scalar
         The circum-diameter of the hexagonal aperture.
     hexagon_angle : float
@@ -605,7 +605,7 @@ def hexike_noll(i, circum_diameter, hexagon_angle=0, grid=None, cache=None):
     Parameters
     ----------
     i : int
-        The Noll index.
+        The Noll index. This is one-based, so the piston mode has index one.
     circum_diameter : scalar
         The circum-diameter of the hexagonal aperture.
     hexagon_angle : float
@@ -736,7 +736,7 @@ def keystone_ansi(i, inner_diameter, outer_diameter, angle_width, spider_width, 
     Parameters
     ----------
     i : int
-        The ANSI index.
+        The ANSI index. This is zero-based, so the piston mode has index zero.
     inner_diameter : scalar
         The inner diameter of the keystone aperture.
     outer_diameter : scalar
@@ -770,7 +770,7 @@ def keystone_noll(i, inner_diameter, outer_diameter, angle_width, spider_width, 
     Parameters
     ----------
     i : int
-        The Noll index.
+        The Noll index. This is one-based, so the piston mode has index one.
     inner_diameter : scalar
         The inner diameter of the keystone aperture.
     outer_diameter : scalar

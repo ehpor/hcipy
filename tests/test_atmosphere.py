@@ -170,6 +170,8 @@ def test_atmospheric_layer_reset(layer_cls):
     layer.evolve_until(1)
     phase_6 = layer.phase_for(wavelength)
     layer.reset(make_independent_realization=False)
+    assert layer.t == 0
+    assert np.allclose(layer.center, 0)
     layer.evolve_until(1)
     phase_7 = layer.phase_for(wavelength)
 
@@ -179,6 +181,91 @@ def test_atmospheric_layer_reset(layer_cls):
     assert np.allclose(phase_4, phase_5)
     assert not np.allclose(phase_5, phase_6)
     assert np.allclose(phase_6, phase_7)
+
+def test_finite_atmospheric_layer_cn_squared_scaling():
+    fried_parameter = 0.3  # meter
+    wavelength = 1e-6  # meter
+    outer_scale = 20  # meter
+
+    pupil_grid = make_pupil_grid(32, 8)
+
+    Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
+    layer = FiniteAtmosphericLayer(pupil_grid, Cn_squared, outer_scale, [1, 1], seed=0)
+
+    layer.evolve_until(1)
+    layer._t = 1
+
+    center = layer.center.copy()
+    noise = layer._noise
+    phase_before = layer.phase_for(wavelength)
+
+    layer.Cn_squared = 4 * Cn_squared
+
+    phase_after = layer.phase_for(wavelength)
+
+    assert np.allclose(layer.center, center)
+    assert layer.t == 1
+    assert layer._noise is noise
+    assert np.allclose(phase_after, 2 * phase_before)
+    assert np.allclose(np.sqrt(np.mean(phase_after**2)) / np.sqrt(np.mean(phase_before**2)), 2)
+
+def test_finite_atmospheric_layer_cn_squared_from_zero():
+    fried_parameter = 0.3  # meter
+    wavelength = 1e-6  # meter
+
+    pupil_grid = make_pupil_grid(32, 8)
+
+    Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
+    layer = FiniteAtmosphericLayer(pupil_grid, Cn_squared, 20, [1, 1], seed=0)
+
+    layer.evolve_until(1)
+    layer._t = 1
+
+    center = layer.center.copy()
+
+    layer.Cn_squared = 0
+    phase_zero = layer.phase_for(wavelength)
+
+    assert np.allclose(phase_zero, 0)
+
+    layer.Cn_squared = Cn_squared
+
+    assert layer._noise is None
+    assert layer._achromatic_screen is None
+
+    phase_after = layer.phase_for(wavelength)
+
+    assert np.all(np.isfinite(phase_after))
+    assert not np.allclose(phase_after, 0)
+    assert np.allclose(layer.center, center)
+    assert layer.t == 1
+
+def test_finite_atmospheric_layer_outer_scale_recalculates_screen():
+    fried_parameter = 0.3  # meter
+    wavelength = 1e-6  # meter
+
+    pupil_grid = make_pupil_grid(32, 8)
+
+    Cn_squared = Cn_squared_from_fried_parameter(fried_parameter, wavelength)
+    layer = FiniteAtmosphericLayer(pupil_grid, Cn_squared, 20, [1, 1], seed=0)
+
+    layer.evolve_until(1)
+    layer._t = 1
+
+    center = layer.center.copy()
+    phase_before = layer.phase_for(wavelength)
+
+    layer.outer_scale = 10
+
+    assert layer.outer_scale == 10
+    assert layer._noise is None
+    assert layer._achromatic_screen is None
+
+    phase_after = layer.phase_for(wavelength)
+
+    assert not np.allclose(phase_after, phase_before)
+    assert np.allclose(layer.center, center)
+    assert layer.t == 1
 
 def make_modal_ao_layer(framerate):
     grid = make_pupil_grid(32)

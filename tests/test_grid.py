@@ -592,3 +592,38 @@ def test_make_uniform_vector_field_generator():
 
     assert vector_field.tensor_order == 1
     assert vector_field.tensor_shape == (2,)
+
+def test_crop_grid_with_zero_width():
+    # Regular grid: zero widths should leave the corresponding side unchanged.
+    grid = make_uniform_grid(dims=[5, 6], extent=[1, 1], xp=xp)
+
+    cropped = crop_grid(grid, (1, 0))
+    assert cropped.dims == (4, 5)
+
+    cropped = crop_grid(grid, ((1, 0), (2, 0)))
+    assert cropped.dims == (4, 4)
+
+    cropped = crop_grid(grid, (0, 0))
+    assert cropped.dims == grid.dims
+    assert all_close(cropped.zero, grid.zero)
+
+    # Separated grid: the same zero-width handling must apply per dimension.
+    grid = CartesianGrid(SeparatedCoords([
+        xp.asarray([0.0, 1.0, 2.0, 3.0]),
+        xp.asarray([10.0, 20.0, 30.0, 40.0, 50.0]),
+    ]))
+
+    cropped = crop_grid(grid, (1, 0))
+    assert cropped.dims == (3, 4)
+    assert all_close(cropped.separated_coords[0], xp.asarray([1.0, 2.0, 3.0]))
+    assert all_close(cropped.separated_coords[1], xp.asarray([20.0, 30.0, 40.0, 50.0]))
+
+    cropped = crop_grid(grid, ((0, 1), (1, 0)))
+    assert cropped.dims == (3, 4)
+    assert all_close(cropped.separated_coords[0], xp.asarray([0.0, 1.0, 2.0]))
+    assert all_close(cropped.separated_coords[1], xp.asarray([20.0, 30.0, 40.0, 50.0]))
+
+    cropped = crop_grid(grid, (0, 0))
+    assert cropped.dims == grid.dims
+    assert all_close(cropped.separated_coords[0], grid.separated_coords[0])
+    assert all_close(cropped.separated_coords[1], grid.separated_coords[1])

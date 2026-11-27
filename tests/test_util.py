@@ -13,9 +13,10 @@ def test_grid_io():
     filenames = ['grid_test.' + fmt for fmt in formats]
 
     for g in grids:
-        for fname in filenames:
-            write_grid(g, fname)
-            new_grid = read_grid(fname)
+        for fmt, fname in zip(formats, filenames):
+            write_fmt = 'pickle' if fmt in ('pkl', 'pickle') else None
+            write_grid(g, fname, fmt=write_fmt)
+            new_grid = read_grid(fname, fmt=write_fmt)
 
             assert hash(g) == hash(new_grid)
 
@@ -28,9 +29,10 @@ def test_field_io():
     formats = ['asdf', 'fits', 'fits.gz', 'pkl', 'pickle']
     filenames = ['field_test.' + fmt for fmt in formats]
 
-    for fname in filenames:
-        write_field(field, fname)
-        new_field = read_field(fname)
+    for fmt, fname in zip(formats, filenames):
+        write_fmt = 'pickle' if fmt in ('pkl', 'pickle') else None
+        write_field(field, fname, fmt=write_fmt)
+        new_field = read_field(fname, fmt=write_fmt)
 
         assert np.allclose(field, new_field)
         assert hash(field.grid) == hash(new_field.grid)
@@ -48,9 +50,10 @@ def test_mode_basis_io():
     filenames = ['mode_basis_test.' + fmt for fmt in formats]
 
     for mode_basis in mode_bases:
-        for fname in filenames:
-            write_mode_basis(mode_basis, fname)
-            new_mode_basis = read_mode_basis(fname)
+        for fmt, fname in zip(formats, filenames):
+            write_fmt = 'pickle' if fmt in ('pkl', 'pickle') else None
+            write_mode_basis(mode_basis, fname, fmt=write_fmt)
+            new_mode_basis = read_mode_basis(fname, fmt=write_fmt)
 
             assert hash(new_mode_basis.grid) == hash(mode_basis.grid)
             assert new_mode_basis.is_sparse == mode_basis.is_sparse

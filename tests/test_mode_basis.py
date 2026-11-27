@@ -1,4 +1,5 @@
 from hcipy import *
+from hcipy.mode_basis.disk_harmonic import get_disk_harmonic_orders_sorted
 from hcipy.mode_basis.zernike import _keystone_geometry
 import numpy as np
 import scipy
@@ -254,10 +255,54 @@ def test_disk_harmonic_modes(bc):
 
     modes = make_disk_harmonic_basis(grid, num_modes, bc=bc)
 
+    weights = grid.weights[aperture_mask] if np.ndim(grid.weights) > 0 else grid.weights
+    area = np.pi * (1 / 2)**2
+
     for i, m1 in enumerate(modes):
         for j, m2 in enumerate(modes):
-            product = np.sum((m1 * m2)[aperture_mask])
+            product = np.sum((m1 * m2)[aperture_mask] * weights) / area
             assert np.abs(product - np.eye(num_modes)[i, j]) < 1e-2
+
+@pytest.mark.parametrize('bc', ['dirichlet', 'neumann'])
+def test_disk_harmonic_normalization_resolution(bc):
+    rms_values = []
+
+    for num_pixels in [64, 256]:
+        grid = make_pupil_grid(num_pixels)
+        aperture_mask = make_circular_aperture(1)(grid) > 0
+
+        mode = disk_harmonic(1, 1, bc=bc, grid=grid)
+
+        weights = grid.weights[aperture_mask] if np.ndim(grid.weights) > 0 else grid.weights
+        area = np.pi * (1 / 2)**2
+        rms = np.sqrt(np.sum((mode**2)[aperture_mask] * weights) / area)
+
+        assert np.abs(rms - 1) < 1e-2
+        rms_values.append(rms)
+
+    assert np.abs(rms_values[0] - rms_values[1]) < 1e-2
+
+def test_disk_harmonic_neumann_constant_mode():
+    grid = make_pupil_grid(64)
+    aperture_mask = make_circular_aperture(1)(grid) > 0
+
+    orders = get_disk_harmonic_orders_sorted(5, bc='neumann')
+    assert orders[0] == (0, 0)
+    assert disk_harmonic_energy(0, 0, bc='neumann') == 0
+
+    mode = disk_harmonic(0, 0, bc='neumann', grid=grid)
+    values = np.asarray(mode)[aperture_mask]
+
+    assert np.allclose(values, values[0])
+    assert not np.allclose(values, 0)
+
+    weights = grid.weights[aperture_mask] if np.ndim(grid.weights) > 0 else grid.weights
+    area = np.pi * (1 / 2)**2
+    rms = np.sqrt(np.sum((mode**2)[aperture_mask] * weights) / area)
+    assert np.abs(rms - 1) < 1e-2
+
+    dirichlet_orders = get_disk_harmonic_orders_sorted(5, bc='dirichlet')
+    assert (0, 0) not in dirichlet_orders
 
 def test_lp_modes():
     grid = make_pupil_grid(128)

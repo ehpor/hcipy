@@ -11,7 +11,7 @@ def noll_to_zernike(i):
     Parameters
     ----------
     i : int
-        The Noll index.
+        The Noll index. This is one-based, so the piston mode has index one.
 
     Returns
     -------
@@ -33,7 +33,7 @@ def ansi_to_zernike(i):
     Parameters
     ----------
     i : int
-        The ANSI index.
+        The ANSI index. This is zero-based, so the piston mode has index zero.
 
     Returns
     -------
@@ -59,7 +59,7 @@ def zernike_to_ansi(n, m):
     Returns
     -------
     int
-        The ANSI index.
+        The ANSI index. This is zero-based, so the piston mode has index zero.
     '''
     return (m + n * n) // 2 + n
 
@@ -76,7 +76,7 @@ def zernike_to_noll(n, m):
     Returns
     -------
     int
-        The Noll index.
+        The Noll index. This is one-based, so the piston mode has index one.
     '''
     i = int(((n + 0.5)**2 + 1) / 2) + 1
     Nn = (n + 1) * (n + 2) // 2 + 1
@@ -154,11 +154,17 @@ def zernike_radial_chong(n, m, r, cache=None):
     array_like
         The radial component of the evaluated Zernike polynomial.
     '''
+    if cache is None:
+        cache = {}
+
+    if ('origin_mask',) not in cache:
+        cache[('origin_mask',)] = np.asarray(r) == 0
+
+    origin_mask = cache[('origin_mask',)]
     m = abs(m)
 
-    if cache is not None:
-        if ('rad', n, m) in cache:
-            return cache[('rad', n, m)]
+    if ('rad', n, m) in cache:
+        return cache[('rad', n, m)]
 
     if n == m:
         res = r**n
@@ -176,12 +182,28 @@ def zernike_radial_chong(n, m, r, cache=None):
         h1 = q * (q - 1) / 2.0 - q * h2 + h3 * (p + q + 2) * (p - q) / 8.0
 
         r2 = zernike_radial_chong(2, 2, r, cache)
-        res = h1 * zernike_radial_chong(p, q, r, cache) + (h2 + h3 / r2) * zernike_radial_chong(n, q - 2, r, cache)
 
-    if cache is not None:
-        cache[('rad', n, m)] = res
+        # The q-recursive relation contains a 1/r**2 term whose singular part
+        # cancels against R_n^{m+2}. Use a safe denominator here and overwrite
+        # the values at the origin with their analytic limit below.
+        safe_r2 = np.where(r2 == 0, 1, r2)
+        res = h1 * zernike_radial_chong(p, q, r, cache) \
+            + (h2 + h3 / safe_r2) * zernike_radial_chong(n, q - 2, r, cache)
+
+    if np.any(origin_mask):
+        res = np.array(res, copy=True)
+        res[origin_mask] = _zernike_origin_value(n, m)
+
+    cache[('rad', n, m)] = res
 
     return res
+
+def _zernike_origin_value(n, m):
+    '''Return the value of the radial Zernike polynomial at the origin.'''
+    if m == 0 and n % 2 == 0:
+        return (-1)**(n // 2)
+
+    return 0
 
 def zernike_radial_andersen(n, m, r, cache=None):
     """
@@ -376,7 +398,7 @@ def zernike(n, m, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_rel
 
     if grid.is_separated and grid.is_('polar'):
         R, Theta = grid.separated_coords
-        z_r = zernike_radial(n, m, 2 * R / D, cache)
+        z_r = zernike_radial(n, m, 2 * R / D, cache, recurrence_relationship)
         if radial_cutoff:
             z_r *= (2 * R) < D
         z = sqrt(n + 1) * np.outer(zernike_azimuthal(m, Theta, cache), z_r).flatten()
@@ -394,7 +416,7 @@ def zernike_ansi(i, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_r
     Parameters
     ----------
     i : int
-        The ANSI index.
+        The ANSI index. This is zero-based, so the piston mode has index zero.
     D : scalar
         The diameter of the Zernike polynomial.
     grid : Grid or None
@@ -426,7 +448,7 @@ def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_r
     Parameters
     ----------
     i : int
-        The Noll index.
+        The Noll index. This is one-based, so the piston mode has index one.
     D : scalar
         The diameter of the Zernike polynomial.
     grid : Grid or None
@@ -452,7 +474,7 @@ def zernike_noll(i, D=1, grid=None, radial_cutoff=True, cache=None, recurrence_r
     n, m = noll_to_zernike(i)
     return zernike(n, m, D, grid, radial_cutoff, cache, recurrence_relationship)
 
-def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_cutoff=True, use_cache=True, cache=None, recurrence_relationship='andersen'):
+def make_zernike_basis(num_modes, D, grid, starting_mode=None, ansi=False, radial_cutoff=True, use_cache=True, cache=None, recurrence_relationship='andersen'):
     '''Make a ModeBasis of Zernike polynomials.
 
     Parameters
@@ -464,8 +486,11 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
     grid : Grid or None
         The grid on which to evaluate the Zernike polynomials. If this is None,
         a list of Field generators will be returned.
-    starting_mode : int
-        The first mode to evaluate.
+    starting_mode : int or None
+        The first mode to evaluate. If this is None (the default), the first mode
+        (piston) is used. Otherwise, the value is interpreted using the selected
+        indexing convention: Noll indices are one-based, while ANSI indices are
+        zero-based.
     ansi : boolean
         If this is True, the modes will be indexed using ANSI indices. Otherwise, a Noll
         indexing scheme is used.
@@ -497,6 +522,9 @@ def make_zernike_basis(num_modes, D, grid, starting_mode=1, ansi=False, radial_c
             cache = {}
     else:
         cache = None
+
+    if starting_mode is None:
+        starting_mode = 0 if ansi else 1
 
     modes = [f(i, D, polar_grid, radial_cutoff, cache, recurrence_relationship) for i in range(starting_mode, starting_mode + num_modes)]
 
@@ -548,7 +576,7 @@ def hexike_ansi(i, circum_diameter, hexagon_angle=0, grid=None, cache=None):
     Parameters
     ----------
     i : int
-        The ANSI index.
+        The ANSI index. This is zero-based, so the piston mode has index zero.
     circum_diameter : scalar
         The circum-diameter of the hexagonal aperture.
     hexagon_angle : float
@@ -577,7 +605,7 @@ def hexike_noll(i, circum_diameter, hexagon_angle=0, grid=None, cache=None):
     Parameters
     ----------
     i : int
-        The Noll index.
+        The Noll index. This is one-based, so the piston mode has index one.
     circum_diameter : scalar
         The circum-diameter of the hexagonal aperture.
     hexagon_angle : float
@@ -708,7 +736,7 @@ def keystone_ansi(i, inner_diameter, outer_diameter, angle_width, spider_width, 
     Parameters
     ----------
     i : int
-        The ANSI index.
+        The ANSI index. This is zero-based, so the piston mode has index zero.
     inner_diameter : scalar
         The inner diameter of the keystone aperture.
     outer_diameter : scalar
@@ -742,7 +770,7 @@ def keystone_noll(i, inner_diameter, outer_diameter, angle_width, spider_width, 
     Parameters
     ----------
     i : int
-        The Noll index.
+        The Noll index. This is one-based, so the piston mode has index one.
     inner_diameter : scalar
         The inner diameter of the keystone aperture.
     outer_diameter : scalar

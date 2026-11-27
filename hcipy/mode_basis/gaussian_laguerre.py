@@ -45,8 +45,15 @@ def gaussian_laguerre(p, l, mode_field_diameter=1, grid=None):
     r = 2 * R / mode_field_diameter
     r2 = r**2
 
-    # Compute the mode
-    lg = (r * sqrt(2))**abs(l) * np.exp(-r2) * np.exp(-1j * l * Theta) * eval_genlaguerre(p, abs(l), 2 * r2)
+    # Compute the radial and azimuthal parts of the mode
+    radial = (r * sqrt(2))**abs(l) * np.exp(-r2) * eval_genlaguerre(p, abs(l), 2 * r2)
+    azimuthal = np.exp(-1j * l * Theta)
+
+    if grid.is_separated and grid.is_('polar'):
+        # The separated coordinates are one-dimensional, so combine them using an outer product.
+        lg = np.outer(azimuthal, radial).flatten()
+    else:
+        lg = radial * azimuthal
 
     # Numerically normalize the mode
     lg /= np.sqrt(np.sum(np.abs(lg)**2 * grid.weights))
@@ -58,7 +65,7 @@ def make_gaussian_laguerre_basis(grid, pmax, lmax, mode_field_diameter, pmin=0):
     '''Creates a Gaussian-Laguerre mode basis.
 
     This function evaluates Gaussian-Laguerre modes. For each radial order
-    within [pmin, pmax] it will calculate the azimuthal order [-lmax, lmax] inclusive.
+    within [pmin, pmax) it will calculate the azimuthal order [-lmax, lmax] inclusive.
     This function returns a ModeBasis made out of these Gaussian-Laguerre modes.
 
     Parameters
@@ -66,13 +73,13 @@ def make_gaussian_laguerre_basis(grid, pmax, lmax, mode_field_diameter, pmin=0):
     grid : Grid
         The grid on which to evaluate the Gaussian-Laguerre mode.
     pmax : int
-        The maximum radial order of the modes.
+        The maximum radial order of the modes (exclusive).
     lmax : int
-        The maximum azimuthal order.
+        The maximum azimuthal order (inclusive).
     mode_field_diameter : scalar
         The mode field diameter of the Gaussian-Laguerre mode.
     pmin : int
-        The minimal radial order.
+        The minimal radial order (inclusive).
 
     Returns
     -------

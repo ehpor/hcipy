@@ -1,0 +1,121 @@
+import functools
+
+import numpy as np
+from scipy.linalg import get_blas_funcs
+from array_api_compat import is_numpy_namespace
+
+from .backends import array_namespace
+
+
+@functools.lru_cache(maxsize=None)
+def _get_numpy_gemm(dtype):
+    return get_blas_funcs('gemm', dtype=dtype)
+
+
+def _apply_transpose(x, trans, xp):
+    '''Apply a BLAS-style transpose to the last two axes of an array.'''
+    if trans == 0:
+        return x
+
+    if trans not in (1, 2):
+        raise ValueError('trans must be 0, 1 or 2.')
+
+    if x.ndim < 2:
+        raise ValueError('Cannot transpose an array with fewer than two dimensions.')
+
+    axes = tuple(range(x.ndim - 2)) + (x.ndim - 1, x.ndim - 2)
+    x = xp.permute_dims(x, axes)
+
+    if trans == 2:
+        x = xp.conj(x)
+
+    return x
+
+
+def gemm(alpha, a, b, beta=0.0, *, c=None, trans_a=0, trans_b=0, overwrite_c=False):
+    '''Compute a general matrix-matrix product.
+
+    This function computes
+
+    .. math:: C = \\alpha \\, op(A) \\, op(B) + \\beta \\, C,
+
+    where ``op()`` is the identity, transpose or conjugate transpose, selected
+    by `trans_a` and `trans_b`.
+
+    On NumPy arrays this dispatches to the BLAS ``gemm`` implementation from
+    SciPy. On other Array API backends it is implemented using `xp.matmul`.
+
+    Parameters
+    ----------
+    alpha : scalar
+        The scalar multiplying the matrix product.
+    a : Array
+        The first input matrix, with at least two dimensions.
+    b : Array
+        The second input matrix, with at least two dimensions.
+    beta : scalar, optional
+        The scalar multiplying `c`. Default is 0.
+    c : Array, optional
+        The matrix to which the scaled product is added. If `overwrite_c` is
+        True, it may also be used to store the result.
+    trans_a : int, optional
+        Whether to use `a`, its transpose (1), or its conjugate transpose (2).
+    trans_b : int, optional
+        Whether to use `b`, its transpose (1), or its conjugate transpose (2).
+    overwrite_c : bool, optional
+        Whether `c` may be overwritten with the result. Whether this is
+        possible in place depends on the backend. On the NumPy backend, `c`
+        must be C-contiguous for in-place overwriting to be supported.
+
+    Returns
+    -------
+    Array
+        The resulting matrix product.
+    '''
+    if trans_a not in (0, 1, 2):
+        raise ValueError('trans_a must be 0, 1 or 2.')
+
+    if trans_b not in (0, 1, 2):
+        raise ValueError('trans_b must be 0, 1 or 2.')
+
+    xp = array_namespace(a, b, c)
+
+    if is_numpy_namespace(xp) and a.ndim == 2 and b.ndim == 2:
+        a = np.ascontiguousarray(a)
+        b = np.ascontiguousarray(b)
+
+        if c is not None:
+            c = np.ascontiguousarray(c)
+
+        dtype = c.dtype if c is not None else a.dtype
+        gemm_func = _get_numpy_gemm(np.dtype(dtype))
+
+        result = gemm_func(
+            alpha, b.T, a.T, beta=beta,
+            c=None if c is None else c.T,
+            trans_a=trans_b, trans_b=trans_a, overwrite_c=overwrite_c,
+        )
+
+        if c is not None and overwrite_c:
+            return c
+
+        return result.T
+
+    a = _apply_transpose(a, trans_a, xp)
+    b = _apply_transpose(b, trans_b, xp)
+
+    result = alpha * xp.matmul(a, b)
+
+    if c is not None:
+        if beta != 0:
+            result = result + beta * c
+
+        if overwrite_c:
+            try:
+                c[...] = result
+            except (TypeError, NotImplementedError):
+                pass
+            else:
+                return c
+
+    return result

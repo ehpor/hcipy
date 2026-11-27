@@ -2,6 +2,7 @@ import pytest
 import hcipy
 import numpy as np
 from hcipy._math.backends import to_numpy, array_namespace, is_scalar
+from hcipy._math.blas import gemm
 from hcipy._math.einsum import einsum
 from hcipy._math.fourier import dft_matrix_regular, dft_matrix_separated
 from hcipy._math.separable_filter import make_phase_ramp, make_separable_filter, _kernel
@@ -605,6 +606,163 @@ def test_dft_matrix_separated_out():
     result = dft_matrix_separated(x, u, out=out)
 
     assert result is out
+
+
+def _gemm_reference_transpose(a, trans):
+    if trans == 0:
+        return a
+
+    a = np.swapaxes(a, -1, -2)
+
+    if trans == 2:
+        a = np.conj(a)
+
+    return a
+
+
+def _gemm_input_shape(shape, trans):
+    if trans == 0:
+        return shape
+
+    return shape[:-2] + (shape[-1], shape[-2])
+
+
+def _make_gemm_array(xp, rng, shape, dtype):
+    a = xp.astype(rng.normal(size=shape), dtype)
+
+    if xp.isdtype(dtype, 'complex floating'):
+        a = a + xp.asarray(1j, dtype=dtype) * xp.astype(rng.normal(size=shape), dtype)
+
+    return a
+
+
+@pytest.mark.parametrize('trans_a', [0, 1, 2])
+@pytest.mark.parametrize('trans_b', [0, 1, 2])
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
+def test_gemm(xp, trans_a, trans_b, dtype):
+    dtype = getattr(xp, dtype)
+    rng = make_random_generator(xp, seed=42)
+
+    a = _make_gemm_array(xp, rng, _gemm_input_shape((3, 4), trans_a), dtype)
+    b = _make_gemm_array(xp, rng, _gemm_input_shape((4, 5), trans_b), dtype)
+
+    result = gemm(1.5, a, b, trans_a=trans_a, trans_b=trans_b)
+
+    expected = 1.5 * _gemm_reference_transpose(to_numpy(a), trans_a) @ _gemm_reference_transpose(to_numpy(b), trans_b)
+
+    tol = 1e-5 if xp.finfo(dtype).bits <= 32 else 1e-13
+
+    assert result.dtype == dtype
+    np.testing.assert_allclose(to_numpy(result), expected, atol=tol, rtol=tol)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
+def test_gemm_beta_c(xp, dtype):
+    dtype = getattr(xp, dtype)
+    rng = make_random_generator(xp, seed=42)
+
+    a = _make_gemm_array(xp, rng, (3, 4), dtype)
+    b = _make_gemm_array(xp, rng, (4, 5), dtype)
+    c = _make_gemm_array(xp, rng, (3, 5), dtype)
+    c_before = to_numpy(c).copy()
+
+    result = gemm(1.25, a, b, beta=0.75, c=c)
+
+    expected = 1.25 * to_numpy(a) @ to_numpy(b) + 0.75 * to_numpy(c)
+
+    tol = 1e-5 if xp.finfo(dtype).bits <= 32 else 1e-13
+
+    assert result.dtype == dtype
+    np.testing.assert_allclose(to_numpy(result), expected, atol=tol, rtol=tol)
+    np.testing.assert_array_equal(to_numpy(c), c_before)
+
+
+@pytest.mark.parametrize('dtype', ['complex64', 'complex128'])
+def test_gemm_array_scalars(xp, dtype):
+    dtype = getattr(xp, dtype)
+    float_dtype = xp.float32 if dtype == xp.complex64 else xp.float64
+    rng = make_random_generator(xp, seed=42)
+
+    a = _make_gemm_array(xp, rng, (3, 4), dtype)
+    b = _make_gemm_array(xp, rng, (4, 5), dtype)
+    c = _make_gemm_array(xp, rng, (3, 5), dtype)
+
+    alpha = xp.asarray(1.5, dtype=float_dtype)
+    beta = xp.asarray(0.25, dtype=float_dtype)
+
+    result = gemm(alpha, a, b, beta=beta, c=c)
+
+    expected = 1.5 * to_numpy(a) @ to_numpy(b) + 0.25 * to_numpy(c)
+
+    tol = 1e-5 if xp.finfo(dtype).bits <= 32 else 1e-13
+
+    assert result.dtype == dtype
+    np.testing.assert_allclose(to_numpy(result), expected, atol=tol, rtol=tol)
+
+
+@pytest.mark.parametrize('a_shape, b_shape', [
+    ((2, 3, 4), (4, 5)),
+    ((3, 4), (2, 4, 5)),
+    ((2, 3, 4), (2, 4, 5)),
+])
+@pytest.mark.parametrize('trans_a', [0, 1, 2])
+@pytest.mark.parametrize('trans_b', [0, 1, 2])
+def test_gemm_batched(xp, a_shape, b_shape, trans_a, trans_b):
+    dtype = xp.complex128
+    rng = make_random_generator(xp, seed=42)
+
+    a = _make_gemm_array(xp, rng, _gemm_input_shape(a_shape, trans_a), dtype)
+    b = _make_gemm_array(xp, rng, _gemm_input_shape(b_shape, trans_b), dtype)
+
+    result = gemm(-0.5, a, b, trans_a=trans_a, trans_b=trans_b)
+
+    expected = -0.5 * _gemm_reference_transpose(to_numpy(a), trans_a) @ _gemm_reference_transpose(to_numpy(b), trans_b)
+
+    assert result.dtype == dtype
+    assert result.shape == expected.shape
+    np.testing.assert_allclose(to_numpy(result), expected, atol=1e-13, rtol=1e-13)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'complex64', 'complex128'])
+def test_gemm_overwrite_c(xp, dtype):
+    dtype = getattr(xp, dtype)
+    rng = make_random_generator(xp, seed=42)
+
+    a = _make_gemm_array(xp, rng, (3, 4), dtype)
+    b = _make_gemm_array(xp, rng, (4, 5), dtype)
+    c = xp.zeros((3, 5), dtype=dtype)
+
+    result = gemm(1.5, a, b, c=c, overwrite_c=True)
+
+    expected = 1.5 * to_numpy(a) @ to_numpy(b)
+
+    tol = 1e-5 if xp.finfo(dtype).bits <= 32 else 1e-13
+
+    assert result.dtype == dtype
+    np.testing.assert_allclose(to_numpy(result), expected, atol=tol, rtol=tol)
+
+
+def test_gemm_invalid_trans(xp):
+    a = xp.ones((3, 4))
+    b = xp.ones((4, 5))
+
+    with pytest.raises(ValueError):
+        gemm(1, a, b, trans_a=3)
+
+    with pytest.raises(ValueError):
+        gemm(1, a, b, trans_b=-1)
+
+
+def test_gemm_transpose_requires_two_dimensions(xp):
+    a = xp.ones((4,))
+    b = xp.ones((4,))
+
+    with pytest.raises(ValueError):
+        gemm(1, a, b, trans_a=1)
+
+    with pytest.raises(ValueError):
+        gemm(1, a, b, trans_b=1)
+
 
 @pytest.mark.parametrize('subscripts, shapes', [
     # basic contractions

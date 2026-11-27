@@ -299,27 +299,29 @@ def make_fourier_transform(input_grid, output_grid=None, q=1, fov=1, shift=0, pl
     else:
         return options[best_method](input_grid, output_grid)
 
-def _get_float_and_complex_dtype(dtype):
-    '''Return the floating point and complex numpy data types with the same
+def _get_float_and_complex_dtype(dtype, xp=np):
+    '''Return the floating point and complex data types with the same
     bit depth per component.
 
     Parameters
     ----------
-    dtype : numpy dtype
+    dtype : dtype
         The dtype to convert to a floating point and complex dtype.
+    xp : module, optional
+        The Array API namespace to which the returned dtypes belong.
 
     Returns
     -------
-    float_dtype : numpy dtype
+    float_dtype : dtype
         The floating point dtype.
-    complex_dtype : numpy dtype
+    complex_dtype : dtype
         The complex dtype.
     '''
-    if dtype == np.dtype('float32') or dtype == np.dtype('complex64'):
-        complex_dtype = 'complex64'
-        float_dtype = 'float32'
+    if dtype == xp.float32 or dtype == xp.complex64 or dtype in ('float32', 'complex64'):
+        complex_dtype = xp.complex64
+        float_dtype = xp.float32
     else:
-        complex_dtype = 'complex128'
-        float_dtype = 'float64'
+        complex_dtype = xp.complex128
+        float_dtype = xp.float64
 
     return float_dtype, complex_dtype

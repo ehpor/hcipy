@@ -1,12 +1,19 @@
 import warnings
 
 import numpy as np
-from scipy.linalg import get_blas_funcs
+from array_api_compat import is_numpy_namespace
 from .fourier_transform import FourierTransform, ComputationalComplexity, _get_float_and_complex_dtype
-from ..field import Field
+from ..field import Field, NewStyleField
 from ..config import Configuration
 from .._math.fourier import dft_matrix_regular, dft_matrix_separated
+from .._math.blas import gemm
 from .._math import buffer_pool
+from .._math.backends import is_scalar
+
+
+def _field_data(field):
+    return field.data if isinstance(field, NewStyleField) else field
+
 
 class MatrixFourierTransform(FourierTransform):
     '''A Matrix Fourier Transform (MFT) object.
@@ -59,6 +66,7 @@ class MatrixFourierTransform(FourierTransform):
         self.shape_output = output_grid.shape
 
         self.ndim = input_grid.ndim
+        self._xp = input_grid.xp
 
         # Get the value from the configuration file if left at default.
         if precompute_matrices is None:
@@ -73,24 +81,18 @@ class MatrixFourierTransform(FourierTransform):
 
         Parameters
         ---
-        dtype : numpy data type
+        dtype : dtype
             The data type for which to calculate the matrices.
         '''
+        xp = self._xp
+
         # Set the correct complex and real data type, based on the input data type.
-        float_dtype, complex_dtype = _get_float_and_complex_dtype(dtype)
+        float_dtype, complex_dtype = _get_float_and_complex_dtype(dtype, xp)
 
         # Check if the matrices need to be (re)calculated.
         if self.matrices_dtype != complex_dtype:
-            self.weights_input = (self.input_grid.weights).astype(float_dtype, copy=False)
-            self.weights_output = (self.output_grid.weights / (2 * np.pi)**self.ndim).astype(float_dtype, copy=False)
-
-            # If all input weights are all the same, use a scalar instead.
-            if not np.isscalar(self.weights_input) and np.all(self.weights_input == self.weights_input[0]):
-                self.weights_input = self.weights_input[0]
-
-            # If all output weights are all the same, use a scalar instead.
-            if not np.isscalar(self.weights_output) and np.all(self.weights_output == self.weights_output[0]):
-                self.weights_output = self.weights_output[0]
+            self.weights_input = xp.asarray(self.input_grid.weights, dtype=float_dtype)
+            self.weights_output = xp.asarray(self.output_grid.weights / (2 * np.pi)**self.ndim, dtype=float_dtype)
 
             if self.ndim == 1:
                 if self.input_grid.is_regular and self.output_grid.is_regular:
@@ -98,9 +100,10 @@ class MatrixFourierTransform(FourierTransform):
                         self.output_grid.zero[0], self.input_grid.zero[0],
                         self.output_grid.delta[0], self.input_grid.delta[0],
                         self.output_grid.size, self.input_grid.size,
-                        np, np.dtype(complex_dtype), conjugate=True)
+                        xp, complex_dtype, conjugate=True)
                 else:
-                    self.M = dft_matrix_separated(self.output_grid.x, self.input_grid.x, conjugate=True).astype(complex_dtype, copy=False)
+                    self.M = dft_matrix_separated(self.output_grid.separated_coords[0], self.input_grid.separated_coords[0], conjugate=True)
+                    self.M = xp.astype(self.M, complex_dtype, copy=False)
             elif self.ndim == 2:
                 if self.input_grid.is_regular and self.output_grid.is_regular:
                     delta_in, dims_in, zero_in = self.input_grid.regular_coords
@@ -108,16 +111,18 @@ class MatrixFourierTransform(FourierTransform):
 
                     self.M1 = dft_matrix_regular(
                         zero_out[1], zero_in[1], delta_out[1], delta_in[1],
-                        dims_out[1], dims_in[1], np, np.dtype(complex_dtype), conjugate=True)
+                        dims_out[1], dims_in[1], xp, complex_dtype, conjugate=True)
                     self.M2 = dft_matrix_regular(
                         zero_in[0], zero_out[0], delta_in[0], delta_out[0],
-                        dims_in[0], dims_out[0], np, np.dtype(complex_dtype), conjugate=True)
+                        dims_in[0], dims_out[0], xp, complex_dtype, conjugate=True)
                 else:
                     x, y = self.input_grid.coords.separated_coords
                     u, v = self.output_grid.coords.separated_coords
 
-                    self.M1 = dft_matrix_separated(v, y, conjugate=True).astype(complex_dtype, copy=False)
-                    self.M2 = dft_matrix_separated(x, u, conjugate=True).astype(complex_dtype, copy=False)
+                    self.M1 = dft_matrix_separated(v, y, conjugate=True)
+                    self.M2 = dft_matrix_separated(x, u, conjugate=True)
+                    self.M1 = xp.astype(self.M1, complex_dtype, copy=False)
+                    self.M2 = xp.astype(self.M2, complex_dtype, copy=False)
 
             self.matrices_dtype = complex_dtype
 
@@ -151,48 +156,55 @@ class MatrixFourierTransform(FourierTransform):
         self._compute_matrices(field.dtype)
         field = field.astype(self.matrices_dtype, copy=False)
 
-        gemm = get_blas_funcs('gemm', dtype=self.matrices_dtype)
+        xp = self._xp
+        tensor_shape = field.tensor_shape
 
         if self.ndim == 1:
-            if np.isscalar(self.weights_input):
-                # Weights can be included in the gemm call as that multiplication
-                # happens anyway (and it saves an array copy).
+            if is_scalar(self.weights_input):
                 alpha = self.weights_input
-                f = field
+                f = _field_data(field)
             else:
-                # Fallback in case the weights is not a scalar.
                 alpha = 1
-                f = field * self.weights_input
+                f = _field_data(field * self.weights_input)
 
-            # The leading tensor dimensions act as the batch.
-            res = np.empty(tuple(field.tensor_shape) + (self.M.shape[0],), dtype=self.matrices_dtype)
+            f = xp.reshape(f, tensor_shape + self.shape_input)
 
-            for i in np.ndindex(field.tensor_shape):
-                gemm(alpha, f[i][np.newaxis, :], self.M.T, c=res[i][np.newaxis, :], overwrite_c=True)
+            if is_numpy_namespace(xp):
+                # The leading tensor dimensions act as the batch.
+                res = xp.empty(tensor_shape + (self.M.shape[0],), dtype=self.matrices_dtype)
+
+                for i in np.ndindex(tensor_shape):
+                    gemm(alpha, f[i][np.newaxis, :], self.M, trans_b=1, c=res[i][np.newaxis, :], overwrite_c=True)
+            else:
+                f = xp.reshape(f, (-1, self.shape_input[-1]))
+                res = gemm(alpha, f, self.M, trans_b=1)
+                res = xp.reshape(res, tensor_shape + (self.M.shape[0],))
         elif self.ndim == 2:
-            if np.isscalar(self.weights_input):
-                # Weights can be included in the gemm call as that multiplication
-                # happens anyway (and it saves an array copy).
+            if is_scalar(self.weights_input):
                 alpha = self.weights_input
-                f = field
+                f = _field_data(field)
             else:
-                # Fallback in case the weights is not a scalar.
                 alpha = 1
-                f = field * self.weights_input
+                f = _field_data(field * self.weights_input)
 
             # The leading tensor dimensions act as the batch. Reshape as a 2D array.
-            f = f.reshape(tuple(field.tensor_shape) + self.shape_input)
-            res = np.empty(tuple(field.tensor_shape) + self.shape_output, dtype=self.matrices_dtype)
+            f = xp.reshape(f, tensor_shape + self.shape_input)
 
-            intermediate_shape = (self.input_grid.shape[0], self.M2.shape[1])
-            with buffer_pool.empty(intermediate_shape, self.matrices_dtype) as intermediate_array:
-                for i in np.ndindex(field.tensor_shape):
-                    gemm(1, self.M2.T, f[i].T, c=intermediate_array.T, overwrite_c=True)
-                    gemm(alpha, intermediate_array.T, self.M1.T, c=res[i].T, overwrite_c=True)
+            if is_numpy_namespace(xp):
+                res = xp.empty(tensor_shape + self.shape_output, dtype=self.matrices_dtype)
+
+                intermediate_shape = (self.input_grid.shape[0], self.M2.shape[1])
+                with buffer_pool.empty(intermediate_shape, self.matrices_dtype) as intermediate_array:
+                    for i in np.ndindex(tensor_shape):
+                        gemm(1, f[i], self.M2, c=intermediate_array, overwrite_c=True)
+                        gemm(alpha, self.M1, intermediate_array, c=res[i], overwrite_c=True)
+            else:
+                intermediate_array = gemm(1, f, self.M2)
+                res = gemm(alpha, self.M1, intermediate_array)
 
         self._remove_matrices()
 
-        return Field(res.reshape(tuple(field.tensor_shape) + (-1,)), self.output_grid)
+        return Field(xp.reshape(res, tensor_shape + (-1,)), self.output_grid)
 
     def backward(self, field):
         '''Returns the inverse Fourier transform of the :class:`Field` field.
@@ -210,49 +222,56 @@ class MatrixFourierTransform(FourierTransform):
         self._compute_matrices(field.dtype)
         field = field.astype(self.matrices_dtype, copy=False)
 
-        gemm = get_blas_funcs('gemm', dtype=self.matrices_dtype)
+        xp = self._xp
+        tensor_shape = field.tensor_shape
 
         if self.ndim == 1:
-            if np.isscalar(self.weights_output):
-                # Weights can be included in the gemm call as that multiplication
-                # happens anyway (and it saves an array copy).
+            if is_scalar(self.weights_output):
                 alpha = self.weights_output
-                f = field
+                f = _field_data(field)
             else:
-                # Fallback in case the weights is not a scalar.
                 alpha = 1
-                f = field * self.weights_output
+                f = _field_data(field * self.weights_output)
 
-            # The leading tensor dimensions act as the batch.
-            res = np.empty(tuple(field.tensor_shape) + (self.M.shape[1],), dtype=self.matrices_dtype)
+            f = xp.reshape(f, tensor_shape + self.shape_output)
+            inverse_matrix = xp.conj(self.M)
 
-            for i in np.ndindex(field.tensor_shape):
-                gemm(alpha, f[i][np.newaxis, :], self.M.T, trans_b=2, c=res[i][np.newaxis, :], overwrite_c=True)
+            if is_numpy_namespace(xp):
+                # The leading tensor dimensions act as the batch.
+                res = xp.empty(tensor_shape + (self.M.shape[1],), dtype=self.matrices_dtype)
+
+                for i in np.ndindex(tensor_shape):
+                    gemm(alpha, f[i][np.newaxis, :], inverse_matrix, c=res[i][np.newaxis, :], overwrite_c=True)
+            else:
+                f = xp.reshape(f, (-1, self.shape_output[-1]))
+                res = gemm(alpha, f, inverse_matrix)
+                res = xp.reshape(res, tensor_shape + (self.M.shape[1],))
         elif self.ndim == 2:
-            if np.isscalar(self.weights_output):
-                # Weights can be included in the gemm call as that multiplication
-                # happens anyway (and it saves an array copy).
+            if is_scalar(self.weights_output):
                 alpha = self.weights_output
-                f = field
+                f = _field_data(field)
             else:
-                # Fallback in case the weights is not a scalar.
                 alpha = 1
-                f = field * self.weights_output
+                f = _field_data(field * self.weights_output)
 
             # The leading tensor dimensions act as the batch. Reshape as a 2D array.
-            f = f.reshape(tuple(field.tensor_shape) + self.shape_output)
-            res = np.empty(tuple(field.tensor_shape) + self.shape_input, dtype=self.matrices_dtype)
+            f = xp.reshape(f, tensor_shape + self.shape_output)
 
-            intermediate_shape = (self.input_grid.shape[0], self.M2.shape[1])
-            with buffer_pool.empty(intermediate_shape, self.matrices_dtype) as intermediate_array:
-                # Use trans_a=2 and trans_b=2 to apply the conjugate transpose on the a and b arrays.
-                for i in np.ndindex(field.tensor_shape):
-                    gemm(1, f[i].T, self.M1.T, trans_b=2, c=intermediate_array.T, overwrite_c=True)
-                    gemm(alpha, self.M2.T, intermediate_array.T, trans_a=2, c=res[i].T, overwrite_c=True)
+            if is_numpy_namespace(xp):
+                res = xp.empty(tensor_shape + self.shape_input, dtype=self.matrices_dtype)
+
+                intermediate_shape = (self.input_grid.shape[0], self.M2.shape[1])
+                with buffer_pool.empty(intermediate_shape, self.matrices_dtype) as intermediate_array:
+                    for i in np.ndindex(tensor_shape):
+                        gemm(1, self.M1, f[i], trans_a=2, c=intermediate_array, overwrite_c=True)
+                        gemm(alpha, intermediate_array, self.M2, trans_b=2, c=res[i], overwrite_c=True)
+            else:
+                intermediate_array = gemm(1, self.M1, f, trans_a=2)
+                res = gemm(alpha, intermediate_array, self.M2, trans_b=2)
 
         self._remove_matrices()
 
-        return Field(res.reshape(tuple(field.tensor_shape) + (-1,)), self.input_grid)
+        return Field(xp.reshape(res, tensor_shape + (-1,)), self.input_grid)
 
     @classmethod
     def check_if_supported(cls, input_grid, output_grid):
@@ -314,11 +333,11 @@ class MatrixFourierTransform(FourierTransform):
             N_out_x, N_out_y = output_grid.shape
             N_in_x, N_in_y = input_grid.shape
 
-            # Complexity for gemm(1, self.M2.T, f.T)
+            # Complexity for gemm(1, f, self.M2)
             num_complex_multiplications = N_in_y * N_in_x * N_out_y
             num_complex_additions = N_out_y * N_in_x * (N_in_y - 1)
 
-            # Complexity for gemm(alpha, intermediate_array.T, self.M1.T)
+            # Complexity for gemm(alpha, self.M1, intermediate_array)
             num_complex_multiplications += N_in_x * N_out_x * N_out_y
             num_complex_additions += N_out_x * N_out_y * (N_in_x - 1)
 

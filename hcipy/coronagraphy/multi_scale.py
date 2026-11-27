@@ -39,12 +39,18 @@ class MultiScaleCoronagraph(OpticalElement):
     window_size : integer
         The size of the next level in the number of pixels on the current layer. Lowering this
         increases performance in exchange for accuracy. Values smaller than 4-8 are not recommended.
+    pupil_diameter : scalar
+        The diameter of the pupil. This is used to set the focal-plane sampling. If this is None
+        (default), the extent of the input grid is used as the pupil diameter.
     '''
-    def __init__(self, input_grid, complex_mask, lyot_stop=None, q=1024, scaling_factor=4, window_size=32):
+    def __init__(self, input_grid, complex_mask, lyot_stop=None, q=1024, scaling_factor=4, window_size=32, pupil_diameter=None):
         self.input_grid = input_grid
 
         xp = input_grid.xp
-        pupil_diameter = xp.asarray(input_grid.dims) * input_grid.delta
+        if pupil_diameter is None:
+            pupil_diameter = xp.asarray(input_grid.dims) * input_grid.delta
+        else:
+            pupil_diameter = xp.asarray(pupil_diameter)
 
         if hasattr(lyot_stop, 'forward') or lyot_stop is None:
             self.lyot_stop = lyot_stop

@@ -177,6 +177,47 @@ def test_scalar_vortex_coronagraph_polarized():
         wf_input_b = vortex.backward(wf_b)
         assert np.allclose(wf_input_b.intensity, wf_input_b.V)
 
+def test_coronagraph_pupil_diameter():
+    pupil_grid = make_pupil_grid(32, 1.1)
+    pupil_diameter = 1.0
+    grid_extent = 1.1
+
+    complex_mask = lambda grid: Field(np.exp(1j * grid.as_('polar').theta), grid)
+    kwargs = dict(q=8, scaling_factor=2, window_size=8)
+
+    default = MultiScaleCoronagraph(pupil_grid, complex_mask, **kwargs)
+    explicit_default = MultiScaleCoronagraph(
+        pupil_grid, complex_mask, pupil_diameter=grid_extent, **kwargs
+    )
+    undersized = MultiScaleCoronagraph(
+        pupil_grid, complex_mask, pupil_diameter=pupil_diameter, **kwargs
+    )
+
+    np.testing.assert_allclose(default.focal_masks[0].grid.delta, explicit_default.focal_masks[0].grid.delta)
+    np.testing.assert_allclose(
+        default.focal_masks[0].grid.delta / undersized.focal_masks[0].grid.delta,
+        pupil_diameter / grid_extent
+    )
+
+    vortex_default = VortexCoronagraph(pupil_grid, 2, **kwargs)
+    vortex_undersized = VortexCoronagraph(pupil_grid, 2, pupil_diameter=pupil_diameter, **kwargs)
+
+    np.testing.assert_allclose(
+        vortex_default.focal_masks[0].grid.delta / vortex_undersized.focal_masks[0].grid.delta,
+        pupil_diameter / grid_extent
+    )
+
+    vector_default = VectorVortexCoronagraph(2, **kwargs)
+    vector_undersized = VectorVortexCoronagraph(2, pupil_diameter=pupil_diameter, **kwargs)
+
+    default_data = vector_default.get_instance_data(pupil_grid, pupil_grid, 1)
+    undersized_data = vector_undersized.get_instance_data(pupil_grid, pupil_grid, 1)
+
+    np.testing.assert_allclose(
+        default_data.jones_matrices[0].grid.delta / undersized_data.jones_matrices[0].grid.delta,
+        pupil_diameter / grid_extent
+    )
+
 def test_ravc():
     pupil_grid = make_pupil_grid(256)
     focal_grid = make_focal_grid(4, 32)

@@ -164,7 +164,7 @@ class MatrixFourierTransform(FourierTransform):
                 alpha = self.weights_input
                 f = _field_data(field)
             else:
-                alpha = 1
+                alpha = None
                 f = _field_data(field * self.weights_input)
 
             f = xp.reshape(f, tensor_shape + self.shape_input)
@@ -184,7 +184,7 @@ class MatrixFourierTransform(FourierTransform):
                 alpha = self.weights_input
                 f = _field_data(field)
             else:
-                alpha = 1
+                alpha = None
                 f = _field_data(field * self.weights_input)
 
             # The leading tensor dimensions act as the batch. Reshape as a 2D array.
@@ -196,10 +196,10 @@ class MatrixFourierTransform(FourierTransform):
                 intermediate_shape = (self.input_grid.shape[0], self.M2.shape[1])
                 with buffer_pool.empty(intermediate_shape, self.matrices_dtype) as intermediate_array:
                     for i in np.ndindex(tensor_shape):
-                        gemm(1, f[i], self.M2, c=intermediate_array, overwrite_c=True)
+                        gemm(None, f[i], self.M2, c=intermediate_array, overwrite_c=True)
                         gemm(alpha, self.M1, intermediate_array, c=res[i], overwrite_c=True)
             else:
-                intermediate_array = gemm(1, f, self.M2)
+                intermediate_array = gemm(None, f, self.M2)
                 res = gemm(alpha, self.M1, intermediate_array)
 
         self._remove_matrices()
@@ -230,7 +230,7 @@ class MatrixFourierTransform(FourierTransform):
                 alpha = self.weights_output
                 f = _field_data(field)
             else:
-                alpha = 1
+                alpha = None
                 f = _field_data(field * self.weights_output)
 
             f = xp.reshape(f, tensor_shape + self.shape_output)
@@ -251,7 +251,7 @@ class MatrixFourierTransform(FourierTransform):
                 alpha = self.weights_output
                 f = _field_data(field)
             else:
-                alpha = 1
+                alpha = None
                 f = _field_data(field * self.weights_output)
 
             # The leading tensor dimensions act as the batch. Reshape as a 2D array.
@@ -263,10 +263,10 @@ class MatrixFourierTransform(FourierTransform):
                 intermediate_shape = (self.input_grid.shape[0], self.M2.shape[1])
                 with buffer_pool.empty(intermediate_shape, self.matrices_dtype) as intermediate_array:
                     for i in np.ndindex(tensor_shape):
-                        gemm(1, self.M1, f[i], trans_a=2, c=intermediate_array, overwrite_c=True)
+                        gemm(None, self.M1, f[i], trans_a=2, c=intermediate_array, overwrite_c=True)
                         gemm(alpha, intermediate_array, self.M2, trans_b=2, c=res[i], overwrite_c=True)
             else:
-                intermediate_array = gemm(1, self.M1, f, trans_a=2)
+                intermediate_array = gemm(None, self.M1, f, trans_a=2)
                 res = gemm(alpha, intermediate_array, self.M2, trans_b=2)
 
         self._remove_matrices()
@@ -333,7 +333,7 @@ class MatrixFourierTransform(FourierTransform):
             N_out_x, N_out_y = output_grid.shape
             N_in_x, N_in_y = input_grid.shape
 
-            # Complexity for gemm(1, f, self.M2)
+            # Complexity for gemm(None, f, self.M2)
             num_complex_multiplications = N_in_y * N_in_x * N_out_y
             num_complex_additions = N_out_y * N_in_x * (N_in_y - 1)
 

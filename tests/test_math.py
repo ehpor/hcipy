@@ -700,6 +700,65 @@ def test_gemm_array_scalars(xp, dtype):
     np.testing.assert_allclose(to_numpy(result), expected, atol=tol, rtol=tol)
 
 
+def test_gemm_alpha_none(xp):
+    dtype = xp.complex128
+    rng = make_random_generator(xp, seed=42)
+
+    a = _make_gemm_array(xp, rng, (3, 4), dtype)
+    b = _make_gemm_array(xp, rng, (4, 5), dtype)
+
+    result = gemm(None, a, b)
+    result_scaled = gemm(xp.asarray(1.0, dtype=xp.float64), a, b)
+
+    expected = to_numpy(a) @ to_numpy(b)
+
+    assert result.dtype == dtype
+    np.testing.assert_allclose(to_numpy(result), expected, atol=1e-13, rtol=1e-13)
+    np.testing.assert_allclose(to_numpy(result_scaled), expected, atol=1e-13, rtol=1e-13)
+
+
+@pytest.mark.parametrize('dtype', ['complex64', 'complex128'])
+def test_gemm_beta_none_ignores_c(xp, dtype):
+    dtype = getattr(xp, dtype)
+    rng = make_random_generator(xp, seed=42)
+
+    a = _make_gemm_array(xp, rng, (3, 4), dtype)
+    b = _make_gemm_array(xp, rng, (4, 5), dtype)
+    c = _make_gemm_array(xp, rng, (3, 5), dtype)
+    c_before = to_numpy(c).copy()
+
+    result = gemm(1.5, a, b, c=c)
+    result_without_c = gemm(1.5, a, b, beta=0.75)
+
+    expected = 1.5 * to_numpy(a) @ to_numpy(b)
+
+    tol = 1e-5 if xp.finfo(dtype).bits <= 32 else 1e-13
+
+    assert result.dtype == dtype
+    np.testing.assert_allclose(to_numpy(result), expected, atol=tol, rtol=tol)
+    np.testing.assert_allclose(to_numpy(result_without_c), expected, atol=tol, rtol=tol)
+    np.testing.assert_array_equal(to_numpy(c), c_before)
+
+
+@pytest.mark.parametrize('dtype', ['complex64', 'complex128'])
+def test_gemm_alpha_none_overwrite_c(xp, dtype):
+    dtype = getattr(xp, dtype)
+    rng = make_random_generator(xp, seed=42)
+
+    a = _make_gemm_array(xp, rng, (3, 4), dtype)
+    b = _make_gemm_array(xp, rng, (4, 5), dtype)
+    c = xp.zeros((3, 5), dtype=dtype)
+
+    result = gemm(None, a, b, c=c, overwrite_c=True)
+
+    expected = to_numpy(a) @ to_numpy(b)
+
+    tol = 1e-5 if xp.finfo(dtype).bits <= 32 else 1e-13
+
+    assert result.dtype == dtype
+    np.testing.assert_allclose(to_numpy(result), expected, atol=tol, rtol=tol)
+
+
 @pytest.mark.parametrize('a_shape, b_shape', [
     ((2, 3, 4), (4, 5)),
     ((3, 4), (2, 4, 5)),

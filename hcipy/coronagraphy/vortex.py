@@ -276,7 +276,7 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_unders
 
     if charge == 2:
         t1 = 1 - 0.25 * (R0**2 + R0 * np.sqrt(R0**2 + 8))
-        R1 = R0 / np.sqrt(1 - t1)
+        R1 = np.sqrt(4 * R0 / (R0 + np.sqrt(R0**2 + 8)))
 
         pupil1 = make_circular_aperture(pupil_diameter)
         pupil2 = make_circular_aperture(pupil_diameter * R1)
@@ -287,10 +287,11 @@ def make_ravc_masks(central_obscuration, charge=2, pupil_diameter=1, lyot_unders
         lyot2 = make_circular_aperture(pupil_diameter * (1 - lyot_undersize))
         lyot_stop = lambda grid: lyot2(grid) - lyot1(grid)
     elif charge == 4:
-        R1 = np.sqrt(np.sqrt(R0**2 * (R0**2 + 4)) - 2 * R0**2)
-        R2 = np.sqrt(R1**2 + R0**2)
+        R1_squared = np.sqrt(R0**2 * (R0**2 + 4)) - 2 * R0**2
+        R1 = np.sqrt(R1_squared)
+        R2 = np.sqrt(R1_squared + R0**2)
         t1 = 0
-        t2 = (R1**2 - R0**2) / (R1**2 + R0**2)
+        t2 = (np.sqrt(R0**2 + 4) - 3 * R0) / (np.sqrt(R0**2 + 4) - R0)
 
         pupil1 = make_circular_aperture(pupil_diameter)
         pupil2 = make_circular_aperture(pupil_diameter * R1)
@@ -333,13 +334,13 @@ def get_ravc_planet_transmission(central_obscuration_ratio, charge=2):
 
     if charge == 2:
         t1_opt = 1 - 0.25 * (R0**2 + R0 * np.sqrt(R0**2 + 8))
-        R1_opt = R0 / np.sqrt(1 - t1_opt)
+        R1_opt = np.sqrt(4 * R0 / (R0 + np.sqrt(R0**2 + 8)))
 
         return t1_opt**2 * (1 - R1_opt**2) / (1 - (R0**2))
     elif charge == 4:
         R1 = np.sqrt(np.sqrt(R0**2 * (R0**2 + 4)) - 2 * R0**2)
         R2 = np.sqrt(R1**2 + R0**2)
-        t2 = (R1**2 - R0**2) / (R1**2 + R0**2)
+        t2 = (np.sqrt(R0**2 + 4) - 3 * R0) / (np.sqrt(R0**2 + 4) - R0)
 
         return t2**2 * (1 - R2**2) / (1 - R0**2)
     else:

@@ -1,4 +1,3 @@
-import copy
 import math
 
 from ..field import Field, NewStyleField, field_dot, field_kron, is_field
@@ -83,7 +82,21 @@ class Wavefront(object):
     def copy(self):
         '''Make a copy of the wavefront.
         '''
-        return copy.deepcopy(self)
+        wf = Wavefront.__new__(Wavefront)
+
+        wf._electric_field = self.electric_field.copy()
+
+        if self._input_stokes_vector is not None:
+            wf._input_stokes_vector = self.grid.xp.asarray(self._input_stokes_vector, copy=True)
+        else:
+            wf._input_stokes_vector = None
+
+        if hasattr(self.wavelength, 'dtype'):
+            wf.wavelength = self.grid.xp.asarray(self.wavelength, copy=True)
+        else:
+            wf.wavelength = self.wavelength
+
+        return wf
 
     @property
     def electric_field(self):

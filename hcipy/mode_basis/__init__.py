@@ -34,6 +34,7 @@ __all__ = [
     'disk_harmonic',
     'disk_harmonic_energy',
     'make_disk_harmonic_basis',
+    'make_kirchhoff_love_basis',
 ]
 
 from .disk_harmonic import *
@@ -42,6 +43,7 @@ from .gaussian_hermite import *
 from .gaussian_laguerre import *
 from .gaussian_pokes import *
 from .karhunen_loeve import *
+from .kirchhoff_love import *
 from .mode_basis import *
 from .lp_fiber_modes import *
 from .zernike import *

@@ -17,9 +17,6 @@ def _apply_transpose(x, trans, xp):
     if trans == 0:
         return x
 
-    if trans not in (1, 2):
-        raise ValueError('trans must be 0, 1 or 2.')
-
     if x.ndim < 2:
         raise ValueError('Cannot transpose an array with fewer than two dimensions.')
 

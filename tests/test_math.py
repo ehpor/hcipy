@@ -749,6 +749,11 @@ def test_gemm_alpha_none_overwrite_c(xp, dtype):
     b = _make_gemm_array(xp, rng, (4, 5), dtype)
     c = xp.zeros((3, 5), dtype=dtype)
 
+    if xp is not np:
+        with pytest.raises(NotImplementedError):
+            gemm(None, a, b, c=c, overwrite_c=True)
+        return
+
     result = gemm(None, a, b, c=c, overwrite_c=True)
 
     expected = to_numpy(a) @ to_numpy(b)
@@ -790,6 +795,11 @@ def test_gemm_overwrite_c(xp, dtype):
     a = _make_gemm_array(xp, rng, (3, 4), dtype)
     b = _make_gemm_array(xp, rng, (4, 5), dtype)
     c = xp.zeros((3, 5), dtype=dtype)
+
+    if xp is not np:
+        with pytest.raises(NotImplementedError):
+            gemm(1.5, a, b, c=c, overwrite_c=True)
+        return
 
     result = gemm(1.5, a, b, c=c, overwrite_c=True)
 

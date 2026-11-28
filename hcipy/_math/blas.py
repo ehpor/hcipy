@@ -65,9 +65,8 @@ def gemm(alpha, a, b, *, beta=None, c=None, trans_a=0, trans_b=0, overwrite_c=Fa
     trans_b : int, optional
         Whether to use `b`, its transpose (1), or its conjugate transpose (2).
     overwrite_c : bool, optional
-        Whether `c` may be overwritten with the result. Whether this is
-        possible in place depends on the backend. On the NumPy backend, `c`
-        must be C-contiguous for in-place overwriting to be supported.
+        Whether `c` may be overwritten with the result. This is only supported
+        on the NumPy backend, where `c` must be C-contiguous.
     xp : module, optional
         The Array API namespace. If None, it is inferred from `a`, `b` and `c`.
 
@@ -86,9 +85,7 @@ def gemm(alpha, a, b, *, beta=None, c=None, trans_a=0, trans_b=0, overwrite_c=Fa
         xp = array_namespace(a, b, c)
 
     if is_numpy_namespace(xp) and a.ndim == 2 and b.ndim == 2:
-        use_c = c is not None and (beta is not None or overwrite_c)
-
-        if not use_c:
+        if c is not None and beta is None and not overwrite_c:
             c = None
 
         dtype = c.dtype if c is not None else a.dtype
@@ -101,10 +98,13 @@ def gemm(alpha, a, b, *, beta=None, c=None, trans_a=0, trans_b=0, overwrite_c=Fa
             trans_a=trans_b, trans_b=trans_a, overwrite_c=overwrite_c,
         )
 
-        if use_c and overwrite_c:
+        if c is not None and overwrite_c:
             return c
 
         return result.T
+
+    if c is not None and overwrite_c and not is_numpy_namespace(xp):
+        raise NotImplementedError('overwrite_c is only supported on the NumPy backend.')
 
     a = _apply_transpose(a, trans_a, xp)
     b = _apply_transpose(b, trans_b, xp)
@@ -118,11 +118,7 @@ def gemm(alpha, a, b, *, beta=None, c=None, trans_a=0, trans_b=0, overwrite_c=Fa
         result = result + beta * c
 
     if c is not None and overwrite_c:
-        try:
-            c[...] = result
-        except (TypeError, NotImplementedError):
-            pass
-        else:
-            return c
+        c[...] = result
+        return c
 
     return result

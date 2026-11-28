@@ -174,9 +174,7 @@ class MatrixFourierTransform(FourierTransform):
                 for i in np.ndindex(tensor_shape):
                     gemm(alpha, f[i][np.newaxis, :], self.M, trans_b=1, c=res[i][np.newaxis, :], overwrite_c=True, xp=self._xp)
             else:
-                f = xp.reshape(f, (-1, self.shape_input[-1]))
                 res = gemm(alpha, f, self.M, trans_b=1, xp=self._xp)
-                res = xp.reshape(res, tensor_shape + (self.M.shape[0],))
         elif self.ndim == 2:
             # The leading tensor dimensions act as the batch. Reshape as a 2D array.
             f = xp.reshape(f, tensor_shape + self.shape_input)
@@ -236,9 +234,7 @@ class MatrixFourierTransform(FourierTransform):
                 for i in np.ndindex(tensor_shape):
                     gemm(alpha, f[i][np.newaxis, :], inverse_matrix, c=res[i][np.newaxis, :], overwrite_c=True, xp=self._xp)
             else:
-                f = xp.reshape(f, (-1, self.shape_output[-1]))
                 res = gemm(alpha, f, inverse_matrix, xp=self._xp)
-                res = xp.reshape(res, tensor_shape + (self.M.shape[1],))
         elif self.ndim == 2:
             # The leading tensor dimensions act as the batch. Reshape as a 2D array.
             f = xp.reshape(f, tensor_shape + self.shape_output)

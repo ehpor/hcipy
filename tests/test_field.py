@@ -357,3 +357,25 @@ def test_field_einsum_implicit_output_keeps_grid():
     assert result.is_valid_field
     assert all_close(result, expected)
 
+def test_field_dot_scalar_fields():
+    grid = make_pupil_grid(4, xp=xp)
+
+    a_data = np.arange(grid.size, dtype=float) + 1
+    b_data = np.arange(grid.size, dtype=float) + 2
+    vector_data = np.arange(3 * grid.size, dtype=float).reshape(3, grid.size)
+
+    a = Field(a_data, grid)
+    b = Field(b_data, grid)
+    vector = Field(vector_data, grid)
+
+    result = field_dot(a, b)
+    assert result.shape == (grid.size,)
+    assert all_close(result, a_data * b_data)
+
+    result = field_dot(a, vector)
+    assert result.shape == vector_data.shape
+    assert all_close(result, a_data[np.newaxis, :] * vector_data)
+
+    result = field_dot(vector, a)
+    assert result.shape == vector_data.shape
+    assert all_close(result, vector_data * a_data[np.newaxis, :])

@@ -4,7 +4,8 @@ import copy
 import math
 from collections.abc import Iterable
 import importlib
-from .._math.backends import infer_xp, default_dtype
+from array_api_compat import device
+from .._math.backends import infer_xp, default_dtype, asarray, array_namespace
 
 
 class Coords(object):
@@ -376,7 +377,7 @@ class SeparatedCoords(Coords):
 
         # Make a copy to avoid modification from outside the class
         dtype = default_dtype(xp, 'real floating')
-        self.separated_coords = [self._xp.asarray(s, copy=True, dtype=dtype) for s in separated_coords]
+        self.separated_coords = [asarray(s, xp, copy=True, dtype=dtype) for s in separated_coords]
 
     @classmethod
     def from_dict(cls, tree):
@@ -566,9 +567,9 @@ class RegularCoords(Coords):
 
         # Convert to arrays - accept tuples, lists, or arrays
         dtype = default_dtype(xp, 'real floating')
-        self.delta = xp.asarray(delta, dtype=dtype)
+        self.delta = asarray(delta, xp, dtype=dtype)
         self.dims = tuple(int(n) for n in dims)
-        self.zero = xp.asarray(zero, dtype=dtype)
+        self.zero = asarray(zero, xp, dtype=dtype)
 
         # Validate dimensions match
         assert self.delta.shape[0] == len(self.dims), 'delta and dims must have same length'
@@ -649,7 +650,9 @@ class RegularCoords(Coords):
 
         The actual points are the iterated tensor product of this tuple.
         '''
-        return [self._xp.arange(n, dtype=self.delta.dtype) * delta + zero for delta, n, zero in zip(self.delta, self.dims, self.zero)]
+        xp = array_namespace(self.delta)
+        return [xp.arange(n, dtype=self.delta.dtype, device=device(self.delta)) * delta + zero
+                for delta, n, zero in zip(self.delta, self.dims, self.zero)]
 
     @property
     def regular_coords(self):

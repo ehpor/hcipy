@@ -156,17 +156,17 @@ class MatrixFourierTransform(FourierTransform):
         xp = self._xp
         tensor_shape = field.tensor_shape
 
-        if self.ndim == 1:
-            # Weights can be included in the gemm call as that multiplication
-            # happens anyway (and it saves an array copy).
-            if is_scalar(self.weights_input):
-                alpha = self.weights_input
-                f = field.data if isinstance(field, NewStyleField) else field
-            else:
-                alpha = None
-                f = field * self.weights_input
-                f = f.data if isinstance(f, NewStyleField) else f
+        # Weights can be included in the gemm call as that multiplication
+        # happens anyway (and it saves an array copy).
+        if is_scalar(self.weights_input):
+            alpha = self.weights_input
+            f = field.data if isinstance(field, NewStyleField) else field
+        else:
+            alpha = None
+            f = field * self.weights_input
+            f = f.data if isinstance(f, NewStyleField) else f
 
+        if self.ndim == 1:
             if is_numpy_namespace(xp):
                 # The leading tensor dimensions act as the batch.
                 res = xp.empty(tensor_shape + (self.M.shape[0],), dtype=self.matrices_dtype)
@@ -178,16 +178,6 @@ class MatrixFourierTransform(FourierTransform):
                 res = gemm(alpha, f, self.M, trans_b=1, xp=self._xp)
                 res = xp.reshape(res, tensor_shape + (self.M.shape[0],))
         elif self.ndim == 2:
-            # Weights can be included in the gemm call as that multiplication
-            # happens anyway (and it saves an array copy).
-            if is_scalar(self.weights_input):
-                alpha = self.weights_input
-                f = field.data if isinstance(field, NewStyleField) else field
-            else:
-                alpha = None
-                f = field * self.weights_input
-                f = f.data if isinstance(f, NewStyleField) else f
-
             # The leading tensor dimensions act as the batch. Reshape as a 2D array.
             f = xp.reshape(f, tensor_shape + self.shape_input)
 
@@ -226,17 +216,17 @@ class MatrixFourierTransform(FourierTransform):
         xp = self._xp
         tensor_shape = field.tensor_shape
 
-        if self.ndim == 1:
-            # Weights can be included in the gemm call as that multiplication
-            # happens anyway (and it saves an array copy).
-            if is_scalar(self.weights_output):
-                alpha = self.weights_output
-                f = field.data if isinstance(field, NewStyleField) else field
-            else:
-                alpha = None
-                f = field * self.weights_output
-                f = f.data if isinstance(f, NewStyleField) else f
+        # Weights can be included in the gemm call as that multiplication
+        # happens anyway (and it saves an array copy).
+        if is_scalar(self.weights_output):
+            alpha = self.weights_output
+            f = field.data if isinstance(field, NewStyleField) else field
+        else:
+            alpha = None
+            f = field * self.weights_output
+            f = f.data if isinstance(f, NewStyleField) else f
 
+        if self.ndim == 1:
             inverse_matrix = xp.conj(self.M)
 
             if is_numpy_namespace(xp):
@@ -250,16 +240,6 @@ class MatrixFourierTransform(FourierTransform):
                 res = gemm(alpha, f, inverse_matrix, xp=self._xp)
                 res = xp.reshape(res, tensor_shape + (self.M.shape[1],))
         elif self.ndim == 2:
-            # Weights can be included in the gemm call as that multiplication
-            # happens anyway (and it saves an array copy).
-            if is_scalar(self.weights_output):
-                alpha = self.weights_output
-                f = field.data if isinstance(field, NewStyleField) else field
-            else:
-                alpha = None
-                f = field * self.weights_output
-                f = f.data if isinstance(f, NewStyleField) else f
-
             # The leading tensor dimensions act as the batch. Reshape as a 2D array.
             f = xp.reshape(f, tensor_shape + self.shape_output)
 

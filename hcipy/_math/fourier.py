@@ -117,7 +117,7 @@ def _dft_matrix_regular_fallback(x0, u0, dx, du, Nx, Nu, xp, dtype):
     x = xp.arange(Nx, dtype=float_dtype) * dx + x0
     u = xp.arange(Nu, dtype=float_dtype) * du + u0
 
-    return xp.astype(xp.exp(1j * x[:, xp.newaxis] * u[xp.newaxis, :]), dtype)
+    return xp.astype(xp.exp(1j * x[:, xp.newaxis] * u[xp.newaxis, :]), dtype, copy=False)
 
 def dft_matrix_regular(x0, u0, dx, du, Nx, Nu, xp, dtype, conjugate=False, transpose=False, out=None):
     """Compute a DFT matrix for equally spaced grids.

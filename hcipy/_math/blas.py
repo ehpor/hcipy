@@ -1,15 +1,8 @@
-import functools
-
 import numpy as np
 from scipy.linalg import get_blas_funcs
 from array_api_compat import is_numpy_namespace
 
 from .backends import array_namespace
-
-
-@functools.lru_cache(maxsize=None)
-def _get_numpy_gemm(dtype):
-    return get_blas_funcs('gemm', dtype=dtype)
 
 
 def _apply_transpose(x, trans, xp):
@@ -86,7 +79,7 @@ def gemm(alpha, a, b, *, beta=None, c=None, trans_a=0, trans_b=0, overwrite_c=Fa
             c = None
 
         dtype = c.dtype if c is not None else a.dtype
-        gemm_func = _get_numpy_gemm(np.dtype(dtype))
+        gemm_func = get_blas_funcs('gemm', dtype=np.dtype(dtype))
 
         result = gemm_func(
             1.0 if alpha is None else alpha, b.T, a.T,

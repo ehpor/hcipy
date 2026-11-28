@@ -192,6 +192,23 @@ def test_deformable_mirror():
             # Check that the deformable mirror is flat again
             assert np.std(deformable_mirror.surface) < 1e-12
 
+@pytest.mark.parametrize('x_tilt, y_tilt', [(0, 0), (np.radians(20), np.radians(15))])
+def test_xinetics_influence_function_tilt_scaling(x_tilt, y_tilt):
+    num_pix = 33
+    num_actuators_across_pupil = 3
+    actuator_spacing = 1 / num_actuators_across_pupil
+    grid = make_pupil_grid(num_pix, 1.5)
+
+    actuator_positions = make_actuator_positions(num_actuators_across_pupil, actuator_spacing)
+    center_actuator = np.argmin(np.sum(actuator_positions.points**2, axis=-1))
+
+    influence_functions = make_xinetics_influence_functions(grid, num_actuators_across_pupil, actuator_spacing, x_tilt=x_tilt, y_tilt=y_tilt)
+
+    center_pixel = np.argmin(grid.x**2 + grid.y**2)
+    expected_amplitude = 1 / (np.cos(x_tilt) * np.cos(y_tilt))
+
+    assert np.isclose(influence_functions[center_actuator][center_pixel], expected_amplitude, rtol=1e-6)
+
 def test_segmented_deformable_mirror():
     num_pix = 256
     grid = make_pupil_grid(num_pix)

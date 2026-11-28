@@ -55,7 +55,6 @@ class Configuration(BaseSettings):
 
     # MFT
     mft_precompute_matrices: bool = True
-    mft_allocate_intermediate: bool = True
     mft_runtime_coeffs: tuple[float, float, float] = (1.667, 0.716, -4.624)
 
     # NFT

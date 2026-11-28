@@ -32,7 +32,7 @@ def _apply_transpose(x, trans, xp):
     return x
 
 
-def gemm(alpha, a, b, *, beta=None, c=None, trans_a=0, trans_b=0, overwrite_c=False):
+def gemm(alpha, a, b, *, beta=None, c=None, trans_a=0, trans_b=0, overwrite_c=False, xp=None):
     '''Compute a general matrix-matrix product.
 
     This function computes
@@ -68,6 +68,8 @@ def gemm(alpha, a, b, *, beta=None, c=None, trans_a=0, trans_b=0, overwrite_c=Fa
         Whether `c` may be overwritten with the result. Whether this is
         possible in place depends on the backend. On the NumPy backend, `c`
         must be C-contiguous for in-place overwriting to be supported.
+    xp : module, optional
+        The Array API namespace. If None, it is inferred from `a`, `b` and `c`.
 
     Returns
     -------
@@ -80,17 +82,13 @@ def gemm(alpha, a, b, *, beta=None, c=None, trans_a=0, trans_b=0, overwrite_c=Fa
     if trans_b not in (0, 1, 2):
         raise ValueError('trans_b must be 0, 1 or 2.')
 
-    xp = array_namespace(a, b, c)
+    if xp is None:
+        xp = array_namespace(a, b, c)
 
     if is_numpy_namespace(xp) and a.ndim == 2 and b.ndim == 2:
-        a = np.ascontiguousarray(a)
-        b = np.ascontiguousarray(b)
-
         use_c = c is not None and (beta is not None or overwrite_c)
 
-        if use_c:
-            c = np.ascontiguousarray(c)
-        else:
+        if not use_c:
             c = None
 
         dtype = c.dtype if c is not None else a.dtype

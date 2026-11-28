@@ -196,12 +196,16 @@ def test_fft_grid_reconstruction():
     for shift_input in [[0, 0], [0.1, 0.1]]:
             for scale in [1, 2]:
                 for shift_output in [[0, 0], [0.1, 0.1]]:
-                    for q in [1, 1.234, 3, 4]:
+                    for q in [1, 1.1, 1.2, 1.234, 1.3, 1.4, 1.7, 3, 4]:
                         for fov in [1, 0.5, 0.8, [0.3, 0.23]]:
-                            for dims in [[8, 8], [8, 16], [9, 9], [9, 18]]:
+                            for dims in [[8, 8], [8, 16], [9, 9], [9, 18], [11, 11], [13, 13]]:
                                 input_grid = make_uniform_grid(dims, 1, has_center=True).shifted(shift_input).scaled(scale)
 
                                 fft_grid = make_fft_grid(input_grid, q, fov, shift_output)
+
+                                if np.isscalar(fov) and fov == 1:
+                                    expected_dims = tuple(round(q * d_in) for d_in in input_grid.dims)
+                                    assert fft_grid.dims == expected_dims
 
                                 assert is_fft_grid(fft_grid, input_grid)
 
@@ -408,6 +412,37 @@ def test_fourier_correlation(n, q):
     assert np.allclose(ref, op_direct.forward(f_in))
     assert np.allclose(ref, op_callable.forward(f_in))
 
+@pytest.mark.parametrize('field_dtype', ['float64', 'complex128'])
+@pytest.mark.parametrize('kernel_dtype', ['float64', 'complex128'])
+@pytest.mark.parametrize('tensor_shape', [(), (2, 3)])
+@pytest.mark.parametrize('q', [1, 2])
+def test_fourier_convolution_dtypes(field_dtype, kernel_dtype, tensor_shape, q):
+    input_grid = make_pupil_grid(8, 1)
+    kernel_grid = make_pupil_grid(tuple(d * q for d in input_grid.dims), q)
+
+    # An asymmetric kernel, so its transfer function has a non-zero imaginary part.
+    kernel_data = np.zeros(kernel_grid.size, dtype=kernel_dtype)
+    kernel_data[0] = 1
+    kernel_data[1] = 0.5
+    kernel_data[3] = -0.25
+    if kernel_dtype == 'complex128':
+        kernel_data[2] = 0.3j
+        kernel_data[4] = -0.2 + 0.1j
+    kernel = Field(kernel_data, kernel_grid)
+
+    rng = make_random_generator(np, seed=0)
+    shape = tensor_shape + (input_grid.size,)
+    if field_dtype == 'float64':
+        data = rng.normal(size=shape)
+    else:
+        data = rng.normal(size=shape) + 1j * rng.normal(size=shape)
+    f_in = Field(data, input_grid).astype(field_dtype)
+
+    op = make_fourier_convolution(input_grid, kernel, q)
+    ref = _reference_convolution_or_correlation(f_in, kernel, q, conjugate=False)
+
+    assert np.allclose(op.forward(f_in), ref)
+
 def test_fourier_convolution_correlation_errors():
     input_grid = make_pupil_grid(8)
 
@@ -462,17 +497,25 @@ def test_chirp_z_transform(dtype):
 
         check_czt_vs_scipy(x, m, w, a, dtype)
 
-def test_fourier_shift():
-    input_grid = make_uniform_grid([32, 32], 1)
+@pytest.mark.parametrize('dims, shift', [
+    ([32, 32], [10, 0]),
+    ([8, 8, 8], [2, 0, 0]),
+    ([8, 8, 8], [0, 2, 0]),
+    ([8, 8, 8], [0, 0, 2]),
+    ([8, 8, 8], [1, 2, 3]),
+])
+def test_fourier_shift(dims, shift):
+    input_grid = make_uniform_grid(dims, 1)
     field = Field(np.random.randn(input_grid.size), input_grid)
 
-    shift = np.array([10, 0])
+    shift = np.array(shift)
 
     shifter = FourierShift(input_grid, shift * input_grid.delta)
     shifter_reverse = FourierShift(input_grid, -shift * input_grid.delta)
 
     shifted = shifter.forward(field)
-    ref = np.roll(field.shaped, shift, axis=(1, 0)).ravel()
+    axes = tuple(range(input_grid.ndim - 1, -1, -1))
+    ref = np.roll(field.shaped, shift, axis=axes).ravel()
     assert np.allclose(shifted, ref)
 
     back = shifter.backward(shifted)

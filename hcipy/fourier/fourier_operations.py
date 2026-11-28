@@ -1,6 +1,6 @@
 import numpy as np
 
-from .fast_fourier_transform import FastFourierTransform, make_fft_grid
+from .fast_fourier_transform import FastFourierTransform, make_fft_grid, _get_float_and_complex_dtype
 from .fourier_transform import make_fourier_transform
 from ..field import Field, field_dot, field_conjugate_transpose, CartesianGrid, RegularCoords, make_uniform_grid
 from .._math.separable_filter import make_phase_ramp, make_separable_filter
@@ -40,14 +40,20 @@ class FourierFilter(object):
         self.internal_array = None
 
     def _compute_functions(self, field):
-        if self._transfer_function is None or self._transfer_function.dtype != field.dtype:
+        _, complex_dtype = _get_float_and_complex_dtype(field.dtype)
+
+        # The transfer function is generally complex, even for a real input
+        # field and a real kernel (unless the kernel is symmetric). Keep it
+        # complex rather than casting it to the field dtype, which would
+        # discard the imaginary part for real input fields.
+        if self._transfer_function is None or self._transfer_function.dtype != np.dtype(complex_dtype):
             if hasattr(self.transfer_function, '__call__'):
                 tf = self.transfer_function(self.internal_grid)
             else:
                 tf = self.transfer_function.copy()
 
             tf = np.fft.ifftshift(tf.shaped, axes=tuple(range(-self.input_grid.ndim, 0)))
-            self._transfer_function = tf.astype(field.dtype, copy=False)
+            self._transfer_function = tf.astype(complex_dtype, copy=False)
 
         recompute_internal_array = self.internal_array is None
         recompute_internal_array = recompute_internal_array or (self.internal_array.ndim != (field.grid.ndim + field.tensor_order))
@@ -286,8 +292,10 @@ class FourierShift:
         shift = np.array(shift)
         self._shift = shift
 
-        # Find out which axes to Fourier transform.
-        self._ft_axes = tuple(np.flatnonzero(shift) - 1)
+        # Find out which axes to Fourier transform. The shift is given in
+        # coordinate order (x, y, z, ...), while the array axes are reversed,
+        # so coordinate axis i corresponds to array axis -(i + 1).
+        self._ft_axes = tuple(-(int(i) + 1) for i in np.flatnonzero(shift))
 
         if not self._ft_axes:
             # All shifts are zero. We can exit out early.

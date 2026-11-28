@@ -73,11 +73,14 @@ def make_fft_grid(input_grid, q=1, fov=1, shift=0):
     if not input_grid.is_('cartesian'):
         raise ValueError('The input_grid must be cartesian.')
 
-    # Correct q for a discrete zero padding of the input grid.
-    q = tuple(round(q_i * d_in) / d_in for q_i, d_in in zip(q, input_grid.dims))
+    # Correct q for a discrete zero padding of the input grid. Keep the
+    # zero-padded dimensions as integers, so that the output dimensions are
+    # not affected by floating-point rounding in the corrected q.
+    zeropadded_dims = tuple(round(q_i * d_in) for q_i, d_in in zip(q, input_grid.dims))
+    q = tuple(zp_dim / d_in for zp_dim, d_in in zip(zeropadded_dims, input_grid.dims))
 
     delta = tuple(float((2 * math.pi / (d_in * s_in)) / q_i) for d_in, s_in, q_i in zip(input_grid.delta, input_grid.dims, q))
-    dims = tuple(int(d_in * f_i * q_i) for d_in, f_i, q_i in zip(input_grid.dims, fov, q))
+    dims = tuple(int(zp_dim * f_i) for zp_dim, f_i in zip(zeropadded_dims, fov))
     zero = tuple(float(d_i * (-dim / 2 + (dim % 2) * 0.5) + s_i) for d_i, dim, s_i in zip(delta, dims, shift))
 
     return CartesianGrid(RegularCoords(delta, dims, zero, xp=input_grid.xp))

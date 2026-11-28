@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 from ..optics import OpticalElement, PhaseApodizer, PhotonicLantern
 from ..propagation import FraunhoferPropagator
@@ -99,13 +100,33 @@ class PhotonicLanternNuller(FiberNuller):
         The grid on which the incoming wavefront is defined.
     focal_grid : Grid
         The focal grid where light is injected into the lantern.
-    mode_field_diameter : scalar
-        (Optional) The mode field diameter of the lantern modes.
+    core_radius : scalar
+        The core radius of the step-index fiber used to model the lantern modes.
+        Note that this is a radius, not a mode-field diameter. This argument is required.
     vortex_charge : integer
         (Optional) The charge of an optional pupil plane vortex mask.
+    mode_field_diameter : scalar
+        Deprecated alias for ``core_radius``. This argument will be removed in a
+        future version.
     '''
-    def __init__(self, input_grid, focal_grid, mode_field_diameter=1.31, vortex_charge=None):
-        lp_modes = make_lp_modes(focal_grid, 1.5 * np.pi, mode_field_diameter)
+    def __init__(self, input_grid, focal_grid, core_radius=None, vortex_charge=None, mode_field_diameter=None):
+        if mode_field_diameter is not None:
+            if core_radius is not None:
+                raise TypeError('Specify either core_radius or mode_field_diameter, not both.')
+
+            warnings.warn(
+                'The mode_field_diameter argument is deprecated. Use core_radius instead. '
+                'The supplied value is still interpreted as the core radius for backward compatibility.',
+                DeprecationWarning,
+                stacklevel=2
+            )
+            core_radius = mode_field_diameter
+
+        if core_radius is None:
+            raise TypeError('The core_radius parameter is required.')
+
+        self.core_radius = core_radius
+        lp_modes = make_lp_modes(focal_grid, 1.5 * np.pi, core_radius)
         photonic_lantern = PhotonicLantern(lp_modes)
 
         if vortex_charge is not None:

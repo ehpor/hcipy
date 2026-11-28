@@ -425,7 +425,7 @@ def test_photonic_lantern_nuller():
     aperture = make_circular_aperture(1)
     aperture = evaluate_supersampled(aperture, pupil_grid, 8)
 
-    pln = PhotonicLanternNuller(pupil_grid, focal_grid)
+    pln = PhotonicLanternNuller(pupil_grid, focal_grid, core_radius=1.31)
 
     wf = Wavefront(aperture)
     wf.total_power = 1

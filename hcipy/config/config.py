@@ -49,7 +49,6 @@ class Configuration(BaseSettings):
         return cls._instance
 
     # FFT
-    fft_emulate_fftshifts: bool = True
     fft_method: list[str] = ['mkl', 'scipy', 'fftw', 'numpy']
     fft_runtime_coeffs: tuple[float, float, float] = (3.746, 0.881, -4.749)
 

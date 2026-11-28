@@ -5,12 +5,77 @@ import copy
 import pytest
 import pickle
 from hcipy._math.random import make_random_generator
-from hcipy._math.backends import all_close
+from hcipy._math.backends import all_close, to_numpy
 
 if Configuration().use_array_api:
     import array_api_strict as xp
 else:
     import numpy as xp
+
+@pytest.mark.parametrize('shape_a, shape_b', [
+    ((2, 2), (2, 2)),
+    ((2, 3, 4), (5, 6)),
+    ((2,), (3,)),
+    ((2, 3), (4,)),
+])
+def test_field_kron_arrays(xp, shape_a, shape_b):
+    rng = np.random.default_rng(seed=0)
+    a = rng.normal(size=shape_a)
+    b = rng.normal(size=shape_b)
+
+    result = field_kron(xp.asarray(a), xp.asarray(b))
+
+    assert np.allclose(to_numpy(result), np.kron(a, b))
+
+@pytest.mark.parametrize('shape_a, shape_b', [
+    ((2,), (2,)),
+    ((2,), (2, 2)),
+    ((2, 2), (2, 2)),
+])
+def test_field_kron_fields(xp, shape_a, shape_b):
+    grid = make_pupil_grid(4, xp=xp)
+    rng = np.random.default_rng(seed=0)
+
+    a = rng.normal(size=shape_a + (grid.size,))
+    b = rng.normal(size=shape_b + (grid.size,))
+
+    result = field_kron(
+        hcipy.NewStyleField(xp.asarray(a), grid),
+        hcipy.NewStyleField(xp.asarray(b), grid),
+    )
+    expected = np.stack([np.kron(a[..., i], b[..., i]) for i in range(grid.size)], axis=-1)
+
+    assert is_field(result)
+    assert result.grid is grid
+    result_data = result.data if isinstance(result, hcipy.NewStyleField) else result
+    assert np.allclose(to_numpy(result_data), expected)
+
+@pytest.mark.parametrize('field_first, shape_field, shape_array', [
+    (True, (2,), (2,)),
+    (False, (2,), (2,)),
+    (True, (2,), (2, 2)),
+    (False, (2, 2), (2,)),
+])
+def test_field_kron_field_and_array(xp, field_first, shape_field, shape_array):
+    grid = make_pupil_grid(4, xp=xp)
+    rng = np.random.default_rng(seed=0)
+
+    field_data = rng.normal(size=shape_field + (grid.size,))
+    array_data = rng.normal(size=shape_array)
+    field = hcipy.NewStyleField(xp.asarray(field_data), grid)
+    array = xp.asarray(array_data)
+
+    if field_first:
+        result = field_kron(field, array)
+        expected = np.stack([np.kron(field_data[..., i], array_data) for i in range(grid.size)], axis=-1)
+    else:
+        result = field_kron(array, field)
+        expected = np.stack([np.kron(array_data, field_data[..., i]) for i in range(grid.size)], axis=-1)
+
+    assert is_field(result)
+    assert result.grid is grid
+    result_data = result.data if isinstance(result, hcipy.NewStyleField) else result
+    assert np.allclose(to_numpy(result_data), expected)
 
 def test_field_dot():
     grid = make_pupil_grid(2, xp=xp)

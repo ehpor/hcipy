@@ -661,35 +661,41 @@ def field_kron(a, b):
     '''
     is_a_field = hasattr(a, 'grid')
     is_b_field = hasattr(b, 'grid')
-
     is_output_field = is_a_field or is_b_field
 
-    if not is_output_field:
-        return np.kron(a, b)
+    if is_a_field and is_b_field and a.grid.size != b.grid.size:
+        raise ValueError('Field sizes for a (%d) and b (%d) are not compatible.' % (a.grid.size, b.grid.size))
 
-    if is_a_field and is_b_field:
-        if a.grid.size != b.grid.size:
-            raise ValueError('Field sizes for a (%d) and b (%d) are not compatible.' % (a.grid.size, b.grid.size))
-        grid = a.grid
-    else:
-        if is_a_field:
-            grid = a.grid
-        else:
-            grid = b.grid
+    # Determine tensor shapes and the trailing field-axis sizes.
+    grid = a.grid if is_a_field else b.grid if is_b_field else None
+    field_size = grid.size if is_output_field else 1
 
-    if is_a_field:
-        aa = a
-    else:
-        aa = a[..., np.newaxis]
+    a_shape = a.shape[:-1] if is_a_field else a.shape
+    b_shape = b.shape[:-1] if is_b_field else b.shape
+    a_field_size = field_size if is_a_field else 1
+    b_field_size = field_size if is_b_field else 1
 
-    if is_b_field:
-        bb = b
-    else:
-        bb = b[..., np.newaxis]
+    # Promote both tensor shapes to the same rank.
+    ndim = max(len(a_shape), len(b_shape))
+    a_shape = (1,) * (ndim - len(a_shape)) + a_shape
+    b_shape = (1,) * (ndim - len(b_shape)) + b_shape
 
-    output_tensor_shape = np.array(aa.shape[:-1]) * np.array(bb.shape[:-1])
-    output_shape = np.concatenate((output_tensor_shape, [grid.size]))
+    # Interleave each tensor axis with a singleton axis for broadcasting.
+    output_tensor_shape = tuple(a_size * b_size for a_size, b_size in zip(a_shape, b_shape))
+    output_shape = output_tensor_shape + ((field_size,) if is_output_field else ())
 
-    res = (aa[:, np.newaxis, :, np.newaxis, :] * bb[np.newaxis, :, np.newaxis, :, :]).reshape(output_shape)
+    xp = array_namespace(a if is_a_field else b) if is_output_field else array_namespace(a, b)
+    a = xp.reshape(a, tuple(value for size in a_shape for value in (size, 1)) + (a_field_size,))
+    b = xp.reshape(b, tuple(value for size in b_shape for value in (1, size)) + (b_field_size,))
 
-    return Field(res, grid)
+    # Multiply and combine each pair of axes.
+    result = xp.reshape(a * b, output_shape)
+
+    if is_output_field:
+        if hasattr(result, 'grid'):
+            result.grid = grid
+            return result
+
+        return Field(result, grid)
+
+    return result

@@ -1,3 +1,4 @@
+import math
 import warnings
 
 import numpy as np
@@ -9,10 +10,6 @@ from .._math.fourier import dft_matrix_regular, dft_matrix_separated
 from .._math.blas import gemm
 from .._math import buffer_pool
 from .._math.backends import is_scalar
-
-
-def _field_data(field):
-    return field.data if isinstance(field, NewStyleField) else field
 
 
 class MatrixFourierTransform(FourierTransform):
@@ -92,7 +89,7 @@ class MatrixFourierTransform(FourierTransform):
         # Check if the matrices need to be (re)calculated.
         if self.matrices_dtype != complex_dtype:
             self.weights_input = xp.asarray(self.input_grid.weights, dtype=float_dtype)
-            self.weights_output = xp.asarray(self.output_grid.weights / (2 * np.pi)**self.ndim, dtype=float_dtype)
+            self.weights_output = xp.asarray(self.output_grid.weights / (2 * math.pi)**self.ndim, dtype=float_dtype)
 
             if self.ndim == 1:
                 if self.input_grid.is_regular and self.output_grid.is_regular:
@@ -160,32 +157,36 @@ class MatrixFourierTransform(FourierTransform):
         tensor_shape = field.tensor_shape
 
         if self.ndim == 1:
+            # Weights can be included in the gemm call as that multiplication
+            # happens anyway (and it saves an array copy).
             if is_scalar(self.weights_input):
                 alpha = self.weights_input
-                f = _field_data(field)
+                f = field.data if isinstance(field, NewStyleField) else field
             else:
                 alpha = None
-                f = _field_data(field * self.weights_input)
-
-            f = xp.reshape(f, tensor_shape + self.shape_input)
+                f = field * self.weights_input
+                f = f.data if isinstance(f, NewStyleField) else f
 
             if is_numpy_namespace(xp):
                 # The leading tensor dimensions act as the batch.
                 res = xp.empty(tensor_shape + (self.M.shape[0],), dtype=self.matrices_dtype)
 
                 for i in np.ndindex(tensor_shape):
-                    gemm(alpha, f[i][np.newaxis, :], self.M, trans_b=1, c=res[i][np.newaxis, :], overwrite_c=True)
+                    gemm(alpha, f[i][np.newaxis, :], self.M, trans_b=1, c=res[i][np.newaxis, :], overwrite_c=True, xp=self._xp)
             else:
                 f = xp.reshape(f, (-1, self.shape_input[-1]))
-                res = gemm(alpha, f, self.M, trans_b=1)
+                res = gemm(alpha, f, self.M, trans_b=1, xp=self._xp)
                 res = xp.reshape(res, tensor_shape + (self.M.shape[0],))
         elif self.ndim == 2:
+            # Weights can be included in the gemm call as that multiplication
+            # happens anyway (and it saves an array copy).
             if is_scalar(self.weights_input):
                 alpha = self.weights_input
-                f = _field_data(field)
+                f = field.data if isinstance(field, NewStyleField) else field
             else:
                 alpha = None
-                f = _field_data(field * self.weights_input)
+                f = field * self.weights_input
+                f = f.data if isinstance(f, NewStyleField) else f
 
             # The leading tensor dimensions act as the batch. Reshape as a 2D array.
             f = xp.reshape(f, tensor_shape + self.shape_input)
@@ -196,11 +197,11 @@ class MatrixFourierTransform(FourierTransform):
                 intermediate_shape = (self.input_grid.shape[0], self.M2.shape[1])
                 with buffer_pool.empty(intermediate_shape, self.matrices_dtype) as intermediate_array:
                     for i in np.ndindex(tensor_shape):
-                        gemm(None, f[i], self.M2, c=intermediate_array, overwrite_c=True)
-                        gemm(alpha, self.M1, intermediate_array, c=res[i], overwrite_c=True)
+                        gemm(None, f[i], self.M2, c=intermediate_array, overwrite_c=True, xp=self._xp)
+                        gemm(alpha, self.M1, intermediate_array, c=res[i], overwrite_c=True, xp=self._xp)
             else:
-                intermediate_array = gemm(None, f, self.M2)
-                res = gemm(alpha, self.M1, intermediate_array)
+                intermediate_array = gemm(None, f, self.M2, xp=self._xp)
+                res = gemm(alpha, self.M1, intermediate_array, xp=self._xp)
 
         self._remove_matrices()
 
@@ -226,14 +227,16 @@ class MatrixFourierTransform(FourierTransform):
         tensor_shape = field.tensor_shape
 
         if self.ndim == 1:
+            # Weights can be included in the gemm call as that multiplication
+            # happens anyway (and it saves an array copy).
             if is_scalar(self.weights_output):
                 alpha = self.weights_output
-                f = _field_data(field)
+                f = field.data if isinstance(field, NewStyleField) else field
             else:
                 alpha = None
-                f = _field_data(field * self.weights_output)
+                f = field * self.weights_output
+                f = f.data if isinstance(f, NewStyleField) else f
 
-            f = xp.reshape(f, tensor_shape + self.shape_output)
             inverse_matrix = xp.conj(self.M)
 
             if is_numpy_namespace(xp):
@@ -241,18 +244,21 @@ class MatrixFourierTransform(FourierTransform):
                 res = xp.empty(tensor_shape + (self.M.shape[1],), dtype=self.matrices_dtype)
 
                 for i in np.ndindex(tensor_shape):
-                    gemm(alpha, f[i][np.newaxis, :], inverse_matrix, c=res[i][np.newaxis, :], overwrite_c=True)
+                    gemm(alpha, f[i][np.newaxis, :], inverse_matrix, c=res[i][np.newaxis, :], overwrite_c=True, xp=self._xp)
             else:
                 f = xp.reshape(f, (-1, self.shape_output[-1]))
-                res = gemm(alpha, f, inverse_matrix)
+                res = gemm(alpha, f, inverse_matrix, xp=self._xp)
                 res = xp.reshape(res, tensor_shape + (self.M.shape[1],))
         elif self.ndim == 2:
+            # Weights can be included in the gemm call as that multiplication
+            # happens anyway (and it saves an array copy).
             if is_scalar(self.weights_output):
                 alpha = self.weights_output
-                f = _field_data(field)
+                f = field.data if isinstance(field, NewStyleField) else field
             else:
                 alpha = None
-                f = _field_data(field * self.weights_output)
+                f = field * self.weights_output
+                f = f.data if isinstance(f, NewStyleField) else f
 
             # The leading tensor dimensions act as the batch. Reshape as a 2D array.
             f = xp.reshape(f, tensor_shape + self.shape_output)
@@ -263,11 +269,11 @@ class MatrixFourierTransform(FourierTransform):
                 intermediate_shape = (self.input_grid.shape[0], self.M2.shape[1])
                 with buffer_pool.empty(intermediate_shape, self.matrices_dtype) as intermediate_array:
                     for i in np.ndindex(tensor_shape):
-                        gemm(None, self.M1, f[i], trans_a=2, c=intermediate_array, overwrite_c=True)
-                        gemm(alpha, intermediate_array, self.M2, trans_b=2, c=res[i], overwrite_c=True)
+                        gemm(None, self.M1, f[i], trans_a=2, c=intermediate_array, overwrite_c=True, xp=self._xp)
+                        gemm(alpha, intermediate_array, self.M2, trans_b=2, c=res[i], overwrite_c=True, xp=self._xp)
             else:
-                intermediate_array = gemm(None, self.M1, f, trans_a=2)
-                res = gemm(alpha, intermediate_array, self.M2, trans_b=2)
+                intermediate_array = gemm(None, self.M1, f, trans_a=2, xp=self._xp)
+                res = gemm(alpha, intermediate_array, self.M2, trans_b=2, xp=self._xp)
 
         self._remove_matrices()
 

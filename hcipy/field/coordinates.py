@@ -14,7 +14,7 @@ class Coords(object):
 
     @property
     def xp(self):
-        '''The array namespace (e.g., numpy, cupy, jax.numpy) used by these coordinates.
+        '''The array namespace (e.g., numpy, cupy, jax.numpy, or torch) used by these coordinates.
         '''
         return self._xp
 
@@ -211,8 +211,9 @@ class UnstructuredCoords(Coords):
     coords : list or tuple
         A tuple of a list of positions for each dimension.
     xp : module, optional
-        The array namespace (e.g., numpy, cupy, jax.numpy). If not provided,
-        it will be inferred from the input arrays.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
     '''
     def __init__(self, coords, xp=None):
         if xp is None:
@@ -361,8 +362,9 @@ class SeparatedCoords(Coords):
     separated_coords : list or tuple
         A tuple of a list of coordinates along each dimension.
     xp : module, optional
-        The array namespace (e.g., numpy, cupy, jax.numpy). If not provided,
-        it will be inferred from the input arrays.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Attributes
     ----------
@@ -542,8 +544,9 @@ class RegularCoords(Coords):
     zero : array_like
         The coordinates for the first point.
     xp : module, optional
-        The array namespace (e.g., numpy, cupy, jax.numpy). If not provided,
-        it will be inferred from the delta and zero arrays.
+        The array namespace to use (e.g., numpy, cupy, jax.numpy, or torch).
+        If not provided, it will be inferred from the input arguments. In legacy
+        mode, which uses old-style Fields, this must be NumPy.
 
     Attributes
     ----------
